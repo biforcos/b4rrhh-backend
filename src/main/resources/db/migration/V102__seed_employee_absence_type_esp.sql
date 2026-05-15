@@ -26,5 +26,4 @@ set
     description = excluded.description,
     active = excluded.active,
     start_date = excluded.start_date,
-    end_date = excluded.end_date,
     updated_at = now();
