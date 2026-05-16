@@ -51,7 +51,35 @@
       "mcp__plugin_claude-mem_mcp-search__timeline",
       "mcp__plugin_claude-mem_mcp-search__search",
       "Read(//c/Users/bifor/Documents/Proyectos/B4RRHH/b4rrhh_designer/**)",
-      "Read(//c/Users/bifor/Documents/Proyectos/B4RRHH/b4rrhh_designer/src/**)"
+      "Read(//c/Users/bifor/Documents/Proyectos/B4RRHH/b4rrhh_designer/src/**)",
+      "Powershell",
+      "PowerShell(Set-Content *)",
+      "PowerShell(Get-Content \"C:\\\\Users\\\\bifor\\\\Documents\\\\Proyectos\\\\B4RRHH\\\\b4rrhh_backend\\\\.claude\\\\settings.local.json\" | Select-Object -Index \\(48..60\\))",
+      "PowerShell(mvn test *)",
+      "PowerShell(netstat *)",
+      "PowerShell(Get-Process *)",
+      "PowerShell(Get-WmiObject *)",
+      "PowerShell(wmic process where \"ProcessId=8316\" get ProcessId,Name,ExecutablePath 2>&1)",
+      "PowerShell(Get-CimInstance *)",
+      "PowerShell(Get-ChildItem \"HKLM:\\\\SOFTWARE\" -ErrorAction SilentlyContinue | Where-Object { $_.Name -match -join\\(\"post\",\"gre\",\"SQL\"\\) } | Select-Object Name)",
+      "PowerShell(ls \"C:\\\\Program Files\\\\PostgreSQL\" -ErrorAction SilentlyContinue; ls \"C:\\\\Program Files \\(x86\\)\\\\PostgreSQL\" -ErrorAction SilentlyContinue; ls \"$env:APPDATA\\\\PostgreSQL\" -ErrorAction SilentlyContinue)",
+      "PowerShell(sc.exe query \"postgresql-x64-17\" 2>&1)",
+      "PowerShell(sc.exe stop \"postgresql-x64-17\" 2>&1)",
+      "Bash(Get-Content \"C:\\\\Users\\\\bifor\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-bifor-Documents-Proyectos-B4RRHH-b4rrhh_backend\\\\e480538d-0e67-4969-bca3-d3d875536fff\\\\tasks\\\\bxkloxf01.output\" -Wait)"
     ]
+  },
+  "tools": {
+    "powershell": {
+      "allowedCommands": [
+        "Get-ChildItem",
+        "Get-Content",
+        "Get-CimInstance",
+        "*",
+        "Select-Object",
+        "mvn",
+        "cd",
+        "git"
+      ]
+    }
   }
 }
