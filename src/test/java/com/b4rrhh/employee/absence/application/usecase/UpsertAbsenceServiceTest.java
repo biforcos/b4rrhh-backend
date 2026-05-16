@@ -141,6 +141,23 @@ class UpsertAbsenceServiceTest {
     }
 
     @Test
+    void throwsWhenEndDateNotCoveredByPresence() {
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM, "EMPLOYEE_ABSENCE_TYPE", ABSENCE_TYPE))
+                .thenReturn(Optional.of(activeRuleEntity()));
+        when(getEmployee.getByBusinessKey(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER))
+                .thenReturn(Optional.of(activeEmployee()));
+        // Presence covers May 1–15; endDate May 18 is outside
+        Presence shortPresence = new Presence(1L, 42L, 1, "B4", "HIRE", null,
+                MAY_1, LocalDate.of(2026, 5, 15), NOW, NOW);
+        when(listPresences.listByEmployeeBusinessKey(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER))
+                .thenReturn(List.of(shortPresence));
+
+        UpsertAbsenceCommand cmd = commandFor(MAY_14, MAY_18);
+
+        assertThrows(AbsenceOutsidePresencePeriodException.class, () -> service.upsert(cmd));
+    }
+
+    @Test
     void throwsWhenEndDateBeforeStartDate() {
         when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM, "EMPLOYEE_ABSENCE_TYPE", ABSENCE_TYPE))
                 .thenReturn(Optional.of(activeRuleEntity()));

@@ -22,6 +22,7 @@ import java.util.Optional;
 @Service
 public class UpsertAbsenceService implements UpsertAbsenceUseCase {
 
+    // Sentinel for open-ended absences in overlap JPQL: COALESCE(end_date, :maxDate)
     private static final LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
 
     private final RuleEntityRepository ruleEntityRepository;
