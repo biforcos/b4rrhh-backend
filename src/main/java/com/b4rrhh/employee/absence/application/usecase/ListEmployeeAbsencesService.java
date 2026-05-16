@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.absence.application.usecase;
 
+import com.b4rrhh.employee.absence.domain.exception.AbsenceEmployeeNotFoundException;
 import com.b4rrhh.employee.absence.domain.model.Absence;
 import com.b4rrhh.employee.absence.domain.port.AbsenceRepository;
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
@@ -21,9 +22,12 @@ public class ListEmployeeAbsencesService implements ListEmployeeAbsencesUseCase 
 
     @Override
     public List<Absence> listByEmployeeBusinessKey(ListEmployeeAbsencesCommand command) {
-        return getEmployee.getByBusinessKey(
+        Long employeeId = getEmployee.getByBusinessKey(
                 command.ruleSystemCode(), command.employeeTypeCode(), command.employeeNumber())
-            .map(e -> absenceRepository.findByEmployeeIdOrderByStartDateDescStartTimeDesc(e.getId()))
-            .orElse(List.of());
+            .map(e -> e.getId())
+            .orElseThrow(() -> new AbsenceEmployeeNotFoundException(
+                "Employee not found: " + command.ruleSystemCode() + "/" +
+                command.employeeTypeCode() + "/" + command.employeeNumber()));
+        return absenceRepository.findByEmployeeIdOrderByStartDateDescStartTimeDesc(employeeId);
     }
 }

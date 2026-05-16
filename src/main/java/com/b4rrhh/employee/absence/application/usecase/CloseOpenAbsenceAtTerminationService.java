@@ -26,6 +26,7 @@ public class CloseOpenAbsenceAtTerminationService implements CloseOpenAbsenceAtT
             .ifPresent(employee -> absenceRepository
                 .findByEmployeeIdOrderByStartDateDescStartTimeDesc(employee.getId())
                 .stream()
+                // overlap constraint guarantees at most one open absence per employee
                 .filter(Absence::isOpen)
                 .findFirst()
                 .ifPresent(absence -> {

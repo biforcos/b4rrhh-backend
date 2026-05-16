@@ -1,9 +1,11 @@
 package com.b4rrhh.employee.absence.application.usecase;
 
+import com.b4rrhh.employee.absence.domain.exception.AbsenceEmployeeNotFoundException;
 import com.b4rrhh.employee.absence.domain.exception.AbsenceNotFoundException;
 import com.b4rrhh.employee.absence.domain.port.AbsenceRepository;
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class DeleteAbsenceService implements DeleteAbsenceUseCase {
@@ -18,11 +20,14 @@ public class DeleteAbsenceService implements DeleteAbsenceUseCase {
     }
 
     @Override
+    @Transactional
     public void delete(DeleteAbsenceCommand command) {
         Long employeeId = getEmployee.getByBusinessKey(
                 command.ruleSystemCode(), command.employeeTypeCode(), command.employeeNumber())
             .map(e -> e.getId())
-            .orElseThrow(() -> new AbsenceNotFoundException("Employee not found: " + command.employeeNumber()));
+            .orElseThrow(() -> new AbsenceEmployeeNotFoundException(
+                "Employee not found: " + command.ruleSystemCode() + "/" +
+                command.employeeTypeCode() + "/" + command.employeeNumber()));
 
         absenceRepository.findByKey(employeeId, command.absenceTypeCode(), command.startDate(), command.startTime())
             .orElseThrow(() -> new AbsenceNotFoundException(

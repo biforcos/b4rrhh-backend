@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.absence.application.usecase;
 
+import com.b4rrhh.employee.absence.domain.exception.AbsenceEmployeeNotFoundException;
 import com.b4rrhh.employee.absence.domain.exception.AbsenceNotFoundException;
 import com.b4rrhh.employee.absence.domain.model.Absence;
 import com.b4rrhh.employee.absence.domain.port.AbsenceRepository;
@@ -51,11 +52,11 @@ class GetAbsenceByBusinessKeyServiceTest {
     }
 
     @Test
-    void throwsAbsenceNotFoundWhenEmployeeNotFound() {
+    void throwsWhenEmployeeNotFound() {
         when(getEmployee.getByBusinessKey(anyString(), anyString(), anyString()))
             .thenReturn(Optional.empty());
 
-        assertThrows(AbsenceNotFoundException.class, () -> service.getByBusinessKey(
+        assertThrows(AbsenceEmployeeNotFoundException.class, () -> service.getByBusinessKey(
             new GetAbsenceByBusinessKeyCommand("ESP", "INTERNAL", "EMP001", "VACATION", MAY_14, 0)));
     }
 

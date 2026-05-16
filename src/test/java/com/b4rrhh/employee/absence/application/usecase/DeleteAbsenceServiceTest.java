@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.absence.application.usecase;
 
+import com.b4rrhh.employee.absence.domain.exception.AbsenceEmployeeNotFoundException;
 import com.b4rrhh.employee.absence.domain.exception.AbsenceNotFoundException;
 import com.b4rrhh.employee.absence.domain.model.Absence;
 import com.b4rrhh.employee.absence.domain.port.AbsenceRepository;
@@ -64,7 +65,7 @@ class DeleteAbsenceServiceTest {
         when(getEmployee.getByBusinessKey(anyString(), anyString(), anyString()))
             .thenReturn(Optional.empty());
 
-        assertThrows(AbsenceNotFoundException.class, () ->
+        assertThrows(AbsenceEmployeeNotFoundException.class, () ->
             service.delete(new DeleteAbsenceCommand("ESP", "INTERNAL", "UNKNOWN", "VACATION", MAY_14, 0)));
     }
 }

@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.absence.application.usecase;
 
+import com.b4rrhh.employee.absence.domain.exception.AbsenceEmployeeNotFoundException;
 import com.b4rrhh.employee.absence.domain.exception.AbsenceNotFoundException;
 import com.b4rrhh.employee.absence.domain.model.Absence;
 import com.b4rrhh.employee.absence.domain.port.AbsenceRepository;
@@ -23,8 +24,9 @@ public class GetAbsenceByBusinessKeyService implements GetAbsenceByBusinessKeyUs
         Long employeeId = getEmployee.getByBusinessKey(
                 command.ruleSystemCode(), command.employeeTypeCode(), command.employeeNumber())
             .map(e -> e.getId())
-            .orElseThrow(() -> new AbsenceNotFoundException(
-                "Absence not found for employee: " + command.employeeNumber()));
+            .orElseThrow(() -> new AbsenceEmployeeNotFoundException(
+                "Employee not found: " + command.ruleSystemCode() + "/" +
+                command.employeeTypeCode() + "/" + command.employeeNumber()));
 
         return absenceRepository.findByKey(
                 employeeId, command.absenceTypeCode(), command.startDate(), command.startTime())

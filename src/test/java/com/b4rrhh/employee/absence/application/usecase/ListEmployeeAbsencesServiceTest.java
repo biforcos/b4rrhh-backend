@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.absence.application.usecase;
 
+import com.b4rrhh.employee.absence.domain.exception.AbsenceEmployeeNotFoundException;
 import com.b4rrhh.employee.absence.domain.model.Absence;
 import com.b4rrhh.employee.absence.domain.port.AbsenceRepository;
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
@@ -57,13 +58,11 @@ class ListEmployeeAbsencesServiceTest {
     }
 
     @Test
-    void returnsEmptyListWhenEmployeeNotFound() {
+    void throwsWhenEmployeeNotFound() {
         when(getEmployee.getByBusinessKey(anyString(), anyString(), anyString()))
             .thenReturn(Optional.empty());
 
-        List<Absence> result = service.listByEmployeeBusinessKey(
-            new ListEmployeeAbsencesCommand("ESP", "INTERNAL", "UNKNOWN"));
-
-        assertTrue(result.isEmpty());
+        assertThrows(AbsenceEmployeeNotFoundException.class, () -> service.listByEmployeeBusinessKey(
+            new ListEmployeeAbsencesCommand("ESP", "INTERNAL", "UNKNOWN")));
     }
 }
