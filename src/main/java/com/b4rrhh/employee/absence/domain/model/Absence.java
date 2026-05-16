@@ -10,10 +10,10 @@ public class Absence {
     private final String absenceTypeCode;
     private final LocalDate startDate;
     private final int startTime;
-    private LocalDate endDate;
-    private Integer endTime;
+    private final LocalDate endDate;
+    private final Integer endTime;
     private final LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private final LocalDateTime updatedAt;
 
     private Absence(Long id, Long employeeId, String absenceTypeCode,
                     LocalDate startDate, int startTime,
@@ -46,16 +46,14 @@ public class Absence {
             startDate, startTime, endDate, endTime, createdAt, updatedAt);
     }
 
-    public void update(LocalDate endDate, Integer endTime) {
-        this.endDate = endDate;
-        this.endTime = endTime;
-        this.updatedAt = LocalDateTime.now();
+    public Absence update(LocalDate newEndDate, Integer newEndTime) {
+        return new Absence(id, employeeId, absenceTypeCode,
+            startDate, startTime, newEndDate, newEndTime, createdAt, LocalDateTime.now());
     }
 
-    public void closeAt(LocalDate terminationDate) {
-        this.endDate = terminationDate;
-        this.endTime = null;
-        this.updatedAt = LocalDateTime.now();
+    public Absence closeAt(LocalDate terminationDate) {
+        return new Absence(id, employeeId, absenceTypeCode,
+            startDate, startTime, terminationDate, null, createdAt, LocalDateTime.now());
     }
 
     public boolean isOpen() {

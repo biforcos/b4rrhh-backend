@@ -34,19 +34,21 @@ class AbsenceTest {
     }
 
     @Test
-    void updateMutatesEndDateAndEndTime() {
-        Absence a = Absence.create(1L, "VACATION", LocalDate.of(2026, 5, 14), 0, null, null);
-        a.update(LocalDate.of(2026, 5, 20), null);
-        assertEquals(LocalDate.of(2026, 5, 20), a.getEndDate());
-        assertNull(a.getEndTime());
+    void updateReturnsNewAbsenceWithEndFields() {
+        Absence original = Absence.create(1L, "VACATION", LocalDate.of(2026, 5, 14), 0, null, null);
+        Absence updated = original.update(LocalDate.of(2026, 5, 20), null);
+        assertEquals(LocalDate.of(2026, 5, 20), updated.getEndDate());
+        assertNull(updated.getEndTime());
+        assertNull(original.getEndDate()); // original unchanged
     }
 
     @Test
-    void closeAtSetsEndDateAndNullsEndTime() {
-        Absence a = Absence.create(1L, "VACATION", LocalDate.of(2026, 5, 14), 0, null, null);
-        a.closeAt(LocalDate.of(2026, 5, 31));
-        assertEquals(LocalDate.of(2026, 5, 31), a.getEndDate());
-        assertNull(a.getEndTime());
+    void closeAtReturnsNewAbsenceWithTerminationDate() {
+        Absence original = Absence.create(1L, "VACATION", LocalDate.of(2026, 5, 14), 0, null, null);
+        Absence closed = original.closeAt(LocalDate.of(2026, 5, 31));
+        assertEquals(LocalDate.of(2026, 5, 31), closed.getEndDate());
+        assertNull(closed.getEndTime());
+        assertNull(original.getEndDate()); // original unchanged
     }
 
     @Test
