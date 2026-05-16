@@ -22,9 +22,6 @@ import java.util.Optional;
 @Service
 public class UpsertAbsenceService implements UpsertAbsenceUseCase {
 
-    // Sentinel for open-ended absences in overlap JPQL: COALESCE(end_date, :maxDate)
-    private static final LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
-
     private final RuleEntityRepository ruleEntityRepository;
     private final GetEmployeeByBusinessKeyUseCase getEmployee;
     private final ListEmployeePresencesUseCase listPresences;
@@ -90,23 +87,19 @@ public class UpsertAbsenceService implements UpsertAbsenceUseCase {
             }
         }
 
-        LocalDate effectiveEndDate = endDate != null ? endDate : MAX_DATE;
-
         // 5. Look up existing absence by business key
         Optional<Absence> existing = absenceRepository.findByKey(employeeId, absenceTypeCode, startDate, startTime);
 
         if (existing.isPresent()) {
             Absence current = existing.get();
-            // Check overlap excluding current record
-            if (absenceRepository.existsOverlappingAbsenceExcluding(employeeId, startDate, effectiveEndDate, current.getId())) {
+            if (absenceRepository.existsOverlappingAbsenceExcluding(employeeId, startDate, endDate, current.getId())) {
                 throw new AbsenceOverlapException(
                         "Absence overlaps with an existing absence for employee " + employeeNumber);
             }
             Absence updated = current.update(endDate, endTime);
             return absenceRepository.save(updated);
         } else {
-            // Check overlap for new record
-            if (absenceRepository.existsOverlappingAbsence(employeeId, startDate, effectiveEndDate)) {
+            if (absenceRepository.existsOverlappingAbsence(employeeId, startDate, endDate)) {
                 throw new AbsenceOverlapException(
                         "Absence overlaps with an existing absence for employee " + employeeNumber);
             }

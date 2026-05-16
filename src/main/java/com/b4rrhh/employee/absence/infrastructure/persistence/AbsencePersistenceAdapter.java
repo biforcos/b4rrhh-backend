@@ -33,14 +33,16 @@ public class AbsencePersistenceAdapter implements AbsenceRepository {
     }
 
     @Override
-    public boolean existsOverlappingAbsence(Long employeeId, LocalDate startDate, LocalDate effectiveEndDate) {
-        return springRepo.existsOverlappingAbsence(employeeId, startDate, effectiveEndDate, MAX_DATE);
+    public boolean existsOverlappingAbsence(Long employeeId, LocalDate startDate, LocalDate endDate) {
+        LocalDate effectiveEnd = endDate != null ? endDate : MAX_DATE;
+        return springRepo.existsOverlappingAbsence(employeeId, startDate, effectiveEnd, MAX_DATE);
     }
 
     @Override
     public boolean existsOverlappingAbsenceExcluding(Long employeeId, LocalDate startDate,
-                                                      LocalDate effectiveEndDate, Long excludeId) {
-        return springRepo.existsOverlappingAbsenceExcluding(employeeId, startDate, effectiveEndDate, excludeId, MAX_DATE);
+                                                      LocalDate endDate, Long excludeId) {
+        LocalDate effectiveEnd = endDate != null ? endDate : MAX_DATE;
+        return springRepo.existsOverlappingAbsenceExcluding(employeeId, startDate, effectiveEnd, excludeId, MAX_DATE);
     }
 
     @Override

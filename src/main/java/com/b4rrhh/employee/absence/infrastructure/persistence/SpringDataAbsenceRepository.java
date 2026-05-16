@@ -3,6 +3,7 @@ package com.b4rrhh.employee.absence.infrastructure.persistence;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -15,6 +16,7 @@ interface SpringDataAbsenceRepository extends JpaRepository<AbsenceEntity, Long>
 
     List<AbsenceEntity> findByEmployeeIdOrderByStartDateDescStartTimeDesc(Long employeeId);
 
+    @Transactional
     void deleteByEmployeeIdAndAbsenceTypeCodeAndStartDateAndStartTime(
         Long employeeId, String absenceTypeCode, LocalDate startDate, int startTime);
 

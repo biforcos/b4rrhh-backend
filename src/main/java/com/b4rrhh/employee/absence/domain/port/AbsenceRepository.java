@@ -9,9 +9,9 @@ public interface AbsenceRepository {
     Optional<Absence> findByKey(Long employeeId, String absenceTypeCode,
                                 LocalDate startDate, int startTime);
     List<Absence> findByEmployeeIdOrderByStartDateDescStartTimeDesc(Long employeeId);
-    boolean existsOverlappingAbsence(Long employeeId, LocalDate startDate, LocalDate effectiveEndDate);
+    boolean existsOverlappingAbsence(Long employeeId, LocalDate startDate, LocalDate endDate);
     boolean existsOverlappingAbsenceExcluding(Long employeeId, LocalDate startDate,
-                                               LocalDate effectiveEndDate, Long excludeId);
+                                               LocalDate endDate, Long excludeId);
     Absence save(Absence absence);
     void deleteByKey(Long employeeId, String absenceTypeCode, LocalDate startDate, int startTime);
 }
