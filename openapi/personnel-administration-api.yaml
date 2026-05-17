@@ -54,6 +54,8 @@ tags:
     description: Payroll lifecycle operations — search, invalidate, validate, recalculate.
   - name: Payroll Calculation Run
     description: Launch and track bulk payroll calculation runs.
+  - name: Employee Absences
+    description: Employee absence occurrence management.
 
 paths:
   /employees:
@@ -5295,11 +5297,27 @@ paths:
     get:
       summary: List all absences for an employee
       operationId: listEmployeeAbsences
-      tags: [Employee Absences]
+      tags:
+        - Employee Absences
       parameters:
-        - $ref: '#/components/parameters/ruleSystemCode'
-        - $ref: '#/components/parameters/employeeTypeCode'
-        - $ref: '#/components/parameters/employeeNumber'
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
       responses:
         '200':
           description: List of absences ordered by startDate DESC, startTime DESC
@@ -5309,21 +5327,40 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/AbsenceResponse'
+        '404':
+          description: Employee not found
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/absences/{absenceTypeCode}/{startDate}:
     put:
       summary: Upsert absence (day mode — startTime defaults to 00:00)
       operationId: upsertAbsenceDayMode
-      tags: [Employee Absences]
+      tags:
+        - Employee Absences
       parameters:
-        - $ref: '#/components/parameters/ruleSystemCode'
-        - $ref: '#/components/parameters/employeeTypeCode'
-        - $ref: '#/components/parameters/employeeNumber'
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
         - name: absenceTypeCode
           in: path
           required: true
           schema:
             type: string
+            maxLength: 30
         - name: startDate
           in: path
           required: true
@@ -5358,16 +5395,33 @@ paths:
     get:
       summary: Get absence by business key (day mode)
       operationId: getAbsenceDayMode
-      tags: [Employee Absences]
+      tags:
+        - Employee Absences
       parameters:
-        - $ref: '#/components/parameters/ruleSystemCode'
-        - $ref: '#/components/parameters/employeeTypeCode'
-        - $ref: '#/components/parameters/employeeNumber'
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
         - name: absenceTypeCode
           in: path
           required: true
           schema:
             type: string
+            maxLength: 30
         - name: startDate
           in: path
           required: true
@@ -5390,16 +5444,33 @@ paths:
     delete:
       summary: Delete absence (day mode)
       operationId: deleteAbsenceDayMode
-      tags: [Employee Absences]
+      tags:
+        - Employee Absences
       parameters:
-        - $ref: '#/components/parameters/ruleSystemCode'
-        - $ref: '#/components/parameters/employeeTypeCode'
-        - $ref: '#/components/parameters/employeeNumber'
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
         - name: absenceTypeCode
           in: path
           required: true
           schema:
             type: string
+            maxLength: 30
         - name: startDate
           in: path
           required: true
@@ -5420,16 +5491,33 @@ paths:
     put:
       summary: Upsert absence (hour mode — startTime as HHmm e.g. 0900)
       operationId: upsertAbsenceHourMode
-      tags: [Employee Absences]
+      tags:
+        - Employee Absences
       parameters:
-        - $ref: '#/components/parameters/ruleSystemCode'
-        - $ref: '#/components/parameters/employeeTypeCode'
-        - $ref: '#/components/parameters/employeeNumber'
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
         - name: absenceTypeCode
           in: path
           required: true
           schema:
             type: string
+            maxLength: 30
         - name: startDate
           in: path
           required: true
@@ -5471,16 +5559,33 @@ paths:
     get:
       summary: Get absence by business key (hour mode)
       operationId: getAbsenceHourMode
-      tags: [Employee Absences]
+      tags:
+        - Employee Absences
       parameters:
-        - $ref: '#/components/parameters/ruleSystemCode'
-        - $ref: '#/components/parameters/employeeTypeCode'
-        - $ref: '#/components/parameters/employeeNumber'
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
         - name: absenceTypeCode
           in: path
           required: true
           schema:
             type: string
+            maxLength: 30
         - name: startDate
           in: path
           required: true
@@ -5509,16 +5614,33 @@ paths:
     delete:
       summary: Delete absence (hour mode)
       operationId: deleteAbsenceHourMode
-      tags: [Employee Absences]
+      tags:
+        - Employee Absences
       parameters:
-        - $ref: '#/components/parameters/ruleSystemCode'
-        - $ref: '#/components/parameters/employeeTypeCode'
-        - $ref: '#/components/parameters/employeeNumber'
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
         - name: absenceTypeCode
           in: path
           required: true
           schema:
             type: string
+            maxLength: 30
         - name: startDate
           in: path
           required: true
@@ -9350,6 +9472,12 @@ components:
 
     AbsenceResponse:
       type: object
+      required:
+        - absenceTypeCode
+        - startDate
+        - startTime
+        - createdAt
+        - updatedAt
       properties:
         absenceTypeCode:
           type: string
