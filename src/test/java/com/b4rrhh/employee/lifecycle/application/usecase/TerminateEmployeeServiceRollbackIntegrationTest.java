@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.lifecycle.application.usecase;
 
+import com.b4rrhh.employee.absence.application.usecase.CloseOpenAbsenceAtTerminationUseCase;
 import com.b4rrhh.employee.contract.application.usecase.ListEmployeeContractsUseCase;
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
 import com.b4rrhh.employee.employee.domain.port.EmployeeRepository;
@@ -7,6 +8,7 @@ import com.b4rrhh.employee.employee.infrastructure.persistence.EmployeePersisten
 import com.b4rrhh.employee.labor_classification.application.usecase.ListEmployeeLaborClassificationsUseCase;
 import com.b4rrhh.employee.lifecycle.application.command.TerminateEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.TerminationContext;
+import com.b4rrhh.employee.lifecycle.application.participant.AbsenceTerminationParticipant;
 import com.b4rrhh.employee.lifecycle.application.participant.CostCenterTerminationParticipant;
 import com.b4rrhh.employee.lifecycle.application.participant.ContractTerminationParticipant;
 import com.b4rrhh.employee.lifecycle.application.participant.LaborClassificationTerminationParticipant;
@@ -198,6 +200,17 @@ class TerminateEmployeeServiceRollbackIntegrationTest {
                             command.exitReasonCode(),
                             LocalDate.of(2026, 1, 1), command.endDate(),
                             LocalDateTime.now(), LocalDateTime.now()));
+        }
+
+        @Bean
+        CloseOpenAbsenceAtTerminationUseCase closeOpenAbsenceAtTerminationUseCase() {
+            return (ruleSystemCode, employeeTypeCode, employeeNumber, terminationDate) -> {};
+        }
+
+        @Bean
+        AbsenceTerminationParticipant absenceTerminationParticipant(
+                CloseOpenAbsenceAtTerminationUseCase closeOpenAbsenceAtTerminationUseCase) {
+            return new AbsenceTerminationParticipant(closeOpenAbsenceAtTerminationUseCase);
         }
     }
 }
