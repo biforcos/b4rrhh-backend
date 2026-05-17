@@ -19,14 +19,28 @@ public class AbsenceWebMapper {
         );
     }
 
-    public int parseHHmmToMinutes(String hhMm) {
+    int parseHHmmToMinutes(String hhMm) {
+        if (hhMm == null || !hhMm.matches("\\d{2}:\\d{2}")) {
+            throw new IllegalArgumentException("Invalid time format, expected HH:mm but got: " + hhMm);
+        }
         String[] parts = hhMm.split(":");
-        return Integer.parseInt(parts[0]) * 60 + Integer.parseInt(parts[1]);
+        int hours = Integer.parseInt(parts[0]);
+        int minutes = Integer.parseInt(parts[1]);
+        if (hours > 23 || minutes > 59) {
+            throw new IllegalArgumentException("Time out of range: " + hhMm);
+        }
+        return hours * 60 + minutes;
     }
 
-    public int parsePathTimeToMinutes(String hhmm) {
+    int parsePathTimeToMinutes(String hhmm) {
+        if (hhmm == null || !hhmm.matches("\\d{4}")) {
+            throw new IllegalArgumentException("Invalid path time format, expected HHmm but got: " + hhmm);
+        }
         int hours = Integer.parseInt(hhmm.substring(0, 2));
         int minutes = Integer.parseInt(hhmm.substring(2, 4));
+        if (hours > 23 || minutes > 59) {
+            throw new IllegalArgumentException("Time out of range: " + hhmm);
+        }
         return hours * 60 + minutes;
     }
 
