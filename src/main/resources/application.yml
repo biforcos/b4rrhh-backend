@@ -45,6 +45,26 @@ logging:
     org.flywaydb: info
 
 app:
+  # Acceso a la demo publica. Apagado por defecto: solo se enciende con la
+  # variable DEMO_AUTH_ENABLED y ademas requiere el perfil 'demo'. Doble llave,
+  # igual que dev-auth.
+  demo-auth:
+    enabled: ${DEMO_AUTH_ENABLED:false}
+    # La contrasena se publica en la propia pantalla de acceso: la demo es para
+    # que entre cualquiera. Sirve para que nadie entre sin querer, no para
+    # impedir el paso. Aun asi va por entorno, no escrita aqui.
+    password: ${DEMO_PASSWORD:}
+    expires-in-minutes: 120
+    # Sujetos que ya existen en authz.subject_role_assignment. 'bifor' (ADMIN)
+    # no esta y no debe estar: nadie entra de administrador desde internet.
+    subjects:
+      hr.manager:
+        - HR_MANAGER
+      auditor:
+        - AUDITOR
+      readonly:
+        - READONLY
+
   jwt:
     # En producción se define la variable JWT_SECRET. Si no se define, la
     # aplicación NO arranca: ver SecurityConfig.jwtDecoder(). El valor de abajo

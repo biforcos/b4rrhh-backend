@@ -1,5 +1,6 @@
 package com.b4rrhh.shared.infrastructure.config;
 
+import com.b4rrhh.shared.infrastructure.demo.auth.DemoAuthProperties;
 import com.b4rrhh.shared.infrastructure.dev.auth.DevAuthProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -18,7 +19,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 
 @Configuration
-@EnableConfigurationProperties({JwtProperties.class, DevAuthProperties.class})
+@EnableConfigurationProperties({JwtProperties.class, DevAuthProperties.class, DemoAuthProperties.class})
 @EnableMethodSecurity
 public class SecurityConfig {
 
@@ -32,11 +33,16 @@ public class SecurityConfig {
 
     private final JwtProperties jwtProperties;
     private final DevAuthProperties devAuthProperties;
+    private final DemoAuthProperties demoAuthProperties;
     private final Environment environment;
 
-    public SecurityConfig(JwtProperties jwtProperties, DevAuthProperties devAuthProperties, Environment environment) {
+    public SecurityConfig(JwtProperties jwtProperties,
+                          DevAuthProperties devAuthProperties,
+                          DemoAuthProperties demoAuthProperties,
+                          Environment environment) {
         this.jwtProperties = jwtProperties;
         this.devAuthProperties = devAuthProperties;
+        this.demoAuthProperties = demoAuthProperties;
         this.environment = environment;
     }
 
@@ -48,6 +54,11 @@ public class SecurityConfig {
                     auth.requestMatchers("/actuator/health", "/actuator/health/**").permitAll();
                     if (isDevAuthEnabled()) {
                         auth.requestMatchers("/dev/auth/token").permitAll();
+                    }
+                    if (isDemoAuthEnabled()) {
+                        // La puerta de la demo tiene que ser accesible sin token:
+                        // es donde se consigue el token.
+                        auth.requestMatchers("/demo/auth/login", "/demo/auth/subjects").permitAll();
                     }
                     auth.anyRequest().authenticated();
                 }
@@ -64,6 +75,10 @@ public class SecurityConfig {
 
     private boolean isDevAuthEnabled() {
         return devAuthProperties.isEnabled() && environment.acceptsProfiles(Profiles.of("local"));
+    }
+
+    private boolean isDemoAuthEnabled() {
+        return demoAuthProperties.isEnabled() && environment.acceptsProfiles(Profiles.of("demo"));
     }
 
     @Bean
