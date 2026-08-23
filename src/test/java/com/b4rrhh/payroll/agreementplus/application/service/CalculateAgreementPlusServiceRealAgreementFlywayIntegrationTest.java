@@ -1,5 +1,7 @@
 package com.b4rrhh.payroll.agreementplus.application.service;
 
+import com.b4rrhh.support.TestPostgres;
+
 import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeBusinessKeyLookupSupport;
 import com.b4rrhh.employee.working_time.infrastructure.persistence.EmployeeAgreementContextLookupAdapter;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.EmployeeAgreementCategoryLookupAdapter;
@@ -52,8 +54,8 @@ class CalculateAgreementPlusServiceRealAgreementFlywayIntegrationTest {
     private static final String RULE_SYSTEM_CODE = "ESP";
     private static final String EMPLOYEE_TYPE_CODE = "INTERNAL";
     private static final String REAL_AGREEMENT_CODE = "99002405011982";
-    private static final String POSTGRES_HOST = "localhost";
-    private static final int POSTGRES_PORT = 5432;
+    private static final String POSTGRES_HOST = TestPostgres.host();
+    private static final int POSTGRES_PORT = TestPostgres.port();
     private static final String POSTGRES_ADMIN_DATABASE = "postgres";
     private static final String POSTGRES_USERNAME = "b4rrhh";
     private static final String POSTGRES_PASSWORD = "b4rrhh";

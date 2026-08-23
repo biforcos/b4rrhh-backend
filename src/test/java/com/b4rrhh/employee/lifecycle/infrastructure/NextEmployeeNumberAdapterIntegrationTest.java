@@ -1,6 +1,7 @@
 package com.b4rrhh.employee.lifecycle.infrastructure;
 
 import com.b4rrhh.B4rrhhBackendApplication;
+import com.b4rrhh.support.TestPostgres;
 import com.b4rrhh.rulesystem.employeenumbering.domain.exception.EmployeeNumberingConfigNotFoundException;
 import com.b4rrhh.rulesystem.employeenumbering.domain.exception.EmployeeNumberingExhaustedException;
 import jakarta.persistence.EntityManager;
@@ -8,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -15,6 +18,18 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(classes = B4rrhhBackendApplication.class)
 @Transactional
 class NextEmployeeNumberAdapterIntegrationTest {
+
+    /**
+     * Sin esto, el test usaba el Postgres que hubiera en localhost:5432, es
+     * decir, la base de datos de desarrollo de quien lanzara la suite. Ahora
+     * apunta al contenedor efimero: mismo resultado en tu portatil y en el CI.
+     */
+    @DynamicPropertySource
+    static void datasource(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", () -> TestPostgres.jdbcUrl(TestPostgres.defaultDatabase()));
+        registry.add("spring.datasource.username", TestPostgres::username);
+        registry.add("spring.datasource.password", TestPostgres::password);
+    }
 
     @Autowired
     private NextEmployeeNumberAdapter adapter;

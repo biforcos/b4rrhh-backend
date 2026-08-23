@@ -1,5 +1,7 @@
 package com.b4rrhh.employee.working_time.infrastructure.persistence;
 
+import com.b4rrhh.support.TestPostgres;
+
 import com.b4rrhh.rulesystem.agreementprofile.infrastructure.persistence.AgreementCatalogLookupAdapter;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -33,8 +35,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class AgreementAnnualHoursLookupRealSeedFlywayIntegrationTest {
 
     private static final String REAL_AGREEMENT_CODE = "99002405011982";
-    private static final String POSTGRES_HOST = "localhost";
-    private static final int POSTGRES_PORT = 5432;
+    private static final String POSTGRES_HOST = TestPostgres.host();
+    private static final int POSTGRES_PORT = TestPostgres.port();
     private static final String POSTGRES_ADMIN_DATABASE = "postgres";
     private static final String POSTGRES_USERNAME = "b4rrhh";
     private static final String POSTGRES_PASSWORD = "b4rrhh";
