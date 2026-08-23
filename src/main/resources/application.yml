@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/b4rrhh
-    username: b4rrhh
-    password: b4rrhh
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/b4rrhh}
+    username: ${DB_USERNAME:b4rrhh}
+    password: ${DB_PASSWORD:b4rrhh}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -39,7 +39,12 @@ logging:
 
 app:
   jwt:
-    secret: "b4rrhh-dev-secret-key-minimum-256-bits-for-hmac-sha256-algorithm"
+    # En producción se define la variable JWT_SECRET. Si no se define, la
+    # aplicación NO arranca: ver SecurityConfig.jwtDecoder(). El valor de abajo
+    # es solo para desarrollo y está publicado en el repositorio, así que
+    # cualquiera podría firmar tokens con él. Por eso el código lo rechaza
+    # fuera del perfil local.
+    secret: ${JWT_SECRET:dev-only-secreto-de-desarrollo-local-no-usar-en-produccion}
 
 payroll:
   launch:
@@ -47,8 +52,8 @@ payroll:
       collapse-segment-rows: true
 
 minio:
-  endpoint: http://localhost:9000
-  access-key: b4rrhh
-  secret-key: b4rrhh123
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:b4rrhh}
+  secret-key: ${MINIO_SECRET_KEY:b4rrhh123}
   bucket-name: b4rrhh-employee-photos
   presigned-url-expiry-minutes: 10

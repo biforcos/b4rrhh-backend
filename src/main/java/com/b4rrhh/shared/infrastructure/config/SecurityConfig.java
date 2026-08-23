@@ -22,6 +22,14 @@ import java.nio.charset.StandardCharsets;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    /**
+     * Prefijo que marca un secreto de desarrollo. Los valores de desarrollo
+     * viven en el repositorio, y el repositorio es público: quien lo lea puede
+     * firmarse un token con el rol que quiera. Por eso cualquier secreto con
+     * este prefijo se rechaza fuera de local y test.
+     */
+    private static final String DEV_SECRET_PREFIX = "dev-only-";
+
     private final JwtProperties jwtProperties;
     private final DevAuthProperties devAuthProperties;
     private final Environment environment;
@@ -71,11 +79,24 @@ public class SecurityConfig {
 
     @Bean
     JwtDecoder jwtDecoder() {
-        byte[] keyBytes = jwtProperties.secret().getBytes(StandardCharsets.UTF_8);
+        String secret = jwtProperties.secret();
+        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         if (keyBytes.length < 32) {
             throw new IllegalStateException(
                     "app.jwt.secret must be at least 32 bytes (256 bits) for HMAC-SHA256. "
                     + "Current length: " + keyBytes.length + " bytes."
+            );
+        }
+        // Sin perfil activo estamos en desarrollo o en tests: ahi el secreto de
+        // desarrollo vale. En cuanto hay un perfil explicito y no es de desarrollo,
+        // estamos en un despliegue de verdad y el secreto publico no se admite.
+        boolean deployed = environment.getActiveProfiles().length > 0
+                && !environment.acceptsProfiles(Profiles.of("local", "test"));
+        if (secret.startsWith(DEV_SECRET_PREFIX) && deployed) {
+            throw new IllegalStateException(
+                    "app.jwt.secret sigue siendo el valor de desarrollo, que es publico. "
+                    + "Define la variable de entorno JWT_SECRET con un secreto generado, "
+                    + "por ejemplo: openssl rand -base64 48"
             );
         }
         SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "HmacSHA256");
