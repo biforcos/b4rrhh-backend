@@ -58,7 +58,7 @@ public class SecurityConfig {
                     if (isDemoAuthEnabled()) {
                         // La puerta de la demo tiene que ser accesible sin token:
                         // es donde se consigue el token.
-                        auth.requestMatchers("/demo/auth/login", "/demo/auth/subjects").permitAll();
+                        auth.requestMatchers("/demo/auth/login", "/demo/auth/info").permitAll();
                     }
                     auth.anyRequest().authenticated();
                 }

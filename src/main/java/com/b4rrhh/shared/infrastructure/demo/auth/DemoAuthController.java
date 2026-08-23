@@ -13,9 +13,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.Map;
-
 /**
  * Puerta de entrada de la demo publica.
  *
@@ -39,15 +36,15 @@ public class DemoAuthController {
     }
 
     /**
-     * Que perfiles ofrece la demo. La pantalla de acceso lo pinta sola, asi que
-     * anadir un perfil es tocar configuracion, no codigo.
+     * Lo que la pantalla necesita: perfiles disponibles y la contrasena.
      *
-     * Publicar la lista no revela nada: son sujetos sinteticos de una base de
-     * datos sintetica, y sin la contrasena no sirven de nada.
+     * Publicar esto no revela nada. Son sujetos sinteticos de una base de datos
+     * sintetica, y la contrasena de una demo abierta esta para usarse. Anadir un
+     * perfil pasa a ser tocar configuracion, no recompilar el frontend.
      */
-    @GetMapping("/subjects")
-    public Map<String, List<String>> availableSubjects() {
-        return properties.getSubjects();
+    @GetMapping("/info")
+    public DemoAuthInfo info() {
+        return new DemoAuthInfo(properties.getPassword(), properties.getSubjects());
     }
 
     @PostMapping("/login")
