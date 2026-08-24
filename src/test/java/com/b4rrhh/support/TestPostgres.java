@@ -16,44 +16,73 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * La imagen es la misma que usa docker/postgres/docker-compose.yaml. Si un dia
  * subes una, sube la otra: que los tests pasen contra una version distinta de
  * la que corre en produccion es exactamente el fallo que esto viene a evitar.
+ *
+ * Si en el entorno hay TEST_DB_HOST, esta clase no arranca nada y usa el
+ * Postgres que le digan. Es lo que hace el pipeline: ver la nota de abajo.
  */
 public final class TestPostgres {
 
-    private static final PostgreSQLContainer<?> CONTAINER =
-            new PostgreSQLContainer<>("postgres:16")
-                    .withDatabaseName("b4rrhh")
-                    .withUsername("b4rrhh")
-                    .withPassword("b4rrhh")
-                    // Margen sobre el limite por defecto (100). No sustituye a
-                    // limitar el pool: es el colchon para cuando la suite crezca.
-                    .withCommand("postgres", "-c", "max_connections=300");
+    /**
+     * Postgres puesto por quien lanza la suite. Se activa poniendo TEST_DB_HOST
+     * en el entorno; entonces no se arranca ningun contenedor.
+     *
+     * Existe por el pipeline. El runner de Gitea es dind: los puertos que
+     * Testcontainers publicaria quedan en el demonio, no en el contenedor del
+     * job, y el job no llega a ellos. Levantando el Postgres en la misma red
+     * del job y pasando aqui su nombre, se hablan por el DNS de Docker y no
+     * hace falta que ningun puerto salga a ninguna parte.
+     *
+     * En tu maquina no pongas nada: sin la variable, todo sigue igual.
+     */
+    private static final String HOST_EXTERNO = variable("TEST_DB_HOST", null);
 
-    static {
-        CONTAINER.start();
+    private static final PostgreSQLContainer<?> CONTAINER = arrancarSiHaceFalta();
+
+    private static PostgreSQLContainer<?> arrancarSiHaceFalta() {
+        if (HOST_EXTERNO != null) {
+            return null;
+        }
+        PostgreSQLContainer<?> contenedor = new PostgreSQLContainer<>("postgres:16")
+                .withDatabaseName("b4rrhh")
+                .withUsername("b4rrhh")
+                .withPassword("b4rrhh")
+                // Margen sobre el limite por defecto (100). No sustituye a
+                // limitar el pool: es el colchon para cuando la suite crezca.
+                .withCommand("postgres", "-c", "max_connections=300");
+        contenedor.start();
+        return contenedor;
     }
 
     private TestPostgres() {
     }
 
     public static String host() {
-        return CONTAINER.getHost();
+        return CONTAINER == null ? HOST_EXTERNO : CONTAINER.getHost();
     }
 
     public static int port() {
-        return CONTAINER.getFirstMappedPort();
+        return CONTAINER == null
+                ? Integer.parseInt(variable("TEST_DB_PORT", "5432"))
+                : CONTAINER.getFirstMappedPort();
     }
 
     public static String username() {
-        return CONTAINER.getUsername();
+        return CONTAINER == null ? variable("TEST_DB_USERNAME", "b4rrhh") : CONTAINER.getUsername();
     }
 
     public static String password() {
-        return CONTAINER.getPassword();
+        return CONTAINER == null ? variable("TEST_DB_PASSWORD", "b4rrhh") : CONTAINER.getPassword();
     }
 
-    /** La base que crea la imagen al arrancar; sirve de base administrativa. */
+    /** La base que ya existe al arrancar; sirve de base administrativa. */
     public static String defaultDatabase() {
-        return CONTAINER.getDatabaseName();
+        return CONTAINER == null ? variable("TEST_DB_NAME", "b4rrhh") : CONTAINER.getDatabaseName();
+    }
+
+    /** Vacia y sin definir son lo mismo: en un YAML es facil dejar una a medias. */
+    private static String variable(String nombre, String pordefecto) {
+        String valor = System.getenv(nombre);
+        return valor == null || valor.isBlank() ? pordefecto : valor;
     }
 
     public static String jdbcUrl(String database) {

@@ -1,0 +1,132 @@
+# ============================================================
+#  CI/CD del backend de B4RRHH
+#
+#  Igual que el de la web personal, con un paso mas por delante: aqui la
+#  suite pasa ANTES de construir la imagen. El Dockerfile compila con
+#  -DskipTests precisamente porque cuenta con este fichero.
+#
+#  La parte rara es el Postgres. Los tests usan Testcontainers, y el runner
+#  de Gitea es dind: los puertos que Testcontainers publicaria se quedan en
+#  el demonio, no en el contenedor del job, asi que el job no llegaria a
+#  ellos. En vez de pelearse con eso, aqui se levanta el Postgres a mano en
+#  una red propia y se corre Maven en esa misma red: se hablan por el DNS de
+#  Docker, sin publicar un solo puerto. TestPostgres se aparta al ver
+#  TEST_DB_HOST en el entorno.
+#
+#  Maven va en su propio contenedor y no en el del job a proposito: asi esto
+#  no depende de que la imagen del runner traiga un JDK 21, y usa la misma
+#  version de Maven que el Dockerfile.
+# ============================================================
+name: Test, build and deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  # La IP y no git.bifor.casa: la CT tiene DNS de Cloudflare y el firewall
+  # solo le abre esta IP y este puerto.
+  REGISTRY: 192.168.1.104:3000/b4rrhh
+  IMAGEN: b4rrhh-api
+  SERVIDOR: 192.168.1.151
+  RED: ci-${{ github.sha }}
+  PG: pg-${{ github.sha }}
+  MVN: mvn-${{ github.sha }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Levantar el Postgres de los tests
+        run: |
+          # Por si una ejecucion anterior del mismo commit dejo restos.
+          docker rm -f "${{ env.PG }}" "${{ env.MVN }}" 2>/dev/null || true
+          docker network rm "${{ env.RED }}" 2>/dev/null || true
+
+          docker network create "${{ env.RED }}"
+          docker run -d --name "${{ env.PG }}" --network "${{ env.RED }}" \
+            -e POSTGRES_DB=b4rrhh \
+            -e POSTGRES_USER=b4rrhh \
+            -e POSTGRES_PASSWORD=b4rrhh \
+            postgres:16 postgres -c max_connections=300
+
+          # Sin esperar aqui, el primer contexto de Spring se encuentra la
+          # base a medio arrancar y el fallo aparece en un test cualquiera.
+          for i in $(seq 1 40); do
+            docker exec "${{ env.PG }}" pg_isready -U b4rrhh -d b4rrhh && break
+            sleep 2
+          done
+
+      - name: Pasar la suite
+        run: |
+          docker create \
+            --name "${{ env.MVN }}" \
+            --network "${{ env.RED }}" \
+            -e TEST_DB_HOST="${{ env.PG }}" \
+            # TZ y no MAVEN_OPTS: Surefire forkea otro JVM que no hereda
+            # MAVEN_OPTS, asi que los tests correrian en UTC. Con nomina de
+            # por medio, una hora de diferencia entre tu maquina y el
+            # pipeline es un fallo que no se reproduce.
+            -e TZ=Europe/Madrid \
+            -v b4rrhh-m2:/root/.m2 \
+            -w /app \
+            maven:3.9-eclipse-temurin-21 \
+            mvn -B test
+
+          # docker cp y no un bind mount: el demonio es el de dind y no ve el
+          # disco de este contenedor, asi que el codigo hay que enviarselo.
+          docker cp "$GITHUB_WORKSPACE" "${{ env.MVN }}":/app
+
+          # -a engancha la salida y devuelve el codigo de salida de Maven:
+          # si la suite falla, el paso falla.
+          docker start -a "${{ env.MVN }}"
+
+      - name: Entrar en el registry
+        run: |
+          echo "${{ secrets.REGISTRY_TOKEN }}" \
+            | docker login ${{ env.REGISTRY }} -u "${{ secrets.REGISTRY_USER }}" --password-stdin
+
+      - name: Construir y subir la imagen
+        run: |
+          docker build \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGEN }}:${{ github.sha }} \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGEN }}:latest \
+            .
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGEN }}:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGEN }}:latest
+
+      - name: Preparar la llave SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          ssh-keyscan -H ${{ env.SERVIDOR }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Desplegar
+        run: |
+          # Solo se toca .env.api-tag. El del front vive aparte para que
+          # publicar el backend no le cambie la imagen al frontend.
+          ssh -i ~/.ssh/deploy deploy@${{ env.SERVIDOR }} \
+            "cd /opt/b4rrhh && \
+             [ -f .env.web-tag ] || echo 'WEB_TAG=latest' > .env.web-tag && \
+             echo 'API_TAG=${{ github.sha }}' > .env.api-tag && \
+             docker compose --env-file .env --env-file .env.api-tag --env-file .env.web-tag pull api && \
+             docker compose --env-file .env --env-file .env.api-tag --env-file .env.web-tag up -d && \
+             docker image prune -f"
+
+      - name: Comprobar que sigue en pie
+        run: |
+          sleep 15
+          ssh -i ~/.ssh/deploy deploy@${{ env.SERVIDOR }} \
+            "cd /opt/b4rrhh && docker compose ps --format '{{.Name}} {{.Status}}'"
+
+      - name: Recoger los contenedores de los tests
+        if: always()
+        run: |
+          docker rm -f "${{ env.MVN }}" "${{ env.PG }}" 2>/dev/null || true
+          docker network rm "${{ env.RED }}" 2>/dev/null || true
