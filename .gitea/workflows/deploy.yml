@@ -49,11 +49,26 @@ jobs:
           docker network rm "${{ env.RED }}" 2>/dev/null || true
 
           docker network create "${{ env.RED }}"
+          # Sin fsync ni escritura sincrona: esta base vive lo que dura el job y
+          # muere con el. Que sobreviva a un corte de luz no aporta nada aqui.
+          # NO se parece al Postgres de produccion en durabilidad, pero si en
+          # todo lo que los tests comprueban: tipos, plegado de identificadores,
+          # casts y restricciones.
+          #
+          # Los datos se quedan en disco y no en tmpfs a proposito. Lo probamos
+          # y estaba mal medido: el "io full" que vimos no lo causaba este
+          # Postgres, sino la CT quedandose sin memoria y tirando de swap. Un
+          # tmpfs aqui solo sirve para quedarse sin sitio a mitad de la suite y
+          # fallar con un "No space left on device" que no dice nada.
           docker run -d --name "${{ env.PG }}" --network "${{ env.RED }}" \
             -e POSTGRES_DB=b4rrhh \
             -e POSTGRES_USER=b4rrhh \
             -e POSTGRES_PASSWORD=b4rrhh \
-            postgres:16 postgres -c max_connections=300
+            postgres:16 postgres \
+              -c max_connections=300 \
+              -c fsync=off \
+              -c full_page_writes=off \
+              -c synchronous_commit=off
 
           # Sin esperar aqui, el primer contexto de Spring se encuentra la
           # base a medio arrancar y el fallo aparece en un test cualquiera.
@@ -68,9 +83,24 @@ jobs:
           # MAVEN_OPTS, asi que los tests correrian en UTC. Con nomina de por
           # medio, una hora de diferencia entre tu maquina y el pipeline es un
           # fallo que no se reproduce.
+          #
+          # Techos calculados sobre lo que tiene la CT104 (8 hilos, 12 GB), no
+          # sobre el nodo. Sin ellos, Maven se come la CT entera, y ahi dentro
+          # vive tambien el Gitea que te ensena si el pipeline va bien: la
+          # primera vez, el build tumbo la web que tenia que informar del build.
+          # Dejando 3 hilos y ~5 GB libres, Gitea sigue respondiendo mientras
+          # se construye.
+          #
+          # JAVA_TOOL_OPTIONS y no MAVEN_OPTS: el JVM lo lee del entorno al
+          # arrancar, asi que le llega tambien al que forkea Surefire, que es
+          # el que de verdad necesita el heap. Si algun dia aparece un
+          # OutOfMemoryError, se sube este porcentaje o el -m; no se quitan.
           docker create \
             --name "${{ env.MVN }}" \
             --network "${{ env.RED }}" \
+            --cpus 5 \
+            -m 6g \
+            -e JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=60 \
             -e TEST_DB_HOST="${{ env.PG }}" \
             -e TZ=Europe/Madrid \
             -v b4rrhh-m2:/root/.m2 \
