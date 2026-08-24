@@ -80,7 +80,11 @@ jobs:
 
           # docker cp y no un bind mount: el demonio es el de dind y no ve el
           # disco de este contenedor, asi que el codigo hay que enviarselo.
-          docker cp "$GITHUB_WORKSPACE" "${{ env.MVN }}":/app
+          #
+          # El "/." del final no es adorno. docker create -w /app ya ha creado
+          # /app, y contra un destino que existe "cp origen dest" copia la
+          # CARPETA dentro (/app/backend/pom.xml). Con "/." copia su contenido.
+          docker cp "$GITHUB_WORKSPACE/." "${{ env.MVN }}":/app
 
           # -a engancha la salida y devuelve el codigo de salida de Maven:
           # si la suite falla, el paso falla.
