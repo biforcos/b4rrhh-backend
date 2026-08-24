@@ -44,3 +44,6 @@ docs/architecture/adr/ADR_BUNDLE.md
 
 # Git worktrees
 .worktrees/
+
+# Local de Claude Code: guarda comandos autorizados con sus argumentos.
+.claude/settings.local.json
