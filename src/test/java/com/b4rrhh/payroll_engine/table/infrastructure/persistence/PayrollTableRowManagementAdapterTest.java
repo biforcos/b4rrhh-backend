@@ -1,10 +1,13 @@
 package com.b4rrhh.payroll_engine.table.infrastructure.persistence;
 
+import com.b4rrhh.support.TestPostgresInitializer;
 import com.b4rrhh.payroll_engine.table.domain.model.PayrollTableRow;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -24,6 +27,12 @@ import static org.assertj.core.api.Assertions.assertThat;
         "spring.jpa.hibernate.ddl-auto=none",
         "spring.flyway.enabled=true"
 })
+// Postgres de verdad en vez del H2 que Spring pone por defecto. Este test
+// aplica un subconjunto de las migraciones reales sobre una base virgen que le
+// prepara el initializer, asi que hasta ahora estaba ejecutando SQL de
+// produccion contra un motor que no es el de produccion.
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@ContextConfiguration(initializers = TestPostgresInitializer.class)
 @Import(PayrollTableRowManagementAdapter.class)
 class PayrollTableRowManagementAdapterTest {
 

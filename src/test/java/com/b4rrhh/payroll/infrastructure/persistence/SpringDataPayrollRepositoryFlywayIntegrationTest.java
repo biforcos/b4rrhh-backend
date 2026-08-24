@@ -1,10 +1,13 @@
 package com.b4rrhh.payroll.infrastructure.persistence;
 
+import com.b4rrhh.support.TestPostgresInitializer;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -27,6 +30,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         "spring.jpa.hibernate.ddl-auto=none",
         "spring.flyway.enabled=true"
 })
+// Postgres de verdad en vez del H2 que Spring pone por defecto. Este test
+// aplica un subconjunto de las migraciones reales sobre una base virgen que le
+// prepara el initializer, asi que hasta ahora estaba ejecutando SQL de
+// produccion contra un motor que no es el de produccion.
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@ContextConfiguration(initializers = TestPostgresInitializer.class)
 class SpringDataPayrollRepositoryFlywayIntegrationTest {
 
     @TempDir
@@ -102,7 +111,7 @@ class SpringDataPayrollRepositoryFlywayIntegrationTest {
         assertThrows(
             DataIntegrityViolationException.class,
             () -> jdbcTemplate.update(
-                "insert into payroll.payroll_context_snapshot (payroll_id, snapshot_type_code, source_vertical_code, source_business_key_json, snapshot_payload_json) values (?, ?, ?, ?, ?)",
+                "insert into payroll.payroll_context_snapshot (payroll_id, snapshot_type_code, source_vertical_code, source_business_key_json, snapshot_payload_json) values (?, ?, ?, cast(? as json), cast(? as json))",
                 saved.getId(),
                 "PRESENCE",
                 "EMPLOYEE",

@@ -1,9 +1,12 @@
 package com.b4rrhh.payroll.infrastructure.persistence;
 
+import com.b4rrhh.support.TestPostgresInitializer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -24,6 +27,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
         "spring.jpa.hibernate.ddl-auto=none",
         "spring.flyway.enabled=true"
 })
+// Postgres de verdad en vez del H2 que Spring pone por defecto. Este test
+// aplica un subconjunto de las migraciones reales sobre una base virgen que le
+// prepara el initializer, asi que hasta ahora estaba ejecutando SQL de
+// produccion contra un motor que no es el de produccion.
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@ContextConfiguration(initializers = TestPostgresInitializer.class)
 class PayrollLaunchPersistenceFlywayIntegrationTest {
 
     @TempDir
@@ -67,7 +76,7 @@ class PayrollLaunchPersistenceFlywayIntegrationTest {
     void cascadesPayrollWarningsWhenPayrollIsDeleted() {
         Long payrollId = insertPayroll();
         jdbcTemplate.update(
-                "insert into payroll.payroll_warning (payroll_id, warning_code, severity_code, message, details_json) values (?, ?, ?, ?, ?)",
+                "insert into payroll.payroll_warning (payroll_id, warning_code, severity_code, message, details_json) values (?, ?, ?, ?, cast(? as json))",
                 payrollId,
                 "MISSING_DATA",
                 "ERROR",
@@ -84,7 +93,7 @@ class PayrollLaunchPersistenceFlywayIntegrationTest {
     void cascadesRunMessagesWhenRunIsDeleted() {
         Long runId = insertCalculationRun("REQUESTED");
         jdbcTemplate.update(
-                "insert into payroll.calculation_run_message (run_id, message_code, severity_code, message, details_json) values (?, ?, ?, ?, ?)",
+                "insert into payroll.calculation_run_message (run_id, message_code, severity_code, message, details_json) values (?, ?, ?, ?, cast(? as json))",
                 runId,
                 "RUN_INFO",
                 "INFO",
@@ -108,11 +117,15 @@ class PayrollLaunchPersistenceFlywayIntegrationTest {
     }
 
     private Integer tableCount(String schemaName, String tableName) {
+        // Sin toUpperCase: H2 pliega los identificadores sin comillas a
+        // MAYUSCULAS y Postgres a minusculas. Preguntando en mayusculas este
+        // test encontraba las tablas en H2 y no las encontraba en el motor de
+        // produccion, donde se llaman en minuscula.
         return jdbcTemplate.queryForObject(
                 "select count(*) from information_schema.tables where table_schema = ? and table_name = ?",
                 Integer.class,
-                schemaName.toUpperCase(),
-                tableName.toUpperCase()
+                schemaName,
+                tableName
         );
     }
 
@@ -122,7 +135,7 @@ class PayrollLaunchPersistenceFlywayIntegrationTest {
 
     private Long insertCalculationRun(String status) {
         jdbcTemplate.update(
-                "insert into payroll.calculation_run (rule_system_code, payroll_period_code, payroll_type_code, calculation_engine_code, calculation_engine_version, requested_at, requested_by, status, target_selection_json, total_candidates, total_eligible, total_claimed, total_skipped_not_eligible, total_skipped_already_claimed, total_calculated, total_not_valid, total_errors, summary_json) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "insert into payroll.calculation_run (rule_system_code, payroll_period_code, payroll_type_code, calculation_engine_code, calculation_engine_version, requested_at, requested_by, status, target_selection_json, total_candidates, total_eligible, total_claimed, total_skipped_not_eligible, total_skipped_already_claimed, total_calculated, total_not_valid, total_errors, summary_json) values (?, ?, ?, ?, ?, ?, ?, ?, cast(? as json), ?, ?, ?, ?, ?, ?, ?, ?, cast(? as json))",
                 "ESP",
                 "202501",
                 "NORMAL",
@@ -200,7 +213,7 @@ class PayrollLaunchPersistenceFlywayIntegrationTest {
         );
 
         jdbcTemplate.update(
-                "insert into payroll.payroll_context_snapshot (payroll_id, snapshot_type_code, source_vertical_code, source_business_key_json, snapshot_payload_json) values ((select max(id) from payroll.payroll), ?, ?, ?, ?)",
+                "insert into payroll.payroll_context_snapshot (payroll_id, snapshot_type_code, source_vertical_code, source_business_key_json, snapshot_payload_json) values ((select max(id) from payroll.payroll), ?, ?, cast(? as json), cast(? as json))",
                 "PRESENCE",
                 "EMPLOYEE",
                 "{\"presenceNumber\":1}",

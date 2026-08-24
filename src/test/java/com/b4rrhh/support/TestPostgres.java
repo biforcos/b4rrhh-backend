@@ -23,7 +23,10 @@ public final class TestPostgres {
             new PostgreSQLContainer<>("postgres:16")
                     .withDatabaseName("b4rrhh")
                     .withUsername("b4rrhh")
-                    .withPassword("b4rrhh");
+                    .withPassword("b4rrhh")
+                    // Margen sobre el limite por defecto (100). No sustituye a
+                    // limitar el pool: es el colchon para cuando la suite crezca.
+                    .withCommand("postgres", "-c", "max_connections=300");
 
     static {
         CONTAINER.start();
