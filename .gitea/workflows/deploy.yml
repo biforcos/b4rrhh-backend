@@ -64,14 +64,14 @@ jobs:
 
       - name: Pasar la suite
         run: |
+          # TZ y no MAVEN_OPTS: Surefire forkea otro JVM que no hereda
+          # MAVEN_OPTS, asi que los tests correrian en UTC. Con nomina de por
+          # medio, una hora de diferencia entre tu maquina y el pipeline es un
+          # fallo que no se reproduce.
           docker create \
             --name "${{ env.MVN }}" \
             --network "${{ env.RED }}" \
             -e TEST_DB_HOST="${{ env.PG }}" \
-            # TZ y no MAVEN_OPTS: Surefire forkea otro JVM que no hereda
-            # MAVEN_OPTS, asi que los tests correrian en UTC. Con nomina de
-            # por medio, una hora de diferencia entre tu maquina y el
-            # pipeline es un fallo que no se reproduce.
             -e TZ=Europe/Madrid \
             -v b4rrhh-m2:/root/.m2 \
             -w /app \
