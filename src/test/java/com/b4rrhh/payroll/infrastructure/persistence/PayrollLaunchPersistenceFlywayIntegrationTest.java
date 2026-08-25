@@ -1,22 +1,15 @@
 package com.b4rrhh.payroll.infrastructure.persistence;
 
-import com.b4rrhh.support.TestPostgresInitializer;
+import com.b4rrhh.support.EsquemaRealInitializer;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
@@ -25,31 +18,18 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @DataJpaTest(properties = {
         "spring.jpa.hibernate.ddl-auto=none",
-        "spring.flyway.enabled=true"
+        "spring.flyway.enabled=false"
 })
-// Postgres de verdad en vez del H2 que Spring pone por defecto. Este test
-// aplica un subconjunto de las migraciones reales sobre una base virgen que le
-// prepara el initializer, asi que hasta ahora estaba ejecutando SQL de
-// produccion contra un motor que no es el de produccion.
+// El esquema no lo declara el test: es el de produccion, aplicado por Flyway
+// una vez y clonado para este contexto (ver EsquemaReal). El subconjunto de
+// migraciones que se copiaba aqui estaba congelado: una migracion futura que
+// tocara estas tablas no se veia.
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@ContextConfiguration(initializers = TestPostgresInitializer.class)
+@ContextConfiguration(initializers = EsquemaRealInitializer.class)
 class PayrollLaunchPersistenceFlywayIntegrationTest {
-
-    @TempDir
-    static Path tempDir;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
-
-    @DynamicPropertySource
-    static void registerProperties(DynamicPropertyRegistry registry) throws IOException {
-        Path migrationDirectory = Files.createDirectories(tempDir.resolve("flyway-payroll-launch"));
-        copyMigration(migrationDirectory, "V53__create_payroll_tables.sql");
-        copyMigration(migrationDirectory, "V54__add_payroll_child_unique_constraints.sql");
-        copyMigration(migrationDirectory, "V55__create_payroll_launch_persistence_model.sql");
-
-        registry.add("spring.flyway.locations", () -> "filesystem:" + migrationDirectory.toAbsolutePath());
-    }
 
     @Test
     void createsLaunchPersistenceTables() {
@@ -221,17 +201,5 @@ class PayrollLaunchPersistenceFlywayIntegrationTest {
         );
 
         return jdbcTemplate.queryForObject("select max(id) from payroll.payroll", Long.class);
-    }
-
-    private static void copyMigration(Path migrationDirectory, String fileName) throws IOException {
-        Path target = migrationDirectory.resolve(fileName);
-        try (InputStream inputStream = PayrollLaunchPersistenceFlywayIntegrationTest.class
-                .getClassLoader()
-                .getResourceAsStream("db/migration/" + fileName)) {
-            if (inputStream == null) {
-                throw new IllegalStateException("Migration not found on classpath: " + fileName);
-            }
-            Files.copy(inputStream, target);
-        }
     }
 }

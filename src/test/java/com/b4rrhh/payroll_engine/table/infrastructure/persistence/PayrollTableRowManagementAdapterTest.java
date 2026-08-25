@@ -1,22 +1,15 @@
 package com.b4rrhh.payroll_engine.table.infrastructure.persistence;
 
-import com.b4rrhh.support.TestPostgresInitializer;
+import com.b4rrhh.support.EsquemaRealInitializer;
 import com.b4rrhh.payroll_engine.table.domain.model.PayrollTableRow;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -25,30 +18,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest(properties = {
         "spring.jpa.hibernate.ddl-auto=none",
-        "spring.flyway.enabled=true"
+        "spring.flyway.enabled=false"
 })
-// Postgres de verdad en vez del H2 que Spring pone por defecto. Este test
-// aplica un subconjunto de las migraciones reales sobre una base virgen que le
-// prepara el initializer, asi que hasta ahora estaba ejecutando SQL de
-// produccion contra un motor que no es el de produccion.
+// El esquema no lo declara el test: es el de produccion, aplicado por Flyway
+// una vez y clonado para este contexto (ver EsquemaReal). El subconjunto de
+// migraciones que se copiaba aqui estaba congelado: una migracion futura que
+// tocara estas tablas no se veia. El codigo de tabla SB_TEST no es ninguno
+// de los que siembran las migraciones (SB, PC).
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@ContextConfiguration(initializers = TestPostgresInitializer.class)
+@ContextConfiguration(initializers = EsquemaRealInitializer.class)
 @Import(PayrollTableRowManagementAdapter.class)
 class PayrollTableRowManagementAdapterTest {
 
-    @TempDir
-    static Path tempDir;
-
     @Autowired
     private PayrollTableRowManagementAdapter adapter;
-
-    @DynamicPropertySource
-    static void registerProperties(DynamicPropertyRegistry registry) throws IOException {
-        Path migrationDirectory = Files.createDirectories(tempDir.resolve("flyway-table-row"));
-        copyMigration(migrationDirectory, "V53__create_payroll_tables.sql");
-        copyMigration(migrationDirectory, "V64__create_payroll_table_row_table.sql");
-        registry.add("spring.flyway.locations", () -> "filesystem:" + migrationDirectory.toAbsolutePath());
-    }
 
     @Test
     void savesAndFindsRowsByTableCode() {
@@ -113,15 +96,5 @@ class PayrollTableRowManagementAdapterTest {
 
         boolean notExists = adapter.existsByBusinessKey("ESP", "SB_TEST", "SB-G4", LocalDate.of(2025, 1, 1));
         assertThat(notExists).isFalse();
-    }
-
-    private static void copyMigration(Path dir, String fileName) throws IOException {
-        Path target = dir.resolve(fileName);
-        try (InputStream in = PayrollTableRowManagementAdapterTest.class
-                .getClassLoader()
-                .getResourceAsStream("db/migration/" + fileName)) {
-            if (in == null) throw new IllegalStateException("Migration not found: " + fileName);
-            Files.copy(in, target);
-        }
     }
 }
