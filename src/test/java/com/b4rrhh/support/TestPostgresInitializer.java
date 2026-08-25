@@ -4,10 +4,6 @@ import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -30,7 +26,7 @@ public class TestPostgresInitializer implements ApplicationContextInitializer<Co
     @Override
     public void initialize(ConfigurableApplicationContext applicationContext) {
         String base = "test_" + SECUENCIA.incrementAndGet() + "_" + Long.toHexString(System.nanoTime());
-        crearBase(base);
+        TestPostgres.crearBase(base, null);
 
         TestPropertyValues.of(
                 "spring.datasource.url=" + TestPostgres.jdbcUrl(base),
@@ -46,18 +42,5 @@ public class TestPostgresInitializer implements ApplicationContextInitializer<Co
                 "spring.datasource.hikari.maximum-pool-size=2",
                 "spring.datasource.hikari.minimum-idle=0"
         ).applyTo(applicationContext.getEnvironment());
-    }
-
-    private void crearBase(String nombre) {
-        String urlAdmin = TestPostgres.jdbcUrl(TestPostgres.defaultDatabase());
-        try (Connection conexion = DriverManager.getConnection(
-                     urlAdmin, TestPostgres.username(), TestPostgres.password());
-             Statement sentencia = conexion.createStatement()) {
-            // El nombre lo genera esta clase, no viene de fuera: no hay
-            // interpolacion de nada que no controlemos.
-            sentencia.execute("CREATE DATABASE " + nombre);
-        } catch (SQLException e) {
-            throw new IllegalStateException("No se pudo crear la base de test " + nombre, e);
-        }
     }
 }

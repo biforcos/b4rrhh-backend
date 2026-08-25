@@ -2,6 +2,11 @@ package com.b4rrhh.support;
 
 import org.testcontainers.containers.PostgreSQLContainer;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
+
 /**
  * Un unico Postgres para toda la ejecucion de la suite.
  *
@@ -87,5 +92,25 @@ public final class TestPostgres {
 
     public static String jdbcUrl(String database) {
         return "jdbc:postgresql://" + host() + ":" + port() + "/" + database;
+    }
+
+    /**
+     * Crea una base dentro de este Postgres. Con plantilla, Postgres la copia
+     * fichero a fichero en vez de partir de cero; sin ella, sale vacia.
+     *
+     * El nombre lo generan los initializers, no viene de fuera: no hay
+     * interpolacion de nada que no controlemos.
+     */
+    public static void crearBase(String nombre, String plantilla) {
+        String sentencia = plantilla == null
+                ? "CREATE DATABASE " + nombre
+                : "CREATE DATABASE " + nombre + " TEMPLATE " + plantilla;
+        String urlAdmin = jdbcUrl(defaultDatabase());
+        try (Connection conexion = DriverManager.getConnection(urlAdmin, username(), password());
+             Statement statement = conexion.createStatement()) {
+            statement.execute(sentencia);
+        } catch (SQLException e) {
+            throw new IllegalStateException("No se pudo crear la base de test " + nombre, e);
+        }
     }
 }
