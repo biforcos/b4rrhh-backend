@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.journey.infrastructure.persistence;
 
+import com.b4rrhh.support.TestPostgresInitializer;
 import com.b4rrhh.employee.journey.application.port.JourneyContractReadPort;
 import com.b4rrhh.employee.journey.application.port.JourneyContractRecord;
 import com.b4rrhh.employee.journey.application.port.JourneyCostCenterReadPort;
@@ -16,6 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.test.context.ContextConfiguration;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -35,6 +38,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
         JourneyCostCenterReadAdapter.class,
         EmployeeJourneyLookupAdapter.class
 })
+// Estos tests levantan su propio esquema a mano en @BeforeEach, y hasta ahora
+// lo hacian contra H2. El DDL es el mismo; el motor no. Comprobar una
+// restriccion de integridad en una base que no es la de produccion solo
+// demuestra que H2 la respeta.
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@ContextConfiguration(initializers = TestPostgresInitializer.class)
 class JourneyReadPersistenceAdapterIntegrationTest {
 
     @Autowired

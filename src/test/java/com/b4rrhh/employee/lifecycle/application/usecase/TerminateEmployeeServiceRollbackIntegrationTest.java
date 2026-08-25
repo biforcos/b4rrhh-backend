@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.lifecycle.application.usecase;
 
+import com.b4rrhh.support.TestPostgresInitializer;
 import com.b4rrhh.employee.absence.application.usecase.CloseOpenAbsenceAtTerminationUseCase;
 import com.b4rrhh.employee.contract.application.usecase.ListEmployeeContractsUseCase;
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
@@ -31,6 +32,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.test.context.ContextConfiguration;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -49,6 +52,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
         TerminateEmployeeService.class,
         TerminateEmployeeServiceRollbackIntegrationTest.TerminateEmployeeRollbackTestConfig.class
 })
+// Estos tests levantan su propio esquema a mano en @BeforeEach, y hasta ahora
+// lo hacian contra H2. El DDL es el mismo; el motor no. Comprobar una
+// restriccion de integridad en una base que no es la de produccion solo
+// demuestra que H2 la respeta.
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@ContextConfiguration(initializers = TestPostgresInitializer.class)
 class TerminateEmployeeServiceRollbackIntegrationTest {
 
     @Autowired

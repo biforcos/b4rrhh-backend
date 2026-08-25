@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.contract.application.usecase;
 
+import com.b4rrhh.support.TestPostgresInitializer;
 import com.b4rrhh.employee.contract.application.command.ReplaceContractFromDateCommand;
 import com.b4rrhh.employee.contract.application.port.EmployeeContractContext;
 import com.b4rrhh.employee.contract.application.port.EmployeeContractLookupPort;
@@ -19,6 +20,8 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.test.context.ContextConfiguration;
 
 import java.sql.Date;
 import java.time.LocalDate;
@@ -39,6 +42,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
         ReplaceContractFromDateService.class,
         ReplaceContractFromDateServiceIntegrationTest.ReplaceContractTestConfig.class
 })
+// Estos tests levantan su propio esquema a mano en @BeforeEach, y hasta ahora
+// lo hacian contra H2. El DDL es el mismo; el motor no. Comprobar una
+// restriccion de integridad en una base que no es la de produccion solo
+// demuestra que H2 la respeta.
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@ContextConfiguration(initializers = TestPostgresInitializer.class)
 class ReplaceContractFromDateServiceIntegrationTest {
 
     private static final String RULE_SYSTEM_CODE = "ESP";

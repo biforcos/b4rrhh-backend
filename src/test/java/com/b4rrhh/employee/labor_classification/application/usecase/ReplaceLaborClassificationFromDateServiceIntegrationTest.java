@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.labor_classification.application.usecase;
 
+import com.b4rrhh.support.TestPostgresInitializer;
 import com.b4rrhh.employee.labor_classification.application.command.ReplaceLaborClassificationFromDateCommand;
 import com.b4rrhh.employee.labor_classification.application.port.EmployeeLaborClassificationContext;
 import com.b4rrhh.employee.labor_classification.application.port.EmployeeLaborClassificationLookupPort;
@@ -19,6 +20,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.test.context.ContextConfiguration;
+
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Date;
 import java.time.LocalDate;
@@ -39,6 +45,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
         ReplaceLaborClassificationFromDateService.class,
         ReplaceLaborClassificationFromDateServiceIntegrationTest.ReplaceLaborClassificationTestConfig.class
 })
+// Estos tests levantan su propio esquema a mano en @BeforeEach, y hasta ahora
+// lo hacian contra H2. El DDL es el mismo; el motor no. Comprobar una
+// restriccion de integridad en una base que no es la de produccion solo
+// demuestra que H2 la respeta.
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@ContextConfiguration(initializers = TestPostgresInitializer.class)
 class ReplaceLaborClassificationFromDateServiceIntegrationTest {
 
     private static final String RULE_SYSTEM_CODE = "ESP";
@@ -160,7 +172,18 @@ class ReplaceLaborClassificationFromDateServiceIntegrationTest {
         assertEquals("CAT_TECH_1", rows.get(0).getAgreementCategoryCode());
     }
 
+    // Este test comprueba que el servicio deshace SU transaccion cuando el
+    // insert falla. Para verlo hay que mirar desde fuera, y @DataJpaTest lo
+    // envuelve todo en una transaccion propia: dentro de ella el servicio no
+    // tiene transaccion que deshacer, y en Postgres la consulta posterior ni
+    // siquiera se ejecuta porque la transaccion quedo abortada por el fallo.
+    // Con NOT_SUPPORTED el test no abre transaccion: la preparacion se
+    // confirma, el servicio gestiona la suya, y las consultas ven lo que de
+    // verdad quedo grabado. En H2 pasaba por casualidad, no por diseno.
+    //
+    // No hace falta limpiar despues: el @BeforeEach tira y recrea las tablas.
     @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void replaceIsAtomicWhenInsertFailsAfterUpdate() {
         String tooLongAgreementCode = "AGR_CODE_LONGER_THAN_THIRTY_CHARS";
 

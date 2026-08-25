@@ -1,11 +1,14 @@
 package com.b4rrhh.employee.contract.infrastructure.persistence;
 
+import com.b4rrhh.support.TestPostgresInitializer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.test.context.ContextConfiguration;
 
 import java.time.LocalDate;
 
@@ -17,6 +20,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         "spring.jpa.hibernate.ddl-auto=none",
         "spring.flyway.enabled=false"
 })
+// Estos tests levantan su propio esquema a mano en @BeforeEach, y hasta ahora
+// lo hacian contra H2. El DDL es el mismo; el motor no. Comprobar una
+// restriccion de integridad en una base que no es la de produccion solo
+// demuestra que H2 la respeta.
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@ContextConfiguration(initializers = TestPostgresInitializer.class)
 class SpringDataContractRepositoryIntegrationTest {
 
     @Autowired
@@ -137,8 +146,12 @@ class SpringDataContractRepositoryIntegrationTest {
         assertFalse(nonOverlap);
     }
 
+    // Un fallo por test, y no dos seguidos: en Postgres, cuando una sentencia
+    // revienta dentro de una transaccion, la transaccion queda envenenada y
+    // todo lo que venga detras responde "current transaction is aborted". H2
+    // dejaba seguir, asi que los dos assertThrows cabian en un mismo test.
     @Test
-    void rejectsContractCodeLengthDifferentThanThree() {
+    void rejectsContractCodeShorterThanThree() {
         assertThrows(
                 DataIntegrityViolationException.class,
                 () -> repository.saveAndFlush(entity(
@@ -149,7 +162,10 @@ class SpringDataContractRepositoryIntegrationTest {
                         null
                 ))
         );
+    }
 
+    @Test
+    void rejectsContractCodeLongerThanThree() {
         assertThrows(
                 DataIntegrityViolationException.class,
                 () -> repository.saveAndFlush(entity(
@@ -163,7 +179,7 @@ class SpringDataContractRepositoryIntegrationTest {
     }
 
     @Test
-    void rejectsContractSubtypeCodeLengthDifferentThanThree() {
+    void rejectsContractSubtypeCodeShorterThanThree() {
         assertThrows(
                 DataIntegrityViolationException.class,
                 () -> repository.saveAndFlush(entity(
@@ -174,7 +190,10 @@ class SpringDataContractRepositoryIntegrationTest {
                         null
                 ))
         );
+    }
 
+    @Test
+    void rejectsContractSubtypeCodeLongerThanThree() {
         assertThrows(
                 DataIntegrityViolationException.class,
                 () -> repository.saveAndFlush(entity(
