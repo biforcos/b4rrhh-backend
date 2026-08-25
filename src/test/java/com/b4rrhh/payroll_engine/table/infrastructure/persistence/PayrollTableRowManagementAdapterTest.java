@@ -1,13 +1,9 @@
 package com.b4rrhh.payroll_engine.table.infrastructure.persistence;
 
-import com.b4rrhh.support.EsquemaRealInitializer;
+import com.b4rrhh.support.TestSobreEsquemaReal;
 import com.b4rrhh.payroll_engine.table.domain.model.PayrollTableRow;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.context.annotation.Import;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -16,18 +12,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=none",
-        "spring.flyway.enabled=false"
-})
-// El esquema no lo declara el test: es el de produccion, aplicado por Flyway
-// una vez y clonado para este contexto (ver EsquemaReal). El subconjunto de
-// migraciones que se copiaba aqui estaba congelado: una migracion futura que
-// tocara estas tablas no se veia. El codigo de tabla SB_TEST no es ninguno
-// de los que siembran las migraciones (SB, PC).
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@ContextConfiguration(initializers = EsquemaRealInitializer.class)
-@Import(PayrollTableRowManagementAdapter.class)
+@TestSobreEsquemaReal
+// El codigo de tabla SB_TEST no es ninguno de los que siembran las migraciones
+// (SB, PC).
 class PayrollTableRowManagementAdapterTest {
 
     @Autowired

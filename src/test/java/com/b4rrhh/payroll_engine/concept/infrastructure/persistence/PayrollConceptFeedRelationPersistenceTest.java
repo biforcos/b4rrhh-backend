@@ -1,14 +1,10 @@
 package com.b4rrhh.payroll_engine.concept.infrastructure.persistence;
 
-import com.b4rrhh.support.EsquemaRealInitializer;
+import com.b4rrhh.support.TestSobreEsquemaReal;
 import com.b4rrhh.payroll_engine.object.infrastructure.persistence.PayrollObjectEntity;
 import com.b4rrhh.payroll_engine.object.infrastructure.persistence.SpringDataPayrollObjectRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -19,17 +15,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@DataJpaTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=none",
-        "spring.flyway.enabled=false"
-})
-// El esquema no lo declara el test: es el de produccion, aplicado por Flyway
-// una vez y clonado para este contexto (ver EsquemaReal). El subconjunto de
-// migraciones que se copiaba aqui estaba congelado: una migracion futura que
-// tocara estas tablas no se veia. Los codigos de objeto que usa el test no
-// estan entre los que siembran las migraciones.
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@ContextConfiguration(initializers = EsquemaRealInitializer.class)
+@TestSobreEsquemaReal
+// Los codigos de objeto que usa el test no estan entre los que siembran las
+// migraciones.
 class PayrollConceptFeedRelationPersistenceTest {
 
     @Autowired

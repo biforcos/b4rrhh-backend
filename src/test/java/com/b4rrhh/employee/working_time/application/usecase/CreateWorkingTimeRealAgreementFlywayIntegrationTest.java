@@ -1,23 +1,10 @@
 package com.b4rrhh.employee.working_time.application.usecase;
 
-import com.b4rrhh.support.EsquemaRealInitializer;
+import com.b4rrhh.support.TestSobreEsquemaReal;
 
-import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeBusinessKeyLookupSupport;
-import com.b4rrhh.employee.working_time.application.service.DefaultWorkingTimePresenceConsistencyValidator;
-import com.b4rrhh.employee.working_time.application.service.StandardWorkingTimeDerivationPolicy;
-import com.b4rrhh.employee.working_time.infrastructure.persistence.AgreementAnnualHoursLookupAdapter;
-import com.b4rrhh.employee.working_time.infrastructure.persistence.EmployeeAgreementContextLookupAdapter;
-import com.b4rrhh.employee.working_time.infrastructure.persistence.EmployeeWorkingTimeLookupAdapter;
-import com.b4rrhh.employee.working_time.infrastructure.persistence.WorkingTimePersistenceAdapter;
-import com.b4rrhh.employee.working_time.infrastructure.persistence.WorkingTimePresenceConsistencyAdapter;
-import com.b4rrhh.rulesystem.agreementprofile.infrastructure.persistence.AgreementCatalogLookupAdapter;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ContextConfiguration;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -26,28 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@DataJpaTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=none",
-        "spring.flyway.enabled=false"
-})
-// El esquema no lo declara el test: es el de produccion, aplicado por Flyway
-// una vez y clonado para este contexto (ver EsquemaReal). Las semillas del
-// convenio real (V61) vienen incluidas; antes este test montaba su propia
-// base con un subconjunto congelado de migraciones.
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@ContextConfiguration(initializers = EsquemaRealInitializer.class)
-@Import({
-        CreateWorkingTimeService.class,
-        WorkingTimePersistenceAdapter.class,
-        EmployeeWorkingTimeLookupAdapter.class,
-        EmployeeBusinessKeyLookupSupport.class,
-        EmployeeAgreementContextLookupAdapter.class,
-        AgreementAnnualHoursLookupAdapter.class,
-        AgreementCatalogLookupAdapter.class,
-        DefaultWorkingTimePresenceConsistencyValidator.class,
-        WorkingTimePresenceConsistencyAdapter.class,
-        StandardWorkingTimeDerivationPolicy.class
-})
+@TestSobreEsquemaReal
 class CreateWorkingTimeRealAgreementFlywayIntegrationTest {
 
     private static final String RULE_SYSTEM_CODE = "ESP";

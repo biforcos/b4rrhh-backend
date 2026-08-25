@@ -1,11 +1,8 @@
 package com.b4rrhh.payroll.infrastructure.persistence;
 
-import com.b4rrhh.support.EsquemaRealInitializer;
+import com.b4rrhh.support.TestSobreEsquemaReal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -16,16 +13,7 @@ import java.time.LocalDateTime;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@DataJpaTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=none",
-        "spring.flyway.enabled=false"
-})
-// El esquema no lo declara el test: es el de produccion, aplicado por Flyway
-// una vez y clonado para este contexto (ver EsquemaReal). El subconjunto de
-// migraciones que se copiaba aqui estaba congelado: una migracion futura que
-// tocara estas tablas no se veia.
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@ContextConfiguration(initializers = EsquemaRealInitializer.class)
+@TestSobreEsquemaReal
 class PayrollLaunchPersistenceFlywayIntegrationTest {
 
     @Autowired

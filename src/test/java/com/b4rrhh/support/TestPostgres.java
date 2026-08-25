@@ -98,19 +98,49 @@ public final class TestPostgres {
      * Crea una base dentro de este Postgres. Con plantilla, Postgres la copia
      * fichero a fichero en vez de partir de cero; sin ella, sale vacia.
      *
+     * STRATEGY = FILE_COPY: desde Postgres 15 el clon por defecto (WAL_LOG)
+     * mete cada pagina copiada por el WAL, o sea, escribe la base dos veces y
+     * el WAL tarda en reciclarse. FILE_COPY copia los ficheros y fuerza un
+     * checkpoint. No es a prueba de caidas, y da igual: estas bases mueren
+     * con el contexto que las creo (ver borrarBase).
+     *
      * El nombre lo generan los initializers, no viene de fuera: no hay
      * interpolacion de nada que no controlemos.
      */
     public static void crearBase(String nombre, String plantilla) {
         String sentencia = plantilla == null
                 ? "CREATE DATABASE " + nombre
-                : "CREATE DATABASE " + nombre + " TEMPLATE " + plantilla;
+                : "CREATE DATABASE " + nombre + " TEMPLATE " + plantilla + " STRATEGY = FILE_COPY";
+        try {
+            enAdmin(sentencia);
+        } catch (SQLException e) {
+            throw new IllegalStateException("No se pudo crear la base de test " + nombre, e);
+        }
+    }
+
+    /**
+     * Borra una base de test. WITH (FORCE) corta antes las sesiones que
+     * queden abiertas: el pool ya deberia estar cerrado cuando se llama, pero
+     * una conexion rezagada no puede dejar la base huerfana.
+     *
+     * No lanza: se ejecuta al destruir contextos, a menudo en el apagado de la
+     * JVM, y un fallo ahi no debe tumbar nada. Si el Postgres efimero ya ha
+     * muerto (Ryuk se lo lleva en paralelo), la base se ha ido con el.
+     */
+    public static void borrarBase(String nombre) {
+        try {
+            enAdmin("DROP DATABASE IF EXISTS " + nombre + " WITH (FORCE)");
+        } catch (SQLException e) {
+            System.err.println("No se pudo borrar la base de test " + nombre + ": " + e.getMessage());
+        }
+    }
+
+    /** Ejecuta una sentencia conectado a la base administrativa. */
+    static void enAdmin(String sentencia) throws SQLException {
         String urlAdmin = jdbcUrl(defaultDatabase());
         try (Connection conexion = DriverManager.getConnection(urlAdmin, username(), password());
              Statement statement = conexion.createStatement()) {
             statement.execute(sentencia);
-        } catch (SQLException e) {
-            throw new IllegalStateException("No se pudo crear la base de test " + nombre, e);
         }
     }
 }

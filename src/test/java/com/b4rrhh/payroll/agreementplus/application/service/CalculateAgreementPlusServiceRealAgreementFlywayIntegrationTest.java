@@ -1,48 +1,18 @@
 package com.b4rrhh.payroll.agreementplus.application.service;
 
-import com.b4rrhh.support.EsquemaRealInitializer;
+import com.b4rrhh.support.TestSobreEsquemaReal;
 
-import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeBusinessKeyLookupSupport;
-import com.b4rrhh.employee.working_time.infrastructure.persistence.EmployeeAgreementContextLookupAdapter;
-import com.b4rrhh.payroll.basesalary.infrastructure.persistence.EmployeeAgreementCategoryLookupAdapter;
-import com.b4rrhh.payroll.basesalary.infrastructure.persistence.EmployeeByBusinessKeyLookupAdapter;
-import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollObjectActivationLookupAdapter;
-import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollObjectBindingLookupAdapter;
-import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollTableRowLookupAdapter;
 import com.b4rrhh.payroll.domain.model.PayrollConceptNotApplicableException;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ContextConfiguration;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@DataJpaTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=none",
-        "spring.flyway.enabled=false"
-})
-// El esquema no lo declara el test: es el de produccion, aplicado por Flyway
-// una vez y clonado para este contexto (ver EsquemaReal). Las semillas del
-// convenio real (V61, V68-V70) vienen incluidas; antes este test montaba su
-// propia base con un subconjunto congelado de migraciones.
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@ContextConfiguration(initializers = EsquemaRealInitializer.class)
-@Import({
-        CalculateAgreementPlusService.class,
-        PayrollObjectBindingLookupAdapter.class,
-        PayrollTableRowLookupAdapter.class,
-        PayrollObjectActivationLookupAdapter.class,
-        EmployeeAgreementCategoryLookupAdapter.class,
-        EmployeeByBusinessKeyLookupAdapter.class,
-        EmployeeAgreementContextLookupAdapter.class,
-        EmployeeBusinessKeyLookupSupport.class
-})
+@TestSobreEsquemaReal
 class CalculateAgreementPlusServiceRealAgreementFlywayIntegrationTest {
 
     private static final String RULE_SYSTEM_CODE = "ESP";

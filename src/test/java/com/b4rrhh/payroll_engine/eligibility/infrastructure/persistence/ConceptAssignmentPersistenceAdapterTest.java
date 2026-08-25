@@ -1,14 +1,10 @@
 package com.b4rrhh.payroll_engine.eligibility.infrastructure.persistence;
 
-import com.b4rrhh.support.EsquemaRealInitializer;
+import com.b4rrhh.support.TestSobreEsquemaReal;
 import com.b4rrhh.payroll_engine.eligibility.domain.model.ConceptAssignment;
 import com.b4rrhh.payroll_engine.eligibility.domain.model.EmployeeAssignmentContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.context.annotation.Import;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -28,20 +24,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  *   <li>Save round-trip preserves all fields</li>
  * </ul>
  */
-@DataJpaTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=none",
-        "spring.flyway.enabled=false"
-})
-// El esquema no lo declara el test: es el de produccion, aplicado por Flyway
-// una vez y clonado para este contexto (ver EsquemaReal). El subconjunto de
-// migraciones que se copiaba aqui estaba congelado: una migracion futura que
-// tocara estas tablas no se veia.
+@TestSobreEsquemaReal
 // El sistema de reglas no puede ser ESP: las migraciones siembran
 // concept_assignment para ESP y los recuentos de este test dejarian de
 // cuadrar. TST no lo siembra nadie.
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@ContextConfiguration(initializers = EsquemaRealInitializer.class)
-@Import(ConceptAssignmentPersistenceAdapter.class)
 class ConceptAssignmentPersistenceAdapterTest {
 
     @Autowired

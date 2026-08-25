@@ -55,6 +55,11 @@ jobs:
           # todo lo que los tests comprueban: tipos, plegado de identificadores,
           # casts y restricciones.
           #
+          # max_wal_size bajo: los clones de la plantilla del esquema real van
+          # con STRATEGY = FILE_COPY (ver TestPostgres), asi que el WAL no tiene
+          # que absorberlos; con el 1 GB por defecto tardaba en reciclarse y era
+          # disco tirado (issue #12).
+          #
           # Los datos se quedan en disco y no en tmpfs a proposito. Lo probamos
           # y estaba mal medido: el "io full" que vimos no lo causaba este
           # Postgres, sino la CT quedandose sin memoria y tirando de swap. Un
@@ -68,7 +73,8 @@ jobs:
               -c max_connections=300 \
               -c fsync=off \
               -c full_page_writes=off \
-              -c synchronous_commit=off
+              -c synchronous_commit=off \
+              -c max_wal_size=256MB
 
           # Sin esperar aqui, el primer contexto de Spring se encuentra la
           # base a medio arrancar y el fallo aparece en un test cualquiera.
