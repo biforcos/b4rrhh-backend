@@ -28,8 +28,24 @@ public class PresenceTerminationParticipant implements TerminationParticipant {
         this.closePresence = closePresence;
     }
 
+    /**
+     * El primero, y no el ultimo.
+     *
+     * El cese cierra todo lo que deriva de la presencia del empleado en la
+     * empresa. La presencia es la raiz: si se cierra al final, cada vertical
+     * que se cierra antes valida sus periodos contra una presencia que todavia
+     * llega hasta 9999-12-31, y la cobertura nunca cuadra. Cerrandola primero,
+     * todos los demas se comprueban contra el periodo que de verdad va a
+     * quedar.
+     *
+     * La regla para un vertical nuevo es entonces sencilla: si deriva de la
+     * presencia, va detras de ella. El orden entre derivados da igual.
+     *
+     * Cerrar de dentro afuera, como un destructor, era lo intuitivo. Por eso
+     * estaba asi. Pero el invariante de cobertura no lo admite.
+     */
     @Override
-    public int order() { return 60; }
+    public int order() { return 5; }
 
     @Override
     public void participate(TerminationContext ctx) {

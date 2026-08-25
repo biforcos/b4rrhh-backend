@@ -38,7 +38,9 @@ class PresenceTerminationParticipantTest {
 
     @Test
     void orderIs60() {
-        assertEquals(60, participant().order());
+        // La presencia es la raiz del cese y se cierra la primera: los demas
+        // verticales validan sus periodos contra ella.
+        assertEquals(5, participant().order());
     }
 
     @Test
