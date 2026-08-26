@@ -45,7 +45,7 @@ jobs:
       - name: Levantar el Postgres de los tests
         run: |
           # Por si una ejecucion anterior del mismo commit dejo restos.
-          docker rm -f "${{ env.PG }}" "${{ env.MVN }}" 2>/dev/null || true
+          docker rm -f -v "${{ env.PG }}" "${{ env.MVN }}" 2>/dev/null || true
           docker network rm "${{ env.RED }}" 2>/dev/null || true
 
           docker network create "${{ env.RED }}"
@@ -165,8 +165,34 @@ jobs:
           ssh -i ~/.ssh/deploy deploy@${{ env.SERVIDOR }} \
             "cd /opt/b4rrhh && docker compose ps --format '{{.Name}} {{.Status}}'"
 
-      - name: Recoger los contenedores de los tests
+      - name: Recoger los contenedores de los tests y podar el runner
         if: always()
         run: |
-          docker rm -f "${{ env.MVN }}" "${{ env.PG }}" 2>/dev/null || true
+          # -v no es opcional: sin el, "docker rm" deja vivo el volumen anonimo
+          # del Postgres, ~300 MB por pasada que nadie volvia a tocar. Asi es
+          # como se lleno la CT (issue #13).
+          docker rm -f -v "${{ env.MVN }}" "${{ env.PG }}" 2>/dev/null || true
           docker network rm "${{ env.RED }}" 2>/dev/null || true
+
+          # Lo que se acumulaba en el runner (issue #13). Esto corre en el dind
+          # del act-runner, que nadie mira: "docker system df" en la CT no lo
+          # ensena, hay que hacer "docker exec act-runner docker system df".
+          #
+          # Imagenes: cada build etiqueta con el sha y las deja ahi. Se guardan
+          # latest y las dos mas recientes de cada repositorio de b4rrhh, por si
+          # hay que volver atras sin pasar por el registry. Las de otros
+          # proyectos que comparten el runner no se tocan desde aqui.
+          # "docker images" lista de mas nueva a mas vieja.
+          for repo in $(docker images --format '{{.Repository}}' \
+                          --filter "reference=${{ env.REGISTRY }}/*" | sort -u); do
+            docker images "$repo" --format '{{.Tag}}' \
+              | grep -v -e '^latest$' -e '^<none>$' \
+              | tail -n +3 \
+              | xargs -r -I{} docker rmi "$repo:{}" || true
+          done
+          docker image prune -f || true
+
+          # Cache de build: 144 entradas y 2 GB que no usaba nadie. No se vacia
+          # del todo (cada build seria un build desde cero): se tira lo que
+          # lleva una semana sin usarse.
+          docker builder prune -af --filter until=168h || true
