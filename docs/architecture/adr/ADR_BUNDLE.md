@@ -1,7 +1,7 @@
 # ADR Bundle
 
 > Fichero generado automÃ¡ticamente. No editar a mano.
-> Fecha de generaciÃ³n: 2026-08-29 22:19:44
+> Fecha de generaciÃ³n: 2026-08-29 22:28:28
 
 ---
 
@@ -13418,14 +13418,21 @@ entre las pestaÃ±as**. Desaparece el Ã¡rea Â«ResumenÂ»: el resumen *es* 
 secciones de la relaciÃ³n laboral comparten modo, luego se ven iguales, y una pÃ¡gina donde todo se
 ve igual no tiene jerarquÃ­a. La regla se mantiene. La jerarquÃ­a viene de otros dos sitios:
 
-- **De dentro de la secciÃ³n**: lo vigente manda sobre lo cerrado. La fila en vigor se ve siempre y
-  pesa; las cerradas retroceden y se pliegan por defecto.
-- **De la pÃ¡gina**: primero el estado actual, despuÃ©s la historia. La relaciÃ³n abre con una tira
-  Â«HoyÂ» â€”una fila por vigencia con su valor de hoyâ€” y las tablas van debajo como historia.
+- **De dentro de la secciÃ³n**: lo vigente manda sobre lo cerrado. La fila en vigor es la Ãºnica en
+  tinta plena; las cerradas, apagadas. La historia no se pliega: con el estado de hoy arriba ya es
+  secundaria por posiciÃ³n, y esconderla aÃ±adirÃ­a un clic a algo que se abre a menudo. La jerarquÃ­a
+  se consigue bajando su peso, no ocultÃ¡ndola.
+- **De la pÃ¡gina**: primero el estado actual, despuÃ©s la historia. La relaciÃ³n lleva un bloque
+  Â«HoyÂ» entre la lÃ­nea de vida y las secciones â€”una lÃ­nea por vigencia, en el mismo orden que los
+  carriles del eje, el Ã­ndice del raÃ­l y las secciones, con el valor, su cÃ³digo y desde cuÃ¡ndo
+  rigeâ€”, y las tablas van debajo como historia. Es el borde derecho de la lÃ­nea de vida, escrito.
+  Y es donde aparece lo anÃ³malo: sin centro de coste se lee Â«sin asignarÂ» en tono de aviso.
 
 Corolarios: una marca de modo que llevan todas las secciones de una pÃ¡gina no informa de nada y se
-quita (queda la de la que **gobierna**, que solo lleva una); la caja se reserva para lo que tiene
-otro modo, y entre secciones del mismo modo basta separaciÃ³n y regla.
+quita (queda la de la que **gobierna**, que solo lleva una); el Ã©nfasis de la caja se invierte: la
+lleva el bloque Â«HoyÂ» y la pierden las secciones de historia, que quedan en tÃ­tulo, regla y tabla.
+La caja dejÃ³ de significar algo en cuanto la tuvieron todas; dÃ¡rsela solo a lo que importa es lo
+que crea la jerarquÃ­a.
 
 ## Consecuencias
 

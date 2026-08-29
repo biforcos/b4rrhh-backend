@@ -63,14 +63,21 @@ entre las pestañas**. Desaparece el área «Resumen»: el resumen *es* la líne
 secciones de la relación laboral comparten modo, luego se ven iguales, y una página donde todo se
 ve igual no tiene jerarquía. La regla se mantiene. La jerarquía viene de otros dos sitios:
 
-- **De dentro de la sección**: lo vigente manda sobre lo cerrado. La fila en vigor se ve siempre y
-  pesa; las cerradas retroceden y se pliegan por defecto.
-- **De la página**: primero el estado actual, después la historia. La relación abre con una tira
-  «Hoy» —una fila por vigencia con su valor de hoy— y las tablas van debajo como historia.
+- **De dentro de la sección**: lo vigente manda sobre lo cerrado. La fila en vigor es la única en
+  tinta plena; las cerradas, apagadas. La historia no se pliega: con el estado de hoy arriba ya es
+  secundaria por posición, y esconderla añadiría un clic a algo que se abre a menudo. La jerarquía
+  se consigue bajando su peso, no ocultándola.
+- **De la página**: primero el estado actual, después la historia. La relación lleva un bloque
+  «Hoy» entre la línea de vida y las secciones —una línea por vigencia, en el mismo orden que los
+  carriles del eje, el índice del raíl y las secciones, con el valor, su código y desde cuándo
+  rige—, y las tablas van debajo como historia. Es el borde derecho de la línea de vida, escrito.
+  Y es donde aparece lo anómalo: sin centro de coste se lee «sin asignar» en tono de aviso.
 
 Corolarios: una marca de modo que llevan todas las secciones de una página no informa de nada y se
-quita (queda la de la que **gobierna**, que solo lleva una); la caja se reserva para lo que tiene
-otro modo, y entre secciones del mismo modo basta separación y regla.
+quita (queda la de la que **gobierna**, que solo lleva una); el énfasis de la caja se invierte: la
+lleva el bloque «Hoy» y la pierden las secciones de historia, que quedan en título, regla y tabla.
+La caja dejó de significar algo en cuanto la tuvieron todas; dársela solo a lo que importa es lo
+que crea la jerarquía.
 
 ## Consecuencias
 
