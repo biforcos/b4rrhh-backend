@@ -9,8 +9,6 @@ import com.b4rrhh.employee.working_time.infrastructure.persistence.EmployeeAgree
 import com.b4rrhh.employee.working_time.infrastructure.persistence.EmployeeWorkingTimeLookupAdapter;
 import com.b4rrhh.employee.working_time.infrastructure.persistence.WorkingTimePersistenceAdapter;
 import com.b4rrhh.employee.working_time.infrastructure.persistence.WorkingTimePresenceConsistencyAdapter;
-import com.b4rrhh.payroll.agreementplus.application.service.CalculateAgreementPlusService;
-import com.b4rrhh.payroll.basesalary.application.service.CalculateBaseSalaryService;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.EmployeeAgreementCategoryLookupAdapter;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.EmployeeByBusinessKeyLookupAdapter;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollObjectActivationLookupAdapter;
@@ -74,8 +72,6 @@ import java.lang.annotation.Target;
         WorkingTimePresenceConsistencyAdapter.class,
         StandardWorkingTimeDerivationPolicy.class,
         // payroll: salario base y plus convenio
-        CalculateBaseSalaryService.class,
-        CalculateAgreementPlusService.class,
         PayrollObjectBindingLookupAdapter.class,
         PayrollTableRowLookupAdapter.class,
         PayrollObjectActivationLookupAdapter.class,
