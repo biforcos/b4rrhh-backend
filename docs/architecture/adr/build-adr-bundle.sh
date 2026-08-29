@@ -57,6 +57,8 @@ find . -maxdepth 1 -type f -name "*.md" \
       } >> "$TMP_FILE"
     done
 
-mv "$TMP_FILE" "$OUT_FILE"
+# Se escribe por truncado y no por mv: en algunos entornos montados no se puede
+# borrar el destino, y mv falla al intentar reemplazarlo.
+cat "$TMP_FILE" > "$OUT_FILE"
 
 echo "Generado: $OUT_FILE"

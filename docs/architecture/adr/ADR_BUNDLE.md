@@ -1,7 +1,7 @@
 # ADR Bundle
 
 > Fichero generado automáticamente. No editar a mano.
-> Fecha de generación: 2026-08-29 20:39:58
+> Fecha de generación: 2026-08-29 20:50:56
 
 ---
 
@@ -13259,12 +13259,18 @@ Existe **un único esqueleto de página** al que las pantallas se acogen, con cu
 | `identidad` | Quién o qué se está mirando, y las acciones de página | Franja superior, ancho completo |
 | `raíl` | Índice de la página y, si la hay, la cola de trabajo | Izquierda, plegable como una unidad |
 | `principal` | El contenido | Gobierna las columnas |
-| `contextual` | Paneles secundarios: historial, ayuda, auditoría | Derecha, **plegado por defecto** |
+| `contextual` | Paneles secundarios: historial, ayuda, auditoría | Derecha, **plegado solo si no cabe** |
 
 ### Reglas
 
 1. **Las acciones de página van en `identidad`**, nunca dentro de una card del contenido.
-2. **`contextual` está plegado por defecto** y se despliega a petición. Su estado se recuerda.
+2. **`contextual` se pliega por defecto solo cuando no cabe.** El estado inicial lo decide el ancho
+   disponible: si desplegarlo deja a `principal` por encima de la medida de lectura, se abre; si la
+   deja por debajo, se pliega. Medido en la ficha del empleado en una pantalla de 1920 px: con el
+   contextual abierto `principal` mide 1617 px frente a una medida de 1400 px —217 px de holgura— y
+   con el contextual cerrado quedan unos 800 px de papel muerto a la derecha. «Plegado siempre» era
+   una regla escrita antes de medir; el ancho es un dato, no una preferencia. El estado que elija el
+   usuario se recuerda y manda sobre el inicial.
 3. **El raíl se pliega entero**, no por partes. Índice y cola viven o desaparecen juntos.
 4. **El menú principal se pliega a iconos**, y su estado se recuerda. Es la única navegación que
    admite plegarse a iconos, porque son pocos destinos usados a diario y se reconocen por la forma.
@@ -13274,6 +13280,13 @@ Existe **un único esqueleto de página** al que las pantallas se acogen, con cu
    iconos.
 5. **El índice informa, no solo navega**: lleva el recuento de cada sección y marca en gris las
    vacías. Lo excepcional se ve porque lo normal calla.
+
+   Esa regla es sobre **repetición**, y por tanto vale en listas, no en fichas. En el directorio,
+   250 insignias «Activo» idénticas son ruido: no distinguen a nadie y tapan las tres que dicen
+   «Baja». En la ficha de un solo registro no hay repetición, luego no hay ruido, y el silencio ya no
+   se lee como normalidad sino como ambigüedad: si el estado desaparece cuando es «Activo», quien
+   mira no sabe si está activo o si el dato no ha llegado. **En listas se calla lo normal; en la
+   ficha de un registro el estado se dice siempre**, aunque sea el estado de todos.
 6. **La identidad no cambia entre secciones de la misma entidad.** Nunca puede desaparecer el nombre
    de lo que se está mirando.
 
