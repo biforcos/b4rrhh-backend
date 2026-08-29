@@ -1,0 +1,68 @@
+# ADR-050 — Esqueleto de página
+
+## Estado
+Aceptado
+
+## Contexto
+
+Cada pantalla se inventa su disposición. La prueba más limpia es el panel «Historial» de la ficha
+del empleado: aparece en las tres áreas —resumen, personales, laborales— en **tres posiciones
+distintas, con tres anchos distintos**, sin alinearse con nada de lo que tiene debajo. Si un
+componente no sabe dónde va, es que no hay ningún sitio donde deba ir.
+
+De ahí sale todo lo demás:
+
+- El área laboral es una página de dos columnas donde la izquierda tiene una caja y **600 px de nada**.
+- El área personal deja el 85 % de la pantalla en blanco.
+- El directorio ocupa poco más de la mitad del ancho disponible y desperdicia el resto.
+- Las acciones de página («Calcular nómina», «Acciones») viven **dentro de una card**, en el sitio de
+  un dato.
+- El raíl de identidad se colapsa a iconos en un área y va con etiquetas en las otras dos, de forma
+  que en la pantalla de resumen **desaparece el nombre del empleado**.
+
+Ninguno de estos es un fallo de estilo. Son síntomas de que no hay un plano.
+
+## Decisión
+
+Existe **un único esqueleto de página** al que las pantallas se acogen, con cuatro huecos nombrados:
+
+| Hueco | Qué lleva | Notas |
+|---|---|---|
+| `identidad` | Quién o qué se está mirando, y las acciones de página | Franja superior, ancho completo |
+| `raíl` | Índice de la página y, si la hay, la cola de trabajo | Izquierda, plegable como una unidad |
+| `principal` | El contenido | Gobierna las columnas |
+| `contextual` | Paneles secundarios: historial, ayuda, auditoría | Derecha, **plegado por defecto** |
+
+### Reglas
+
+1. **Las acciones de página van en `identidad`**, nunca dentro de una card del contenido.
+2. **`contextual` está plegado por defecto** y se despliega a petición. Su estado se recuerda.
+3. **El raíl se pliega entero**, no por partes. Índice y cola viven o desaparecen juntos.
+4. **El menú principal se pliega a iconos**, y su estado se recuerda. Es la única navegación que
+   admite plegarse a iconos, porque son pocos destinos usados a diario y se reconocen por la forma.
+   **El índice del raíl no se pliega a iconos**: es un sumario que se lee de reojo, sus conceptos son
+   vecinos entre sí —centro de trabajo y centro de coste, convenio y reglamentación— y obligar a
+   pasar el ratón por cada uno lo convierte en una adivinanza. Se aprieta con tipografía, no con
+   iconos.
+5. **El índice informa, no solo navega**: lleva el recuento de cada sección y marca en gris las
+   vacías. Lo excepcional se ve porque lo normal calla.
+6. **La identidad no cambia entre secciones de la misma entidad.** Nunca puede desaparecer el nombre
+   de lo que se está mirando.
+
+### El ancho
+
+Ancho completo no es la respuesta automática: una tabla de 2.500 px es ilegible porque el ojo pierde
+la fila. **La medida de lectura manda sobre el ancho disponible**, y donde sobre espacio se usa para
+poner cosas al lado, no para estirar. El esqueleto decide esto una vez, no cada pantalla.
+
+## Consecuencias
+
+- Migrar una pantalla al esqueleto **no debe obligar a reescribir su contenido**. Si obliga, el
+  esqueleto está mal y hay que revisar este ADR. Esa restricción permite desplegar el esqueleto antes
+  de rediseñar nada.
+- Las clases de contenedor propias de cada feature dejan de tener sentido. Ver ADR-051.
+- Los huecos se dimensionan una vez, en el esqueleto. Ninguna pantalla ajusta anchos por su cuenta.
+
+## Fuera de alcance
+
+Qué aspecto tiene cada bloque dentro de `principal`. Eso es ADR-051.
