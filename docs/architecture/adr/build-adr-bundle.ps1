@@ -47,7 +47,10 @@ foreach ($file in $files) {
 
 "@ | Add-Content -Path $TempFile -Encoding UTF8
 
-    Get-Content -Path $file.FullName -Raw | Add-Content -Path $TempFile -Encoding UTF8
+    # -Encoding UTF8 al LEER, no solo al escribir: sin el, PowerShell 5.1 lee con la
+    # pagina ANSI de la maquina, el UTF-8 entra como Latin-1 y se reescribe doblemente
+    # codificado. Asi es como el bundle acabo lleno de "Ã¡" y "Ãndice".
+    Get-Content -Path $file.FullName -Raw -Encoding UTF8 | Add-Content -Path $TempFile -Encoding UTF8
 
     @"
 

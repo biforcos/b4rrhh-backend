@@ -42,11 +42,11 @@ find . -maxdepth 1 -type f -name "*.md" \
       anchor=$(echo "$base" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g')
 
       {
-        echo "<a name=\"file-$anchor\"></a>"
         echo
         echo "---"
         echo
         echo "# FILE: $base"
+        echo "<a name=\"file-$anchor\"></a>"
         echo
         echo "<!-- BEGIN FILE: $base -->"
         echo
