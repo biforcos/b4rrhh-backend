@@ -57,6 +57,21 @@ La ficha tiene **dos naturalezas, no cinco áreas hermanas**:
 Partir la primera en pestañas hermanas esconde justo lo que hay que ver, porque **los solapes ocurren
 entre las pestañas**. Desaparece el área «Resumen»: el resumen *es* la línea de tiempo.
 
+### Nota (frontend#25): de dónde viene la jerarquía
+
+«Un modo, un tratamiento» produce páginas uniformes cuando la entrada es uniforme: las seis
+secciones de la relación laboral comparten modo, luego se ven iguales, y una página donde todo se
+ve igual no tiene jerarquía. La regla se mantiene. La jerarquía viene de otros dos sitios:
+
+- **De dentro de la sección**: lo vigente manda sobre lo cerrado. La fila en vigor se ve siempre y
+  pesa; las cerradas retroceden y se pliegan por defecto.
+- **De la página**: primero el estado actual, después la historia. La relación abre con una tira
+  «Hoy» —una fila por vigencia con su valor de hoy— y las tablas van debajo como historia.
+
+Corolarios: una marca de modo que llevan todas las secciones de una página no informa de nada y se
+quita (queda la de la que **gobierna**, que solo lleva una); la caja se reserva para lo que tiene
+otro modo, y entre secciones del mismo modo basta separación y regla.
+
 ## Consecuencias
 
 - Añadir una vertical temporal deja de ser una decisión de diseño: hereda el tratamiento de su modo.

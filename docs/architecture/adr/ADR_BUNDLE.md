@@ -1,11 +1,11 @@
 # ADR Bundle
 
-> Fichero generado automáticamente. No editar a mano.
-> Fecha de generación: 2026-08-29 15:57:51
+> Fichero generado automÃ¡ticamente. No editar a mano.
+> Fecha de generaciÃ³n: 2026-08-29 22:19:44
 
 ---
 
-## Índice
+## Ãndice
 
 - [ADR-001-vertical-architecture-and-api-identity.md](#file-adr-001-vertical-architecture-and-api-identity-md)
 - [ADR-002-employee-contact-vertical.md](#file-adr-002-employee-contact-vertical-md)
@@ -60,29 +60,29 @@
 
 ---
 
-<a name="file-adr-001-vertical-architecture-and-api-identity-md"></a>
 
 ---
 
 # FILE: ADR-001-vertical-architecture-and-api-identity.md
+<a name="file-adr-001-vertical-architecture-and-api-identity-md"></a>
 
 <!-- BEGIN FILE: ADR-001-vertical-architecture-and-api-identity.md -->
 
-# ADR — Arquitectura por verticales y reglas de identidad API en B4RRHH
+# ADR â€” Arquitectura por verticales y reglas de identidad API en B4RRHH
 
 ## Estado
-Propuesta adoptada como guía de refactor y convención base del proyecto.
+Propuesta adoptada como guÃ­a de refactor y convenciÃ³n base del proyecto.
 
 ## Objetivo
-Definir de forma inequívoca cómo debe organizarse el código en B4RRHH, cómo deben diseñarse las APIs y qué decisiones deben seguirse al crear o refactorizar verticales funcionales, para evitar desviaciones de implementación al trabajar con Copilot o al crecer el proyecto.
+Definir de forma inequÃ­voca cÃ³mo debe organizarse el cÃ³digo en B4RRHH, cÃ³mo deben diseÃ±arse las APIs y quÃ© decisiones deben seguirse al crear o refactorizar verticales funcionales, para evitar desviaciones de implementaciÃ³n al trabajar con Copilot o al crecer el proyecto.
 
 ---
 
 # 1. Contexto
 
-B4RRHH está evolucionando desde una estructura inicialmente más centrada en capas globales (`application`, `domain`, `infrastructure`) hacia un modelo donde el negocio ya no es un único bloque homogéneo, sino un conjunto de verticales funcionales dentro de bounded contexts claros.
+B4RRHH estÃ¡ evolucionando desde una estructura inicialmente mÃ¡s centrada en capas globales (`application`, `domain`, `infrastructure`) hacia un modelo donde el negocio ya no es un Ãºnico bloque homogÃ©neo, sino un conjunto de verticales funcionales dentro de bounded contexts claros.
 
-En la práctica, ya existen varios subdominios o verticales relevantes:
+En la prÃ¡ctica, ya existen varios subdominios o verticales relevantes:
 
 - `employee.employee`
 - `employee.presence`
@@ -91,7 +91,7 @@ En la práctica, ya existen varios subdominios o verticales relevantes:
 - `rulesystem.rule_entity_type`
 - `rulesystem.rule_entity`
 
-A medida que el proyecto crezca, aparecerán más verticales y recursos relacionados con el empleado, por ejemplo:
+A medida que el proyecto crezca, aparecerÃ¡n mÃ¡s verticales y recursos relacionados con el empleado, por ejemplo:
 
 - `employee.address`
 - `employee.document`
@@ -100,33 +100,33 @@ A medida que el proyecto crezca, aparecerán más verticales y recursos relacion
 - `employee.compensation`
 - etc.
 
-La estructura actual mezcla dos criterios de organización:
+La estructura actual mezcla dos criterios de organizaciÃ³n:
 
-1. organización por capas globales
-2. organización por verticales con capas internas
+1. organizaciÃ³n por capas globales
+2. organizaciÃ³n por verticales con capas internas
 
-Esa mezcla genera asimetrías, dificulta la navegación, favorece decisiones inconsistentes en API y aumenta la probabilidad de que Copilot implemente nuevos verticales siguiendo patrones incorrectos.
+Esa mezcla genera asimetrÃ­as, dificulta la navegaciÃ³n, favorece decisiones inconsistentes en API y aumenta la probabilidad de que Copilot implemente nuevos verticales siguiendo patrones incorrectos.
 
 Este ADR fija el modelo objetivo.
 
 ---
 
-# 2. Decisión arquitectónica principal
+# 2. DecisiÃ³n arquitectÃ³nica principal
 
 ## 2.1. Regla principal
 
-**En B4RRHH, el código se organiza primero por vertical/subdominio, y dentro de cada vertical se aplica arquitectura hexagonal.**
+**En B4RRHH, el cÃ³digo se organiza primero por vertical/subdominio, y dentro de cada vertical se aplica arquitectura hexagonal.**
 
 Eso significa que el eje principal del scaffolding es el negocio, no las capas globales.
 
-## 2.2. Consecuencia práctica
+## 2.2. Consecuencia prÃ¡ctica
 
-No se debe seguir creciendo con una estructura donde, dentro de un mismo bounded context, convivan simultáneamente:
+No se debe seguir creciendo con una estructura donde, dentro de un mismo bounded context, convivan simultÃ¡neamente:
 
-- paquetes raíz por capa (`application`, `domain`, `infrastructure`)
-- y paquetes raíz por vertical (`presence`, `contact`, etc.)
+- paquetes raÃ­z por capa (`application`, `domain`, `infrastructure`)
+- y paquetes raÃ­z por vertical (`presence`, `contact`, etc.)
 
-Ese híbrido sólo se tolera como estado transitorio durante la migración.
+Ese hÃ­brido sÃ³lo se tolera como estado transitorio durante la migraciÃ³n.
 
 ## 2.3. Modelo objetivo
 
@@ -229,11 +229,11 @@ No obstante, **todo vertical nuevo dentro de `employee` debe seguir ya el modelo
 
 ## 4.1. Regla obligatoria del proyecto
 
-**Todas las APIs de B4RRHH deben trabajar con códigos funcionales de dominio. Nunca con IDs técnicos como identidad pública del recurso.**
+**Todas las APIs de B4RRHH deben trabajar con cÃ³digos funcionales de dominio. Nunca con IDs tÃ©cnicos como identidad pÃºblica del recurso.**
 
-Esta es una convención global del proyecto y aplica a todos los bounded contexts y verticales.
+Esta es una convenciÃ³n global del proyecto y aplica a todos los bounded contexts y verticales.
 
-## 4.2. Qué significa “código funcional”
+## 4.2. QuÃ© significa â€œcÃ³digo funcionalâ€
 
 Son identificadores de negocio estables y significativos, por ejemplo:
 
@@ -244,35 +244,35 @@ Son identificadores de negocio estables y significativos, por ejemplo:
 - `ruleEntityTypeCode`
 - `ruleEntityCode`
 
-## 4.3. Qué no debe exponerse en la API
+## 4.3. QuÃ© no debe exponerse en la API
 
-No deben utilizarse como identidad pública en paths ni en la semántica de la API:
+No deben utilizarse como identidad pÃºblica en paths ni en la semÃ¡ntica de la API:
 
 - `id`
 - `employeeId`
 - `contactId`
 - `presenceId`
 - claves surrogate de base de datos
-- UUIDs técnicos sin valor de negocio
+- UUIDs tÃ©cnicos sin valor de negocio
 
-Los IDs técnicos pueden existir y seguir existiendo para:
+Los IDs tÃ©cnicos pueden existir y seguir existiendo para:
 
 - persistencia
 - joins
 - rendimiento
 - claves primarias internas
-- simplificación de adapters y repositorios
+- simplificaciÃ³n de adapters y repositorios
 
-Pero no deben dirigir la forma de la API pública.
+Pero no deben dirigir la forma de la API pÃºblica.
 
 ## 4.4. Regla de consistencia
 
 No se permite mezclar en una misma API:
 
 - recurso padre identificado por business key
-- recurso hijo identificado por id técnico
+- recurso hijo identificado por id tÃ©cnico
 
-Tampoco al revés.
+Tampoco al revÃ©s.
 
 Si un recurso tiene identidad funcional clara, la API debe expresarla.
 
@@ -282,18 +282,18 @@ Si un recurso tiene identidad funcional clara, la API debe expresarla.
 
 ## 5.1. Los recursos se modelan por su identidad funcional real
 
-Al diseñar un vertical, primero debe responderse a estas preguntas:
+Al diseÃ±ar un vertical, primero debe responderse a estas preguntas:
 
-1. ¿cuál es la identidad funcional del recurso?
-2. ¿qué campos forman parte de esa identidad?
-3. ¿qué campos son mutables?
-4. ¿qué campos son meramente persistentes o técnicos?
-5. ¿el recurso es historizado o no?
-6. ¿hay unicidad por tipo, período o combinación de códigos?
+1. Â¿cuÃ¡l es la identidad funcional del recurso?
+2. Â¿quÃ© campos forman parte de esa identidad?
+3. Â¿quÃ© campos son mutables?
+4. Â¿quÃ© campos son meramente persistentes o tÃ©cnicos?
+5. Â¿el recurso es historizado o no?
+6. Â¿hay unicidad por tipo, perÃ­odo o combinaciÃ³n de cÃ³digos?
 
 ## 5.2. No confundir identidad con persistencia
 
-Si un recurso tiene un `id` técnico en base de datos, eso no implica que su identidad de negocio sea ese `id`.
+Si un recurso tiene un `id` tÃ©cnico en base de datos, eso no implica que su identidad de negocio sea ese `id`.
 
 Ejemplo:
 
@@ -302,25 +302,25 @@ Ejemplo:
 
 ## 5.3. Los endpoints deben expresar el dominio
 
-Cuando una regla de negocio diga “sólo puede existir uno por tipo”, la API debe tender a expresarlo como tal, en lugar de simular una colección anónima de filas con `id`.
+Cuando una regla de negocio diga â€œsÃ³lo puede existir uno por tipoâ€, la API debe tender a expresarlo como tal, en lugar de simular una colecciÃ³n anÃ³nima de filas con `id`.
 
 ---
 
-# 6. Convenciones específicas para el bounded context `employee`
+# 6. Convenciones especÃ­ficas para el bounded context `employee`
 
 ## 6.1. Verticales actuales
 
-Dentro de `employee`, por ahora se consideran verticales explícitos:
+Dentro de `employee`, por ahora se consideran verticales explÃ­citos:
 
 - `employee`
 - `presence`
 - `contact`
 
-A futuro podrán añadirse otros verticales del mismo nivel.
+A futuro podrÃ¡n aÃ±adirse otros verticales del mismo nivel.
 
 ## 6.2. Regla de naming
 
-Se prioriza naming orientado a negocio y no a artefacto técnico.
+Se prioriza naming orientado a negocio y no a artefacto tÃ©cnico.
 
 Buenos ejemplos:
 
@@ -336,17 +336,17 @@ Evitar nombres que consoliden decisiones incorrectas de identidad, por ejemplo:
 - `DeletePresenceByIdUseCase`
 - `EmployeeIdController`
 
-salvo que el caso sea estrictamente interno y no forme parte de la API pública.
+salvo que el caso sea estrictamente interno y no forme parte de la API pÃºblica.
 
 ## 6.3. `shared` dentro de `employee`
 
-El paquete `employee.shared` sólo debe contener elementos verdaderamente transversales al bounded context y sin pertenencia clara a un vertical concreto.
+El paquete `employee.shared` sÃ³lo debe contener elementos verdaderamente transversales al bounded context y sin pertenencia clara a un vertical concreto.
 
-No debe convertirse en un cajón desastre.
+No debe convertirse en un cajÃ³n desastre.
 
 Se debe evitar mover a `shared`:
 
-- lógica de dominio específica de un vertical
+- lÃ³gica de dominio especÃ­fica de un vertical
 - validaciones concretas de un recurso
 - DTOs
 - queries o repositorios de un subdominio concreto
@@ -355,7 +355,7 @@ Se debe evitar mover a `shared`:
 
 # 7. Caso de referencia: `employee.contact`
 
-Este vertical se usará como patrón canónico del refactor.
+Este vertical se usarÃ¡ como patrÃ³n canÃ³nico del refactor.
 
 ## 7.1. Naturaleza del recurso
 
@@ -369,8 +369,8 @@ Este vertical se usará como patrón canónico del refactor.
 - `rule_entity_type_code = EMPLOYEE_CONTACT_TYPE`
 - tipos de contacto definidos por `rule_system`
 - `contact_value` obligatorio
-- validación ligera del valor según tipo
-- borrado físico
+- validaciÃ³n ligera del valor segÃºn tipo
+- borrado fÃ­sico
 
 ## 7.3. Identidad funcional del contacto
 
@@ -379,11 +379,11 @@ La identidad funcional del recurso es:
 - empleado
 - `contactTypeCode`
 
-El contacto no se identifica funcionalmente por un `contactId` técnico.
+El contacto no se identifica funcionalmente por un `contactId` tÃ©cnico.
 
 ## 7.4. Mutabilidad
 
-- `contactTypeCode`: **inmutable** tras creación
+- `contactTypeCode`: **inmutable** tras creaciÃ³n
 - `contactValue`: **mutable**
 
 ## 7.5. Persistencia
@@ -392,13 +392,13 @@ Puede existir una tabla como:
 
 - `employee.contact(id, employee_id, contact_type_code, contact_value, created_at, updated_at)`
 
-con restricción:
+con restricciÃ³n:
 
 - `unique(employee_id, contact_type_code)`
 
 Eso es correcto siempre que se entienda que:
 
-- `id` es técnico
+- `id` es tÃ©cnico
 - la identidad funcional del recurso no es ese `id`
 
 ## 7.6. API objetivo para `employee.contact`
@@ -424,14 +424,14 @@ Debe contener:
 - `contactValue`
 
 ### UpdateContactRequest
-Debe contener sólo:
+Debe contener sÃ³lo:
 
 - `contactValue`
 
 No debe permitir cambiar `contactTypeCode`.
 
 ### ContactResponse
-Debe evitar exponer IDs técnicos como identidad principal del recurso. Si un campo técnico se mantiene temporalmente por motivos internos, debe tratarse como excepción transitoria, no como convención.
+Debe evitar exponer IDs tÃ©cnicos como identidad principal del recurso. Si un campo tÃ©cnico se mantiene temporalmente por motivos internos, debe tratarse como excepciÃ³n transitoria, no como convenciÃ³n.
 
 ## 7.8. Estructura objetivo del paquete `contact`
 
@@ -492,32 +492,32 @@ com.b4rrhh.employee.contact
 
 # 8. Caso de referencia: `employee.presence`
 
-`employee.presence` debe tender al mismo modelo arquitectónico que `employee.contact`, aunque sus reglas funcionales sean distintas.
+`employee.presence` debe tender al mismo modelo arquitectÃ³nico que `employee.contact`, aunque sus reglas funcionales sean distintas.
 
 ## 8.1. Naturaleza
 
 - vertical hermano de `employee.contact`
 - no un subpaquete accidental dentro de una arquitectura por capas globales
 
-## 8.2. Acción recomendada
+## 8.2. AcciÃ³n recomendada
 
-Una vez estabilizado `contact` como patrón, `presence` debe revisarse para alinearse con la misma convención:
+Una vez estabilizado `contact` como patrÃ³n, `presence` debe revisarse para alinearse con la misma convenciÃ³n:
 
 - vertical en primer nivel del bounded context `employee`
 - hexagonal interna
-- endpoints públicos basados en business keys
+- endpoints pÃºblicos basados en business keys
 
 ---
 
-# 9. Validación contra catálogos (`rule_entity`)
+# 9. ValidaciÃ³n contra catÃ¡logos (`rule_entity`)
 
 ## 9.1. Principio
 
-Las validaciones de catálogo deben seguir el metamodelo existente del proyecto.
+Las validaciones de catÃ¡logo deben seguir el metamodelo existente del proyecto.
 
 ## 9.2. Regla
 
-Cuando un campo de un vertical representa un código parametrizable, debe validarse contra `rulesystem.rule_entity` usando:
+Cuando un campo de un vertical representa un cÃ³digo parametrizable, debe validarse contra `rulesystem.rule_entity` usando:
 
 - `ruleSystemCode` correcto
 - `ruleEntityTypeCode` correcto
@@ -525,7 +525,7 @@ Cuando un campo de un vertical representa un código parametrizable, debe valida
 
 ## 9.3. Sobre activo y vigencia
 
-Es aceptable reutilizar una validación genérica común que además compruebe:
+Es aceptable reutilizar una validaciÃ³n genÃ©rica comÃºn que ademÃ¡s compruebe:
 
 - activo
 - vigencia temporal
@@ -534,133 +534,133 @@ si eso forma parte de la infraestructura compartida del metamodelo.
 
 Pero debe entenderse como:
 
-- una política de validación técnica compartida
-- no necesariamente como una característica específica del vertical en cuestión
+- una polÃ­tica de validaciÃ³n tÃ©cnica compartida
+- no necesariamente como una caracterÃ­stica especÃ­fica del vertical en cuestiÃ³n
 
-No debe complicarse el modelo funcional del recurso sólo por heredar esa validación compartida.
+No debe complicarse el modelo funcional del recurso sÃ³lo por heredar esa validaciÃ³n compartida.
 
 ---
 
 # 10. Regla sobre seeds por `rule_system`
 
-## 10.1. Decisión actual
+## 10.1. DecisiÃ³n actual
 
-Los catálogos como `EMPLOYEE_CONTACT_TYPE` pueden repetirse por `rule_system`, aunque hoy los valores coincidan entre sistemas.
+Los catÃ¡logos como `EMPLOYEE_CONTACT_TYPE` pueden repetirse por `rule_system`, aunque hoy los valores coincidan entre sistemas.
 
-## 10.2. Justificación
+## 10.2. JustificaciÃ³n
 
-Se evita introducir por ahora una jerarquía más compleja de catálogos globales / por país / por familia.
+Se evita introducir por ahora una jerarquÃ­a mÃ¡s compleja de catÃ¡logos globales / por paÃ­s / por familia.
 
 ## 10.3. Consecuencia
 
-Es válido sembrar valores por cada `rule_system` existente en una migración inicial.
+Es vÃ¡lido sembrar valores por cada `rule_system` existente en una migraciÃ³n inicial.
 
 ## 10.4. Deuda conocida
 
-Debe definirse en el futuro cómo escalar esto cuando se creen nuevos `rule_system`:
+Debe definirse en el futuro cÃ³mo escalar esto cuando se creen nuevos `rule_system`:
 
-- seed automático al alta
+- seed automÃ¡tico al alta
 - proceso operativo
 - estrategia de bootstrap
 - otro mecanismo
 
-Esta deuda no invalida el diseño actual, pero debe permanecer visible.
+Esta deuda no invalida el diseÃ±o actual, pero debe permanecer visible.
 
 ---
 
-# 11. Reglas de diseño para Copilot
+# 11. Reglas de diseÃ±o para Copilot
 
-Estas reglas deben incluirse en prompts de implementación o refactor.
+Estas reglas deben incluirse en prompts de implementaciÃ³n o refactor.
 
 ## 11.1. Reglas obligatorias
 
-1. Organiza el código primero por vertical/subdominio.
+1. Organiza el cÃ³digo primero por vertical/subdominio.
 2. Dentro de cada vertical, aplica arquitectura hexagonal.
-3. No mezcles paquetes raíz por capa y por vertical dentro de un mismo bounded context.
-4. Nunca expongas IDs técnicos en APIs públicas si existe una identidad funcional clara.
-5. Usa siempre códigos funcionales en paths y contratos OpenAPI.
-6. Mantén los IDs técnicos sólo en persistencia y wiring interno.
-7. Cuando un recurso tenga unicidad funcional por combinación de códigos, exprésala en el diseño del endpoint.
+3. No mezcles paquetes raÃ­z por capa y por vertical dentro de un mismo bounded context.
+4. Nunca expongas IDs tÃ©cnicos en APIs pÃºblicas si existe una identidad funcional clara.
+5. Usa siempre cÃ³digos funcionales en paths y contratos OpenAPI.
+6. MantÃ©n los IDs tÃ©cnicos sÃ³lo en persistencia y wiring interno.
+7. Cuando un recurso tenga unicidad funcional por combinaciÃ³n de cÃ³digos, exprÃ©sala en el diseÃ±o del endpoint.
 8. No permitas mutar campos que formen parte de la identidad funcional.
-9. Actualiza OpenAPI, casos de uso, adapters, tests y documentación de recurso en cada refactor.
-10. No introduzcas historización si el recurso no la requiere.
+9. Actualiza OpenAPI, casos de uso, adapters, tests y documentaciÃ³n de recurso en cada refactor.
+10. No introduzcas historizaciÃ³n si el recurso no la requiere.
 
 ## 11.2. Antipatrones a evitar
 
 Copilot no debe:
 
-- crear un nuevo paquete raíz suelto al lado de `application`, `domain`, `infrastructure` cuando el bounded context ya tiene verticales
+- crear un nuevo paquete raÃ­z suelto al lado de `application`, `domain`, `infrastructure` cuando el bounded context ya tiene verticales
 - exponer endpoints por `{id}` cuando el dominio ya tiene business keys claras
 - usar DTOs de update que permitan modificar campos identificativos
-- tratar una tabla con surrogate key como si esa surrogate key fuera automáticamente la identidad del recurso
-- diseñar recursos como listas de filas genéricas cuando el negocio habla de “uno por tipo” o “uno por combinación de códigos”
+- tratar una tabla con surrogate key como si esa surrogate key fuera automÃ¡ticamente la identidad del recurso
+- diseÃ±ar recursos como listas de filas genÃ©ricas cuando el negocio habla de â€œuno por tipoâ€ o â€œuno por combinaciÃ³n de cÃ³digosâ€
 
 ---
 
-# 12. Estrategia de migración recomendada
+# 12. Estrategia de migraciÃ³n recomendada
 
 ## 12.1. No hacer big bang global
 
-No se recomienda un megarrefactor de todo el proyecto en una sola iteración.
+No se recomienda un megarrefactor de todo el proyecto en una sola iteraciÃ³n.
 
 ## 12.2. Orden recomendado
 
-1. fijar este ADR como convención
+1. fijar este ADR como convenciÃ³n
 2. refactorizar `employee.contact`
-3. usar `employee.contact` como patrón canónico
+3. usar `employee.contact` como patrÃ³n canÃ³nico
 4. alinear `employee.presence`
 5. consolidar `employee.employee` si procede
-6. aplicar la convención a nuevos verticales
+6. aplicar la convenciÃ³n a nuevos verticales
 
 ## 12.3. Regla para nuevos desarrollos
 
-Mientras existan áreas aún no migradas, cualquier vertical nuevo debe ya nacer con la estructura objetivo.
+Mientras existan Ã¡reas aÃºn no migradas, cualquier vertical nuevo debe ya nacer con la estructura objetivo.
 
 ---
 
-# 13. Checklist de revisión para cualquier vertical nuevo
+# 13. Checklist de revisiÃ³n para cualquier vertical nuevo
 
-Antes de aceptar una implementación, revisar:
+Antes de aceptar una implementaciÃ³n, revisar:
 
 ## 13.1. Arquitectura
 
-- ¿el vertical está organizado como vertical autónomo con capas internas?
-- ¿se ha evitado mezclar vertical raíz con capas raíz del mismo bounded context?
+- Â¿el vertical estÃ¡ organizado como vertical autÃ³nomo con capas internas?
+- Â¿se ha evitado mezclar vertical raÃ­z con capas raÃ­z del mismo bounded context?
 
 ## 13.2. API
 
-- ¿los endpoints usan business keys?
-- ¿hay algún `{id}` técnico expuesto sin necesidad?
-- ¿la identidad del path expresa el dominio real?
+- Â¿los endpoints usan business keys?
+- Â¿hay algÃºn `{id}` tÃ©cnico expuesto sin necesidad?
+- Â¿la identidad del path expresa el dominio real?
 
 ## 13.3. Dominio
 
-- ¿la identidad funcional está clara?
-- ¿qué campos son inmutables?
-- ¿qué campos son mutables?
-- ¿la unicidad real del negocio está modelada?
+- Â¿la identidad funcional estÃ¡ clara?
+- Â¿quÃ© campos son inmutables?
+- Â¿quÃ© campos son mutables?
+- Â¿la unicidad real del negocio estÃ¡ modelada?
 
 ## 13.4. Persistencia
 
-- ¿el id técnico queda encapsulado?
-- ¿hay unique constraints alineadas con la identidad funcional?
+- Â¿el id tÃ©cnico queda encapsulado?
+- Â¿hay unique constraints alineadas con la identidad funcional?
 
 ## 13.5. OpenAPI
 
-- ¿los schemas reflejan las reglas de mutabilidad?
-- ¿los DTOs de update evitan modificar campos identitarios?
+- Â¿los schemas reflejan las reglas de mutabilidad?
+- Â¿los DTOs de update evitan modificar campos identitarios?
 
 ## 13.6. Tests
 
-- ¿hay tests de caso feliz?
-- ¿hay tests de duplicado/unicidad?
-- ¿hay tests de ownership o pertenencia al recurso padre?
-- ¿hay tests de validación de catálogo?
-- ¿hay tests de integración con constraints reales de BD?
+- Â¿hay tests de caso feliz?
+- Â¿hay tests de duplicado/unicidad?
+- Â¿hay tests de ownership o pertenencia al recurso padre?
+- Â¿hay tests de validaciÃ³n de catÃ¡logo?
+- Â¿hay tests de integraciÃ³n con constraints reales de BD?
 
 ---
 
-# 14. Prompt base para Copilot — creación/refactor de verticales en B4RRHH
+# 14. Prompt base para Copilot â€” creaciÃ³n/refactor de verticales en B4RRHH
 
 ```text
 You are working in the B4RRHH project.
@@ -696,7 +696,7 @@ When implementing or refactoring a vertical:
 
 ---
 
-# 15. Prompt específico para refactorizar `employee.contact`
+# 15. Prompt especÃ­fico para refactorizar `employee.contact`
 
 ```text
 Refactor the employee.contact vertical in B4RRHH to comply with the project architecture and API identity rules.
@@ -757,25 +757,26 @@ Implementation tasks:
 
 A partir de este ADR:
 
-- el patrón objetivo en `employee` es vertical-first
-- las APIs del proyecto se diseñan siempre con business keys
-- `employee.contact` se toma como primer vertical a refactorizar con esta convención
+- el patrÃ³n objetivo en `employee` es vertical-first
+- las APIs del proyecto se diseÃ±an siempre con business keys
+- `employee.contact` se toma como primer vertical a refactorizar con esta convenciÃ³n
 - cualquier nuevo vertical debe seguir ya estas reglas desde su nacimiento
 
-Este documento debe usarse como referencia base para diseño humano, revisión técnica y prompts a Copilot.
+Este documento debe usarse como referencia base para diseÃ±o humano, revisiÃ³n tÃ©cnica y prompts a Copilot.
+
 
 
 <!-- END FILE: ADR-001-vertical-architecture-and-api-identity.md -->
 
-<a name="file-adr-002-employee-contact-vertical-md"></a>
 
 ---
 
 # FILE: ADR-002-employee-contact-vertical.md
+<a name="file-adr-002-employee-contact-vertical-md"></a>
 
 <!-- BEGIN FILE: ADR-002-employee-contact-vertical.md -->
 
-# ADR-002 — Employee Contact Vertical
+# ADR-002 â€” Employee Contact Vertical
 
 ## Status
 Accepted
@@ -788,7 +789,7 @@ inside the `employee` bounded context.
 Each resource represents a distinct functional aspect of the employee domain
 and follows the architectural rules defined in:
 
-ADR-001 — Vertical architecture and API identity rules.
+ADR-001 â€” Vertical architecture and API identity rules.
 
 The `employee.contact` vertical represents the contact channels currently associated
 with an employee.
@@ -869,8 +870,8 @@ The contact **is not identified by a technical ID**.
 
 | Field | Mutable |
 |-----|------|
-| contactTypeCode | ❌ No |
-| contactValue | ✔ Yes |
+| contactTypeCode | âŒ No |
+| contactValue | âœ” Yes |
 
 Changing the contact type is not allowed.
 
@@ -1041,17 +1042,18 @@ This vertical serves as the **reference implementation** for:
 - metamodel catalog validation
 
 Future verticals in the `employee` bounded context should follow this pattern.
+
 <!-- END FILE: ADR-002-employee-contact-vertical.md -->
 
-<a name="file-adr-003-rule-entity-metamodel-strategy-md"></a>
 
 ---
 
 # FILE: ADR-003-rule-entity-metamodel-strategy.md
+<a name="file-adr-003-rule-entity-metamodel-strategy-md"></a>
 
 <!-- BEGIN FILE: ADR-003-rule-entity-metamodel-strategy.md -->
 
-# ADR-003 — Rule Entity Metamodel Strategy
+# ADR-003 â€” Rule Entity Metamodel Strategy
 
 ## Status
 Accepted
@@ -1077,7 +1079,7 @@ The project has also adopted two major architectural conventions:
 2. public APIs must use business keys and functional codes, never technical IDs
 
 Those conventions are defined in ADR-001. `employee.contact` is defined as the
-reference vertical in ADR-002. fileciteturn8file0 fileciteturn8file1
+reference vertical in ADR-002. îˆ€fileciteîˆ‚turn8file0îˆ îˆ€fileciteîˆ‚turn8file1îˆ
 
 As the project grows, the metamodel becomes a foundational mechanism, so its
 strategy must be made explicit to avoid ambiguity and accidental redesigns.
@@ -1186,7 +1188,7 @@ Validation may additionally check:
 
 That additional validation is acceptable as shared infrastructure policy, but it
 must not distort the domain model of each vertical. This is already consistent
-with the project guidance on catalog validation reuse. fileciteturn8file0
+with the project guidance on catalog validation reuse. îˆ€fileciteîˆ‚turn8file0îˆ
 
 ---
 
@@ -1194,7 +1196,7 @@ with the project guidance on catalog validation reuse. fileciteturn8file0�
 
 The public API for metamodel resources must also follow the project-wide rule:
 use functional business codes, never technical IDs. ADR-001 makes this mandatory
-for the whole project. fileciteturn8file0
+for the whole project. îˆ€fileciteîˆ‚turn8file0îˆ
 
 Therefore:
 
@@ -1275,7 +1277,7 @@ This means:
 - verticals such as `employee.contact` only declare which entity type they depend on
 
 This is aligned with the updated employee resource catalog, where `employee.contact`
-declares `contact_type_code` as catalog-backed and immutable. fileciteturn8file2
+declares `contact_type_code` as catalog-backed and immutable. îˆ€fileciteîˆ‚turn8file2îˆ
 
 ---
 
@@ -1332,20 +1334,21 @@ From this ADR onwards:
 
 This ADR must be used together with:
 
-- ADR-001 — vertical architecture and API identity rules
-- ADR-002 — employee.contact vertical
+- ADR-001 â€” vertical architecture and API identity rules
+- ADR-002 â€” employee.contact vertical
+
 
 <!-- END FILE: ADR-003-rule-entity-metamodel-strategy.md -->
 
-<a name="file-adr-004-employee-business-key-strategy-md"></a>
 
 ---
 
 # FILE: ADR-004-employee-business-key-strategy.md
+<a name="file-adr-004-employee-business-key-strategy-md"></a>
 
 <!-- BEGIN FILE: ADR-004-employee-business-key-strategy.md -->
 
-# ADR-004 — Employee Business Key Strategy
+# ADR-004 â€” Employee Business Key Strategy
 
 ## Status
 Accepted
@@ -1583,35 +1586,36 @@ From this ADR onwards:
 
 This ADR must be used together with:
 
-- ADR-001 — vertical architecture and API identity rules
-- ADR-002 — employee.contact vertical
-- ADR-003 — rule entity metamodel strategy
+- ADR-001 â€” vertical architecture and API identity rules
+- ADR-002 â€” employee.contact vertical
+- ADR-003 â€” rule entity metamodel strategy
+
 
 <!-- END FILE: ADR-004-employee-business-key-strategy.md -->
 
-<a name="file-adr-005-arquitectura-por-verticales-y-reglas-api-md"></a>
 
 ---
 
 # FILE: ADR-005-arquitectura_por_verticales_y_reglas_api.md
+<a name="file-adr-005-arquitectura-por-verticales-y-reglas-api-md"></a>
 
 <!-- BEGIN FILE: ADR-005-arquitectura_por_verticales_y_reglas_api.md -->
 
-# ADR — Arquitectura por verticales y reglas de identidad API en B4RRHH
+# ADR â€” Arquitectura por verticales y reglas de identidad API en B4RRHH
 
 ## Estado
-Propuesta adoptada como guía de refactor y convención base del proyecto.
+Propuesta adoptada como guÃ­a de refactor y convenciÃ³n base del proyecto.
 
 ## Objetivo
-Definir de forma inequívoca cómo debe organizarse el código en B4RRHH, cómo deben diseñarse las APIs y qué decisiones deben seguirse al crear o refactorizar verticales funcionales, para evitar desviaciones de implementación al trabajar con Copilot o al crecer el proyecto.
+Definir de forma inequÃ­voca cÃ³mo debe organizarse el cÃ³digo en B4RRHH, cÃ³mo deben diseÃ±arse las APIs y quÃ© decisiones deben seguirse al crear o refactorizar verticales funcionales, para evitar desviaciones de implementaciÃ³n al trabajar con Copilot o al crecer el proyecto.
 
 ---
 
 # 1. Contexto
 
-B4RRHH está evolucionando desde una estructura inicialmente más centrada en capas globales (`application`, `domain`, `infrastructure`) hacia un modelo donde el negocio ya no es un único bloque homogéneo, sino un conjunto de verticales funcionales dentro de bounded contexts claros.
+B4RRHH estÃ¡ evolucionando desde una estructura inicialmente mÃ¡s centrada en capas globales (`application`, `domain`, `infrastructure`) hacia un modelo donde el negocio ya no es un Ãºnico bloque homogÃ©neo, sino un conjunto de verticales funcionales dentro de bounded contexts claros.
 
-En la práctica, ya existen varios subdominios o verticales relevantes:
+En la prÃ¡ctica, ya existen varios subdominios o verticales relevantes:
 
 - `employee.employee`
 - `employee.presence`
@@ -1620,7 +1624,7 @@ En la práctica, ya existen varios subdominios o verticales relevantes:
 - `rulesystem.rule_entity_type`
 - `rulesystem.rule_entity`
 
-A medida que el proyecto crezca, aparecerán más verticales y recursos relacionados con el empleado, por ejemplo:
+A medida que el proyecto crezca, aparecerÃ¡n mÃ¡s verticales y recursos relacionados con el empleado, por ejemplo:
 
 - `employee.address`
 - `employee.document`
@@ -1629,33 +1633,33 @@ A medida que el proyecto crezca, aparecerán más verticales y recursos relacion
 - `employee.compensation`
 - etc.
 
-La estructura actual mezcla dos criterios de organización:
+La estructura actual mezcla dos criterios de organizaciÃ³n:
 
-1. organización por capas globales
-2. organización por verticales con capas internas
+1. organizaciÃ³n por capas globales
+2. organizaciÃ³n por verticales con capas internas
 
-Esa mezcla genera asimetrías, dificulta la navegación, favorece decisiones inconsistentes en API y aumenta la probabilidad de que Copilot implemente nuevos verticales siguiendo patrones incorrectos.
+Esa mezcla genera asimetrÃ­as, dificulta la navegaciÃ³n, favorece decisiones inconsistentes en API y aumenta la probabilidad de que Copilot implemente nuevos verticales siguiendo patrones incorrectos.
 
 Este ADR fija el modelo objetivo.
 
 ---
 
-# 2. Decisión arquitectónica principal
+# 2. DecisiÃ³n arquitectÃ³nica principal
 
 ## 2.1. Regla principal
 
-**En B4RRHH, el código se organiza primero por vertical/subdominio, y dentro de cada vertical se aplica arquitectura hexagonal.**
+**En B4RRHH, el cÃ³digo se organiza primero por vertical/subdominio, y dentro de cada vertical se aplica arquitectura hexagonal.**
 
 Eso significa que el eje principal del scaffolding es el negocio, no las capas globales.
 
-## 2.2. Consecuencia práctica
+## 2.2. Consecuencia prÃ¡ctica
 
-No se debe seguir creciendo con una estructura donde, dentro de un mismo bounded context, convivan simultáneamente:
+No se debe seguir creciendo con una estructura donde, dentro de un mismo bounded context, convivan simultÃ¡neamente:
 
-- paquetes raíz por capa (`application`, `domain`, `infrastructure`)
-- y paquetes raíz por vertical (`presence`, `contact`, etc.)
+- paquetes raÃ­z por capa (`application`, `domain`, `infrastructure`)
+- y paquetes raÃ­z por vertical (`presence`, `contact`, etc.)
 
-Ese híbrido sólo se tolera como estado transitorio durante la migración.
+Ese hÃ­brido sÃ³lo se tolera como estado transitorio durante la migraciÃ³n.
 
 ## 2.3. Modelo objetivo
 
@@ -1758,11 +1762,11 @@ No obstante, **todo vertical nuevo dentro de `employee` debe seguir ya el modelo
 
 ## 4.1. Regla obligatoria del proyecto
 
-**Todas las APIs de B4RRHH deben trabajar con códigos funcionales de dominio. Nunca con IDs técnicos como identidad pública del recurso.**
+**Todas las APIs de B4RRHH deben trabajar con cÃ³digos funcionales de dominio. Nunca con IDs tÃ©cnicos como identidad pÃºblica del recurso.**
 
-Esta es una convención global del proyecto y aplica a todos los bounded contexts y verticales.
+Esta es una convenciÃ³n global del proyecto y aplica a todos los bounded contexts y verticales.
 
-## 4.2. Qué significa “código funcional”
+## 4.2. QuÃ© significa â€œcÃ³digo funcionalâ€
 
 Son identificadores de negocio estables y significativos, por ejemplo:
 
@@ -1773,35 +1777,35 @@ Son identificadores de negocio estables y significativos, por ejemplo:
 - `ruleEntityTypeCode`
 - `ruleEntityCode`
 
-## 4.3. Qué no debe exponerse en la API
+## 4.3. QuÃ© no debe exponerse en la API
 
-No deben utilizarse como identidad pública en paths ni en la semántica de la API:
+No deben utilizarse como identidad pÃºblica en paths ni en la semÃ¡ntica de la API:
 
 - `id`
 - `employeeId`
 - `contactId`
 - `presenceId`
 - claves surrogate de base de datos
-- UUIDs técnicos sin valor de negocio
+- UUIDs tÃ©cnicos sin valor de negocio
 
-Los IDs técnicos pueden existir y seguir existiendo para:
+Los IDs tÃ©cnicos pueden existir y seguir existiendo para:
 
 - persistencia
 - joins
 - rendimiento
 - claves primarias internas
-- simplificación de adapters y repositorios
+- simplificaciÃ³n de adapters y repositorios
 
-Pero no deben dirigir la forma de la API pública.
+Pero no deben dirigir la forma de la API pÃºblica.
 
 ## 4.4. Regla de consistencia
 
 No se permite mezclar en una misma API:
 
 - recurso padre identificado por business key
-- recurso hijo identificado por id técnico
+- recurso hijo identificado por id tÃ©cnico
 
-Tampoco al revés.
+Tampoco al revÃ©s.
 
 Si un recurso tiene identidad funcional clara, la API debe expresarla.
 
@@ -1811,18 +1815,18 @@ Si un recurso tiene identidad funcional clara, la API debe expresarla.
 
 ## 5.1. Los recursos se modelan por su identidad funcional real
 
-Al diseñar un vertical, primero debe responderse a estas preguntas:
+Al diseÃ±ar un vertical, primero debe responderse a estas preguntas:
 
-1. ¿cuál es la identidad funcional del recurso?
-2. ¿qué campos forman parte de esa identidad?
-3. ¿qué campos son mutables?
-4. ¿qué campos son meramente persistentes o técnicos?
-5. ¿el recurso es historizado o no?
-6. ¿hay unicidad por tipo, período o combinación de códigos?
+1. Â¿cuÃ¡l es la identidad funcional del recurso?
+2. Â¿quÃ© campos forman parte de esa identidad?
+3. Â¿quÃ© campos son mutables?
+4. Â¿quÃ© campos son meramente persistentes o tÃ©cnicos?
+5. Â¿el recurso es historizado o no?
+6. Â¿hay unicidad por tipo, perÃ­odo o combinaciÃ³n de cÃ³digos?
 
 ## 5.2. No confundir identidad con persistencia
 
-Si un recurso tiene un `id` técnico en base de datos, eso no implica que su identidad de negocio sea ese `id`.
+Si un recurso tiene un `id` tÃ©cnico en base de datos, eso no implica que su identidad de negocio sea ese `id`.
 
 Ejemplo:
 
@@ -1831,25 +1835,25 @@ Ejemplo:
 
 ## 5.3. Los endpoints deben expresar el dominio
 
-Cuando una regla de negocio diga “sólo puede existir uno por tipo”, la API debe tender a expresarlo como tal, en lugar de simular una colección anónima de filas con `id`.
+Cuando una regla de negocio diga â€œsÃ³lo puede existir uno por tipoâ€, la API debe tender a expresarlo como tal, en lugar de simular una colecciÃ³n anÃ³nima de filas con `id`.
 
 ---
 
-# 6. Convenciones específicas para el bounded context `employee`
+# 6. Convenciones especÃ­ficas para el bounded context `employee`
 
 ## 6.1. Verticales actuales
 
-Dentro de `employee`, por ahora se consideran verticales explícitos:
+Dentro de `employee`, por ahora se consideran verticales explÃ­citos:
 
 - `employee`
 - `presence`
 - `contact`
 
-A futuro podrán añadirse otros verticales del mismo nivel.
+A futuro podrÃ¡n aÃ±adirse otros verticales del mismo nivel.
 
 ## 6.2. Regla de naming
 
-Se prioriza naming orientado a negocio y no a artefacto técnico.
+Se prioriza naming orientado a negocio y no a artefacto tÃ©cnico.
 
 Buenos ejemplos:
 
@@ -1865,17 +1869,17 @@ Evitar nombres que consoliden decisiones incorrectas de identidad, por ejemplo:
 - `DeletePresenceByIdUseCase`
 - `EmployeeIdController`
 
-salvo que el caso sea estrictamente interno y no forme parte de la API pública.
+salvo que el caso sea estrictamente interno y no forme parte de la API pÃºblica.
 
 ## 6.3. `shared` dentro de `employee`
 
-El paquete `employee.shared` sólo debe contener elementos verdaderamente transversales al bounded context y sin pertenencia clara a un vertical concreto.
+El paquete `employee.shared` sÃ³lo debe contener elementos verdaderamente transversales al bounded context y sin pertenencia clara a un vertical concreto.
 
-No debe convertirse en un cajón desastre.
+No debe convertirse en un cajÃ³n desastre.
 
 Se debe evitar mover a `shared`:
 
-- lógica de dominio específica de un vertical
+- lÃ³gica de dominio especÃ­fica de un vertical
 - validaciones concretas de un recurso
 - DTOs
 - queries o repositorios de un subdominio concreto
@@ -1884,7 +1888,7 @@ Se debe evitar mover a `shared`:
 
 # 7. Caso de referencia: `employee.contact`
 
-Este vertical se usará como patrón canónico del refactor.
+Este vertical se usarÃ¡ como patrÃ³n canÃ³nico del refactor.
 
 ## 7.1. Naturaleza del recurso
 
@@ -1898,8 +1902,8 @@ Este vertical se usará como patrón canónico del refactor.
 - `rule_entity_type_code = EMPLOYEE_CONTACT_TYPE`
 - tipos de contacto definidos por `rule_system`
 - `contact_value` obligatorio
-- validación ligera del valor según tipo
-- borrado físico
+- validaciÃ³n ligera del valor segÃºn tipo
+- borrado fÃ­sico
 
 ## 7.3. Identidad funcional del contacto
 
@@ -1908,11 +1912,11 @@ La identidad funcional del recurso es:
 - empleado
 - `contactTypeCode`
 
-El contacto no se identifica funcionalmente por un `contactId` técnico.
+El contacto no se identifica funcionalmente por un `contactId` tÃ©cnico.
 
 ## 7.4. Mutabilidad
 
-- `contactTypeCode`: **inmutable** tras creación
+- `contactTypeCode`: **inmutable** tras creaciÃ³n
 - `contactValue`: **mutable**
 
 ## 7.5. Persistencia
@@ -1921,13 +1925,13 @@ Puede existir una tabla como:
 
 - `employee.contact(id, employee_id, contact_type_code, contact_value, created_at, updated_at)`
 
-con restricción:
+con restricciÃ³n:
 
 - `unique(employee_id, contact_type_code)`
 
 Eso es correcto siempre que se entienda que:
 
-- `id` es técnico
+- `id` es tÃ©cnico
 - la identidad funcional del recurso no es ese `id`
 
 ## 7.6. API objetivo para `employee.contact`
@@ -1953,14 +1957,14 @@ Debe contener:
 - `contactValue`
 
 ### UpdateContactRequest
-Debe contener sólo:
+Debe contener sÃ³lo:
 
 - `contactValue`
 
 No debe permitir cambiar `contactTypeCode`.
 
 ### ContactResponse
-Debe evitar exponer IDs técnicos como identidad principal del recurso. Si un campo técnico se mantiene temporalmente por motivos internos, debe tratarse como excepción transitoria, no como convención.
+Debe evitar exponer IDs tÃ©cnicos como identidad principal del recurso. Si un campo tÃ©cnico se mantiene temporalmente por motivos internos, debe tratarse como excepciÃ³n transitoria, no como convenciÃ³n.
 
 ## 7.8. Estructura objetivo del paquete `contact`
 
@@ -2021,32 +2025,32 @@ com.b4rrhh.employee.contact
 
 # 8. Caso de referencia: `employee.presence`
 
-`employee.presence` debe tender al mismo modelo arquitectónico que `employee.contact`, aunque sus reglas funcionales sean distintas.
+`employee.presence` debe tender al mismo modelo arquitectÃ³nico que `employee.contact`, aunque sus reglas funcionales sean distintas.
 
 ## 8.1. Naturaleza
 
 - vertical hermano de `employee.contact`
 - no un subpaquete accidental dentro de una arquitectura por capas globales
 
-## 8.2. Acción recomendada
+## 8.2. AcciÃ³n recomendada
 
-Una vez estabilizado `contact` como patrón, `presence` debe revisarse para alinearse con la misma convención:
+Una vez estabilizado `contact` como patrÃ³n, `presence` debe revisarse para alinearse con la misma convenciÃ³n:
 
 - vertical en primer nivel del bounded context `employee`
 - hexagonal interna
-- endpoints públicos basados en business keys
+- endpoints pÃºblicos basados en business keys
 
 ---
 
-# 9. Validación contra catálogos (`rule_entity`)
+# 9. ValidaciÃ³n contra catÃ¡logos (`rule_entity`)
 
 ## 9.1. Principio
 
-Las validaciones de catálogo deben seguir el metamodelo existente del proyecto.
+Las validaciones de catÃ¡logo deben seguir el metamodelo existente del proyecto.
 
 ## 9.2. Regla
 
-Cuando un campo de un vertical representa un código parametrizable, debe validarse contra `rulesystem.rule_entity` usando:
+Cuando un campo de un vertical representa un cÃ³digo parametrizable, debe validarse contra `rulesystem.rule_entity` usando:
 
 - `ruleSystemCode` correcto
 - `ruleEntityTypeCode` correcto
@@ -2054,7 +2058,7 @@ Cuando un campo de un vertical representa un código parametrizable, debe valida
 
 ## 9.3. Sobre activo y vigencia
 
-Es aceptable reutilizar una validación genérica común que además compruebe:
+Es aceptable reutilizar una validaciÃ³n genÃ©rica comÃºn que ademÃ¡s compruebe:
 
 - activo
 - vigencia temporal
@@ -2063,133 +2067,133 @@ si eso forma parte de la infraestructura compartida del metamodelo.
 
 Pero debe entenderse como:
 
-- una política de validación técnica compartida
-- no necesariamente como una característica específica del vertical en cuestión
+- una polÃ­tica de validaciÃ³n tÃ©cnica compartida
+- no necesariamente como una caracterÃ­stica especÃ­fica del vertical en cuestiÃ³n
 
-No debe complicarse el modelo funcional del recurso sólo por heredar esa validación compartida.
+No debe complicarse el modelo funcional del recurso sÃ³lo por heredar esa validaciÃ³n compartida.
 
 ---
 
 # 10. Regla sobre seeds por `rule_system`
 
-## 10.1. Decisión actual
+## 10.1. DecisiÃ³n actual
 
-Los catálogos como `EMPLOYEE_CONTACT_TYPE` pueden repetirse por `rule_system`, aunque hoy los valores coincidan entre sistemas.
+Los catÃ¡logos como `EMPLOYEE_CONTACT_TYPE` pueden repetirse por `rule_system`, aunque hoy los valores coincidan entre sistemas.
 
-## 10.2. Justificación
+## 10.2. JustificaciÃ³n
 
-Se evita introducir por ahora una jerarquía más compleja de catálogos globales / por país / por familia.
+Se evita introducir por ahora una jerarquÃ­a mÃ¡s compleja de catÃ¡logos globales / por paÃ­s / por familia.
 
 ## 10.3. Consecuencia
 
-Es válido sembrar valores por cada `rule_system` existente en una migración inicial.
+Es vÃ¡lido sembrar valores por cada `rule_system` existente en una migraciÃ³n inicial.
 
 ## 10.4. Deuda conocida
 
-Debe definirse en el futuro cómo escalar esto cuando se creen nuevos `rule_system`:
+Debe definirse en el futuro cÃ³mo escalar esto cuando se creen nuevos `rule_system`:
 
-- seed automático al alta
+- seed automÃ¡tico al alta
 - proceso operativo
 - estrategia de bootstrap
 - otro mecanismo
 
-Esta deuda no invalida el diseño actual, pero debe permanecer visible.
+Esta deuda no invalida el diseÃ±o actual, pero debe permanecer visible.
 
 ---
 
-# 11. Reglas de diseño para Copilot
+# 11. Reglas de diseÃ±o para Copilot
 
-Estas reglas deben incluirse en prompts de implementación o refactor.
+Estas reglas deben incluirse en prompts de implementaciÃ³n o refactor.
 
 ## 11.1. Reglas obligatorias
 
-1. Organiza el código primero por vertical/subdominio.
+1. Organiza el cÃ³digo primero por vertical/subdominio.
 2. Dentro de cada vertical, aplica arquitectura hexagonal.
-3. No mezcles paquetes raíz por capa y por vertical dentro de un mismo bounded context.
-4. Nunca expongas IDs técnicos en APIs públicas si existe una identidad funcional clara.
-5. Usa siempre códigos funcionales en paths y contratos OpenAPI.
-6. Mantén los IDs técnicos sólo en persistencia y wiring interno.
-7. Cuando un recurso tenga unicidad funcional por combinación de códigos, exprésala en el diseño del endpoint.
+3. No mezcles paquetes raÃ­z por capa y por vertical dentro de un mismo bounded context.
+4. Nunca expongas IDs tÃ©cnicos en APIs pÃºblicas si existe una identidad funcional clara.
+5. Usa siempre cÃ³digos funcionales en paths y contratos OpenAPI.
+6. MantÃ©n los IDs tÃ©cnicos sÃ³lo en persistencia y wiring interno.
+7. Cuando un recurso tenga unicidad funcional por combinaciÃ³n de cÃ³digos, exprÃ©sala en el diseÃ±o del endpoint.
 8. No permitas mutar campos que formen parte de la identidad funcional.
-9. Actualiza OpenAPI, casos de uso, adapters, tests y documentación de recurso en cada refactor.
-10. No introduzcas historización si el recurso no la requiere.
+9. Actualiza OpenAPI, casos de uso, adapters, tests y documentaciÃ³n de recurso en cada refactor.
+10. No introduzcas historizaciÃ³n si el recurso no la requiere.
 
 ## 11.2. Antipatrones a evitar
 
 Copilot no debe:
 
-- crear un nuevo paquete raíz suelto al lado de `application`, `domain`, `infrastructure` cuando el bounded context ya tiene verticales
+- crear un nuevo paquete raÃ­z suelto al lado de `application`, `domain`, `infrastructure` cuando el bounded context ya tiene verticales
 - exponer endpoints por `{id}` cuando el dominio ya tiene business keys claras
 - usar DTOs de update que permitan modificar campos identificativos
-- tratar una tabla con surrogate key como si esa surrogate key fuera automáticamente la identidad del recurso
-- diseñar recursos como listas de filas genéricas cuando el negocio habla de “uno por tipo” o “uno por combinación de códigos”
+- tratar una tabla con surrogate key como si esa surrogate key fuera automÃ¡ticamente la identidad del recurso
+- diseÃ±ar recursos como listas de filas genÃ©ricas cuando el negocio habla de â€œuno por tipoâ€ o â€œuno por combinaciÃ³n de cÃ³digosâ€
 
 ---
 
-# 12. Estrategia de migración recomendada
+# 12. Estrategia de migraciÃ³n recomendada
 
 ## 12.1. No hacer big bang global
 
-No se recomienda un megarrefactor de todo el proyecto en una sola iteración.
+No se recomienda un megarrefactor de todo el proyecto en una sola iteraciÃ³n.
 
 ## 12.2. Orden recomendado
 
-1. fijar este ADR como convención
+1. fijar este ADR como convenciÃ³n
 2. refactorizar `employee.contact`
-3. usar `employee.contact` como patrón canónico
+3. usar `employee.contact` como patrÃ³n canÃ³nico
 4. alinear `employee.presence`
 5. consolidar `employee.employee` si procede
-6. aplicar la convención a nuevos verticales
+6. aplicar la convenciÃ³n a nuevos verticales
 
 ## 12.3. Regla para nuevos desarrollos
 
-Mientras existan áreas aún no migradas, cualquier vertical nuevo debe ya nacer con la estructura objetivo.
+Mientras existan Ã¡reas aÃºn no migradas, cualquier vertical nuevo debe ya nacer con la estructura objetivo.
 
 ---
 
-# 13. Checklist de revisión para cualquier vertical nuevo
+# 13. Checklist de revisiÃ³n para cualquier vertical nuevo
 
-Antes de aceptar una implementación, revisar:
+Antes de aceptar una implementaciÃ³n, revisar:
 
 ## 13.1. Arquitectura
 
-- ¿el vertical está organizado como vertical autónomo con capas internas?
-- ¿se ha evitado mezclar vertical raíz con capas raíz del mismo bounded context?
+- Â¿el vertical estÃ¡ organizado como vertical autÃ³nomo con capas internas?
+- Â¿se ha evitado mezclar vertical raÃ­z con capas raÃ­z del mismo bounded context?
 
 ## 13.2. API
 
-- ¿los endpoints usan business keys?
-- ¿hay algún `{id}` técnico expuesto sin necesidad?
-- ¿la identidad del path expresa el dominio real?
+- Â¿los endpoints usan business keys?
+- Â¿hay algÃºn `{id}` tÃ©cnico expuesto sin necesidad?
+- Â¿la identidad del path expresa el dominio real?
 
 ## 13.3. Dominio
 
-- ¿la identidad funcional está clara?
-- ¿qué campos son inmutables?
-- ¿qué campos son mutables?
-- ¿la unicidad real del negocio está modelada?
+- Â¿la identidad funcional estÃ¡ clara?
+- Â¿quÃ© campos son inmutables?
+- Â¿quÃ© campos son mutables?
+- Â¿la unicidad real del negocio estÃ¡ modelada?
 
 ## 13.4. Persistencia
 
-- ¿el id técnico queda encapsulado?
-- ¿hay unique constraints alineadas con la identidad funcional?
+- Â¿el id tÃ©cnico queda encapsulado?
+- Â¿hay unique constraints alineadas con la identidad funcional?
 
 ## 13.5. OpenAPI
 
-- ¿los schemas reflejan las reglas de mutabilidad?
-- ¿los DTOs de update evitan modificar campos identitarios?
+- Â¿los schemas reflejan las reglas de mutabilidad?
+- Â¿los DTOs de update evitan modificar campos identitarios?
 
 ## 13.6. Tests
 
-- ¿hay tests de caso feliz?
-- ¿hay tests de duplicado/unicidad?
-- ¿hay tests de ownership o pertenencia al recurso padre?
-- ¿hay tests de validación de catálogo?
-- ¿hay tests de integración con constraints reales de BD?
+- Â¿hay tests de caso feliz?
+- Â¿hay tests de duplicado/unicidad?
+- Â¿hay tests de ownership o pertenencia al recurso padre?
+- Â¿hay tests de validaciÃ³n de catÃ¡logo?
+- Â¿hay tests de integraciÃ³n con constraints reales de BD?
 
 ---
 
-# 14. Prompt base para Copilot — creación/refactor de verticales en B4RRHH
+# 14. Prompt base para Copilot â€” creaciÃ³n/refactor de verticales en B4RRHH
 
 ```text
 You are working in the B4RRHH project.
@@ -2225,7 +2229,7 @@ When implementing or refactoring a vertical:
 
 ---
 
-# 15. Prompt específico para refactorizar `employee.contact`
+# 15. Prompt especÃ­fico para refactorizar `employee.contact`
 
 ```text
 Refactor the employee.contact vertical in B4RRHH to comply with the project architecture and API identity rules.
@@ -2286,21 +2290,22 @@ Implementation tasks:
 
 A partir de este ADR:
 
-- el patrón objetivo en `employee` es vertical-first
-- las APIs del proyecto se diseñan siempre con business keys
-- `employee.contact` se toma como primer vertical a refactorizar con esta convención
+- el patrÃ³n objetivo en `employee` es vertical-first
+- las APIs del proyecto se diseÃ±an siempre con business keys
+- `employee.contact` se toma como primer vertical a refactorizar con esta convenciÃ³n
 - cualquier nuevo vertical debe seguir ya estas reglas desde su nacimiento
 
-Este documento debe usarse como referencia base para diseño humano, revisión técnica y prompts a Copilot.
+Este documento debe usarse como referencia base para diseÃ±o humano, revisiÃ³n tÃ©cnica y prompts a Copilot.
+
 
 
 <!-- END FILE: ADR-005-arquitectura_por_verticales_y_reglas_api.md -->
 
-<a name="file-adr-006-rule-entity-type-domain-md"></a>
 
 ---
 
 # FILE: ADR-006_rule_entity_type_domain.md
+<a name="file-adr-006-rule-entity-type-domain-md"></a>
 
 <!-- BEGIN FILE: ADR-006_rule_entity_type_domain.md -->
 
@@ -2328,7 +2333,7 @@ employee.
 Originally, `rule_system` values resembled country codes (e.g., ESP,
 PRT), which created a misleading semantic association between:
 
-    rule_system ≠ country
+    rule_system â‰  country
 
 In reality, a **rule system represents the regulatory or functional
 context governing the employee**, not necessarily a geographical entity.
@@ -2442,7 +2447,7 @@ The domain classification is a lightweight step toward a richer model.
 
 ------------------------------------------------------------------------
 
-## Non‑Goals
+## Nonâ€‘Goals
 
 This ADR does **not** introduce:
 
@@ -2467,9 +2472,9 @@ Possible future enhancements may include:
 Example conceptual model:
 
     rule_system (context root)
-        ├── COMMON
-        ├── LABORAL
-        └── PAYROLL
+        â”œâ”€â”€ COMMON
+        â”œâ”€â”€ LABORAL
+        â””â”€â”€ PAYROLL
 
 Where catalogs are attached to domains rather than directly to rule
 systems.
@@ -2504,17 +2509,18 @@ systems.
 These questions are intentionally deferred until the rule model matures
 further.
 
+
 <!-- END FILE: ADR-006_rule_entity_type_domain.md -->
 
-<a name="file-adr-007-employee-lifecycle-workflows-md"></a>
 
 ---
 
 # FILE: ADR-007-employee-lifecycle-workflows.md
+<a name="file-adr-007-employee-lifecycle-workflows-md"></a>
 
 <!-- BEGIN FILE: ADR-007-employee-lifecycle-workflows.md -->
 
-# ADR — Employee Lifecycle Workflows (Hire / Terminate / Rehire)
+# ADR â€” Employee Lifecycle Workflows (Hire / Terminate / Rehire)
 
 ## Status
 
@@ -2522,27 +2528,27 @@ Proposed
 
 ## Context
 
-El sistema B4RRHH ha sido diseñado siguiendo una arquitectura basada en verticales funcionales independientes (contacts, addresses, identifiers, presence, etc.), todas ellas relacionadas con el empleado mediante business key.
+El sistema B4RRHH ha sido diseÃ±ado siguiendo una arquitectura basada en verticales funcionales independientes (contacts, addresses, identifiers, presence, etc.), todas ellas relacionadas con el empleado mediante business key.
 
 Este enfoque ha permitido:
 
-* Separación clara de responsabilidades
-* Evolución independiente de cada vertical
+* SeparaciÃ³n clara de responsabilidades
+* EvoluciÃ³n independiente de cada vertical
 * APIs limpias y desacopladas
-* Integración progresiva en frontend mediante composición de bloques
+* IntegraciÃ³n progresiva en frontend mediante composiciÃ³n de bloques
 
-Sin embargo, este modelo presenta una limitación desde el punto de vista funcional:
+Sin embargo, este modelo presenta una limitaciÃ³n desde el punto de vista funcional:
 
-> El ciclo de vida del empleado no se corresponde con la creación y mantenimiento manual de múltiples verticales independientes.
+> El ciclo de vida del empleado no se corresponde con la creaciÃ³n y mantenimiento manual de mÃºltiples verticales independientes.
 
-En la práctica, acciones como contratar, despedir o recontratar a un empleado implican:
+En la prÃ¡ctica, acciones como contratar, despedir o recontratar a un empleado implican:
 
-* creación o modificación coordinada de múltiples verticales
+* creaciÃ³n o modificaciÃ³n coordinada de mÃºltiples verticales
 * reglas de coherencia temporal (fechas efectivas)
 * validaciones transversales
-* significado funcional único (no técnico)
+* significado funcional Ãºnico (no tÃ©cnico)
 
-Actualmente, el sistema permitiría modelar estas acciones como una secuencia de operaciones independientes (crear employee, luego presence, luego assignment, etc.), lo cual:
+Actualmente, el sistema permitirÃ­a modelar estas acciones como una secuencia de operaciones independientes (crear employee, luego presence, luego assignment, etc.), lo cual:
 
 * no refleja el dominio real
 * degrada la experiencia de usuario
@@ -2556,7 +2562,7 @@ Por tanto, se identifica la necesidad de introducir una nueva capa de **operacio
 
 Se introduce el concepto de **Employee Lifecycle Workflows**, como una capa funcional por encima de las verticales existentes.
 
-Estos workflows representan acciones de negocio completas que afectan a múltiples partes del modelo de empleado de forma coordinada.
+Estos workflows representan acciones de negocio completas que afectan a mÃºltiples partes del modelo de empleado de forma coordinada.
 
 ### Workflows iniciales definidos
 
@@ -2568,13 +2574,13 @@ Estos workflows:
 
 * no sustituyen a las verticales existentes
 * no alteran el modelo de datos base
-* actúan como orquestadores de operaciones sobre múltiples verticales
+* actÃºan como orquestadores de operaciones sobre mÃºltiples verticales
 
 ---
 
 ## Design Principles
 
-### 1. Separación entre recursos y acciones
+### 1. SeparaciÃ³n entre recursos y acciones
 
 Se distingue claramente entre:
 
@@ -2588,11 +2594,11 @@ Los workflows no son recursos persistentes, sino casos de uso.
 
 ---
 
-### 2. Orquestación coherente
+### 2. OrquestaciÃ³n coherente
 
 Cada workflow:
 
-* ejecuta múltiples operaciones sobre distintas verticales
+* ejecuta mÃºltiples operaciones sobre distintas verticales
 * garantiza consistencia funcional (fechas, estados, relaciones)
 * evita que el usuario tenga que ensamblar manualmente el estado del empleado
 
@@ -2602,26 +2608,26 @@ Cada workflow:
 
 Las verticales existentes:
 
-* mantienen su diseño actual
+* mantienen su diseÃ±o actual
 * siguen siendo accesibles de forma independiente
 * siguen siendo la base del modelo
 
-Los workflows no introducen nuevas tablas “monolíticas”.
+Los workflows no introducen nuevas tablas â€œmonolÃ­ticasâ€.
 
 ---
 
-### 4. UX orientada a intención
+### 4. UX orientada a intenciÃ³n
 
-El sistema debe permitir que el usuario piense en términos de:
+El sistema debe permitir que el usuario piense en tÃ©rminos de:
 
-* “contratar empleado”
-* “despedir empleado”
+* â€œcontratar empleadoâ€
+* â€œdespedir empleadoâ€
 
 y no en:
 
-* “crear presence”
-* “crear assignment”
-* “actualizar estado”
+* â€œcrear presenceâ€
+* â€œcrear assignmentâ€
+* â€œactualizar estadoâ€
 
 ---
 
@@ -2629,7 +2635,7 @@ y no en:
 
 Los workflows deben:
 
-* ser explícitos en qué operaciones realizan
+* ser explÃ­citos en quÃ© operaciones realizan
 * evitar efectos ocultos
 * permitir trazabilidad futura
 
@@ -2639,18 +2645,18 @@ Los workflows deben:
 
 ### 1. Hire Employee
 
-#### Descripción
+#### DescripciÃ³n
 
 Inicia la vida laboral de un empleado en el sistema.
 
 #### Operaciones implicadas
 
-* creación de employee core
-* creación de primera presence
-* creación de asignación organizativa inicial (work center, cost center, etc.)
-* inicialización de estado laboral
+* creaciÃ³n de employee core
+* creaciÃ³n de primera presence
+* creaciÃ³n de asignaciÃ³n organizativa inicial (work center, cost center, etc.)
+* inicializaciÃ³n de estado laboral
 
-#### Datos mínimos esperados (orientativo)
+#### Datos mÃ­nimos esperados (orientativo)
 
 * employeeNumber
 * employeeTypeCode
@@ -2659,21 +2665,21 @@ Inicia la vida laboral de un empleado en el sistema.
 * fecha de entrada
 * entryReasonCode
 * companyCode
-* workCenter (u otra asignación organizativa mínima)
+* workCenter (u otra asignaciÃ³n organizativa mÃ­nima)
 
 #### Reglas clave
 
 * todas las entidades iniciales deben compartir coherencia temporal
 * debe existir una presence activa tras el proceso
-* el empleado queda en estado funcional válido
+* el empleado queda en estado funcional vÃ¡lido
 
 ---
 
 ### 2. Terminate Employee
 
-#### Descripción
+#### DescripciÃ³n
 
-Finaliza la relación laboral de un empleado.
+Finaliza la relaciÃ³n laboral de un empleado.
 
 #### Operaciones implicadas
 
@@ -2684,35 +2690,35 @@ Finaliza la relación laboral de un empleado.
 
 #### Reglas clave
 
-* no puede existir más de una presence activa
-* tras la terminación no debe quedar ninguna presence abierta
-* se preserva el histórico completo
+* no puede existir mÃ¡s de una presence activa
+* tras la terminaciÃ³n no debe quedar ninguna presence abierta
+* se preserva el histÃ³rico completo
 
 ---
 
 ### 3. Rehire Employee
 
-#### Descripción
+#### DescripciÃ³n
 
 Reincorpora a un empleado previamente terminado.
 
 #### Operaciones implicadas
 
-* creación de nueva presence
-* creación de nuevas asignaciones iniciales
-* reutilización del employee existente
+* creaciÃ³n de nueva presence
+* creaciÃ³n de nuevas asignaciones iniciales
+* reutilizaciÃ³n del employee existente
 
 #### Reglas clave
 
 * no se crea un nuevo employee
-* se mantiene histórico de presencias anteriores
+* se mantiene histÃ³rico de presencias anteriores
 * la nueva presence debe ser coherente con las anteriores
 
 ---
 
 ## API Considerations (Future)
 
-Se prevé la introducción de endpoints específicos para workflows, por ejemplo:
+Se prevÃ© la introducciÃ³n de endpoints especÃ­ficos para workflows, por ejemplo:
 
 * `POST /employees/hire`
 * `POST /employees/{employeeId}/terminate`
@@ -2720,28 +2726,28 @@ Se prevé la introducción de endpoints específicos para workflows, por ejemplo
 
 Estos endpoints:
 
-* encapsularán la lógica de orquestación
-* recibirán payloads orientados a negocio
-* no expondrán directamente detalles internos de cada vertical
+* encapsularÃ¡n la lÃ³gica de orquestaciÃ³n
+* recibirÃ¡n payloads orientados a negocio
+* no expondrÃ¡n directamente detalles internos de cada vertical
 
 ---
 
 ## UI Considerations (Future)
 
-Los workflows se expondrán como acciones de primer nivel en la navegación:
+Los workflows se expondrÃ¡n como acciones de primer nivel en la navegaciÃ³n:
 
 * Employee
 
-  * Ficha (visualización y mantenimiento)
+  * Ficha (visualizaciÃ³n y mantenimiento)
   * Contratar (Hire)
   * Despedir (Terminate)
   * Recontratar (Rehire)
 
-Cada workflow se implementará como:
+Cada workflow se implementarÃ¡ como:
 
 * pantalla dedicada o flujo guiado (no modal simple)
 * formulario estructurado por bloques
-* validación previa antes de ejecución
+* validaciÃ³n previa antes de ejecuciÃ³n
 
 ---
 
@@ -2749,17 +2755,17 @@ Cada workflow se implementará como:
 
 ### Positivas
 
-* Mejor alineación con el dominio real
+* Mejor alineaciÃ³n con el dominio real
 * Mejora significativa de UX
-* Reducción de inconsistencias funcionales
-* Reutilización del modelo existente
+* ReducciÃ³n de inconsistencias funcionales
+* ReutilizaciÃ³n del modelo existente
 * Escalabilidad para nuevas acciones de negocio
 
 ### Negativas / Riesgos
 
-* Incremento de complejidad en capa de aplicación
+* Incremento de complejidad en capa de aplicaciÃ³n
 * Necesidad de definir reglas de negocio claras
-* Posible duplicidad si no se gobierna bien la relación entre workflows y verticales
+* Posible duplicidad si no se gobierna bien la relaciÃ³n entre workflows y verticales
 
 ---
 
@@ -2773,65 +2779,66 @@ Descartado:
 * UX pobre
 * alto riesgo de inconsistencias
 
-### 2. Convertir employee en un agregado monolítico
+### 2. Convertir employee en un agregado monolÃ­tico
 
 Descartado:
 
 * rompe la arquitectura modular actual
 * reduce flexibilidad
-* dificulta evolución
+* dificulta evoluciÃ³n
 
 ---
 
 ## Open Questions
 
-* Definición exacta del mínimo necesario para cada workflow
-* Gestión de validaciones complejas entre verticales
+* DefiniciÃ³n exacta del mÃ­nimo necesario para cada workflow
+* GestiÃ³n de validaciones complejas entre verticales
 * Estrategia de versionado de workflows
-* Auditoría y trazabilidad de ejecuciones
+* AuditorÃ­a y trazabilidad de ejecuciones
 
 ---
 
 ## Summary
 
-El empleado no debe modelarse únicamente como un conjunto de datos, sino como un objeto con ciclo de vida.
+El empleado no debe modelarse Ãºnicamente como un conjunto de datos, sino como un objeto con ciclo de vida.
 
-La introducción de **Employee Lifecycle Workflows** permite:
+La introducciÃ³n de **Employee Lifecycle Workflows** permite:
 
 * mantener la arquitectura modular existente
-* añadir una capa funcional coherente con el negocio
+* aÃ±adir una capa funcional coherente con el negocio
 * mejorar significativamente la experiencia de usuario
 
 Este ADR establece la base conceptual para futuras implementaciones de Hire, Terminate y Rehire en el sistema B4RRHH.
 
+
 <!-- END FILE: ADR-007-employee-lifecycle-workflows.md -->
 
-<a name="file-adr-008-strong-timeline-replace-pattern-md"></a>
 
 ---
 
 # FILE: ADR-008-strong-timeline-replace-pattern.md
+<a name="file-adr-008-strong-timeline-replace-pattern-md"></a>
 
 <!-- BEGIN FILE: ADR-008-strong-timeline-replace-pattern.md -->
 
-# B4RRHH – Strong Timeline Replace Pattern
+# B4RRHH â€“ Strong Timeline Replace Pattern
 
 ## 1. Context
 
-En múltiples verticales del dominio employee (por ejemplo:
+En mÃºltiples verticales del dominio employee (por ejemplo:
 
 * labor_classification
 * contract)
 
-existe una operación común:
+existe una operaciÃ³n comÃºn:
 
 **replaceFromDate(effectiveDate)**
 
-Esta operación:
+Esta operaciÃ³n:
 
 * sustituye el valor activo a partir de una fecha
 * respeta la continuidad temporal
-* puede implicar división de periodos existentes
+* puede implicar divisiÃ³n de periodos existentes
 
 Estas verticales pertenecen al tipo:
 
@@ -2841,23 +2848,23 @@ Estas verticales pertenecen al tipo:
 
 ## 2. Problema
 
-La lógica de replaceFromDate incluye una parte repetida en varias verticales:
+La lÃ³gica de replaceFromDate incluye una parte repetida en varias verticales:
 
-* detección de tramo que cubre la fecha
-* distinción entre:
+* detecciÃ³n de tramo que cubre la fecha
+* distinciÃ³n entre:
 
   * exact match (startDate == effectiveDate)
   * split (fecha dentro del tramo)
   * no covering period
-* cálculo de nuevos límites temporales
+* cÃ¡lculo de nuevos lÃ­mites temporales
 
-Antes, esta lógica estaba duplicada en cada vertical.
+Antes, esta lÃ³gica estaba duplicada en cada vertical.
 
 ---
 
-## 3. Decisión
+## 3. DecisiÃ³n
 
-Se introduce un helper técnico reutilizable:
+Se introduce un helper tÃ©cnico reutilizable:
 
 ### StrongTimelineReplacePlanner
 
@@ -2879,9 +2886,9 @@ Este componente:
 
 ### StrongTimelineReplacePlan
 
-Describe el resultado del análisis temporal:
+Describe el resultado del anÃ¡lisis temporal:
 
-* tipo de operación
+* tipo de operaciÃ³n
 * tramo afectado
 * posibles nuevos rangos temporales
 
@@ -2889,18 +2896,18 @@ Describe el resultado del análisis temporal:
 
 ## 5. Responsabilidades
 
-### Planner (helper técnico)
+### Planner (helper tÃ©cnico)
 
 Responsable de:
 
-* analizar geometría temporal
-* decidir tipo de operación
+* analizar geometrÃ­a temporal
+* decidir tipo de operaciÃ³n
 * calcular fechas derivadas
 
 NO es responsable de:
 
 * validaciones de negocio
-* catálogo
+* catÃ¡logo
 * relaciones
 * persistencia
 * excepciones de dominio
@@ -2919,40 +2926,40 @@ Siguen siendo responsables de:
 
 ---
 
-## 6. Patrón de uso
+## 6. PatrÃ³n de uso
 
 Para cualquier vertical STRONG_TIMELINE:
 
-1. Cargar histórico ordenado
+1. Cargar histÃ³rico ordenado
 2. Convertir a DateRange
 3. Invocar planner:
-   → StrongTimelineReplacePlan
-4. Aplicar lógica de dominio según el plan:
+   â†’ StrongTimelineReplacePlan
+4. Aplicar lÃ³gica de dominio segÃºn el plan:
 
-   * EXACT_START → update
-   * SPLIT → close + create
-   * NO_COVERING → decidir comportamiento
+   * EXACT_START â†’ update
+   * SPLIT â†’ close + create
+   * NO_COVERING â†’ decidir comportamiento
 5. Construir projected history
 6. Validar timeline
 7. Persistir
 
 ---
 
-## 7. Cuándo usar este patrón
+## 7. CuÃ¡ndo usar este patrÃ³n
 
 Aplicar StrongTimelineReplacePlanner SOLO cuando:
 
 * la vertical es STRONG_TIMELINE
-* existe operación replaceFromDate
-* hay garantía de:
+* existe operaciÃ³n replaceFromDate
+* hay garantÃ­a de:
 
   * no solape
-  * un único activo por fecha
+  * un Ãºnico activo por fecha
 
 Ejemplos:
 
-* contract ✅
-* labor_classification ✅
+* contract âœ…
+* labor_classification âœ…
 
 No aplicar directamente a:
 
@@ -2963,49 +2970,50 @@ No aplicar directamente a:
 
 ## 8. Beneficios
 
-* elimina duplicación de lógica temporal crítica
+* elimina duplicaciÃ³n de lÃ³gica temporal crÃ­tica
 * mejora legibilidad de servicios
-* introduce lenguaje común
+* introduce lenguaje comÃºn
 * reduce errores en operaciones de split
 
 ---
 
-## 9. Regla de evolución
+## 9. Regla de evoluciÃ³n
 
 Este helper:
 
-* puede evolucionar si aparece en ≥ 3 verticales
+* puede evolucionar si aparece en â‰¥ 3 verticales
 * NO debe convertirse en:
 
-  * engine genérico
+  * engine genÃ©rico
   * framework configurable
   * capa de negocio
 
 ---
 
-## 10. Decisión futura
+## 10. DecisiÃ³n futura
 
 Si nuevas verticales STRONG_TIMELINE aparecen:
 
-→ deben reutilizar este planner
+â†’ deben reutilizar este planner
 
 Si aparecen variaciones significativas:
 
-→ evaluar extensión del planner, no duplicación
+â†’ evaluar extensiÃ³n del planner, no duplicaciÃ³n
 
 ---
 
 ## 11. Estado
 
-Patrón activo y recomendado.
+PatrÃ³n activo y recomendado.
+
 
 <!-- END FILE: ADR-008-strong-timeline-replace-pattern.md -->
 
-<a name="file-adr-009-journey-md"></a>
 
 ---
 
 # FILE: ADR-009-journey.md
+<a name="file-adr-009-journey-md"></a>
 
 <!-- BEGIN FILE: ADR-009-journey.md -->
 
@@ -3014,51 +3022,51 @@ Design Principles
 
 Un journey debe responder a:
 
-qué pasó
+quÃ© pasÃ³
 
-cuándo pasó
+cuÃ¡ndo pasÃ³
 
-cómo se interpreta funcionalmente
+cÃ³mo se interpreta funcionalmente
 
-por qué ese evento importa
+por quÃ© ese evento importa
 
 No debe limitarse a agrupar verticales en paralelo.
 
-2. El frontend no debe inferir semántica de negocio compleja
+2. El frontend no debe inferir semÃ¡ntica de negocio compleja
 
-El frontend no debe deducir por sí solo si algo es:
+El frontend no debe deducir por sÃ­ solo si algo es:
 
 un alta
 
-una recontratación
+una recontrataciÃ³n
 
 un cambio de contrato
 
-un cambio de clasificación
+un cambio de clasificaciÃ³n
 
-Esa interpretación debe resolverse en backend, dentro del read model.
+Esa interpretaciÃ³n debe resolverse en backend, dentro del read model.
 
-3. Journey es una proyección read-only de UI
+3. Journey es una proyecciÃ³n read-only de UI
 
 Journey V2 no sustituye:
 
-verticales canónicas
+verticales canÃ³nicas
 
 endpoints de escritura
 
 recursos de dominio independientes
 
-Es una proyección agregada para experiencia de usuario.
+Es una proyecciÃ³n agregada para experiencia de usuario.
 
 4. Tracks siguen teniendo valor
 
-La vista actual por tracks sigue siendo útil para:
+La vista actual por tracks sigue siendo Ãºtil para:
 
-inspección técnica
+inspecciÃ³n tÃ©cnica
 
-validación funcional
+validaciÃ³n funcional
 
-representación por vertical
+representaciÃ³n por vertical
 
 Por tanto, no debe considerarse un fracaso ni descartarse.
 
@@ -3072,9 +3080,9 @@ Employee History Tracks
 
 o naming equivalente
 
-No se recomienda seguir llamándolo “journey” en su estado actual.
+No se recomienda seguir llamÃ¡ndolo â€œjourneyâ€ en su estado actual.
 
-Journey V2 — Target Model
+Journey V2 â€” Target Model
 Shape propuesto
 {
   "employee": {
@@ -3089,7 +3097,7 @@ Shape propuesto
       "eventType": "HIRE",
       "trackCode": "PRESENCE",
       "title": "Alta en la empresa",
-      "subtitle": "ES01 · período #1",
+      "subtitle": "ES01 Â· perÃ­odo #1",
       "status": "completed",
       "isCurrent": false,
       "details": {
@@ -3101,7 +3109,7 @@ Shape propuesto
 }
 Event Model
 
-Cada evento debe incluir, como mínimo:
+Cada evento debe incluir, como mÃ­nimo:
 
 eventDate
 
@@ -3121,7 +3129,7 @@ details
 
 Campo eventDate
 
-Fecha efectiva del evento en la línea temporal.
+Fecha efectiva del evento en la lÃ­nea temporal.
 
 Campo eventType
 
@@ -3149,7 +3157,7 @@ Texto principal listo para UI.
 
 Campo subtitle
 
-Contexto breve y útil para lectura rápida.
+Contexto breve y Ãºtil para lectura rÃ¡pida.
 
 Campo status
 
@@ -3165,11 +3173,11 @@ u otro conjunto acotado
 
 Campo isCurrent
 
-Flag explícito para eventos actualmente vigentes o activos.
+Flag explÃ­cito para eventos actualmente vigentes o activos.
 
 Campo details
 
-Información adicional libre y limitada, para tooltips, badges o ampliación contextual.
+InformaciÃ³n adicional libre y limitada, para tooltips, badges o ampliaciÃ³n contextual.
 
 Initial Event Types
 Presence
@@ -3216,15 +3224,15 @@ Ejemplos
 
 una nueva presence con motivo de entrada inicial puede generar HIRE
 
-una nueva presence posterior a una terminación puede generar REHIRE
+una nueva presence posterior a una terminaciÃ³n puede generar REHIRE
 
 el cierre de una presence con motivo adecuado puede generar TERMINATION
 
 un cambio de contrato genera CONTRACT_CHANGE
 
-una nueva clasificación laboral genera LABOR_CLASSIFICATION_CHANGE
+una nueva clasificaciÃ³n laboral genera LABOR_CLASSIFICATION_CHANGE
 
-El frontend no debe deducir esta semántica a partir de details.
+El frontend no debe deducir esta semÃ¡ntica a partir de details.
 
 Relationship with Lifecycle Workflows
 
@@ -3249,7 +3257,7 @@ y no solo snapshots por vertical.
 UI Considerations
 Objetivo de Journey V2
 
-Permitir una representación clara de:
+Permitir una representaciÃ³n clara de:
 
 la historia laboral del empleado
 
@@ -3259,90 +3267,90 @@ cambios significativos
 
 estado actual dentro de la secuencia
 
-Recomendación visual
+RecomendaciÃ³n visual
 
-Se recomienda una timeline orientada a eventos cronológicos, preferentemente:
+Se recomienda una timeline orientada a eventos cronolÃ³gicos, preferentemente:
 
 vertical
 
-o híbrida compacta
+o hÃ­brida compacta
 
-No se considera óptimo reutilizar directamente la representación actual por tracks para este objetivo.
+No se considera Ã³ptimo reutilizar directamente la representaciÃ³n actual por tracks para este objetivo.
 
 Tracks en UI
 
 La vista por tracks puede seguir existiendo como:
 
-vista técnica
+vista tÃ©cnica
 
 vista avanzada
 
-o modo alternativo de inspección
+o modo alternativo de inspecciÃ³n
 
-Pero no como definición principal de “journey”.
+Pero no como definiciÃ³n principal de â€œjourneyâ€.
 
 Migration Strategy
-Phase 1 — Reclassify current model
+Phase 1 â€” Reclassify current model
 
 aceptar que el modelo actual es tracks
 
-ajustar naming interno/documentación si procede
+ajustar naming interno/documentaciÃ³n si procede
 
 mantener compatibilidad
 
-Phase 2 — Design Journey V2 contract
+Phase 2 â€” Design Journey V2 contract
 
 definir EmployeeJourneyV2Response
 
-definir catálogo inicial de eventType
+definir catÃ¡logo inicial de eventType
 
-acordar reglas de agregación en backend
+acordar reglas de agregaciÃ³n en backend
 
-Phase 3 — Implement backend projection
+Phase 3 â€” Implement backend projection
 
-construir la proyección events[]
+construir la proyecciÃ³n events[]
 
 reutilizando verticales existentes
 
-sin alterar recursos canónicos
+sin alterar recursos canÃ³nicos
 
-Phase 4 — Adapt frontend
+Phase 4 â€” Adapt frontend
 
 nuevo client / mapper / store / UI para journey V2
 
-timeline realmente cronológica
+timeline realmente cronolÃ³gica
 
-dejar la vista actual por tracks como opcional o técnica
+dejar la vista actual por tracks como opcional o tÃ©cnica
 
 Consequences
 Positivas
 
-naming más honesto
+naming mÃ¡s honesto
 
-mejor alineación semántica
+mejor alineaciÃ³n semÃ¡ntica
 
-journey verdaderamente útil para UI
+journey verdaderamente Ãºtil para UI
 
-menos lógica interpretativa en frontend
+menos lÃ³gica interpretativa en frontend
 
 mejor encaje con lifecycle workflows
 
 Negativas / Costes
 
-hay que diseñar un segundo read model
+hay que diseÃ±ar un segundo read model
 
-el backend debe añadir reglas de interpretación
+el backend debe aÃ±adir reglas de interpretaciÃ³n
 
-puede convivir temporalmente más de una proyección agregada
+puede convivir temporalmente mÃ¡s de una proyecciÃ³n agregada
 
-habrá que ajustar frontend para el nuevo shape
+habrÃ¡ que ajustar frontend para el nuevo shape
 
 Alternatives Considered
 1. Mantener el shape actual y mejorarlo solo en frontend
 
-Descartado como solución final:
+Descartado como soluciÃ³n final:
 
-obliga al frontend a inferir demasiada semántica
+obliga al frontend a inferir demasiada semÃ¡ntica
 
 sigue sin representar bien un journey
 
@@ -3358,38 +3366,39 @@ no resuelve la necesidad de una timeline funcional de eventos
 
 Descartado:
 
-journey debe seguir siendo una proyección read-only
+journey debe seguir siendo una proyecciÃ³n read-only
 
-no debe sustituir a verticales canónicas
+no debe sustituir a verticales canÃ³nicas
 
 Summary
 
-El modelo actual no representa un journey, sino una vista histórica por tracks.
+El modelo actual no representa un journey, sino una vista histÃ³rica por tracks.
 
 Se decide:
 
 reclasificar conceptualmente el modelo actual como tracks
 
-diseñar Journey V2 como una proyección cronológica de eventos
+diseÃ±ar Journey V2 como una proyecciÃ³n cronolÃ³gica de eventos
 
 mantener separadas:
 
-la vista técnica por tracks
+la vista tÃ©cnica por tracks
 
 la vista funcional de journey
 
-Esto permitirá construir una timeline realmente útil para frontend, alineada con el ciclo de vida del empleado y con la semántica de negocio del dominio.
+Esto permitirÃ¡ construir una timeline realmente Ãºtil para frontend, alineada con el ciclo de vida del empleado y con la semÃ¡ntica de negocio del dominio.
+
 <!-- END FILE: ADR-009-journey.md -->
 
-<a name="file-adr-010-employee-frontend-editing-md"></a>
 
 ---
 
 # FILE: ADR-010-employee-frontend-editing.md
+<a name="file-adr-010-employee-frontend-editing-md"></a>
 
 <!-- BEGIN FILE: ADR-010-employee-frontend-editing.md -->
 
-# ADR — Employee Frontend Editing Pattern by Vertical Maintenance Mode
+# ADR â€” Employee Frontend Editing Pattern by Vertical Maintenance Mode
 
 ## Status
 PROPOSED
@@ -3400,49 +3409,49 @@ PROPOSED
 
 El frontend de B4RRHH ya permite visualizar la ficha de empleado basada en verticales independientes:
 
-- Arquitectura: client → mapper → gateway → store → UI
-- Backend basado en business keys (no IDs técnicos)
+- Arquitectura: client â†’ mapper â†’ gateway â†’ store â†’ UI
+- Backend basado en business keys (no IDs tÃ©cnicos)
 - Verticales con distinta naturaleza:
   - Datos simples (contactos, identificadores)
   - Datos temporales (direcciones)
   - Datos complejos (presence, contracts)
 
-Actualmente la UI es read-only y se requiere introducir edición.
+Actualmente la UI es read-only y se requiere introducir ediciÃ³n.
 
 ---
 
 ## Problema
 
-Diseñar un patrón de edición que:
+DiseÃ±ar un patrÃ³n de ediciÃ³n que:
 - Sea consistente
 - Respete el dominio
-- Evite sobreingeniería
+- Evite sobreingenierÃ­a
 - Escale a futuro
 
-Además, en verticales temporales, debe distinguirse entre:
+AdemÃ¡s, en verticales temporales, debe distinguirse entre:
 - cambio funcional real
-- corrección administrativa de una ocurrencia mal capturada
+- correcciÃ³n administrativa de una ocurrencia mal capturada
 
-Sin esa distinción, el frontend puede acabar representando errores de captura como si fueran eventos reales de negocio.
+Sin esa distinciÃ³n, el frontend puede acabar representando errores de captura como si fueran eventos reales de negocio.
 
 ---
 
-## Decisión
+## DecisiÃ³n
 
-Se adopta el patrón:
+Se adopta el patrÃ³n:
 
 ## Editable Resource Block by Maintenance Mode
 
 ---
 
-## 1. Unidad de interacción: BLOQUE
+## 1. Unidad de interacciÃ³n: BLOQUE
 
-Cada vertical se representa como un bloque autónomo.
+Cada vertical se representa como un bloque autÃ³nomo.
 
 Reglas:
 - Independiente
 - Con su propio estado
-- Sin edición global de ficha
+- Sin ediciÃ³n global de ficha
 
 ---
 
@@ -3451,17 +3460,17 @@ Reglas:
 Cada vertical define su modo de mantenimiento:
 
 ### SLOT
-Para verticales tipo lista simple o “slot por tipo”.
+Para verticales tipo lista simple o â€œslot por tipoâ€.
 
-Uso típico:
+Uso tÃ­pico:
 - contactos
 - identificadores
 
-Características:
+CaracterÃ­sticas:
 - Alta
-- Edición
-- Eliminación
-- Operación normalmente centrada en una fila
+- EdiciÃ³n
+- EliminaciÃ³n
+- OperaciÃ³n normalmente centrada en una fila
 
 ---
 
@@ -3470,23 +3479,23 @@ Para verticales historizados cuyo cambio funcional normal se expresa mediante:
 - alta de una nueva ocurrencia
 - cierre de la ocurrencia vigente
 
-Uso típico:
+Uso tÃ­pico:
 - direcciones
 
-Características:
+CaracterÃ­sticas:
 - No modela un update directo como cambio normal
-- El histórico se preserva por append + close
-- La semántica principal es temporal, no CRUD clásico
+- El histÃ³rico se preserva por append + close
+- La semÃ¡ntica principal es temporal, no CRUD clÃ¡sico
 
 #### Nota importante
-TEMPORAL_APPEND_CLOSE **no implica** que toda modificación de una ocurrencia deba resolverse siempre con “cerrar y crear otra”.
+TEMPORAL_APPEND_CLOSE **no implica** que toda modificaciÃ³n de una ocurrencia deba resolverse siempre con â€œcerrar y crear otraâ€.
 
 Debe distinguirse entre:
 
 ##### a) Cambio funcional real
 Ejemplos:
 - el empleado se muda
-- cambia la dirección efectiva desde una fecha
+- cambia la direcciÃ³n efectiva desde una fecha
 - hay un reemplazo de la ocurrencia vigente
 
 En estos casos:
@@ -3494,39 +3503,39 @@ En estos casos:
 - close
 - eventualmente replace
 
-##### b) Corrección administrativa
+##### b) CorrecciÃ³n administrativa
 Ejemplos:
 - calle mal escrita
-- portal erróneo
-- país o código postal mal informado
+- portal errÃ³neo
+- paÃ­s o cÃ³digo postal mal informado
 - error de captura reciente
 
 En estos casos, cerrar y recrear puede:
-- ensuciar el histórico
+- ensuciar el histÃ³rico
 - generar falsos eventos de negocio
-- introducir ruido funcional o de auditoría
+- introducir ruido funcional o de auditorÃ­a
 
 Por tanto:
 
-- TEMPORAL_APPEND_CLOSE **por defecto no incluye corrección**
-- pero **puede ampliarse** con una operación explícita de `correct` si el dominio y el backend la soportan
+- TEMPORAL_APPEND_CLOSE **por defecto no incluye correcciÃ³n**
+- pero **puede ampliarse** con una operaciÃ³n explÃ­cita de `correct` si el dominio y el backend la soportan
 
 #### Regla de frontend
-El frontend **no inventará** semánticas de corrección si el backend no expone una operación compatible.
+El frontend **no inventarÃ¡** semÃ¡nticas de correcciÃ³n si el backend no expone una operaciÃ³n compatible.
 
 ---
 
 ### WORKFLOW
-Para verticales cuya modificación requiere acciones de negocio, no CRUD directo.
+Para verticales cuya modificaciÃ³n requiere acciones de negocio, no CRUD directo.
 
-Uso típico:
+Uso tÃ­pico:
 - presence
 - contracts
 - labor classification
 
-Características:
-- No se presentan como edición genérica
-- Se accionan mediante flujos explícitos
+CaracterÃ­sticas:
+- No se presentan como ediciÃ³n genÃ©rica
+- Se accionan mediante flujos explÃ­citos
 - Ejemplos futuros:
   - hire
   - termination
@@ -3536,11 +3545,11 @@ Características:
 ---
 
 ### READONLY
-Para verticales puramente informativos o todavía no abiertos a mantenimiento.
+Para verticales puramente informativos o todavÃ­a no abiertos a mantenimiento.
 
 ---
 
-## 3. Modelo de interacción
+## 3. Modelo de interacciÃ³n
 
 Cada bloque tiene:
 
@@ -3549,40 +3558,40 @@ Cada bloque tiene:
 - supportedActions
 
 Ejemplo:
-- contact → maintenanceMode = SLOT
-- identifier → maintenanceMode = SLOT
-- address → maintenanceMode = TEMPORAL_APPEND_CLOSE
+- contact â†’ maintenanceMode = SLOT
+- identifier â†’ maintenanceMode = SLOT
+- address â†’ maintenanceMode = TEMPORAL_APPEND_CLOSE
 
 ---
 
 ## 4. UX
 
 Reglas generales:
-- Edición por bloque
-- Una sola sesión activa por bloque
-- Preferiblemente una única sesión de edición en toda la ficha en V1
+- EdiciÃ³n por bloque
+- Una sola sesiÃ³n activa por bloque
+- Preferiblemente una Ãºnica sesiÃ³n de ediciÃ³n en toda la ficha en V1
 - Operaciones por fila cuando aplique
 - Feedback simple, discreto y local al bloque
 
 ### Principio de honestidad UX
-La UI debe mostrar la acción real soportada por el dominio:
+La UI debe mostrar la acciÃ³n real soportada por el dominio:
 - Editar
-- Añadir
+- AÃ±adir
 - Eliminar
 - Cerrar
 - Corregir
 - Lanzar workflow
 
-No debe usarse “Editar” como verbo universal si la semántica real es otra.
+No debe usarse â€œEditarâ€ como verbo universal si la semÃ¡ntica real es otra.
 
 ---
 
 ## 5. Persistencia
 
 - Backend es la fuente de verdad
-- Tras mutación exitosa:
+- Tras mutaciÃ³n exitosa:
   - refresh del bloque o de la ficha
-- No se introduce lógica rica de reconstrucción local si no aporta valor claro
+- No se introduce lÃ³gica rica de reconstrucciÃ³n local si no aporta valor claro
 
 ---
 
@@ -3590,24 +3599,24 @@ No debe usarse “Editar” como verbo universal si la semántica real es otra.
 
 ### Positivas
 - Consistencia visual
-- Respeto a la semántica del dominio
+- Respeto a la semÃ¡ntica del dominio
 - Escalabilidad hacia workflows
-- Permite distinguir entre cambio funcional y corrección administrativa
+- Permite distinguir entre cambio funcional y correcciÃ³n administrativa
 - Evita forzar CRUD donde no encaja
 
 ### Negativas
-- Más componentes específicos por tipo de bloque
-- Menos reutilización artificial
-- Algunos verticales requerirán discusión explícita sobre si soportan `correct`
+- MÃ¡s componentes especÃ­ficos por tipo de bloque
+- Menos reutilizaciÃ³n artificial
+- Algunos verticales requerirÃ¡n discusiÃ³n explÃ­cita sobre si soportan `correct`
 
 ---
 
 ## 7. Alternativas descartadas
 
-### Form builder genérico
-Rechazado por pérdida de semántica y exceso de abstracción.
+### Form builder genÃ©rico
+Rechazado por pÃ©rdida de semÃ¡ntica y exceso de abstracciÃ³n.
 
-### Edición global de ficha
+### EdiciÃ³n global de ficha
 Rechazado por complejidad, peor control de estado y mal encaje con un dominio verticalizado.
 
 ### Tratar todos los temporales como append/close puro
@@ -3615,29 +3624,29 @@ Rechazado como regla universal porque puede convertir errores administrativos en
 
 ---
 
-## 8. Aplicación inicial
+## 8. AplicaciÃ³n inicial
 
-- Contactos → SLOT
-- Identificadores → SLOT
-- Direcciones → TEMPORAL_APPEND_CLOSE
+- Contactos â†’ SLOT
+- Identificadores â†’ SLOT
+- Direcciones â†’ TEMPORAL_APPEND_CLOSE
 
-### Decisión específica para V1 de direcciones
+### DecisiÃ³n especÃ­fica para V1 de direcciones
 En V1:
-- Añadir nueva dirección
-- Cerrar dirección existente
-- Sin corrección inline de ocurrencia existente, salvo que backend exponga operación específica
+- AÃ±adir nueva direcciÃ³n
+- Cerrar direcciÃ³n existente
+- Sin correcciÃ³n inline de ocurrencia existente, salvo que backend exponga operaciÃ³n especÃ­fica
 
-Esto se considera una decisión de alcance, no una verdad permanente del patrón.
+Esto se considera una decisiÃ³n de alcance, no una verdad permanente del patrÃ³n.
 
 ---
 
 ## 9. Futuro
 
 Posibles evoluciones:
-- Introducción formal de operación `correct` en verticales temporales
-- Integración de workflows
+- IntroducciÃ³n formal de operaciÃ³n `correct` en verticales temporales
+- IntegraciÃ³n de workflows
 - Refinamiento de `supportedActions` por vertical
-- ADR complementario si se consolida distinción explícita entre:
+- ADR complementario si se consolida distinciÃ³n explÃ­cita entre:
   - correction
   - replacement
   - close
@@ -3646,29 +3655,30 @@ Posibles evoluciones:
 
 ## 10. Resumen ejecutivo
 
-El frontend de empleado no se modelará como un gran formulario, sino como una composición de bloques autónomos.
+El frontend de empleado no se modelarÃ¡ como un gran formulario, sino como una composiciÃ³n de bloques autÃ³nomos.
 
 Cada bloque declara un maintenance mode.
 
-La edición no se unifica por “tipo de formulario”, sino por “familia de comportamiento” del vertical.
+La ediciÃ³n no se unifica por â€œtipo de formularioâ€, sino por â€œfamilia de comportamientoâ€ del vertical.
 
 Para verticales temporales:
 - el cambio funcional normal puede expresarse como append/close
-- pero la corrección administrativa no debe confundirse automáticamente con un cambio de negocio
+- pero la correcciÃ³n administrativa no debe confundirse automÃ¡ticamente con un cambio de negocio
 
-El frontend respetará siempre la semántica realmente soportada por backend.
+El frontend respetarÃ¡ siempre la semÃ¡ntica realmente soportada por backend.
+
 
 <!-- END FILE: ADR-010-employee-frontend-editing.md -->
 
-<a name="file-adr-011-shared-lookup-decision-matrix-and-guidelines-md"></a>
 
 ---
 
 # FILE: ADR-011-shared-lookup-decision-matrix-and-guidelines.md
+<a name="file-adr-011-shared-lookup-decision-matrix-and-guidelines-md"></a>
 
 <!-- BEGIN FILE: ADR-011-shared-lookup-decision-matrix-and-guidelines.md -->
 
-# B4RRHH — Matriz de adopción del patrón shared lookup y guía de diseño
+# B4RRHH â€” Matriz de adopciÃ³n del patrÃ³n shared lookup y guÃ­a de diseÃ±o
 
 Fecha: 2026-03-21
 
@@ -3676,44 +3686,44 @@ Fecha: 2026-03-21
 
 Este documento fija dos cosas:
 
-1. una **matriz práctica** para decidir qué verticales de `employee` deben adoptar el patrón shared de lookup por business key;
-2. una **guía de diseño estable** para que tanto una persona como Copilot mantengan la misma disciplina al crear o refactorizar verticales futuras.
+1. una **matriz prÃ¡ctica** para decidir quÃ© verticales de `employee` deben adoptar el patrÃ³n shared de lookup por business key;
+2. una **guÃ­a de diseÃ±o estable** para que tanto una persona como Copilot mantengan la misma disciplina al crear o refactorizar verticales futuras.
 
-El contexto actual es que ya existe un soporte shared mínimo de persistencia con `EmployeeBusinessKeyLookupSupport` y `EmployeeOwnedLookupSupport`, y ya se está usando en `contact`, `identifier` y `address` para resolver employee por business key y mapear a su contexto sin duplicar plumbing técnico. fileciteturn12file4 fileciteturn12file7 fileciteturn12file3 fileciteturn12file0 fileciteturn12file2
+El contexto actual es que ya existe un soporte shared mÃ­nimo de persistencia con `EmployeeBusinessKeyLookupSupport` y `EmployeeOwnedLookupSupport`, y ya se estÃ¡ usando en `contact`, `identifier` y `address` para resolver employee por business key y mapear a su contexto sin duplicar plumbing tÃ©cnico. îˆ€fileciteîˆ‚turn12file4îˆ îˆ€fileciteîˆ‚turn12file7îˆ îˆ€fileciteîˆ‚turn12file3îˆ îˆ€fileciteîˆ‚turn12file0îˆ îˆ€fileciteîˆ‚turn12file2îˆ
 
 ---
 
 ## 2. Regla madre
 
-En B4RRHH, el código debe organizarse **primero por vertical y luego por capas**, y las APIs públicas deben trabajar con **business keys**, no con IDs técnicos. Los IDs técnicos deben quedarse en persistencia. fileciteturn12file15 fileciteturn12file16
+En B4RRHH, el cÃ³digo debe organizarse **primero por vertical y luego por capas**, y las APIs pÃºblicas deben trabajar con **business keys**, no con IDs tÃ©cnicos. Los IDs tÃ©cnicos deben quedarse en persistencia. îˆ€fileciteîˆ‚turn12file15îˆ îˆ€fileciteîˆ‚turn12file16îˆ
 
-Además, `employee.shared` sólo debe contener piezas **realmente transversales y técnicas**. No debe convertirse en un cajón de semántica de negocio. fileciteturn12file15
+AdemÃ¡s, `employee.shared` sÃ³lo debe contener piezas **realmente transversales y tÃ©cnicas**. No debe convertirse en un cajÃ³n de semÃ¡ntica de negocio. îˆ€fileciteîˆ‚turn12file15îˆ
 
-Traducido a esta decisión concreta:
+Traducido a esta decisiÃ³n concreta:
 
-- **sí** a helpers pequeños y explícitos para lookup transversal repetido;
-- **no** a repositorios universales, engines genéricos o shared con vocabulario funcional de un vertical.
+- **sÃ­** a helpers pequeÃ±os y explÃ­citos para lookup transversal repetido;
+- **no** a repositorios universales, engines genÃ©ricos o shared con vocabulario funcional de un vertical.
 
 ---
 
-## 3. Qué patrón se considera ya consolidado
+## 3. QuÃ© patrÃ³n se considera ya consolidado
 
-A día de hoy, el patrón compartido que se considera válido es éste:
+A dÃ­a de hoy, el patrÃ³n compartido que se considera vÃ¡lido es Ã©ste:
 
 1. resolver `EmployeeEntity` por business key (`ruleSystemCode`, `employeeTypeCode`, `employeeNumber`);
 2. resolver opcionalmente la variante con lock (`for update`);
-3. delegar en una lambda o función local del vertical;
-4. mantener el mapping a `EmployeeXContext` o la excepción del vertical en el propio vertical.
+3. delegar en una lambda o funciÃ³n local del vertical;
+4. mantener el mapping a `EmployeeXContext` o la excepciÃ³n del vertical en el propio vertical.
 
-Ese patrón está ya expresado en:
+Ese patrÃ³n estÃ¡ ya expresado en:
 
-- `EmployeeBusinessKeyLookupSupport`, que delega en `SpringDataEmployeeRepository.findByBusinessKey(...)` y `findByBusinessKeyForUpdate(...)`; fileciteturn12file4 fileciteturn12file18
-- `EmployeeOwnedLookupSupport`, que compone el lookup del employee con una función `ownedLookup`, tanto en modo `Optional` como en modo `OrThrow`; fileciteturn12file7 fileciteturn12file12
-- `EmployeeContactLookupAdapter`, `EmployeeIdentifierLookupAdapter` y `EmployeeAddressLookupAdapter`, que ya usan ese soporte compartido y hacen sólo el mapping explícito a su contexto. fileciteturn12file3 fileciteturn12file0 fileciteturn12file2
+- `EmployeeBusinessKeyLookupSupport`, que delega en `SpringDataEmployeeRepository.findByBusinessKey(...)` y `findByBusinessKeyForUpdate(...)`; îˆ€fileciteîˆ‚turn12file4îˆ îˆ€fileciteîˆ‚turn12file18îˆ
+- `EmployeeOwnedLookupSupport`, que compone el lookup del employee con una funciÃ³n `ownedLookup`, tanto en modo `Optional` como en modo `OrThrow`; îˆ€fileciteîˆ‚turn12file7îˆ îˆ€fileciteîˆ‚turn12file12îˆ
+- `EmployeeContactLookupAdapter`, `EmployeeIdentifierLookupAdapter` y `EmployeeAddressLookupAdapter`, que ya usan ese soporte compartido y hacen sÃ³lo el mapping explÃ­cito a su contexto. îˆ€fileciteîˆ‚turn12file3îˆ îˆ€fileciteîˆ‚turn12file0îˆ îˆ€fileciteîˆ‚turn12file2îˆ
 
 ---
 
-## 4. Matriz de adopción por vertical
+## 4. Matriz de adopciÃ³n por vertical
 
 ### 4.1 Resumen ejecutivo
 
@@ -3721,149 +3731,149 @@ Ese patrón está ya expresado en:
 |---|---|---|
 | `contact` | Ya adoptado | lookup de owner puro y mapping simple |
 | `identifier` | Ya adoptado | lookup de owner puro y mapping simple |
-| `address` | Ya adoptado | lookup de owner puro y mapping simple; semántica temporal queda fuera |
-| `presence` | Candidato fuerte siguiente | patrón de employee-context probablemente muy parecido |
+| `address` | Ya adoptado | lookup de owner puro y mapping simple; semÃ¡ntica temporal queda fuera |
+| `presence` | Candidato fuerte siguiente | patrÃ³n de employee-context probablemente muy parecido |
 | `workcenter` | Candidato medio | posible encaje para employee-context, pero revisar mezcla con validaciones de presencia |
 | `cost_center` | Candidato medio | posible encaje para employee-context, pero revisar mezcla con temporalidad y porcentaje |
-| `contract` | Esperar | vertical más cargado de timeline y replace semantics |
-| `labor_classification` | Esperar | vertical más cargado de timeline, cobertura y relaciones |
-| `journey` | No aplicar este patrón | es vertical de lectura/proyección, no de ownership lookup estándar |
-| `employee` raíz | No aplica | es el owner, no un child vertical |
+| `contract` | Esperar | vertical mÃ¡s cargado de timeline y replace semantics |
+| `labor_classification` | Esperar | vertical mÃ¡s cargado de timeline, cobertura y relaciones |
+| `journey` | No aplicar este patrÃ³n | es vertical de lectura/proyecciÃ³n, no de ownership lookup estÃ¡ndar |
+| `employee` raÃ­z | No aplica | es el owner, no un child vertical |
 
 ### 4.2 Lectura detallada
 
-#### `contact` — Ya adoptado
+#### `contact` â€” Ya adoptado
 
-Encaja perfectamente porque el adapter sólo resuelve employee por business key y mapea a `EmployeeContactContext`. No se mete negocio del vertical en shared. fileciteturn12file3
+Encaja perfectamente porque el adapter sÃ³lo resuelve employee por business key y mapea a `EmployeeContactContext`. No se mete negocio del vertical en shared. îˆ€fileciteîˆ‚turn12file3îˆ
 
-#### `identifier` — Ya adoptado
+#### `identifier` â€” Ya adoptado
 
-Mismo caso que `contact`: lookup puro del owner y mapping local. fileciteturn12file0
+Mismo caso que `contact`: lookup puro del owner y mapping local. îˆ€fileciteîˆ‚turn12file0îˆ
 
-#### `address` — Ya adoptado
+#### `address` â€” Ya adoptado
 
-El refactor ha eliminado `EntityManager` y SQL nativo del adapter de lookup y lo ha alineado con el mismo patrón de `contact` e `identifier`. La temporalidad de `address` sigue viviendo fuera de este helper. fileciteturn12file11 fileciteturn12file2 fileciteturn12file14
+El refactor ha eliminado `EntityManager` y SQL nativo del adapter de lookup y lo ha alineado con el mismo patrÃ³n de `contact` e `identifier`. La temporalidad de `address` sigue viviendo fuera de este helper. îˆ€fileciteîˆ‚turn12file11îˆ îˆ€fileciteîˆ‚turn12file2îˆ îˆ€fileciteîˆ‚turn12file14îˆ
 
-#### `presence` — Candidato fuerte siguiente
+#### `presence` â€” Candidato fuerte siguiente
 
-Por estructura, es muy probable que tenga el mismo patrón de resolver employee owner y construir `EmployeePresenceContext`. Si el adapter se parece a `contact`/`identifier`/`address`, debería entrar. La condición es no mezclar ahí reglas como overlap, presencia activa o cierre. Además, en la arquitectura objetivo `presence` debe tender al mismo modelo vertical-first que `contact`. fileciteturn12file17
+Por estructura, es muy probable que tenga el mismo patrÃ³n de resolver employee owner y construir `EmployeePresenceContext`. Si el adapter se parece a `contact`/`identifier`/`address`, deberÃ­a entrar. La condiciÃ³n es no mezclar ahÃ­ reglas como overlap, presencia activa o cierre. AdemÃ¡s, en la arquitectura objetivo `presence` debe tender al mismo modelo vertical-first que `contact`. îˆ€fileciteîˆ‚turn12file17îˆ
 
-#### `workcenter` — Candidato medio
+#### `workcenter` â€” Candidato medio
 
-Puede encajar si existe un `EmployeeWorkCenterLookupAdapter` que sólo resuelva contexto de employee. Debe quedarse fuera cualquier lógica de cobertura respecto a presence, gaps o consistencia. Si el adapter mezcla lookup y validación de cobertura, primero hay que separarlo.
+Puede encajar si existe un `EmployeeWorkCenterLookupAdapter` que sÃ³lo resuelva contexto de employee. Debe quedarse fuera cualquier lÃ³gica de cobertura respecto a presence, gaps o consistencia. Si el adapter mezcla lookup y validaciÃ³n de cobertura, primero hay que separarlo.
 
-#### `cost_center` — Candidato medio
+#### `cost_center` â€” Candidato medio
 
-Misma idea que `workcenter`. Puede encajar para la parte de owner lookup, pero sólo si la lógica de asignación, porcentaje y restricciones temporales permanece fuera.
+Misma idea que `workcenter`. Puede encajar para la parte de owner lookup, pero sÃ³lo si la lÃ³gica de asignaciÃ³n, porcentaje y restricciones temporales permanece fuera.
 
-#### `contract` — Esperar
+#### `contract` â€” Esperar
 
-Aquí el riesgo de contaminar el refactor con lógica temporal es alto: `replaceFromDate`, cobertura de presence, subtype relation, cierre, update con semántica fuerte. Mejor no meterlo aún en esta ola.
+AquÃ­ el riesgo de contaminar el refactor con lÃ³gica temporal es alto: `replaceFromDate`, cobertura de presence, subtype relation, cierre, update con semÃ¡ntica fuerte. Mejor no meterlo aÃºn en esta ola.
 
-#### `labor_classification` — Esperar
+#### `labor_classification` â€” Esperar
 
-Caso parecido a `contract`: reglas temporales más ricas y mayor probabilidad de que lookup y negocio estén más acoplados.
+Caso parecido a `contract`: reglas temporales mÃ¡s ricas y mayor probabilidad de que lookup y negocio estÃ©n mÃ¡s acoplados.
 
-#### `journey` — No aplicar
+#### `journey` â€” No aplicar
 
-`journey` es un vertical de lectura/proyección. Su problema no es ownership lookup de un child resource estándar, sino composición de tracks y eventos. Este patrón no le aporta gran cosa.
+`journey` es un vertical de lectura/proyecciÃ³n. Su problema no es ownership lookup de un child resource estÃ¡ndar, sino composiciÃ³n de tracks y eventos. Este patrÃ³n no le aporta gran cosa.
 
 ---
 
-## 5. Regla de decisión rápida
+## 5. Regla de decisiÃ³n rÃ¡pida
 
-Una vertical **debe entrar** en el patrón shared si se cumplen estas cinco:
+Una vertical **debe entrar** en el patrÃ³n shared si se cumplen estas cinco:
 
 1. el adapter necesita resolver employee por business key;
-2. la parte repetida es claramente técnica;
+2. la parte repetida es claramente tÃ©cnica;
 3. el resultado es un contexto o un owned lookup simple;
 4. el shared no necesita aprender vocabulario del vertical;
-5. el adapter queda más legible después del cambio.
+5. el adapter queda mÃ¡s legible despuÃ©s del cambio.
 
-Una vertical **no debe entrar todavía** si pasa cualquiera de estas cuatro:
+Una vertical **no debe entrar todavÃ­a** si pasa cualquiera de estas cuatro:
 
 1. el refactor arrastra reglas temporales o de negocio;
-2. obliga a meter semántica funcional del vertical en `shared`;
-3. hace el código más mágico o más difícil de depurar;
-4. la identidad funcional del recurso hijo todavía no está del todo clara.
+2. obliga a meter semÃ¡ntica funcional del vertical en `shared`;
+3. hace el cÃ³digo mÃ¡s mÃ¡gico o mÃ¡s difÃ­cil de depurar;
+4. la identidad funcional del recurso hijo todavÃ­a no estÃ¡ del todo clara.
 
 ---
 
-## 6. Qué sí puede vivir en `employee.shared`
+## 6. QuÃ© sÃ­ puede vivir en `employee.shared`
 
-### Sí
+### SÃ­
 
-- lookup de `EmployeeEntity` por business key; fileciteturn12file4
-- variante con lock (`for update`); fileciteturn12file4
-- composición técnica `employee -> ownedLookup`; fileciteturn12file7
-- utilidades técnicas pequeñas y explícitas que se repiten igual en varios verticales.
+- lookup de `EmployeeEntity` por business key; îˆ€fileciteîˆ‚turn12file4îˆ
+- variante con lock (`for update`); îˆ€fileciteîˆ‚turn12file4îˆ
+- composiciÃ³n tÃ©cnica `employee -> ownedLookup`; îˆ€fileciteîˆ‚turn12file7îˆ
+- utilidades tÃ©cnicas pequeÃ±as y explÃ­citas que se repiten igual en varios verticales.
 
 ### No
 
 - `contactTypeCode`, `identifierTypeCode`, `addressTypeCode`, `addressNumber`, etc.;
-- validaciones de catálogo del vertical;
-- lógica de overlap, coverage, split, replace, close o correct;
-- excepciones de dominio genéricas que sustituyan a las del vertical;
+- validaciones de catÃ¡logo del vertical;
+- lÃ³gica de overlap, coverage, split, replace, close o correct;
+- excepciones de dominio genÃ©ricas que sustituyan a las del vertical;
 - repositorios universales tipo `EmployeeOwnedRepository<T, K>`.
 
 ---
 
-## 7. Convenciones de diseño que deben quedar escritas
+## 7. Convenciones de diseÃ±o que deben quedar escritas
 
 ### 7.1 Identidad
 
-La identidad pública siempre debe expresarse con business keys. En `employee`, eso significa al menos:
+La identidad pÃºblica siempre debe expresarse con business keys. En `employee`, eso significa al menos:
 
 - `ruleSystemCode`
 - `employeeTypeCode`
-- `employeeNumber` fileciteturn12file15 fileciteturn12file16
+- `employeeNumber` îˆ€fileciteîˆ‚turn12file15îˆ îˆ€fileciteîˆ‚turn12file16îˆ
 
-Los IDs técnicos sólo deben vivir en persistencia. fileciteturn12file15
+Los IDs tÃ©cnicos sÃ³lo deben vivir en persistencia. îˆ€fileciteîˆ‚turn12file15îˆ
 
-### 7.2 Organización del código
+### 7.2 OrganizaciÃ³n del cÃ³digo
 
-El patrón objetivo sigue siendo:
+El patrÃ³n objetivo sigue siendo:
 
 - `com.b4rrhh.<bounded-context>.<vertical>.application`
 - `com.b4rrhh.<bounded-context>.<vertical>.domain`
-- `com.b4rrhh.<bounded-context>.<vertical>.infrastructure` fileciteturn12file15
+- `com.b4rrhh.<bounded-context>.<vertical>.infrastructure` îˆ€fileciteîˆ‚turn12file15îˆ
 
-### 7.3 Regla de abstracción
+### 7.3 Regla de abstracciÃ³n
 
-Extraer helper sólo cuando:
+Extraer helper sÃ³lo cuando:
 
-- el patrón ya se repite;
-- la variación está entendida;
-- la abstracción hace el código más simple, no más listo.
+- el patrÃ³n ya se repite;
+- la variaciÃ³n estÃ¡ entendida;
+- la abstracciÃ³n hace el cÃ³digo mÃ¡s simple, no mÃ¡s listo.
 
 ### 7.4 Mapping
 
-El mapping de `EmployeeEntity -> EmployeeXContext` debe seguir siendo **local al adapter del vertical**, como ya pasa en `contact`, `identifier` y `address`. fileciteturn12file3 fileciteturn12file0 fileciteturn12file2
+El mapping de `EmployeeEntity -> EmployeeXContext` debe seguir siendo **local al adapter del vertical**, como ya pasa en `contact`, `identifier` y `address`. îˆ€fileciteîˆ‚turn12file3îˆ îˆ€fileciteîˆ‚turn12file0îˆ îˆ€fileciteîˆ‚turn12file2îˆ
 
-### 7.5 Tests mínimos al introducir una vertical en este patrón
+### 7.5 Tests mÃ­nimos al introducir una vertical en este patrÃ³n
 
-Cada adapter que adopte el patrón debe tener al menos:
+Cada adapter que adopte el patrÃ³n debe tener al menos:
 
 - caso feliz en lookup normal;
 - caso feliz en lookup for-update;
 - `Optional.empty()` cuando no existe employee en lookup normal;
 - `Optional.empty()` cuando no existe employee en lookup for-update.
 
-Eso ya está aplicado en `address`, y de forma equivalente en `contact` e `identifier`. fileciteturn12file5 fileciteturn12file8 fileciteturn12file9
+Eso ya estÃ¡ aplicado en `address`, y de forma equivalente en `contact` e `identifier`. îˆ€fileciteîˆ‚turn12file5îˆ îˆ€fileciteîˆ‚turn12file8îˆ îˆ€fileciteîˆ‚turn12file9îˆ
 
 ---
 
-## 8. Guardarraíles para diseñar verticales nuevas
+## 8. GuardarraÃ­les para diseÃ±ar verticales nuevas
 
-Cuando nazca una vertical nueva bajo `employee`, aplicar este checklist antes de escribir código:
+Cuando nazca una vertical nueva bajo `employee`, aplicar este checklist antes de escribir cÃ³digo:
 
-1. **Identidad funcional**: ¿cuál es la business key pública del recurso?
-2. **Ownership**: ¿ese recurso cuelga de employee por business key?
-3. **Naturaleza**: ¿es `SLOT`, `TEMPORAL_APPEND_CLOSE`, workflow u otra familia? Esto es importante también para frontend y UX. En V1, por ejemplo, `contact` e `identifier` se tratan como `SLOT` y `address` como `TEMPORAL_APPEND_CLOSE`. fileciteturn12file19
-4. **Lookup técnico**: ¿hay un adapter de contexto que sólo resuelve employee? Si sí, debe usar el patrón shared.
-5. **Reglas de negocio**: ¿qué debe quedarse fuera de shared sí o sí?
-6. **DTOs y endpoints**: ¿están formulados por business keys y no por IDs técnicos?
-7. **Tests**: ¿se están probando ownership, duplicados, validación y constraints? fileciteturn12file15
+1. **Identidad funcional**: Â¿cuÃ¡l es la business key pÃºblica del recurso?
+2. **Ownership**: Â¿ese recurso cuelga de employee por business key?
+3. **Naturaleza**: Â¿es `SLOT`, `TEMPORAL_APPEND_CLOSE`, workflow u otra familia? Esto es importante tambiÃ©n para frontend y UX. En V1, por ejemplo, `contact` e `identifier` se tratan como `SLOT` y `address` como `TEMPORAL_APPEND_CLOSE`. îˆ€fileciteîˆ‚turn12file19îˆ
+4. **Lookup tÃ©cnico**: Â¿hay un adapter de contexto que sÃ³lo resuelve employee? Si sÃ­, debe usar el patrÃ³n shared.
+5. **Reglas de negocio**: Â¿quÃ© debe quedarse fuera de shared sÃ­ o sÃ­?
+6. **DTOs y endpoints**: Â¿estÃ¡n formulados por business keys y no por IDs tÃ©cnicos?
+7. **Tests**: Â¿se estÃ¡n probando ownership, duplicados, validaciÃ³n y constraints? îˆ€fileciteîˆ‚turn12file15îˆ
 
 ---
 
@@ -3871,7 +3881,7 @@ Cuando nazca una vertical nueva bajo `employee`, aplicar este checklist antes de
 
 ### Uso
 
-Este bloque sirve como cabecera de contexto para cualquier refactor o implementación futura en verticales `employee`.
+Este bloque sirve como cabecera de contexto para cualquier refactor o implementaciÃ³n futura en verticales `employee`.
 
 ```text
 You are working in the B4RRHH project.
@@ -3904,40 +3914,41 @@ Adopt it only if the duplicated code is clearly technical owner lookup and the r
 
 ---
 
-## 10. Decisión operativa recomendada desde hoy
+## 10. DecisiÃ³n operativa recomendada desde hoy
 
-Orden sugerido para próximas revisiones:
+Orden sugerido para prÃ³ximas revisiones:
 
 1. `presence`
 2. `workcenter`
 3. `cost_center`
 4. parar y reevaluar
-5. dejar `contract` y `labor_classification` para una discusión separada
+5. dejar `contract` y `labor_classification` para una discusiÃ³n separada
 
-La razón es simple: conviene seguir capturando el patrón donde el beneficio es alto y el riesgo semántico es bajo, y frenar antes de entrar en verticales donde la lógica temporal fuerte pueda contaminar la abstracción.
+La razÃ³n es simple: conviene seguir capturando el patrÃ³n donde el beneficio es alto y el riesgo semÃ¡ntico es bajo, y frenar antes de entrar en verticales donde la lÃ³gica temporal fuerte pueda contaminar la abstracciÃ³n.
 
 ---
 
 ## 11. Resumen ejecutivo
 
-- El patrón shared de lookup ya está consolidado para `contact`, `identifier` y `address`. fileciteturn12file3 fileciteturn12file0 fileciteturn12file2
-- El patrón correcto es pequeño: resolver employee por business key, componer una lambda local y dejar mapping/excepciones en el vertical. fileciteturn12file4 fileciteturn12file7
+- El patrÃ³n shared de lookup ya estÃ¡ consolidado para `contact`, `identifier` y `address`. îˆ€fileciteîˆ‚turn12file3îˆ îˆ€fileciteîˆ‚turn12file0îˆ îˆ€fileciteîˆ‚turn12file2îˆ
+- El patrÃ³n correcto es pequeÃ±o: resolver employee por business key, componer una lambda local y dejar mapping/excepciones en el vertical. îˆ€fileciteîˆ‚turn12file4îˆ îˆ€fileciteîˆ‚turn12file7îˆ
 - `presence` es el siguiente candidato natural.
-- `workcenter` y `cost_center` son candidatos posibles, pero sólo para la parte de owner lookup.
+- `workcenter` y `cost_center` son candidatos posibles, pero sÃ³lo para la parte de owner lookup.
 - `contract` y `labor_classification` deben esperar.
-- Este documento debe usarse como criterio de diseño y como prólogo de prompts para Copilot.
+- Este documento debe usarse como criterio de diseÃ±o y como prÃ³logo de prompts para Copilot.
+
 
 <!-- END FILE: ADR-011-shared-lookup-decision-matrix-and-guidelines.md -->
 
-<a name="file-adr-012-racionalizaci-n-de-naming-y-alcance-sem-ntico-de-rule-entity-type-md"></a>
 
 ---
 
 # FILE: ADR-012-Racionalización-de-naming-y-alcance-semántico-de-rule_entity_type.md
+<a name="file-adr-012-racionalizaci-n-de-naming-y-alcance-sem-ntico-de-rule-entity-type-md"></a>
 
 <!-- BEGIN FILE: ADR-012-Racionalización-de-naming-y-alcance-semántico-de-rule_entity_type.md -->
 
-ADR — Racionalización de naming y alcance semántico de rule_entity_type en B4RRHH
+ADR â€” RacionalizaciÃ³n de naming y alcance semÃ¡ntico de rule_entity_type en B4RRHH
 Estado
 
 Propuesto
@@ -3950,57 +3961,57 @@ rule_system
 rule_entity_type
 rule_entity
 
-Este metamodelo está empezando a exponerse y utilizarse de forma real desde frontend mediante una pantalla de catálogos, lo que ha hecho visible una tensión de diseño:
+Este metamodelo estÃ¡ empezando a exponerse y utilizarse de forma real desde frontend mediante una pantalla de catÃ¡logos, lo que ha hecho visible una tensiÃ³n de diseÃ±o:
 
 algunos rule_entity_type fueron nombrados inicialmente desde la vertical o caso de uso donde aparecieron primero
 al crecer el sistema, se observa que ciertos conceptos no pertenecen realmente a una sola vertical, sino que son reutilizables en varias partes del dominio
 
-Ejemplo típico:
+Ejemplo tÃ­pico:
 
-un nombre como EMPLOYEE_PRESENCE_COMPANY puede haber sido razonable en una iteración temprana
-pero al madurar el dominio, “company” aparece como concepto reutilizable también en otras verticales o workflows
+un nombre como EMPLOYEE_PRESENCE_COMPANY puede haber sido razonable en una iteraciÃ³n temprana
+pero al madurar el dominio, â€œcompanyâ€ aparece como concepto reutilizable tambiÃ©n en otras verticales o workflows
 por tanto, el naming anterior queda demasiado estrecho
 
-Además, los seeds iniciales de rule_entity y sus labels visibles pueden haber sido definidos con una orientación más técnica o provisional que funcional.
+AdemÃ¡s, los seeds iniciales de rule_entity y sus labels visibles pueden haber sido definidos con una orientaciÃ³n mÃ¡s tÃ©cnica o provisional que funcional.
 
-Esto no invalida el modelo actual, pero sí revela una deuda semántica normal de maduración.
+Esto no invalida el modelo actual, pero sÃ­ revela una deuda semÃ¡ntica normal de maduraciÃ³n.
 
 La arquitectura general del proyecto prioriza:
 
 vertical-first
 business keys en APIs
 naming orientado a negocio y estable
-separación clara entre dominio y detalle técnico
+separaciÃ³n clara entre dominio y detalle tÃ©cnico
 Problema
 
-Sin una guía explícita, el catálogo corre el riesgo de evolucionar como una mezcla de:
+Sin una guÃ­a explÃ­cita, el catÃ¡logo corre el riesgo de evolucionar como una mezcla de:
 
 conceptos reutilizables del dominio
-conceptos específicos de una vertical
+conceptos especÃ­ficos de una vertical
 labels provisionales de seeds
-nombres demasiado pegados a una implementación temporal
+nombres demasiado pegados a una implementaciÃ³n temporal
 
 Esto genera varios riesgos:
 
-semántica inconsistente
+semÃ¡ntica inconsistente
 duplicidad futura de tipos de entidad
-dificultad para reutilizar catálogos transversales
+dificultad para reutilizar catÃ¡logos transversales
 prompts peores para Copilot
 APIs y validadores atados a nombres demasiado concretos
-Decisión
+DecisiÃ³n
 
-Se adopta una convención explícita para diseñar y revisar rule_entity_type y rule_entity:
+Se adopta una convenciÃ³n explÃ­cita para diseÃ±ar y revisar rule_entity_type y rule_entity:
 
-1. Un rule_entity_type debe nombrar el concepto funcional real, no el primer lugar donde se usó
+1. Un rule_entity_type debe nombrar el concepto funcional real, no el primer lugar donde se usÃ³
 
 Ejemplos:
 
 preferir COMPANY
-evitar EMPLOYEE_PRESENCE_COMPANY si el concepto “company” es reutilizable
-2. Los tipos de entidad se clasifican por alcance semántico
+evitar EMPLOYEE_PRESENCE_COMPANY si el concepto â€œcompanyâ€ es reutilizable
+2. Los tipos de entidad se clasifican por alcance semÃ¡ntico
 A. Domain reusable catalog
 
-Conceptos reutilizables en más de una vertical o bounded context relacionado.
+Conceptos reutilizables en mÃ¡s de una vertical o bounded context relacionado.
 
 Ejemplos:
 
@@ -4010,7 +4021,7 @@ COST_CENTER
 COUNTRY
 B. Employee-specific catalog
 
-Conceptos propios del bounded context employee, pero no de una única vertical técnica.
+Conceptos propios del bounded context employee, pero no de una Ãºnica vertical tÃ©cnica.
 
 Ejemplos:
 
@@ -4019,26 +4030,26 @@ EMPLOYEE_IDENTIFIER_TYPE
 EMPLOYEE_ADDRESS_TYPE
 C. Lifecycle-specific catalog
 
-Conceptos ligados a una acción o transición funcional del ciclo de vida laboral.
+Conceptos ligados a una acciÃ³n o transiciÃ³n funcional del ciclo de vida laboral.
 
 Ejemplos:
 
 EMPLOYEE_ENTRY_REASON
 EMPLOYEE_EXIT_REASON
-3. El naming debe seguir el criterio de reutilización máxima razonable
+3. El naming debe seguir el criterio de reutilizaciÃ³n mÃ¡xima razonable
 
-Regla práctica:
+Regla prÃ¡ctica:
 
-si el concepto puede ser usado de forma natural por varias verticales, debe nombrarse de forma genérica
-si el concepto solo tiene sentido en un contexto funcional específico, puede nombrarse de forma específica
+si el concepto puede ser usado de forma natural por varias verticales, debe nombrarse de forma genÃ©rica
+si el concepto solo tiene sentido en un contexto funcional especÃ­fico, puede nombrarse de forma especÃ­fica
 no debe usarse un prefijo de vertical solo porque el primer consumidor pertenezca a esa vertical
 4. rule_entity.code debe ser estable y funcional
 
 El code:
 
 debe ser estable
-debe evitar ruido técnico
-no debe incorporar accidentalmente detalles de UI o de implementación
+debe evitar ruido tÃ©cnico
+no debe incorporar accidentalmente detalles de UI o de implementaciÃ³n
 5. rule_entity.name debe tratarse como label funcional visible
 
 El name:
@@ -4048,80 +4059,81 @@ puede evolucionar para mejorar claridad funcional
 debe pensarse como literal entendible por usuario/negocio
 6. description se reserva para contexto adicional, no para sustituir al nombre
 
-La descripción:
+La descripciÃ³n:
 
-amplía
+amplÃ­a
 no corrige un name pobre
-no debe convertirse en el único lugar donde vive la semántica
+no debe convertirse en el Ãºnico lugar donde vive la semÃ¡ntica
 No objetivos
 
-Este ADR no introduce todavía:
+Este ADR no introduce todavÃ­a:
 
 renombrado masivo inmediato de tipos existentes
 migraciones globales de seeds
-jerarquías complejas entre tipos
+jerarquÃ­as complejas entre tipos
 nuevo modelo de persistencia
 UI para mantenimiento de rule_entity_type
-Estrategia de aplicación
+Estrategia de aplicaciÃ³n
 1. No hacer big bang
 
 No se recomienda un renombrado inmediato de todos los tipos actuales.
 
-2. Aplicación a futuro
+2. AplicaciÃ³n a futuro
 
 A partir de este ADR:
 
-todo rule_entity_type nuevo debe pasar por esta revisión semántica
+todo rule_entity_type nuevo debe pasar por esta revisiÃ³n semÃ¡ntica
 Copilot debe recibir esta regla en prompts de backend y metamodelo
 los nombres nuevos no deben quedar estrechamente acoplados a la primera vertical consumidora
-3. Revisión incremental de deuda existente
+3. RevisiÃ³n incremental de deuda existente
 
-Los tipos actuales que hayan quedado demasiado específicos se documentarán como deuda semántica y se revisarán cuando compense funcionalmente.
+Los tipos actuales que hayan quedado demasiado especÃ­ficos se documentarÃ¡n como deuda semÃ¡ntica y se revisarÃ¡n cuando compense funcionalmente.
 
 Checklist para nuevos rule_entity_type
 
 Antes de crear uno nuevo, revisar:
 
-¿Describe un concepto reutilizable o una regla local?
-¿Ese concepto podría ser consumido por otra vertical en los próximos pasos?
-¿El nombre está reflejando el dominio o la implementación actual?
-¿Estamos poniendo prefijo de vertical por necesidad real o por comodidad momentánea?
-¿El name visible es suficientemente funcional para usuario/negocio?
+Â¿Describe un concepto reutilizable o una regla local?
+Â¿Ese concepto podrÃ­a ser consumido por otra vertical en los prÃ³ximos pasos?
+Â¿El nombre estÃ¡ reflejando el dominio o la implementaciÃ³n actual?
+Â¿Estamos poniendo prefijo de vertical por necesidad real o por comodidad momentÃ¡nea?
+Â¿El name visible es suficientemente funcional para usuario/negocio?
 Ejemplos orientativos
-Buenos candidatos a naming genérico
+Buenos candidatos a naming genÃ©rico
 COMPANY
 WORK_CENTER
 COST_CENTER
 COUNTRY
-Buenos candidatos a naming específico
+Buenos candidatos a naming especÃ­fico
 EMPLOYEE_CONTACT_TYPE
 EMPLOYEE_IDENTIFIER_TYPE
 EMPLOYEE_ENTRY_REASON
 EMPLOYEE_EXIT_REASON
 Sospechosos a revisar
 tipos cuyo nombre empiece por una vertical concreta pero describan un concepto reutilizable
-tipos cuyo name visible parezca una explicación provisional y no una etiqueta funcional
+tipos cuyo name visible parezca una explicaciÃ³n provisional y no una etiqueta funcional
 Consecuencias positivas
-mejor semántica de dominio
-mayor reutilización de catálogos
+mejor semÃ¡ntica de dominio
+mayor reutilizaciÃ³n de catÃ¡logos
 menor duplicidad futura
-prompts más precisos
-mejor UX en la pantalla de catálogos
+prompts mÃ¡s precisos
+mejor UX en la pantalla de catÃ¡logos
 Consecuencias negativas
 aparece deuda visible en nombres ya existentes
-obliga a pensar más antes de crear nuevos tipos
+obliga a pensar mÃ¡s antes de crear nuevos tipos
 en el futuro puede requerir migraciones o aliases si se decide racionalizar nombres existentes
+
 <!-- END FILE: ADR-012-Racionalización-de-naming-y-alcance-semántico-de-rule_entity_type.md -->
 
-<a name="file-adr-013-mantenimiento-de-rule-entity-md"></a>
 
 ---
 
 # FILE: ADR-013-Mantenimiento-de-rule_entity.md
+<a name="file-adr-013-mantenimiento-de-rule-entity-md"></a>
 
 <!-- BEGIN FILE: ADR-013-Mantenimiento-de-rule_entity.md -->
 
-ADR — Mantenimiento de rule_entity en B4RRHH
+ADR â€” Mantenimiento de rule_entity en B4RRHH
 Estado
 
 Propuesto
@@ -4139,7 +4151,7 @@ Actualmente el contrato expone para rule_entity:
 POST /rule-entities
 GET /rule-entities con filtros por business keys
 
-y el modelo público incluye:
+y el modelo pÃºblico incluye:
 
 ruleSystemCode
 ruleEntityTypeCode
@@ -4150,71 +4162,71 @@ active
 startDate
 endDate
 
-La pantalla de catálogos ya permite:
+La pantalla de catÃ¡logos ya permite:
 
 seleccionar rule_system
 seleccionar rule_entity_type
 listar rule_entity
-crear nuevos valores de catálogo
+crear nuevos valores de catÃ¡logo
 
-Sin embargo, todavía no existe una estrategia explícita de mantenimiento para:
+Sin embargo, todavÃ­a no existe una estrategia explÃ­cita de mantenimiento para:
 
 corregir una ocurrencia existente
 cerrar su vigencia
-eliminar ocurrencias erróneas sin uso
+eliminar ocurrencias errÃ³neas sin uso
 
-Además, B4RRHH ya distingue en frontend entre:
+AdemÃ¡s, B4RRHH ya distingue en frontend entre:
 
-edición tipo SLOT
+ediciÃ³n tipo SLOT
 mantenimiento temporal
-corrección administrativa frente a cambio funcional real
+correcciÃ³n administrativa frente a cambio funcional real
 
-También existe ya una decisión previa de naming/semántica: rule_entity_type debe nombrar el concepto funcional real y rule_entity.code debe ser estable, mientras que name actúa como label funcional visible
+TambiÃ©n existe ya una decisiÃ³n previa de naming/semÃ¡ntica: rule_entity_type debe nombrar el concepto funcional real y rule_entity.code debe ser estable, mientras que name actÃºa como label funcional visible
 
 Problema
 
 Si rule_entity se trata como un CRUD plano, aparecen varios riesgos:
 
-confusión entre identidad y datos corregibles
-pérdida de histórico semántico
-borrados peligrosos de valores de catálogo ya usados por empleados u otros recursos
-un frontend que muestra verbos genéricos sin reflejar la semántica real del dominio
+confusiÃ³n entre identidad y datos corregibles
+pÃ©rdida de histÃ³rico semÃ¡ntico
+borrados peligrosos de valores de catÃ¡logo ya usados por empleados u otros recursos
+un frontend que muestra verbos genÃ©ricos sin reflejar la semÃ¡ntica real del dominio
 
-Por el contrario, si se prohíbe todo mantenimiento salvo el alta, el catálogo queda operativamente incompleto.
+Por el contrario, si se prohÃ­be todo mantenimiento salvo el alta, el catÃ¡logo queda operativamente incompleto.
 
 Es necesario definir:
 
-qué constituye la identidad funcional de una ocurrencia de rule_entity
-qué operaciones canónicas existen
-qué se puede corregir
-cuándo procede cerrar
-si existe DELETE, en qué condiciones
-Decisión
+quÃ© constituye la identidad funcional de una ocurrencia de rule_entity
+quÃ© operaciones canÃ³nicas existen
+quÃ© se puede corregir
+cuÃ¡ndo procede cerrar
+si existe DELETE, en quÃ© condiciones
+DecisiÃ³n
 
-Se adopta para rule_entity un modelo de mantenimiento de catálogo con vigencia y borrado excepcional restringido.
+Se adopta para rule_entity un modelo de mantenimiento de catÃ¡logo con vigencia y borrado excepcional restringido.
 
 1. Naturaleza funcional
 
-rule_entity se modela como un catálogo parametrizable con vigencia temporal ligera:
+rule_entity se modela como un catÃ¡logo parametrizable con vigencia temporal ligera:
 
-puede tener histórico por código
+puede tener histÃ³rico por cÃ³digo
 no exige cobertura continua
 no debe tratarse como CRUD plano
-no debe confundirse corrección administrativa con cambio funcional
+no debe confundirse correcciÃ³n administrativa con cambio funcional
 2. Identidad funcional
 
-La identidad funcional de una ocurrencia de rule_entity será:
+La identidad funcional de una ocurrencia de rule_entity serÃ¡:
 
 ruleSystemCode
 ruleEntityTypeCode
 code
 startDate
 
-Esta combinación identifica una ocurrencia concreta del valor de catálogo.
+Esta combinaciÃ³n identifica una ocurrencia concreta del valor de catÃ¡logo.
 
 3. Campos inmutables
 
-Una vez creada la ocurrencia, no podrán modificarse:
+Una vez creada la ocurrencia, no podrÃ¡n modificarse:
 
 ruleSystemCode
 ruleEntityTypeCode
@@ -4222,7 +4234,7 @@ code
 startDate
 4. Campos corregibles
 
-Podrán corregirse:
+PodrÃ¡n corregirse:
 
 name
 description
@@ -4231,9 +4243,9 @@ endDate
 
 active se considera preferentemente un dato derivado/read-model a partir de la vigencia real.
 
-Mientras el contrato público lo mantenga, backend podrá seguir retornándolo, pero el mantenimiento canónico no debe apoyarse en editar active de forma arbitraria si eso duplica la semántica de endDate.
+Mientras el contrato pÃºblico lo mantenga, backend podrÃ¡ seguir retornÃ¡ndolo, pero el mantenimiento canÃ³nico no debe apoyarse en editar active de forma arbitraria si eso duplica la semÃ¡ntica de endDate.
 
-6. Operaciones canónicas
+6. Operaciones canÃ³nicas
 6.1 Crear
 
 Se mantiene:
@@ -4241,16 +4253,16 @@ Se mantiene:
 POST /rule-entities
 6.2 Consultar una ocurrencia concreta
 
-Se añade una lectura canónica por business key completa:
+Se aÃ±ade una lectura canÃ³nica por business key completa:
 
 GET /rule-entities/{ruleSystemCode}/{ruleEntityTypeCode}/{code}/{startDate}
 6.3 Corregir una ocurrencia existente
 
-Se añade una operación de corrección administrativa:
+Se aÃ±ade una operaciÃ³n de correcciÃ³n administrativa:
 
 PUT /rule-entities/{ruleSystemCode}/{ruleEntityTypeCode}/{code}/{startDate}
 
-Esta operación corrige la misma ocurrencia y no crea una nueva.
+Esta operaciÃ³n corrige la misma ocurrencia y no crea una nueva.
 
 Campos permitidos en request:
 
@@ -4259,7 +4271,7 @@ description
 endDate
 6.4 Cerrar vigencia
 
-Se añade una operación explícita de cierre:
+Se aÃ±ade una operaciÃ³n explÃ­cita de cierre:
 
 POST /rule-entities/{ruleSystemCode}/{ruleEntityTypeCode}/{code}/{startDate}/close
 
@@ -4267,30 +4279,30 @@ Request:
 
 endDate
 
-Su semántica es cerrar la vigencia de la ocurrencia existente.
+Su semÃ¡ntica es cerrar la vigencia de la ocurrencia existente.
 
 6.5 Eliminar
 
-Se admite DELETE, pero como operación excepcional y restringida, no como verbo principal de mantenimiento:
+Se admite DELETE, pero como operaciÃ³n excepcional y restringida, no como verbo principal de mantenimiento:
 
 DELETE /rule-entities/{ruleSystemCode}/{ruleEntityTypeCode}/{code}/{startDate}
 
-Su semántica es borrado físico de una ocurrencia de catálogo solo si backend demuestra que no está usada.
+Su semÃ¡ntica es borrado fÃ­sico de una ocurrencia de catÃ¡logo solo si backend demuestra que no estÃ¡ usada.
 
 Reglas de borrado
 
-DELETE solo estará permitido si se cumplen todas las condiciones siguientes:
+DELETE solo estarÃ¡ permitido si se cumplen todas las condiciones siguientes:
 
 La ocurrencia existe.
-La comprobación se realiza dentro del rule_system de la ocurrencia.
-La rule_entity no está referenciada por ningún recurso de negocio existente que dependa de ella.
-La comprobación de referencias debe hacerse en backend, nunca en frontend.
-Si existen referencias, la operación falla con conflicto de negocio y no degrada a soft delete implícito.
-Política de referencias
+La comprobaciÃ³n se realiza dentro del rule_system de la ocurrencia.
+La rule_entity no estÃ¡ referenciada por ningÃºn recurso de negocio existente que dependa de ella.
+La comprobaciÃ³n de referencias debe hacerse en backend, nunca en frontend.
+Si existen referencias, la operaciÃ³n falla con conflicto de negocio y no degrada a soft delete implÃ­cito.
+PolÃ­tica de referencias
 
-Se considera “referenciada” una rule_entity cuando su código está siendo usado por cualquier recurso real que la valide o consuma en ese rule_system.
+Se considera â€œreferenciadaâ€ una rule_entity cuando su cÃ³digo estÃ¡ siendo usado por cualquier recurso real que la valide o consuma en ese rule_system.
 
-Ejemplos típicos:
+Ejemplos tÃ­picos:
 
 companyCode en presence
 contactTypeCode en contacts
@@ -4301,21 +4313,21 @@ costCenterCode en cost centers
 contractCode o contractSubtypeCode en contracts
 agreementCode o agreementCategoryCode en labor classifications
 
-La comprobación exacta dependerá del ruleEntityTypeCode y de los verticales que consuman ese catálogo.
+La comprobaciÃ³n exacta dependerÃ¡ del ruleEntityTypeCode y de los verticales que consuman ese catÃ¡logo.
 
 Reglas de dominio adicionales
-no puede haber solape de vigencia para la misma combinación ruleSystemCode + ruleEntityTypeCode + code
+no puede haber solape de vigencia para la misma combinaciÃ³n ruleSystemCode + ruleEntityTypeCode + code
 endDate no puede ser menor que startDate
-una corrección administrativa no debe alterar la identidad funcional
+una correcciÃ³n administrativa no debe alterar la identidad funcional
 un cierre expresa fin de vigencia, no borrado
 un cambio funcional normal puede resolverse como cierre de la ocurrencia vigente y alta de una nueva ocurrencia
-Semántica de frontend
+SemÃ¡ntica de frontend
 
-El frontend de catálogos debe exponer acciones honestas y alineadas con backend:
+El frontend de catÃ¡logos debe exponer acciones honestas y alineadas con backend:
 
 Crear
 Editar
-entendido como corrección administrativa de la misma ocurrencia
+entendido como correcciÃ³n administrativa de la misma ocurrencia
 Cerrar
 Eliminar
 solo cuando backend lo soporte y sujeto a error si existen referencias
@@ -4335,30 +4347,30 @@ Cuando la ocurrencia concreta no exista.
 
 Cuando:
 
-haya referencias activas o históricas que impidan el borrado
-el cierre o corrección rompa reglas temporales
+haya referencias activas o histÃ³ricas que impidan el borrado
+el cierre o correcciÃ³n rompa reglas temporales
 se intente dejar la ocurrencia en un estado inconsistente
 No objetivos
 
-Este ADR no introduce todavía:
+Este ADR no introduce todavÃ­a:
 
 mantenimiento frontend de rule_entity_type
 renombrado masivo de tipos o seeds
-versionado complejo de catálogos
-soft delete genérico
-cascadas automáticas de cleanup
+versionado complejo de catÃ¡logos
+soft delete genÃ©rico
+cascadas automÃ¡ticas de cleanup
 Consecuencias positivas
 mantenimiento realista de rule_entity
-histórico preservado cuando corresponde
-borrado físico posible para errores sin uso
+histÃ³rico preservado cuando corresponde
+borrado fÃ­sico posible para errores sin uso
 menor riesgo de destruir datos referenciados
-frontend con verbos honestos y semánticos
+frontend con verbos honestos y semÃ¡nticos
 Consecuencias negativas
-backend necesita lógica de comprobación de referencias
+backend necesita lÃ³gica de comprobaciÃ³n de referencias
 DELETE deja de ser trivial
-algunos casos requerirán decidir si aplicar correct, close o delete
-aparece coste de diseño por tipo de catálogo consumidor
-Estrategia de implementación
+algunos casos requerirÃ¡n decidir si aplicar correct, close o delete
+aparece coste de diseÃ±o por tipo de catÃ¡logo consumidor
+Estrategia de implementaciÃ³n
 Fase 1
 
 Backend:
@@ -4366,15 +4378,15 @@ Backend:
 GET by business key
 PUT correct
 POST close
-DELETE con comprobación de referencias
+DELETE con comprobaciÃ³n de referencias
 Fase 2
 
 Frontend:
 
-abrir detalle/edición de ocurrencia concreta
+abrir detalle/ediciÃ³n de ocurrencia concreta
 soportar editar
 soportar cerrar
-soportar eliminar con confirmación ligera
+soportar eliminar con confirmaciÃ³n ligera
 Fase 3
 
 Refinamiento:
@@ -4384,9 +4396,9 @@ posible visibilidad de motivo de bloqueo
 tests por tipo consumidor
 Resumen
 
-rule_entity no se gestionará como CRUD plano.
+rule_entity no se gestionarÃ¡ como CRUD plano.
 
-Su mantenimiento canónico en B4RRHH será:
+Su mantenimiento canÃ³nico en B4RRHH serÃ¡:
 
 create
 get by business key
@@ -4394,39 +4406,40 @@ correct
 close
 delete restringido
 
-DELETE existirá, pero únicamente como operación excepcional y segura, protegida por validación backend de ausencia total de referencias dentro del rule_system.
+DELETE existirÃ¡, pero Ãºnicamente como operaciÃ³n excepcional y segura, protegida por validaciÃ³n backend de ausencia total de referencias dentro del rule_system.
+
 <!-- END FILE: ADR-013-Mantenimiento-de-rule_entity.md -->
 
-<a name="file-adr-014-employee-frontend-ui-md"></a>
 
 ---
 
 # FILE: ADR-014-employee-frontend-ui.md
+<a name="file-adr-014-employee-frontend-ui-md"></a>
 
 <!-- BEGIN FILE: ADR-014-employee-frontend-ui.md -->
 
-# ADR — Employee Frontend Section System and Visual Identity
+# ADR â€” Employee Frontend Section System and Visual Identity
 
 ## 1. Objetivo
 Definir un sistema visual coherente y reutilizable para la ficha de empleado basado en verticales.
 
 ## 2. Principios
-- La ficha es composición de verticales
+- La ficha es composiciÃ³n de verticales
 - Consistencia visual transversal
 - Backend-driven UI
-- No formularios monolíticos
+- No formularios monolÃ­ticos
 
 ## 3. Unidad base: Section Shell
 Componente base que define:
-- Header (título + acciones)
+- Header (tÃ­tulo + acciones)
 - Body (contenido)
 - Footer (estado: loading/error/success)
 
-## 4. Maintenance modes → UI
-- SLOT → lista editable
-- TEMPORAL_APPEND_CLOSE → histórico con activo
-- WORKFLOW → acciones guiadas
-- READONLY → solo lectura
+## 4. Maintenance modes â†’ UI
+- SLOT â†’ lista editable
+- TEMPORAL_APPEND_CLOSE â†’ histÃ³rico con activo
+- WORKFLOW â†’ acciones guiadas
+- READONLY â†’ solo lectura
 
 ## 5. Contratos base
 
@@ -4456,8 +4469,8 @@ Componente base que define:
 - colores base
 
 ## 8. Reglas Copilot
-- No crear componentes genéricos universales
-- No mezclar lógica de negocio en UI
+- No crear componentes genÃ©ricos universales
+- No mezclar lÃ³gica de negocio en UI
 - Reutilizar shell y contratos
 
 ## 9. Estrategia
@@ -4466,59 +4479,60 @@ Componente base que define:
 3. Reutilizar en identifiers
 4. Extender a temporales
 
+
 <!-- END FILE: ADR-014-employee-frontend-ui.md -->
 
-<a name="file-adr-015-binding-de-catalogos-por-recurso-y-campo-md"></a>
 
 ---
 
 # FILE: ADR-015-Binding-de-catalogos-por-recurso-y-campo.md
+<a name="file-adr-015-binding-de-catalogos-por-recurso-y-campo-md"></a>
 
 <!-- BEGIN FILE: ADR-015-Binding-de-catalogos-por-recurso-y-campo.md -->
 
-# ADR-015 — Binding de catálogos por recurso y campo
+# ADR-015 â€” Binding de catÃ¡logos por recurso y campo
 
 ## Estado
 Propuesto
 
 ## Contexto
-B4RRHH ya dispone de un metamodelo funcional de catálogos en el bounded context `rulesystem`:
+B4RRHH ya dispone de un metamodelo funcional de catÃ¡logos en el bounded context `rulesystem`:
 - `rule_system`
 - `rule_entity_type`
 - `rule_entity`
 
-Además:
+AdemÃ¡s:
 - ya existen endpoints de `rule_entity` filtrables por business keys;
-- ya existe un caso dependiente real para edición: `GET /labor-classification-catalog/agreement-categories`;
+- ya existe un caso dependiente real para ediciÃ³n: `GET /labor-classification-catalog/agreement-categories`;
 - `rule_entity_type` debe nombrar conceptos funcionales reutilizables (por ejemplo `COMPANY`, `WORK_CENTER`, `COST_CENTER`);
-- frontend no debe asumir semántica de metamodelo compleja ni convertirse en renderizador genérico de formularios.
+- frontend no debe asumir semÃ¡ntica de metamodelo compleja ni convertirse en renderizador genÃ©rico de formularios.
 
-El problema de producto actual tiene dos necesidades simultáneas:
-1. mostrar labels/literales visibles en frontend, no solo códigos;
-2. conocer qué catálogo aplica a un campo concreto de un recurso para pedir opciones válidas por `rule_system`.
+El problema de producto actual tiene dos necesidades simultÃ¡neas:
+1. mostrar labels/literales visibles en frontend, no solo cÃ³digos;
+2. conocer quÃ© catÃ¡logo aplica a un campo concreto de un recurso para pedir opciones vÃ¡lidas por `rule_system`.
 
 ## Problema
-Hoy, el sistema valida códigos de catálogo en verticales concretos, pero no existe un diccionario backend explícito y reusable que responda de forma simple:
-- qué catálogo corresponde a cada campo;
-- si ese catálogo se resuelve de forma directa, dependiente o custom.
+Hoy, el sistema valida cÃ³digos de catÃ¡logo en verticales concretos, pero no existe un diccionario backend explÃ­cito y reusable que responda de forma simple:
+- quÃ© catÃ¡logo corresponde a cada campo;
+- si ese catÃ¡logo se resuelve de forma directa, dependiente o custom.
 
 Sin este diccionario aparecen dos riesgos no deseados:
 - construir un "GET de la muerte" que devuelva todas las `rule_entities` para que frontend infiera todo;
 - codificar manualmente vertical por vertical y campo por campo en Angular.
 
-## Decisión
-Se adopta una solución backend-first, pequeña y evolutiva basada en binding recurso/campo -> catálogo aplicable.
+## DecisiÃ³n
+Se adopta una soluciÃ³n backend-first, pequeÃ±a y evolutiva basada en binding recurso/campo -> catÃ¡logo aplicable.
 
 ### Decisiones fijadas
 1. Introducir la tabla `resource_field_catalog_binding`.
 2. Clasificar bindings en `DIRECT`, `DEPENDENT`, `CUSTOM`.
-3. El binding define **qué catálogo aplica**, no **cómo renderizar formularios**.
+3. El binding define **quÃ© catÃ¡logo aplica**, no **cÃ³mo renderizar formularios**.
 4. Para lectura, preferir read models enriquecidos con `code + name`.
-5. Para edición, frontend consulta bindings y consume opciones directas o endpoints específicos según el caso.
+5. Para ediciÃ³n, frontend consulta bindings y consume opciones directas o endpoints especÃ­ficos segÃºn el caso.
 6. No introducir en esta fase un motor universal de dependencias.
 7. No introducir un endpoint masivo de todas las `rule_entities`.
 
-## Diseño Propuesto
+## DiseÃ±o Propuesto
 ### Persistencia
 Tabla: `rulesystem.resource_field_catalog_binding`
 
@@ -4536,7 +4550,7 @@ Campos:
 Identidad funcional recomendada:
 - `resourceCode + fieldCode`.
 
-Relación recomendada:
+RelaciÃ³n recomendada:
 - `ruleEntityTypeCode` referencia por business key a `rule_entity_type.code` cuando aplique.
 
 ### Reglas de consistencia
@@ -4544,16 +4558,16 @@ Relación recomendada:
 - `DEPENDENT` => `ruleEntityTypeCode` obligatorio y `dependsOnFieldCode` obligatorio.
 - `CUSTOM` => `customResolverCode` obligatorio.
 
-### Semántica de resolución
+### SemÃ¡ntica de resoluciÃ³n
 - `DIRECT`: opciones por `ruleSystemCode + ruleEntityTypeCode`.
-- `DEPENDENT`: opciones por endpoint específico del caso de negocio.
-- `CUSTOM`: resolución específica controlada por backend, explícita por `customResolverCode`.
+- `DEPENDENT`: opciones por endpoint especÃ­fico del caso de negocio.
+- `CUSTOM`: resoluciÃ³n especÃ­fica controlada por backend, explÃ­cita por `customResolverCode`.
 
-## API Propuesta (primera iteración)
+## API Propuesta (primera iteraciÃ³n)
 ### 1) Consultar bindings de un recurso
 `GET /catalog-bindings/{resourceCode}`
 
-Respuesta mínima:
+Respuesta mÃ­nima:
 - `resourceCode`
 - `bindings[]` con:
   - `fieldCode`
@@ -4563,10 +4577,10 @@ Respuesta mínima:
   - `customResolverCode` (nullable)
   - `active`
 
-### 2) Obtener opciones de catálogo directo
+### 2) Obtener opciones de catÃ¡logo directo
 `GET /catalog-options/direct?ruleSystemCode=...&ruleEntityTypeCode=...&referenceDate=...&q=...`
 
-Respuesta mínima:
+Respuesta mÃ­nima:
 - `items[]` con:
   - `code`
   - `name`
@@ -4575,7 +4589,7 @@ Respuesta mínima:
   - `endDate`
 
 ### 3) Casos dependientes
-Mantener endpoints específicos cuando compense (por ejemplo `labor-classification-catalog/agreement-categories`).
+Mantener endpoints especÃ­ficos cuando compense (por ejemplo `labor-classification-catalog/agreement-categories`).
 
 ## Reglas de Uso
 ### Lectura
@@ -4586,31 +4600,31 @@ Ejemplos:
 - `agreementCode` + `agreementName`
 - `agreementCategoryCode` + `agreementCategoryName`
 
-### Edición
+### EdiciÃ³n
 Frontend:
 1. consulta binding por `resourceCode`;
 2. para `DIRECT`, pide opciones directas por `ruleSystemCode`;
-3. para `DEPENDENT`/`CUSTOM`, usa endpoint específico del caso.
+3. para `DEPENDENT`/`CUSTOM`, usa endpoint especÃ­fico del caso.
 
-No se pretende frontend dinámico universal.
+No se pretende frontend dinÃ¡mico universal.
 
 ## No Objetivos
-Este ADR no pretende resolver todavía:
-- un form builder genérico;
+Este ADR no pretende resolver todavÃ­a:
+- un form builder genÃ©rico;
 - un motor universal de dependencias entre campos;
-- inferencia automática de UI desde metamodelo completo;
-- un endpoint masivo que exponga todas las `rule_entities` para que frontend deduzca semántica;
-- relajar reglas de vertical-first o mover lógica de dominio a Angular.
+- inferencia automÃ¡tica de UI desde metamodelo completo;
+- un endpoint masivo que exponga todas las `rule_entities` para que frontend deduzca semÃ¡ntica;
+- relajar reglas de vertical-first o mover lÃ³gica de dominio a Angular.
 
 ## Consecuencias
 ### Positivas
 - Evita acoplamiento manual campo a campo en frontend.
-- Mantiene el control semántico en backend.
+- Mantiene el control semÃ¡ntico en backend.
 - Permite crecimiento incremental por verticales sin arquitectura astronauta.
 - Reutiliza metamodelo existente y business keys.
 
 ### Costes
-- Introduce una tabla más en metamodelo de consumo.
+- Introduce una tabla mÃ¡s en metamodelo de consumo.
 - Requiere gobierno de seeds de bindings.
 - Exige disciplina para distinguir `DIRECT` vs `DEPENDENT` vs `CUSTOM`.
 
@@ -4636,34 +4650,35 @@ Bindings iniciales a registrar:
 - Empezar enriquecimiento `code + name` en read models prioritarios (work center, labor classification).
 
 ### Fase 3
-- Integrar consumo en frontend para edición guiada por binding.
-- Extender gradualmente a más verticales y consolidar endpoints dependientes puntuales.
+- Integrar consumo en frontend para ediciÃ³n guiada por binding.
+- Extender gradualmente a mÃ¡s verticales y consolidar endpoints dependientes puntuales.
 
 ## Riesgos a Evitar
-- Convertir el binding en framework genérico de formularios.
-- Duplicar semántica de negocio en frontend.
-- Diseñar una API universal compleja antes de validar casos reales.
-- Introducir IDs técnicos en contratos públicos.
+- Convertir el binding en framework genÃ©rico de formularios.
+- Duplicar semÃ¡ntica de negocio en frontend.
+- DiseÃ±ar una API universal compleja antes de validar casos reales.
+- Introducir IDs tÃ©cnicos en contratos pÃºblicos.
 - Romper vertical-first moviendo reglas de dominio fuera de sus verticales.
+
 
 <!-- END FILE: ADR-015-Binding-de-catalogos-por-recurso-y-campo.md -->
 
-<a name="file-adr-016-anatomia-visual-y-patrones-de-interacci-n-de-la-ficha-de-empleado-md"></a>
 
 ---
 
 # FILE: ADR-016-Anatomia-visual-y-patrones-de-interacción-de-la-ficha-de-empleado.md
+<a name="file-adr-016-anatomia-visual-y-patrones-de-interacci-n-de-la-ficha-de-empleado-md"></a>
 
 <!-- BEGIN FILE: ADR-016-Anatomia-visual-y-patrones-de-interacción-de-la-ficha-de-empleado.md -->
 
-ADR — Anatomía visual y patrones de interacción de la ficha de empleado
+ADR â€” AnatomÃ­a visual y patrones de interacciÃ³n de la ficha de empleado
 1. Estado
 
-PROPOSED → TARGET: ACCEPTED
+PROPOSED â†’ TARGET: ACCEPTED
 
 2. Contexto
 
-El frontend de B4RRHH ha evolucionado hacia una arquitectura por verticales, con una clara separación entre:
+El frontend de B4RRHH ha evolucionado hacia una arquitectura por verticales, con una clara separaciÃ³n entre:
 
 dominio (backend)
 contrato (OpenAPI)
@@ -4671,44 +4686,44 @@ frontend desacoplado (Angular)
 
 Las decisiones previas relevantes establecen que:
 
-la ficha de empleado es una composición de secciones autónomas
-la edición se rige por maintenance modes (SLOT, TEMPORAL_APPEND_CLOSE, WORKFLOW, READONLY)
-el frontend no debe inferir semántica compleja, sino consumirla del backend
-las acciones deben ser semánticamente honestas, evitando CRUD genérico
+la ficha de empleado es una composiciÃ³n de secciones autÃ³nomas
+la ediciÃ³n se rige por maintenance modes (SLOT, TEMPORAL_APPEND_CLOSE, WORKFLOW, READONLY)
+el frontend no debe inferir semÃ¡ntica compleja, sino consumirla del backend
+las acciones deben ser semÃ¡nticamente honestas, evitando CRUD genÃ©rico
 
 Sin embargo, el estado actual de la UI:
 
-transmite una sensación de “pantalla técnica”
-carece de una anatomía visual consolidada
+transmite una sensaciÃ³n de â€œpantalla tÃ©cnicaâ€
+carece de una anatomÃ­a visual consolidada
 no expresa de forma clara el ciclo de vida del empleado
-no diferencia visualmente tipos de información (actual vs histórico vs workflow)
+no diferencia visualmente tipos de informaciÃ³n (actual vs histÃ³rico vs workflow)
 
 Existe el riesgo de:
 
-aplicar mejoras estéticas locales sin coherencia global
-introducir abstracciones genéricas que rompan la semántica del dominio
+aplicar mejoras estÃ©ticas locales sin coherencia global
+introducir abstracciones genÃ©ricas que rompan la semÃ¡ntica del dominio
 degradar la experiencia al crecer en verticales
 3. Problema
 
-Se requiere definir una arquitectura de experiencia y anatomía visual coherente, que:
+Se requiere definir una arquitectura de experiencia y anatomÃ­a visual coherente, que:
 
 exprese correctamente el dominio (lifecycle del empleado)
 escale con nuevas verticales
-mantenga la semántica de negocio
-evite caer en formularios genéricos o UI técnica
-4. Decisión
-4.1 La ficha como composición estructurada
+mantenga la semÃ¡ntica de negocio
+evite caer en formularios genÃ©ricos o UI tÃ©cnica
+4. DecisiÃ³n
+4.1 La ficha como composiciÃ³n estructurada
 
 La ficha de empleado se consolida como:
 
-Una composición de secciones autónomas con una jerarquía visual clara y consistente
+Una composiciÃ³n de secciones autÃ³nomas con una jerarquÃ­a visual clara y consistente
 
 Estructura base:
 
 Cabecera de empleado (contexto)
 Estado actual
 Datos operativos (SLOT)
-Datos históricos (TEMPORAL)
+Datos histÃ³ricos (TEMPORAL)
 Acciones de negocio (WORKFLOW)
 Timeline lateral persistente
 4.2 Cabecera como componente de producto
@@ -4718,23 +4733,23 @@ Se introduce un componente de cabecera que:
 muestra identidad completa del empleado
 muestra estado derivado (Activo / Inactivo)
 expone contexto actual (empresa, centro, fechas)
-incluye contacto básico inline
+incluye contacto bÃ¡sico inline
 expone acciones principales dependientes de estado
 
 Regla clave:
 
 La cabecera debe permitir entender el estado del empleado sin navegar ni leer bloques inferiores.
 
-4.3 Contratación como punto de entrada
+4.3 ContrataciÃ³n como punto de entrada
 
 Se establece que:
 
-la acción primaria del sistema es Nueva contratación
-no se expone “crear empleado” como acción independiente
+la acciÃ³n primaria del sistema es Nueva contrataciÃ³n
+no se expone â€œcrear empleadoâ€ como acciÃ³n independiente
 
 Regla:
 
-La contratación inicial crea simultáneamente la identidad del empleado y su primera relación laboral (presence).
+La contrataciÃ³n inicial crea simultÃ¡neamente la identidad del empleado y su primera relaciÃ³n laboral (presence).
 
 Consecuencia:
 
@@ -4752,17 +4767,17 @@ La UI:
 
 refleja el estado derivado (activo/inactivo)
 no introduce estados artificiales
-no separa artificialmente “persona” y “relación” en la experiencia
+no separa artificialmente â€œpersonaâ€ y â€œrelaciÃ³nâ€ en la experiencia
 4.5 Timeline como contexto lateral persistente
 
 Se introduce un componente de timeline con estas reglas:
 
 en escritorio:
 aparece como panel lateral derecho persistente
-en móvil:
+en mÃ³vil:
 se reubica al final de la ficha
 
-Características:
+CaracterÃ­sticas:
 
 representa el lifecycle completo
 no es una tabla
@@ -4773,69 +4788,69 @@ Regla:
 
 El timeline es contexto, no contenido principal.
 
-4.6 Separación visual por familias funcionales
+4.6 SeparaciÃ³n visual por familias funcionales
 
-Cada tipo de mantenimiento se representa con un patrón visual distinto:
+Cada tipo de mantenimiento se representa con un patrÃ³n visual distinto:
 
 SLOT
 datos actuales
 lectura limpia
 sin tablas
-edición localizada
+ediciÃ³n localizada
 TEMPORAL_APPEND_CLOSE
 ocurrencia actual destacada
-histórico secundario
-acciones: añadir / cerrar / corregir
+histÃ³rico secundario
+acciones: aÃ±adir / cerrar / corregir
 WORKFLOW
 no parece formulario
-acciones de negocio explícitas
-lenguaje semántico
+acciones de negocio explÃ­citas
+lenguaje semÃ¡ntico
 READONLY
 lectura pura
-sin affordances engañosas
-4.7 Shell común de sección
+sin affordances engaÃ±osas
+4.7 Shell comÃºn de secciÃ³n
 
 Todas las secciones comparten un shell visual:
 
-título
+tÃ­tulo
 acciones
 contenido
 estado (loading/error/success)
 
 Pero:
 
-La lógica interna no se unifica en un componente genérico.
+La lÃ³gica interna no se unifica en un componente genÃ©rico.
 
-4.8 UI semánticamente honesta
+4.8 UI semÃ¡nticamente honesta
 
-Se prohíbe el uso de:
+Se prohÃ­be el uso de:
 
-“Editar” como verbo universal
-acciones técnicas (create/update/delete)
+â€œEditarâ€ como verbo universal
+acciones tÃ©cnicas (create/update/delete)
 
 Se obliga a usar:
 
-Añadir
+AÃ±adir
 Eliminar
 Cerrar
 Corregir
 Contratar
 Terminar
 Recontratar
-4.9 No uso de form builders genéricos
+4.9 No uso de form builders genÃ©ricos
 
-Se establece explícitamente:
+Se establece explÃ­citamente:
 
-no se implementará un motor genérico de formularios
-no se trasladará la semántica de negocio al frontend
-5. Anatomía visual objetivo
+no se implementarÃ¡ un motor genÃ©rico de formularios
+no se trasladarÃ¡ la semÃ¡ntica de negocio al frontend
+5. AnatomÃ­a visual objetivo
 Layout escritorio
 contenido principal (izquierda)
 timeline lateral (derecha)
-Layout móvil
+Layout mÃ³vil
 contenido en flujo
 timeline al final
-Jerarquía
+JerarquÃ­a
 Cabecera
 Estado actual
 Datos SLOT
@@ -4844,115 +4859,116 @@ Acciones
 Timeline
 6. Consecuencias
 Positivas
-sensación de producto profesional
+sensaciÃ³n de producto profesional
 coherencia entre verticales
 escalabilidad real
-mejor alineación con dominio
-reducción de deuda futura
+mejor alineaciÃ³n con dominio
+reducciÃ³n de deuda futura
 Negativas
 refactor inicial de UI existente
 mayor disciplina en frontend
 necesidad de mantener consistencia
 7. Alternativas descartadas
 mejoras visuales locales sin blueprint
-uso de librerías UI como solución completa
+uso de librerÃ­as UI como soluciÃ³n completa
 componente universal configurable
-formulario único editable
+formulario Ãºnico editable
 timeline como tabla
-8. Plan de implementación
-Fase 0 — Consolidación
+8. Plan de implementaciÃ³n
+Fase 0 â€” ConsolidaciÃ³n
 aprobar ADR
 documentar patrones
 alinear naming
-Fase 1 — Foundation
+Fase 1 â€” Foundation
 employee-page-header
 employee-section-shell
 tokens visuales
 badges y estados
-Fase 2 — SLOT
+Fase 2 â€” SLOT
 consolidar contacto
 consolidar identificadores
-Fase 3 — TEMPORAL
-rediseñar address
-introducir patrón histórico
-Fase 4 — Layout
+Fase 3 â€” TEMPORAL
+rediseÃ±ar address
+introducir patrÃ³n histÃ³rico
+Fase 4 â€” Layout
 implementar layout con timeline lateral
 responsive
-Fase 5 — Timeline
+Fase 5 â€” Timeline
 implementar timeline discreto
 integrar presence
-Fase 6 — Preparación workflows
-preparar patrón workflow
+Fase 6 â€” PreparaciÃ³n workflows
+preparar patrÃ³n workflow
 integrar acciones lifecycle
-9. Reglas para Copilot (CRÍTICO)
+9. Reglas para Copilot (CRÃTICO)
 
 Copilot debe:
 
-respetar la anatomía de sección
-no introducir componentes genéricos
-no alterar semántica de negocio
+respetar la anatomÃ­a de secciÃ³n
+no introducir componentes genÃ©ricos
+no alterar semÃ¡ntica de negocio
 usar naming consistente
-priorizar claridad sobre reutilización excesiva
+priorizar claridad sobre reutilizaciÃ³n excesiva
 
 Copilot NO debe:
 
 crear form builders
-introducir lógica de negocio en frontend
-usar “edit” como acción universal
+introducir lÃ³gica de negocio en frontend
+usar â€œeditâ€ como acciÃ³n universal
 mezclar tipos de mantenimiento
-🎯 Resultado esperado
+ðŸŽ¯ Resultado esperado
 
 Una UI que:
 
-no parece técnica
+no parece tÃ©cnica
 no parece CRUD
 expresa claramente el dominio
 escala sin romperse
 puede evolucionar hacia producto completo de RRHH
+
 <!-- END FILE: ADR-016-Anatomia-visual-y-patrones-de-interacción-de-la-ficha-de-empleado.md -->
 
-<a name="file-adr-017-cost-center-design-md"></a>
 
 ---
 
 # FILE: ADR-017-Cost-center-design.md
+<a name="file-adr-017-cost-center-design-md"></a>
 
 <!-- BEGIN FILE: ADR-017-Cost-center-design.md -->
 
-ADR — Employee Cost Center Vertical
+ADR â€” Employee Cost Center Vertical
 Estado
 
 Propuesto
 
 Contexto
 
-B4RRHH modela el dominio de empleado mediante verticales funcionales independientes dentro del bounded context employee, siguiendo arquitectura vertical-first, hexagonal interna y APIs públicas basadas exclusivamente en business keys. El empleado se identifica funcionalmente por:
+B4RRHH modela el dominio de empleado mediante verticales funcionales independientes dentro del bounded context employee, siguiendo arquitectura vertical-first, hexagonal interna y APIs pÃºblicas basadas exclusivamente en business keys. El empleado se identifica funcionalmente por:
 
 ruleSystemCode
 employeeTypeCode
 employeeNumber
 
-y los recursos hijos deben derivar su identidad desde esa business key, sin exponer IDs técnicos en la API pública.
+y los recursos hijos deben derivar su identidad desde esa business key, sin exponer IDs tÃ©cnicos en la API pÃºblica.
 
-En la evolución del mapa de verticales del proyecto, cost_center ya aparece identificado como una vertical de tipo:
+En la evoluciÃ³n del mapa de verticales del proyecto, cost_center ya aparece identificado como una vertical de tipo:
 
 DISTRIBUTED_TIMELINE
-catálogo simple
+catÃ¡logo simple
 reglas temporales: MULTI_ACTIVE + SUM<=100
 
-y pendiente todavía de aterrizar operativamente.
+y pendiente todavÃ­a de aterrizar operativamente.
 
-Además, el lenguaje temporal común del proyecto distingue claramente entre:
+AdemÃ¡s, el lenguaje temporal comÃºn del proyecto distingue claramente entre:
 
 STRONG_TIMELINE
 FLEXIBLE_TIMELINE
 DISTRIBUTED_TIMELINE
 
-reservando para esta última los casos multi-activos y con reglas agregadas, típicamente basadas en porcentajes. El propio patrón de StrongTimelineReplacePlanner indica expresamente que no debe aplicarse directamente a cost_center, porque esa vertical no es single-active ni de cobertura completa.
+reservando para esta Ãºltima los casos multi-activos y con reglas agregadas, tÃ­picamente basadas en porcentajes. El propio patrÃ³n de StrongTimelineReplacePlanner indica expresamente que no debe aplicarse directamente a cost_center, porque esa vertical no es single-active ni de cobertura completa.
 
-También existe ya una decisión explícita de naming de catálogos reutilizables: cuando el concepto es transversal o reusable, el rule_entity_type debe nombrar el concepto funcional real. COST_CENTER aparece como ejemplo claro de catálogo reusable y además ya está previsto como binding directo para employee.cost_center / costCenterCode.
+TambiÃ©n existe ya una decisiÃ³n explÃ­cita de naming de catÃ¡logos reutilizables: cuando el concepto es transversal o reusable, el rule_entity_type debe nombrar el concepto funcional real. COST_CENTER aparece como ejemplo claro de catÃ¡logo reusable y ademÃ¡s ya estÃ¡ previsto como binding directo para employee.cost_center / costCenterCode.
 
-Por último, el dominio de lifecycle ya establece que TERMINATION debe cerrar o ajustar asignaciones vigentes del empleado, preservando el histórico y sin dejar restos abiertos tras la terminación.
+Por Ãºltimo, el dominio de lifecycle ya establece que TERMINATION debe cerrar o ajustar asignaciones vigentes del empleado, preservando el histÃ³rico y sin dejar restos abiertos tras la terminaciÃ³n.
 
 Problema
 
@@ -4962,71 +4978,71 @@ CRUD plano por filas
 ni como simple clon de work_center
 ni como STRONG_TIMELINE
 
-porque su semántica real no es “una única asignación activa”, sino una distribución organizativa que puede tener varias líneas simultáneas activas para una misma fecha.
+porque su semÃ¡ntica real no es â€œuna Ãºnica asignaciÃ³n activaâ€, sino una distribuciÃ³n organizativa que puede tener varias lÃ­neas simultÃ¡neas activas para una misma fecha.
 
-Ejemplo funcional válido:
+Ejemplo funcional vÃ¡lido:
 
 50% en CC_A
 50% en CC_B
 
 vigentes a la vez desde la misma fecha.
 
-Esto introduce necesidades específicas que no aparecen en verticales single-active:
+Esto introduce necesidades especÃ­ficas que no aparecen en verticales single-active:
 
-permitir multi-actividad simultánea;
+permitir multi-actividad simultÃ¡nea;
 impedir que la suma de porcentajes supere 100 en un momento dado;
-evitar mezclas incoherentes de líneas paralelas con fechas de inicio distintas;
-definir una unidad funcional de cambio más fuerte que “una fila aislada”;
-aclarar cómo impacta TERMINATION;
-definir operaciones canónicas honestas, evitando un CRUD fila a fila que rompa la consistencia agregada.
-Decisión
+evitar mezclas incoherentes de lÃ­neas paralelas con fechas de inicio distintas;
+definir una unidad funcional de cambio mÃ¡s fuerte que â€œuna fila aisladaâ€;
+aclarar cÃ³mo impacta TERMINATION;
+definir operaciones canÃ³nicas honestas, evitando un CRUD fila a fila que rompa la consistencia agregada.
+DecisiÃ³n
 
-Se adopta para employee.cost_center un modelo de vertical de tipo DISTRIBUTED_TIMELINE, cuyo elemento funcional real no es una fila aislada, sino una ventana de distribución de centros de coste para un empleado.
+Se adopta para employee.cost_center un modelo de vertical de tipo DISTRIBUTED_TIMELINE, cuyo elemento funcional real no es una fila aislada, sino una ventana de distribuciÃ³n de centros de coste para un empleado.
 
 La vertical:
 
-será historizada;
-permitirá múltiples líneas activas simultáneamente;
-validará catálogo COST_CENTER;
-exigirá contención dentro de una presence;
-impondrá que la suma de porcentajes activos no supere 100;
-y, cuando exista más de una línea paralela activa, exigirá que todas compartan la misma startDate.
+serÃ¡ historizada;
+permitirÃ¡ mÃºltiples lÃ­neas activas simultÃ¡neamente;
+validarÃ¡ catÃ¡logo COST_CENTER;
+exigirÃ¡ contenciÃ³n dentro de una presence;
+impondrÃ¡ que la suma de porcentajes activos no supere 100;
+y, cuando exista mÃ¡s de una lÃ­nea paralela activa, exigirÃ¡ que todas compartan la misma startDate.
 
-La unidad funcional de cambio será la distribución vigente desde una fecha, no la edición arbitraria de una línea individual.
+La unidad funcional de cambio serÃ¡ la distribuciÃ³n vigente desde una fecha, no la ediciÃ³n arbitraria de una lÃ­nea individual.
 
-Definición funcional
+DefiniciÃ³n funcional
 
-employee.cost_center representa la distribución de imputación organizativa de un empleado entre uno o varios centros de coste, con vigencia temporal.
+employee.cost_center representa la distribuciÃ³n de imputaciÃ³n organizativa de un empleado entre uno o varios centros de coste, con vigencia temporal.
 
-No modela simplemente “una asignación más”, sino el reparto funcional del empleado entre centros de coste para un periodo dado.
+No modela simplemente â€œuna asignaciÃ³n mÃ¡sâ€, sino el reparto funcional del empleado entre centros de coste para un periodo dado.
 
-Ejemplos válidos:
+Ejemplos vÃ¡lidos:
 
 100% CC_FINANCE
 60% CC_IT + 40% CC_SHARED
 50% CC_OPS + 50% CC_TRANSFORMATION
 
-Ejemplos inválidos:
+Ejemplos invÃ¡lidos:
 
 80% CC_A + 30% CC_B
 50% CC_A desde 01/04 y 50% CC_B desde 15/04, coexistiendo en la misma vigencia
-una línea fuera de presence activa
+una lÃ­nea fuera de presence activa
 porcentajes 0 o negativos
 Tipo de vertical
 
-Clasificación formal:
+ClasificaciÃ³n formal:
 
 bounded context: employee
 vertical: cost_center
 tipo: DISTRIBUTED_TIMELINE
-catálogo: SIMPLE
+catÃ¡logo: SIMPLE
 reglas temporales:
 MULTI_ACTIVE
 SUM_PERCENTAGE_LTE_100
 CONTAINED_IN_PRESENCE
 PARALLEL_WINDOW_SAME_START_DATE
 
-Esto consolida la vertical en el cluster distribuido del proyecto y evita tratarla como una variación accidental de work_center.
+Esto consolida la vertical en el cluster distribuido del proyecto y evita tratarla como una variaciÃ³n accidental de work_center.
 
 Identidad funcional
 Identidad del empleado
@@ -5035,7 +5051,7 @@ employeeTypeCode
 employeeNumber
 Identidad del recurso
 
-A nivel de API pública de escritura, la unidad funcional relevante será una ventana de distribución identificada por:
+A nivel de API pÃºblica de escritura, la unidad funcional relevante serÃ¡ una ventana de distribuciÃ³n identificada por:
 
 empleado
 startDate
@@ -5050,32 +5066,32 @@ Nota importante
 
 Internamente, la persistencia puede seguir usando filas individuales con:
 
-id técnico
-costCenterAssignmentNumber técnico/funcional interno
+id tÃ©cnico
+costCenterAssignmentNumber tÃ©cnico/funcional interno
 
-pero esos identificadores no definen la identidad pública canónica del recurso.
+pero esos identificadores no definen la identidad pÃºblica canÃ³nica del recurso.
 
-La razón es funcional: cuando varias líneas comparten una misma distribución vigente, el dominio no las trata como historias autónomas, sino como partes de una única ventana de distribución.
+La razÃ³n es funcional: cuando varias lÃ­neas comparten una misma distribuciÃ³n vigente, el dominio no las trata como historias autÃ³nomas, sino como partes de una Ãºnica ventana de distribuciÃ³n.
 
-Ventana de distribución
+Ventana de distribuciÃ³n
 
-Se introduce el concepto explícito de:
+Se introduce el concepto explÃ­cito de:
 
 Cost Center Distribution Window
 
-Una ventana de distribución es el conjunto de líneas de cost_center que:
+Una ventana de distribuciÃ³n es el conjunto de lÃ­neas de cost_center que:
 
 pertenecen al mismo empleado;
 comparten la misma startDate;
-forman una distribución activa o histórica coherente;
-y se validan conjuntamente como una única unidad funcional.
+forman una distribuciÃ³n activa o histÃ³rica coherente;
+y se validan conjuntamente como una Ãºnica unidad funcional.
 
 Consecuencias:
 
-crear una distribución = crear una ventana;
-sustituir una distribución = cerrar ventana anterior y crear una nueva;
-cerrar una distribución = cerrar todas las líneas de la ventana;
-TERMINATION actúa sobre la ventana activa completa, no sobre una línea suelta.
+crear una distribuciÃ³n = crear una ventana;
+sustituir una distribuciÃ³n = cerrar ventana anterior y crear una nueva;
+cerrar una distribuciÃ³n = cerrar todas las lÃ­neas de la ventana;
+TERMINATION actÃºa sobre la ventana activa completa, no sobre una lÃ­nea suelta.
 Propiedades estructurales
 Propiedad	Valor
 historized	true
@@ -5084,9 +5100,9 @@ simultaneous_occurrences	MULTIPLE_ACTIVE
 lifecycle_strategy	CLOSE
 delete_policy	FORBIDDEN
 maintenance_style	DISTRIBUTED_WINDOW
-Campos funcionales de línea
+Campos funcionales de lÃ­nea
 
-Cada línea de distribución contiene:
+Cada lÃ­nea de distribuciÃ³n contiene:
 
 costCenterCode
 allocationPercentage
@@ -5103,39 +5119,39 @@ Campos derivados de la ventana:
 windowStartDate
 windowEndDate
 totalAllocationPercentage
-Validación de catálogo
+ValidaciÃ³n de catÃ¡logo
 
 costCenterCode debe validarse contra rulesystem.rule_entity usando:
 
 ruleEntityTypeCode = COST_CENTER
 
-Esto se alinea con la convención de naming de catálogos reutilizables y con el binding ya previsto para:
+Esto se alinea con la convenciÃ³n de naming de catÃ¡logos reutilizables y con el binding ya previsto para:
 
 employee.cost_center / costCenterCode -> COST_CENTER (DIRECT)
 
-La validación debe comprobar:
+La validaciÃ³n debe comprobar:
 
 ruleSystemCode correcto
-existencia del código
+existencia del cÃ³digo
 activo
 vigencia temporal aplicable
 Reglas de dominio
-1. Contención en presence
+1. ContenciÃ³n en presence
 
-Toda línea de cost_center debe estar completamente contenida en una presence válida del empleado.
+Toda lÃ­nea de cost_center debe estar completamente contenida en una presence vÃ¡lida del empleado.
 
-No se permiten líneas:
+No se permiten lÃ­neas:
 
 antes del inicio de la presence que las contiene;
-después del final de la presence;
-ni abiertas más allá de una presence cerrada.
+despuÃ©s del final de la presence;
+ni abiertas mÃ¡s allÃ¡ de una presence cerrada.
 2. Multi-actividad permitida
 
-Puede haber múltiples líneas activas simultáneamente para una misma fecha, siempre que pertenezcan a la misma ventana de distribución.
+Puede haber mÃºltiples lÃ­neas activas simultÃ¡neamente para una misma fecha, siempre que pertenezcan a la misma ventana de distribuciÃ³n.
 
-3. Suma máxima de porcentaje
+3. Suma mÃ¡xima de porcentaje
 
-Para cualquier fecha dada, la suma de allocationPercentage de todas las líneas activas del empleado no puede superar 100.
+Para cualquier fecha dada, la suma de allocationPercentage de todas las lÃ­neas activas del empleado no puede superar 100.
 
 Regla:
 
@@ -5144,24 +5160,24 @@ permitido: total = 100
 prohibido: total > 100
 4. Misma fecha de inicio en paralelo
 
-Si existe más de una línea activa simultáneamente dentro de una misma distribución, todas deben compartir exactamente la misma startDate.
+Si existe mÃ¡s de una lÃ­nea activa simultÃ¡neamente dentro de una misma distribuciÃ³n, todas deben compartir exactamente la misma startDate.
 
-Ejemplo válido:
+Ejemplo vÃ¡lido:
 
 CC_A 50% desde 2026-04-01
 CC_B 50% desde 2026-04-01
 
-Ejemplo inválido:
+Ejemplo invÃ¡lido:
 
 CC_A 50% desde 2026-04-01
 CC_B 50% desde 2026-04-15
 5. No mezcla incoherente de ventanas activas
 
-No puede coexistir, para una misma fecha, una línea activa perteneciente a una ventana de distribución distinta.
+No puede coexistir, para una misma fecha, una lÃ­nea activa perteneciente a una ventana de distribuciÃ³n distinta.
 
-Dicho de otro modo: para un empleado, la distribución activa en una fecha debe ser interpretable como una única ventana funcional.
+Dicho de otro modo: para un empleado, la distribuciÃ³n activa en una fecha debe ser interpretable como una Ãºnica ventana funcional.
 
-6. Porcentaje válido por línea
+6. Porcentaje vÃ¡lido por lÃ­nea
 
 allocationPercentage debe cumplir:
 
@@ -5171,19 +5187,19 @@ allocationPercentage debe cumplir:
 
 endDate no puede ser anterior a startDate.
 
-8. Sin edición arbitraria de identidad
+8. Sin ediciÃ³n arbitraria de identidad
 
-No se permite mutar, en una corrección administrativa, los campos que redefinen funcionalmente una línea histórica de forma que rompan la semántica de la ventana.
+No se permite mutar, en una correcciÃ³n administrativa, los campos que redefinen funcionalmente una lÃ­nea histÃ³rica de forma que rompan la semÃ¡ntica de la ventana.
 
-Operaciones canónicas
+Operaciones canÃ³nicas
 
 No se adopta un CRUD plano por fila.
 
-Las operaciones canónicas del vertical serán orientadas a ventana.
+Las operaciones canÃ³nicas del vertical serÃ¡n orientadas a ventana.
 
-1. Crear distribución
+1. Crear distribuciÃ³n
 
-Crea una nueva ventana de distribución desde una fecha.
+Crea una nueva ventana de distribuciÃ³n desde una fecha.
 
 POST /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/distributions
 
@@ -5192,15 +5208,15 @@ startDate
 items[]
 costCenterCode
 allocationPercentage
-2. Consultar histórico de distribuciones
+2. Consultar histÃ³rico de distribuciones
 
 GET /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers
 
-3. Consultar distribución vigente
+3. Consultar distribuciÃ³n vigente
 
 GET /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/current
 
-4. Sustituir distribución desde fecha
+4. Sustituir distribuciÃ³n desde fecha
 
 POST /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/replace-from-date
 
@@ -5210,85 +5226,85 @@ items[]
 costCenterCode
 allocationPercentage
 
-Semántica:
+SemÃ¡ntica:
 
 cerrar la ventana activa previa si cubre la fecha;
 crear nueva ventana desde effectiveDate;
 validar projected timeline distribuida.
-5. Cerrar distribución
+5. Cerrar distribuciÃ³n
 
 POST /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/distributions/{startDate}/close
 
 Request
 endDate
 
-Semántica:
+SemÃ¡ntica:
 
-cerrar todas las líneas de la ventana identificada por startDate.
+cerrar todas las lÃ­neas de la ventana identificada por startDate.
 Operaciones descartadas
 
-Se rechazan como canónicas:
+Se rechazan como canÃ³nicas:
 
-PUT por línea aislada
-DELETE físico por línea
-edición arbitraria de una fila dentro de una distribución multi-línea activa
-endpoints públicos por id
-endpoints públicos por costCenterAssignmentNumber
+PUT por lÃ­nea aislada
+DELETE fÃ­sico por lÃ­nea
+ediciÃ³n arbitraria de una fila dentro de una distribuciÃ³n multi-lÃ­nea activa
+endpoints pÃºblicos por id
+endpoints pÃºblicos por costCenterAssignmentNumber
 
-porque esas operaciones empujan el modelo hacia una semántica de filas independientes que no representa bien el dominio.
+porque esas operaciones empujan el modelo hacia una semÃ¡ntica de filas independientes que no representa bien el dominio.
 
-Relación con replace patterns
+RelaciÃ³n con replace patterns
 
-employee.cost_center puede necesitar una operación funcional tipo replaceFromDate, pero no debe reutilizar directamente el StrongTimelineReplacePlanner, ya que este patrón está reservado a verticales STRONG_TIMELINE con:
+employee.cost_center puede necesitar una operaciÃ³n funcional tipo replaceFromDate, pero no debe reutilizar directamente el StrongTimelineReplacePlanner, ya que este patrÃ³n estÃ¡ reservado a verticales STRONG_TIMELINE con:
 
 single active
 no overlap
 full coverage
 
-y cost_center es explícitamente un caso distinto.
+y cost_center es explÃ­citamente un caso distinto.
 
-Si aparece lógica temporal repetida, podrá introducirse en el futuro un helper ligero específico para distribuciones, por ejemplo:
+Si aparece lÃ³gica temporal repetida, podrÃ¡ introducirse en el futuro un helper ligero especÃ­fico para distribuciones, por ejemplo:
 
 CostCenterDistributionProjector
 DistributedTimelineWindowPlanner
 
-pero no debe crearse todavía un framework genérico ni un motor abstracto.
+pero no debe crearse todavÃ­a un framework genÃ©rico ni un motor abstracto.
 
-Relación con TERMINATION
+RelaciÃ³n con TERMINATION
 
-TERMINATION debe cerrar la distribución activa completa del empleado.
+TERMINATION debe cerrar la distribuciÃ³n activa completa del empleado.
 
 Regla funcional:
 
 al terminar un empleado en terminationDate,
-se identifican todas las líneas activas de cost_center en esa fecha,
+se identifican todas las lÃ­neas activas de cost_center en esa fecha,
 y todas deben quedar cerradas con esa fecha de fin.
 
 Consecuencias:
 
-no puede quedar ninguna línea abierta después de la terminación;
+no puede quedar ninguna lÃ­nea abierta despuÃ©s de la terminaciÃ³n;
 no se redistribuyen porcentajes;
-no se corrigen líneas;
+no se corrigen lÃ­neas;
 no se fuerza una suma distinta;
 simplemente se cierra la ventana activa.
 
-Si no existe distribución activa en la fecha de terminación, no se considera error funcional por sí mismo.
+Si no existe distribuciÃ³n activa en la fecha de terminaciÃ³n, no se considera error funcional por sÃ­ mismo.
 
-Esto encaja con la semántica general de lifecycle workflows y con la necesidad de cerrar asignaciones vigentes sin dejar residuos abiertos.
+Esto encaja con la semÃ¡ntica general de lifecycle workflows y con la necesidad de cerrar asignaciones vigentes sin dejar residuos abiertos.
 
-Relación con Journey
+RelaciÃ³n con Journey
 
-En Journey / timeline, un cambio de cost_center debe interpretarse como evento funcional por ventana de distribución, no como cascada de eventos aislados por cada fila técnica.
+En Journey / timeline, un cambio de cost_center debe interpretarse como evento funcional por ventana de distribuciÃ³n, no como cascada de eventos aislados por cada fila tÃ©cnica.
 
 Evento esperado:
 
 COST_CENTER_CHANGE
 
-La interpretación debe hacerse en backend y no delegarse al frontend.
+La interpretaciÃ³n debe hacerse en backend y no delegarse al frontend.
 
 Persistencia
 
-Persistencia recomendada: tabla por líneas.
+Persistencia recomendada: tabla por lÃ­neas.
 
 Ejemplo conceptual:
 
@@ -5305,8 +5321,8 @@ start_date
 end_date
 created_at
 updated_at
-Restricciones mínimas de base de datos
-PK técnica por id
+Restricciones mÃ­nimas de base de datos
+PK tÃ©cnica por id
 unique (employee_id, cost_center_assignment_number)
 check allocation_percentage > 0 and allocation_percentage <= 100
 check end_date is null or start_date < end_date
@@ -5316,24 +5332,24 @@ Las reglas:
 
 suma <= 100
 misma startDate en multi-activo
-una única ventana funcional activa por fecha
+una Ãºnica ventana funcional activa por fecha
 
-deben validarse en dominio / servicio de aplicación, no intentarse imponer únicamente con constraints SQL.
+deben validarse en dominio / servicio de aplicaciÃ³n, no intentarse imponer Ãºnicamente con constraints SQL.
 
 API y OpenAPI
 
-La API pública debe seguir las reglas generales del proyecto:
+La API pÃºblica debe seguir las reglas generales del proyecto:
 
 business keys del empleado
-sin IDs técnicos
-sin mezclar parent por business key e hijo por id técnico
+sin IDs tÃ©cnicos
+sin mezclar parent por business key e hijo por id tÃ©cnico
 
 La OpenAPI debe reflejar:
 
 operaciones por ventana
 requests con items[]
 DTOs claros y honestos
-sin introducir update DTOs que permitan mutar identidad funcional como si fuera CRUD genérico.
+sin introducir update DTOs que permitan mutar identidad funcional como si fuera CRUD genÃ©rico.
 Read models recomendados
 
 La lectura debe exponer labels enriquecidas:
@@ -5341,7 +5357,7 @@ La lectura debe exponer labels enriquecidas:
 costCenterCode
 costCenterName
 
-y agrupar claramente la ventana actual e histórico.
+y agrupar claramente la ventana actual e histÃ³rico.
 
 Ejemplo conceptual de respuesta:
 
@@ -5358,71 +5374,71 @@ Ejemplo conceptual de respuesta:
     "items": [
       {
         "costCenterCode": "CC_A",
-        "costCenterName": "Administración",
+        "costCenterName": "AdministraciÃ³n",
         "allocationPercentage": 50
       },
       {
         "costCenterCode": "CC_B",
-        "costCenterName": "Transformación",
+        "costCenterName": "TransformaciÃ³n",
         "allocationPercentage": 50
       }
     ]
   }
 }
 
-Esto se alinea con la estrategia general del proyecto de enriquecer lectura con code + name y no obligar al frontend a reconstruir semántica desde catálogos masivos.
+Esto se alinea con la estrategia general del proyecto de enriquecer lectura con code + name y no obligar al frontend a reconstruir semÃ¡ntica desde catÃ¡logos masivos.
 
 Frontend
 
 Esta vertical no debe tratarse como:
 
 SLOT
-ni tabla CRUD genérica
+ni tabla CRUD genÃ©rica
 
-La semántica de UI recomendada es una sección temporal/distribuida con:
+La semÃ¡ntica de UI recomendada es una secciÃ³n temporal/distribuida con:
 
-distribución actual destacada
-histórico de distribuciones
+distribuciÃ³n actual destacada
+histÃ³rico de distribuciones
 acciones honestas:
-Añadir distribución
-Sustituir distribución desde fecha
-Cerrar distribución
+AÃ±adir distribuciÃ³n
+Sustituir distribuciÃ³n desde fecha
+Cerrar distribuciÃ³n
 
 No deben usarse como acciones primarias:
 
 editar fila
 borrar fila
-update técnico
+update tÃ©cnico
 grid CRUD
 
-Esto es coherente con el principio general de UX honesta y con la prohibición de usar “Editar” como verbo universal cuando la semántica real es otra.
+Esto es coherente con el principio general de UX honesta y con la prohibiciÃ³n de usar â€œEditarâ€ como verbo universal cuando la semÃ¡ntica real es otra.
 
 Consecuencias positivas
-mejor alineación con el dominio real;
+mejor alineaciÃ³n con el dominio real;
 evita modelado accidental por filas;
 simplifica TERMINATION;
-facilita Journey semántico;
-hace más clara la UI;
+facilita Journey semÃ¡ntico;
+hace mÃ¡s clara la UI;
 prepara futuras abstracciones de distributed timeline;
 mantiene consistencia con el mapa y lenguaje ya definidos en B4RRHH.
 Costes / riesgos
-requiere lógica de validación agregada, no trivial;
-introduce una noción nueva de ventana funcional;
-obliga a resistir la tentación de implementar CRUD simple por línea;
-puede requerir helper técnico específico en el futuro si aparecen más verticales distribuidas;
-la corrección administrativa de histórico deberá definirse con cuidado si algún día se habilita.
+requiere lÃ³gica de validaciÃ³n agregada, no trivial;
+introduce una nociÃ³n nueva de ventana funcional;
+obliga a resistir la tentaciÃ³n de implementar CRUD simple por lÃ­nea;
+puede requerir helper tÃ©cnico especÃ­fico en el futuro si aparecen mÃ¡s verticales distribuidas;
+la correcciÃ³n administrativa de histÃ³rico deberÃ¡ definirse con cuidado si algÃºn dÃ­a se habilita.
 Alternativas consideradas
 1. Modelarlo como clon de work_center
 
 Descartado.
 
-work_center es una asignación flexible historizada, pero cost_center tiene una semántica distribuida basada en porcentaje y paralelismo.
+work_center es una asignaciÃ³n flexible historizada, pero cost_center tiene una semÃ¡ntica distribuida basada en porcentaje y paralelismo.
 
 2. Modelarlo como CRUD por fila
 
 Descartado.
 
-Rompe la unidad funcional de distribución, genera estados incoherentes y hace más difícil validar suma, ventanas y termination.
+Rompe la unidad funcional de distribuciÃ³n, genera estados incoherentes y hace mÃ¡s difÃ­cil validar suma, ventanas y termination.
 
 3. Tratarlo como STRONG_TIMELINE
 
@@ -5432,30 +5448,31 @@ No es single-active y el planner de strong timeline no aplica directamente.
 
 Resumen
 
-employee.cost_center se define en B4RRHH como una vertical DISTRIBUTED_TIMELINE que modela la distribución temporal del empleado entre uno o varios centros de coste.
+employee.cost_center se define en B4RRHH como una vertical DISTRIBUTED_TIMELINE que modela la distribuciÃ³n temporal del empleado entre uno o varios centros de coste.
 
-La unidad funcional de mantenimiento no será una fila aislada, sino una ventana de distribución identificada por empleado + startDate.
+La unidad funcional de mantenimiento no serÃ¡ una fila aislada, sino una ventana de distribuciÃ³n identificada por empleado + startDate.
 
 Reglas clave:
 
 multi-activo permitido;
 suma activa <= 100;
-contención en presence;
-líneas paralelas con la misma startDate;
+contenciÃ³n en presence;
+lÃ­neas paralelas con la misma startDate;
 cierre completo en TERMINATION;
-catálogo COST_CENTER;
-operaciones canónicas orientadas a crear, sustituir y cerrar distribuciones
+catÃ¡logo COST_CENTER;
+operaciones canÃ³nicas orientadas a crear, sustituir y cerrar distribuciones
+
 <!-- END FILE: ADR-017-Cost-center-design.md -->
 
-<a name="file-adr-018-hiring-an-employee-md"></a>
 
 ---
 
 # FILE: ADR-018-hiring-an-employee.md
+<a name="file-adr-018-hiring-an-employee-md"></a>
 
 <!-- BEGIN FILE: ADR-018-hiring-an-employee.md -->
 
-ADR — Employee Lifecycle Workflow: Hire Employee V1
+ADR â€” Employee Lifecycle Workflow: Hire Employee V1
 Estado
 
 Propuesto
@@ -5468,7 +5485,7 @@ ruleSystemCode
 employeeTypeCode
 employeeNumber
 
-Sin embargo, el ciclo de vida del empleado no se corresponde con la manipulación aislada de estas verticales, sino con acciones de negocio compuestas como:
+Sin embargo, el ciclo de vida del empleado no se corresponde con la manipulaciÃ³n aislada de estas verticales, sino con acciones de negocio compuestas como:
 
 contratar
 terminar
@@ -5476,14 +5493,14 @@ recontratar
 
 Estas acciones implican:
 
-creación coordinada de múltiples verticales
+creaciÃ³n coordinada de mÃºltiples verticales
 coherencia temporal
 validaciones transversales
-una semántica funcional única
+una semÃ¡ntica funcional Ãºnica
 
 El ADR de lifecycle ya establece que estas acciones deben modelarse como workflows de negocio, no como secuencias de operaciones CRUD.
 
-Además, la arquitectura de frontend define que estas acciones deben exponerse como WORKFLOW, no como edición genérica de datos.
+AdemÃ¡s, la arquitectura de frontend define que estas acciones deben exponerse como WORKFLOW, no como ediciÃ³n genÃ©rica de datos.
 
 Problema
 
@@ -5494,37 +5511,37 @@ crear presence
 crear asignaciones organizativas
 etc.
 
-pero no existe una operación unificada de contratación.
+pero no existe una operaciÃ³n unificada de contrataciÃ³n.
 
 Esto implica:
 
 mala UX (el usuario tiene que ensamblar el empleado manualmente)
 riesgo de inconsistencias temporales
-pérdida de semántica de negocio
+pÃ©rdida de semÃ¡ntica de negocio
 dificultad para evolucionar el lifecycle
-Decisión
+DecisiÃ³n
 
 Se introduce el workflow:
 
 Hire Employee V1
 
-como una operación de negocio compuesta que:
+como una operaciÃ³n de negocio compuesta que:
 
 crea el empleado
-inicializa su relación laboral
+inicializa su relaciÃ³n laboral
 establece su contexto organizativo inicial
 garantiza coherencia temporal completa
 
-Todo ello en una única operación orquestada.
+Todo ello en una Ãºnica operaciÃ³n orquestada.
 
-Principios de diseño
-1. Orientado a intención de negocio
+Principios de diseÃ±o
+1. Orientado a intenciÃ³n de negocio
 
-El usuario no crea recursos técnicos.
+El usuario no crea recursos tÃ©cnicos.
 
 El usuario ejecuta:
 
-“Contratar empleado”
+â€œContratar empleadoâ€
 
 2. Presence como eje del lifecycle
 
@@ -5533,8 +5550,8 @@ El lifecycle del empleado se representa mediante presence.
 Por tanto:
 
 el Hire crea la primera presence
-sin presence no hay relación laboral
-3. Fecha central única
+sin presence no hay relaciÃ³n laboral
+3. Fecha central Ãºnica
 
 Se define:
 
@@ -5552,29 +5569,29 @@ labor_classification.startDate = hireDate
 
 No se permiten fechas divergentes en V1.
 
-4. Orquestación única
+4. OrquestaciÃ³n Ãºnica
 
 El workflow:
 
-ejecuta múltiples operaciones internas
-se expone como una única operación externa
+ejecuta mÃºltiples operaciones internas
+se expone como una Ãºnica operaciÃ³n externa
 garantiza consistencia funcional
-5. Sin exposición de IDs técnicos
+5. Sin exposiciÃ³n de IDs tÃ©cnicos
 
 La API:
 
 usa exclusivamente business keys
 no expone IDs internos
-no mezcla identidades técnicas
-6. Backend interpreta la semántica
+no mezcla identidades tÃ©cnicas
+6. Backend interpreta la semÃ¡ntica
 
 El backend:
 
-decide qué significa “HIRE”
+decide quÃ© significa â€œHIREâ€
 construye el estado resultante
 prepara los datos para UI
 
-El frontend no deduce semántica compleja.
+El frontend no deduce semÃ¡ntica compleja.
 
 Alcance V1
 Incluido
@@ -5583,10 +5600,10 @@ El workflow crea:
 
 Employee core
 Primera presence
-Asignación organizativa inicial:
+AsignaciÃ³n organizativa inicial:
 work center
 cost center (opcional en V1)
-Relación laboral inicial:
+RelaciÃ³n laboral inicial:
 contract
 labor classification
 No incluido en V1
@@ -5595,15 +5612,15 @@ direcciones
 identificadores
 correcciones avanzadas
 escenarios multi-fecha
-edición parcial del workflow
+ediciÃ³n parcial del workflow
 API
 Endpoint
 
-Opción recomendada:
+OpciÃ³n recomendada:
 
 POST /employee-lifecycle/hire
 
-Alternativa válida:
+Alternativa vÃ¡lida:
 
 POST /employees/hire
 Request
@@ -5616,8 +5633,8 @@ Ejemplo:
   "employeeNumber": "000123",
 
   "firstName": "Juan",
-  "lastName1": "Pérez",
-  "lastName2": "García",
+  "lastName1": "PÃ©rez",
+  "lastName2": "GarcÃ­a",
   "preferredName": "Juan",
 
   "hireDate": "2026-04-01",
@@ -5654,7 +5671,7 @@ Debe devolver un estado agregado listo para UI:
     "ruleSystemCode": "ESP",
     "employeeTypeCode": "EMP",
     "employeeNumber": "000123",
-    "displayName": "Juan Pérez García",
+    "displayName": "Juan PÃ©rez GarcÃ­a",
     "status": "ACTIVE"
   },
   "presence": {
@@ -5674,8 +5691,8 @@ Debe devolver un estado agregado listo para UI:
 Validaciones
 1. Employee
 no debe existir previamente
-si existe → 409 Conflict
-2. Catálogos
+si existe â†’ 409 Conflict
+2. CatÃ¡logos
 
 Validar:
 
@@ -5695,17 +5712,17 @@ no puede haber otra presence activa
 5. Cost Center
 suma <= 100
 misma startDate
-catálogo válido
+catÃ¡logo vÃ¡lido
 contenido en presence
 6. Coherencia temporal
 todas las entidades deben respetar hireDate
 no se permiten offsets en V1
-Orquestación interna
+OrquestaciÃ³n interna
 
 Orden recomendado:
 
 validar request
-validar catálogos
+validar catÃ¡logos
 validar dependencias
 crear employee
 crear presence
@@ -5715,9 +5732,9 @@ crear contract
 crear labor classification
 construir response
 
-Todo dentro de un único servicio de aplicación.
+Todo dentro de un Ãºnico servicio de aplicaciÃ³n.
 
-Relación con TERMINATION
+RelaciÃ³n con TERMINATION
 
 Este workflow deja al empleado en estado:
 
@@ -5730,21 +5747,21 @@ TERMINATION cierre correctamente todas las verticales activas
 
 Sin estados intermedios incoherentes.
 
-Relación con REHIRE
+RelaciÃ³n con REHIRE
 
 Diferencias clave:
 
 Aspecto	Hire	Rehire
 Employee	se crea	ya existe
 Presence	primera	nueva
-Histórico	vacío	preservado
-Relación con Journey
+HistÃ³rico	vacÃ­o	preservado
+RelaciÃ³n con Journey
 
 El Hire debe generar un evento:
 
 HIRE
 
-El backend es responsable de esta interpretación.
+El backend es responsable de esta interpretaciÃ³n.
 
 El frontend no debe inferirlo.
 
@@ -5752,12 +5769,12 @@ Frontend
 
 El workflow:
 
-se expone como acción principal: “Contratar”
+se expone como acciÃ³n principal: â€œContratarâ€
 se implementa como pantalla dedicada
 no como modal simple
-no como formulario genérico
+no como formulario genÃ©rico
 
-Patrón:
+PatrÃ³n:
 
 WORKFLOW
 no SLOT
@@ -5765,9 +5782,9 @@ no TEMPORAL_APPEND_CLOSE
 Consecuencias positivas
 UX alineada con negocio
 consistencia temporal garantizada
-reducción de errores
-base sólida para lifecycle completo
-integración natural con Journey
+reducciÃ³n de errores
+base sÃ³lida para lifecycle completo
+integraciÃ³n natural con Journey
 Costes
 mayor complejidad en capa application
 necesidad de validaciones transversales
@@ -5779,7 +5796,7 @@ Descartado:
 
 no refleja dominio
 propenso a inconsistencias
-Employee como agregado monolítico
+Employee como agregado monolÃ­tico
 
 Descartado:
 
@@ -5789,28 +5806,29 @@ Workflow parcial
 
 Descartado:
 
-deja estados intermedios inválidos
+deja estados intermedios invÃ¡lidos
 Resumen
 
-Hire Employee V1 introduce una operación de negocio compuesta que:
+Hire Employee V1 introduce una operaciÃ³n de negocio compuesta que:
 
 crea el empleado
-establece su relación laboral
+establece su relaciÃ³n laboral
 define su contexto organizativo inicial
 garantiza coherencia temporal
 
-Todo ello en una única operación orquestada, alineada con el modelo de verticales y con el ciclo de vida real del empleado.
+Todo ello en una Ãºnica operaciÃ³n orquestada, alineada con el modelo de verticales y con el ciclo de vida real del empleado.
+
 <!-- END FILE: ADR-018-hiring-an-employee.md -->
 
-<a name="file-adr-019-employee-delete-administrativo-md"></a>
 
 ---
 
 # FILE: ADR-019-employee-delete-administrativo.md
+<a name="file-adr-019-employee-delete-administrativo-md"></a>
 
 <!-- BEGIN FILE: ADR-019-employee-delete-administrativo.md -->
 
-# ADR-019 — Borrado administrativo de employee con cascada técnica controlada
+# ADR-019 â€” Borrado administrativo de employee con cascada tÃ©cnica controlada
 
 ## Estado
 Propuesto
@@ -5819,7 +5837,7 @@ Propuesto
 
 B4RRHH modela el dominio de empleado mediante:
 
-- identidad pública por business key:
+- identidad pÃºblica por business key:
   - ruleSystemCode
   - employeeTypeCode
   - employeeNumber
@@ -5829,43 +5847,43 @@ B4RRHH modela el dominio de empleado mediante:
   - terminate
   - rehire
 
-Además, el proyecto distingue entre:
+AdemÃ¡s, el proyecto distingue entre:
 
 - operaciones funcionales normales del ciclo de vida
-- operaciones administrativas o técnicas excepcionales
+- operaciones administrativas o tÃ©cnicas excepcionales
 
-Hasta ahora, el modelo conceptual del recurso `employee.employee` no se ha orientado al borrado como operación canónica de negocio, sino a conservación de identidad e histórico. Sin embargo, existen escenarios legítimos donde un borrado administrativo sí tiene sentido, por ejemplo:
+Hasta ahora, el modelo conceptual del recurso `employee.employee` no se ha orientado al borrado como operaciÃ³n canÃ³nica de negocio, sino a conservaciÃ³n de identidad e histÃ³rico. Sin embargo, existen escenarios legÃ­timos donde un borrado administrativo sÃ­ tiene sentido, por ejemplo:
 
 - alta creada por error
 - empleado que finalmente no llega a incorporarse
 - datos de prueba o limpieza controlada de entornos no productivos
-- reversión temprana de una contratación todavía sin efectos descendentes relevantes
+- reversiÃ³n temprana de una contrataciÃ³n todavÃ­a sin efectos descendentes relevantes
 
-Al mismo tiempo, no se quiere permitir un borrado indiscriminado ni delegar toda la semántica del delete a la base de datos.
+Al mismo tiempo, no se quiere permitir un borrado indiscriminado ni delegar toda la semÃ¡ntica del delete a la base de datos.
 
-Se necesita una decisión explícita sobre:
+Se necesita una decisiÃ³n explÃ­cita sobre:
 
 - existencia o no de endpoint de borrado
 - naturaleza funcional de ese borrado
-- relación entre validación de aplicación y cascada física en persistencia
-- preparación del modelo para futuras restricciones de elegibilidad
+- relaciÃ³n entre validaciÃ³n de aplicaciÃ³n y cascada fÃ­sica en persistencia
+- preparaciÃ³n del modelo para futuras restricciones de elegibilidad
 
-## Decisión
+## DecisiÃ³n
 
-Se introduce una operación explícita de **borrado administrativo de employee**.
+Se introduce una operaciÃ³n explÃ­cita de **borrado administrativo de employee**.
 
-### Naturaleza de la operación
+### Naturaleza de la operaciÃ³n
 
 El borrado de employee:
 
 - **no forma parte del lifecycle ordinario**
 - **no sustituye a terminate**
 - **no representa un flujo funcional normal**
-- se modela como una **operación administrativa excepcional**
+- se modela como una **operaciÃ³n administrativa excepcional**
 
 ### Identidad del endpoint
 
-La operación se expone por business key del empleado:
+La operaciÃ³n se expone por business key del empleado:
 
 - `ruleSystemCode`
 - `employeeTypeCode`
@@ -5873,60 +5891,61 @@ La operación se expone por business key del empleado:
 
 ### Regla inicial de elegibilidad (V1)
 
-En esta primera versión, el borrado se permitirá únicamente cuando:
+En esta primera versiÃ³n, el borrado se permitirÃ¡ Ãºnicamente cuando:
 
 - el empleado exista
 
 Si el empleado no existe:
 
-- la operación devolverá `404 Not Found`
+- la operaciÃ³n devolverÃ¡ `404 Not Found`
 
-### Reglas futuras explícitamente previstas
+### Reglas futuras explÃ­citamente previstas
 
-Aunque en V1 no se aplican bloqueos funcionales adicionales, esta operación queda diseñada para soportar en el futuro validaciones como:
+Aunque en V1 no se aplican bloqueos funcionales adicionales, esta operaciÃ³n queda diseÃ±ada para soportar en el futuro validaciones como:
 
-- no permitir borrado si el empleado tiene nómina calculada
+- no permitir borrado si el empleado tiene nÃ³mina calculada
 - no permitir borrado si existen efectos descendentes relevantes
-- no permitir borrado si el empleado ya superó cierto punto funcional del ciclo de vida
+- no permitir borrado si el empleado ya superÃ³ cierto punto funcional del ciclo de vida
 - otras reglas de elegibilidad administrativa
 
 Si en el futuro una regla impide el borrado:
 
-- la operación deberá devolver `409 Conflict`
+- la operaciÃ³n deberÃ¡ devolver `409 Conflict`
 
 ## Persistencia
 
-Cuando el borrado sea autorizado por la capa de aplicación, la eliminación física del empleado podrá apoyarse en **cascada técnica de base de datos** sobre las verticales hijas dependientes por `employee_id`.
+Cuando el borrado sea autorizado por la capa de aplicaciÃ³n, la eliminaciÃ³n fÃ­sica del empleado podrÃ¡ apoyarse en **cascada tÃ©cnica de base de datos** sobre las verticales hijas dependientes por `employee_id`.
 
 Principio:
 
-- la **aplicación decide si se puede borrar**
+- la **aplicaciÃ³n decide si se puede borrar**
 - la **base de datos ejecuta el borrado relacional completo**
 
-La cascada en base de datos se considera una decisión de persistencia y consistencia técnica, no una definición de semántica de negocio.
+La cascada en base de datos se considera una decisiÃ³n de persistencia y consistencia tÃ©cnica, no una definiciÃ³n de semÃ¡ntica de negocio.
 
 ## API propuesta
 
 ```text
 DELETE /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}
+
 <!-- END FILE: ADR-019-employee-delete-administrativo.md -->
 
-<a name="file-adr-020-work-center-replace-from-date-md"></a>
 
 ---
 
 # FILE: ADR-020-work-center-replace-from-date.md
+<a name="file-adr-020-work-center-replace-from-date-md"></a>
 
 <!-- BEGIN FILE: ADR-020-work-center-replace-from-date.md -->
 
-# ADR-020 — Cambio canónico de work center mediante replace-from-date
+# ADR-020 â€” Cambio canÃ³nico de work center mediante replace-from-date
 
 ## Estado
 Propuesto
 
 ## Contexto
 
-B4RRHH modela sus recursos de empleado mediante verticales funcionales historizadas y APIs públicas basadas en business keys del empleado:
+B4RRHH modela sus recursos de empleado mediante verticales funcionales historizadas y APIs pÃºblicas basadas en business keys del empleado:
 
 - ruleSystemCode
 - employeeTypeCode
@@ -5935,10 +5954,10 @@ B4RRHH modela sus recursos de empleado mediante verticales funcionales historiza
 Dentro del mapa actual de verticales, `employee.work_center` se clasifica como una vertical temporal con restricciones de:
 
 - no solape
-- contención dentro de presence
-- una única asignación vigente compatible en cada fecha
+- contenciÃ³n dentro de presence
+- una Ãºnica asignaciÃ³n vigente compatible en cada fecha
 
-Aunque inicialmente puede existir una operación canónica de creación de work center, la experiencia real de uso ha demostrado que el cambio funcional habitual de centro de trabajo no puede modelarse de forma segura como un simple `create` aislado cuando ya existe una asignación abierta.
+Aunque inicialmente puede existir una operaciÃ³n canÃ³nica de creaciÃ³n de work center, la experiencia real de uso ha demostrado que el cambio funcional habitual de centro de trabajo no puede modelarse de forma segura como un simple `create` aislado cuando ya existe una asignaciÃ³n abierta.
 
 En un escenario real, si un empleado ya tiene un work center vigente y se desea cambiarlo con fecha efectiva X:
 
@@ -5946,43 +5965,43 @@ En un escenario real, si un empleado ya tiene un work center vigente y se desea 
 - el anterior debe cerrarse en X - 1
 - el nuevo debe comenzar en X
 
-Por tanto, la operación funcional real no es “añadir otra fila”, sino **sustituir la ventana vigente desde una fecha**.
+Por tanto, la operaciÃ³n funcional real no es â€œaÃ±adir otra filaâ€, sino **sustituir la ventana vigente desde una fecha**.
 
-Esta necesidad se ha hecho visible especialmente al ejecutar simulación masiva con `workforce_loader`, donde la operación de creación directa genera conflictos funcionales que no aparecían en pruebas pequeñas.
+Esta necesidad se ha hecho visible especialmente al ejecutar simulaciÃ³n masiva con `workforce_loader`, donde la operaciÃ³n de creaciÃ³n directa genera conflictos funcionales que no aparecÃ­an en pruebas pequeÃ±as.
 
 ## Problema
 
-Usar únicamente una operación de creación para representar un cambio de work center provoca varios riesgos:
+Usar Ãºnicamente una operaciÃ³n de creaciÃ³n para representar un cambio de work center provoca varios riesgos:
 
 - solapes temporales
-- necesidad de que el consumidor implemente lógica de cierre previa
-- duplicación de semántica de dominio fuera del backend
+- necesidad de que el consumidor implemente lÃ³gica de cierre previa
+- duplicaciÃ³n de semÃ¡ntica de dominio fuera del backend
 - inconsistencias entre consumidores (frontend, loader, workflows)
 
 Esto es contrario a la estrategia del proyecto, donde:
 
-- el backend debe exponer operaciones canónicas de negocio
+- el backend debe exponer operaciones canÃ³nicas de negocio
 - el consumidor no debe reconstruir reglas temporales complejas por su cuenta
 
-## Decisión
+## DecisiÃ³n
 
-Se introduce una operación canónica para `employee.work_center` orientada a cambio funcional por fecha efectiva:
+Se introduce una operaciÃ³n canÃ³nica para `employee.work_center` orientada a cambio funcional por fecha efectiva:
 
 ## `replace-from-date`
 
-Su semántica será:
+Su semÃ¡ntica serÃ¡:
 
-1. localizar la asignación de work center vigente en la fecha efectiva, si existe;
+1. localizar la asignaciÃ³n de work center vigente en la fecha efectiva, si existe;
 2. cerrarla en `effectiveDate - 1`;
-3. crear la nueva asignación desde `effectiveDate`;
-4. validar no solape, contención en presence y coherencia temporal completa.
+3. crear la nueva asignaciÃ³n desde `effectiveDate`;
+4. validar no solape, contenciÃ³n en presence y coherencia temporal completa.
 
-## Naturaleza de la operación
+## Naturaleza de la operaciÃ³n
 
 `replace-from-date`:
 
-- no es un CRUD genérico
-- no sustituye a la operación de creación inicial
+- no es un CRUD genÃ©rico
+- no sustituye a la operaciÃ³n de creaciÃ³n inicial
 - representa el cambio funcional habitual de centro de trabajo
 
 ## API propuesta
@@ -5991,65 +6010,66 @@ Su semántica será:
 POST /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers/replace-from-date
 ```
 
-Request mínima orientativa
+Request mÃ­nima orientativa
 {
   "effectiveDate": "2026-04-01",
   "workCenterCode": "WC02"
 }
 Reglas de negocio
-1. Contención en presence
+1. ContenciÃ³n en presence
 
-La nueva asignación debe estar contenida dentro de una presence válida del empleado.
+La nueva asignaciÃ³n debe estar contenida dentro de una presence vÃ¡lida del empleado.
 
 2. No solape
 
-No puede quedar más de una asignación de work center incompatible en la misma fecha.
+No puede quedar mÃ¡s de una asignaciÃ³n de work center incompatible en la misma fecha.
 
-3. Cierre implícito de la vigente
+3. Cierre implÃ­cito de la vigente
 
-Si existe una asignación vigente en effectiveDate, debe cerrarse en effectiveDate - 1.
+Si existe una asignaciÃ³n vigente en effectiveDate, debe cerrarse en effectiveDate - 1.
 
-4. Creación de nueva asignación
+4. CreaciÃ³n de nueva asignaciÃ³n
 
-La nueva asignación comienza en effectiveDate.
+La nueva asignaciÃ³n comienza en effectiveDate.
 
-5. Operación idempotente semántica no requerida
+5. OperaciÃ³n idempotente semÃ¡ntica no requerida
 
-No se exige idempotencia funcional estricta en V1, pero sí una validación clara de conflictos.
+No se exige idempotencia funcional estricta en V1, pero sÃ­ una validaciÃ³n clara de conflictos.
 
 Consecuencias
 Positivas
-expresa la semántica real del cambio de centro
-evita que frontend o loader implementen lógica temporal propia
+expresa la semÃ¡ntica real del cambio de centro
+evita que frontend o loader implementen lÃ³gica temporal propia
 mantiene la coherencia con otras operaciones temporales del sistema
-facilita simulación masiva y workflows futuros
+facilita simulaciÃ³n masiva y workflows futuros
 Negativas
-añade una operación específica más al vertical
+aÃ±ade una operaciÃ³n especÃ­fica mÃ¡s al vertical
 obliga a definir claramente el comportamiento cuando no existe work center vigente
-Decisión de alcance para V1
+DecisiÃ³n de alcance para V1
 
 En V1:
 
 si existe work center vigente en la fecha efectiva, se cierra y se crea el nuevo
-si no existe vigente, la operación podrá crear directamente la nueva asignación siempre que el contexto temporal sea válido
-no se introducen todavía estrategias avanzadas de corrección administrativa
-Relación con otras verticales
+si no existe vigente, la operaciÃ³n podrÃ¡ crear directamente la nueva asignaciÃ³n siempre que el contexto temporal sea vÃ¡lido
+no se introducen todavÃ­a estrategias avanzadas de correcciÃ³n administrativa
+RelaciÃ³n con otras verticales
 
-Esta decisión acerca work_center a un patrón de sustitución temporal por fecha efectiva, aunque sin convertirlo automáticamente en STRONG_TIMELINE.
+Esta decisiÃ³n acerca work_center a un patrÃ³n de sustituciÃ³n temporal por fecha efectiva, aunque sin convertirlo automÃ¡ticamente en STRONG_TIMELINE.
 
-No se afirma que work_center y contract sean idénticos como verticales, pero sí que ambos requieren una operación canónica de sustitución temporal cuando el cambio funcional afecta a una asignación vigente.
+No se afirma que work_center y contract sean idÃ©nticos como verticales, pero sÃ­ que ambos requieren una operaciÃ³n canÃ³nica de sustituciÃ³n temporal cuando el cambio funcional afecta a una asignaciÃ³n vigente.
+
 
 <!-- END FILE: ADR-020-work-center-replace-from-date.md -->
 
-<a name="file-adr-021-company-como-catalogo-enriquecido-y-anclado-a-rule-entity-md"></a>
 
 ---
 
 # FILE: ADR-021-COMPANY-como-catalogo-enriquecido-y-anclado-a-rule_entity.md
+<a name="file-adr-021-company-como-catalogo-enriquecido-y-anclado-a-rule-entity-md"></a>
 
 <!-- BEGIN FILE: ADR-021-COMPANY-como-catalogo-enriquecido-y-anclado-a-rule_entity.md -->
 
-ADR — COMPANY como catálogo reutilizable enriquecido mediante profile y anclado técnicamente a rule_entity
+ADR â€” COMPANY como catÃ¡logo reutilizable enriquecido mediante profile y anclado tÃ©cnicamente a rule_entity
 Estado
 
 Propuesto
@@ -6062,89 +6082,89 @@ rule_system
 rule_entity_type
 rule_entity
 
-Este metamodelo ya se utiliza como base de validación y parametrización de múltiples verticales del sistema.
+Este metamodelo ya se utiliza como base de validaciÃ³n y parametrizaciÃ³n de mÃºltiples verticales del sistema.
 
-Además, el proyecto ya ha fijado varias decisiones relevantes:
+AdemÃ¡s, el proyecto ya ha fijado varias decisiones relevantes:
 
 1. Los conceptos reutilizables deben nombrarse por su significado funcional real
 
-Se ha decidido que un rule_entity_type debe nombrar el concepto funcional real y no la primera vertical donde apareció. En ese marco, COMPANY es un ejemplo explícito de catálogo reutilizable de dominio, junto con WORK_CENTER, COST_CENTER o COUNTRY.
+Se ha decidido que un rule_entity_type debe nombrar el concepto funcional real y no la primera vertical donde apareciÃ³. En ese marco, COMPANY es un ejemplo explÃ­cito de catÃ¡logo reutilizable de dominio, junto con WORK_CENTER, COST_CENTER o COUNTRY.
 
 2. rule_entity no debe tratarse como un CRUD plano
 
-El mantenimiento de rule_entity ya se ha definido como catálogo con vigencia temporal ligera, con identidad funcional basada en:
+El mantenimiento de rule_entity ya se ha definido como catÃ¡logo con vigencia temporal ligera, con identidad funcional basada en:
 
 ruleSystemCode
 ruleEntityTypeCode
 code
 startDate
 
-y con operaciones canónicas de create, get by business key, correct, close y delete restringido.
+y con operaciones canÃ³nicas de create, get by business key, correct, close y delete restringido.
 
-3. Las APIs públicas del proyecto deben usar business keys, mientras que los IDs técnicos quedan encapsulados en persistencia
+3. Las APIs pÃºblicas del proyecto deben usar business keys, mientras que los IDs tÃ©cnicos quedan encapsulados en persistencia
 
-Esta regla ya está consolidada en el proyecto y se aplica de forma clara en el modelo de empleado: la identidad pública es funcional, mientras que la persistencia usa claves técnicas para FKs, joins y wiring interno.
+Esta regla ya estÃ¡ consolidada en el proyecto y se aplica de forma clara en el modelo de empleado: la identidad pÃºblica es funcional, mientras que la persistencia usa claves tÃ©cnicas para FKs, joins y wiring interno.
 
-4. En el dominio de empleado, el patrón canónico distingue entre identidad pública y persistencia técnica
+4. En el dominio de empleado, el patrÃ³n canÃ³nico distingue entre identidad pÃºblica y persistencia tÃ©cnica
 
-Por ejemplo, employee.contact se identifica públicamente por employee + contactTypeCode, mientras que internamente la tabla usa id técnico y FK a employee.employee.id. Ese id técnico no define la identidad funcional del recurso, pero sí su anclaje persistente.
+Por ejemplo, employee.contact se identifica pÃºblicamente por employee + contactTypeCode, mientras que internamente la tabla usa id tÃ©cnico y FK a employee.employee.id. Ese id tÃ©cnico no define la identidad funcional del recurso, pero sÃ­ su anclaje persistente.
 
 Problema
 
-COMPANY nace correctamente como un catálogo reutilizable del metamodelo. Sin embargo, al evolucionar el producto aparece una necesidad real: una empresa no solo necesita:
+COMPANY nace correctamente como un catÃ¡logo reutilizable del metamodelo. Sin embargo, al evolucionar el producto aparece una necesidad real: una empresa no solo necesita:
 
-código
+cÃ³digo
 literal visible
 vigencia
 
-sino también una ficha ampliada con datos ricos, por ejemplo:
+sino tambiÃ©n una ficha ampliada con datos ricos, por ejemplo:
 
 nombre legal
 identificador fiscal
-dirección
+direcciÃ³n
 
-Esto genera una tensión de diseño.
+Esto genera una tensiÃ³n de diseÃ±o.
 
 Si COMPANY se mantiene exclusivamente como rule_entity
 
-El modelo queda demasiado pobre para soportar información empresarial básica.
+El modelo queda demasiado pobre para soportar informaciÃ³n empresarial bÃ¡sica.
 
-Si COMPANY se promociona inmediatamente a una nueva vertical/autonomía completa
+Si COMPANY se promociona inmediatamente a una nueva vertical/autonomÃ­a completa
 
 Se corre el riesgo de introducir complejidad prematura y de abrir una familia entera de subdominios (organization.company, organization.work_center, organization.cost_center, etc.) antes de que exista una necesidad operativa clara.
 
-Si se modela la ampliación rica solo con business keys y sin anclaje técnico interno
+Si se modela la ampliaciÃ³n rica solo con business keys y sin anclaje tÃ©cnico interno
 
-Se introduciría una excepción innecesaria respecto a la filosofía ya consolidada en el proyecto, que separa:
+Se introducirÃ­a una excepciÃ³n innecesaria respecto a la filosofÃ­a ya consolidada en el proyecto, que separa:
 
-identidad pública funcional
-identidad interna/persistente técnica
+identidad pÃºblica funcional
+identidad interna/persistente tÃ©cnica
 
-El sistema necesita una solución intermedia, evolutiva y coherente con las decisiones ya tomadas.
+El sistema necesita una soluciÃ³n intermedia, evolutiva y coherente con las decisiones ya tomadas.
 
-Decisión
+DecisiÃ³n
 
 Se adopta para COMPANY el siguiente modelo:
 
-1. COMPANY seguirá siendo un catálogo reutilizable del metamodelo
+1. COMPANY seguirÃ¡ siendo un catÃ¡logo reutilizable del metamodelo
 
-COMPANY se mantiene como rule_entity_type reutilizable y sus ocurrencias continúan viviendo en rulesystem.rule_entity.
+COMPANY se mantiene como rule_entity_type reutilizable y sus ocurrencias continÃºan viviendo en rulesystem.rule_entity.
 
 Su responsabilidad sigue siendo:
 
 identidad catalogal funcional
-código reutilizable
+cÃ³digo reutilizable
 label visible
 vigencia
-activación
+activaciÃ³n
 
-Esto preserva el papel de COMPANY como concepto reusable en múltiples verticales y workflows.
+Esto preserva el papel de COMPANY como concepto reusable en mÃºltiples verticales y workflows.
 
-2. La ficha ampliada de empresa no se modelará dentro de rule_entity
+2. La ficha ampliada de empresa no se modelarÃ¡ dentro de rule_entity
 
-Los datos ricos de empresa no se introducirán como extensión ad hoc de rule_entity.
+Los datos ricos de empresa no se introducirÃ¡n como extensiÃ³n ad hoc de rule_entity.
 
-Se crea un recurso complementario específico para la ampliación rica de la empresa.
+Se crea un recurso complementario especÃ­fico para la ampliaciÃ³n rica de la empresa.
 
 Nombre conceptual adoptado:
 
@@ -6152,69 +6172,69 @@ company_profile
 
 Su responsabilidad es representar la ficha ampliada de una empresa sin alterar la naturaleza catalogal base de rule_entity.
 
-3. company_profile se anclará técnicamente a rule_entity.id
+3. company_profile se anclarÃ¡ tÃ©cnicamente a rule_entity.id
 
-La relación interna se resuelve mediante FK técnica a la ocurrencia base de rule_entity de tipo COMPANY.
+La relaciÃ³n interna se resuelve mediante FK tÃ©cnica a la ocurrencia base de rule_entity de tipo COMPANY.
 
 Es decir:
 
-la identidad pública seguirá usando business keys
-la persistencia interna usará un anclaje técnico estable
+la identidad pÃºblica seguirÃ¡ usando business keys
+la persistencia interna usarÃ¡ un anclaje tÃ©cnico estable
 Regla adoptada
 
 company_profile referencia internamente a la empresa base mediante:
 
-company_rule_entity_id → FK a rulesystem.rule_entity.id
+company_rule_entity_id â†’ FK a rulesystem.rule_entity.id
 
-Esto sigue la misma filosofía ya utilizada en el modelo de empleado:
+Esto sigue la misma filosofÃ­a ya utilizada en el modelo de empleado:
 
 business key fuera
-FK técnica dentro
+FK tÃ©cnica dentro
 4. Alcance funcional V1 de company_profile
 
-Para la primera iteración, company_profile solo cubrirá:
+Para la primera iteraciÃ³n, company_profile solo cubrirÃ¡:
 
 legalName
 taxIdentifier
-dirección
+direcciÃ³n
 
-La dirección podrá modelarse inicialmente como campos simples embebidos en el profile.
+La direcciÃ³n podrÃ¡ modelarse inicialmente como campos simples embebidos en el profile.
 
-No se incluyen todavía en V1:
+No se incluyen todavÃ­a en V1:
 
-numeración de empleados
-teléfonos
+numeraciÃ³n de empleados
+telÃ©fonos
 emails
 contactos por tipo
-políticas avanzadas
+polÃ­ticas avanzadas
 subverticales de company
-5. Teléfono y email quedan explícitamente fuera de V1
+5. TelÃ©fono y email quedan explÃ­citamente fuera de V1
 
-Aunque podrían modelarse como columnas simples, se decide no hacerlo en esta fase.
+Aunque podrÃ­an modelarse como columnas simples, se decide no hacerlo en esta fase.
 
-Justificación:
+JustificaciÃ³n:
 
-el proyecto ya ha consolidado en employee.contact un patrón semántico claro para canales de contacto: slot por tipo, validación por catálogo y separación respecto a la ficha base del sujeto.
-introducir phone y email como dos campos planos en company_profile sería una simplificación aceptable a muy corto plazo, pero introduciría una asimetría conceptual innecesaria.
-se prefiere aplazar esta decisión hasta que exista necesidad real de contacto empresarial, momento en el cual podrá evaluarse si procede una solución equivalente a contactos por tipo.
-6. No se crea todavía una nueva vertical/autonomía completa de organización
+el proyecto ya ha consolidado en employee.contact un patrÃ³n semÃ¡ntico claro para canales de contacto: slot por tipo, validaciÃ³n por catÃ¡logo y separaciÃ³n respecto a la ficha base del sujeto.
+introducir phone y email como dos campos planos en company_profile serÃ­a una simplificaciÃ³n aceptable a muy corto plazo, pero introducirÃ­a una asimetrÃ­a conceptual innecesaria.
+se prefiere aplazar esta decisiÃ³n hasta que exista necesidad real de contacto empresarial, momento en el cual podrÃ¡ evaluarse si procede una soluciÃ³n equivalente a contactos por tipo.
+6. No se crea todavÃ­a una nueva vertical/autonomÃ­a completa de organizaciÃ³n
 
-Esta decisión no introduce todavía:
+Esta decisiÃ³n no introduce todavÃ­a:
 
 bounded context organization
 vertical completa organization.company
 subverticales como organization.company.contact, organization.company.address, organization.company.numbering_policy
 
-La decisión actual se limita a:
+La decisiÃ³n actual se limita a:
 
-mantener COMPANY como catálogo reutilizable
-permitir una ampliación rica controlada mediante company_profile
-Diseño funcional adoptado
+mantener COMPANY como catÃ¡logo reutilizable
+permitir una ampliaciÃ³n rica controlada mediante company_profile
+DiseÃ±o funcional adoptado
 Naturaleza de COMPANY
 
 COMPANY pasa a entenderse como un concepto de dos capas:
 
-A. Capa catalogal canónica
+A. Capa catalogal canÃ³nica
 
 Representada por rulesystem.rule_entity
 
@@ -6224,7 +6244,7 @@ identidad reusable
 code
 name
 vigencia
-activación
+activaciÃ³n
 B. Capa de profile enriquecido
 
 Representada por company_profile
@@ -6232,12 +6252,12 @@ Representada por company_profile
 Responsabilidad:
 
 ficha ampliada
-datos operativos básicos
-evolución gradual sin contaminar el metamodelo
+datos operativos bÃ¡sicos
+evoluciÃ³n gradual sin contaminar el metamodelo
 Identidad
-Identidad pública de la empresa
+Identidad pÃºblica de la empresa
 
-La identidad pública funcional sigue siendo:
+La identidad pÃºblica funcional sigue siendo:
 
 ruleSystemCode
 companyCode
@@ -6250,9 +6270,9 @@ Identidad interna de persistencia
 
 La persistencia interna se apoya en:
 
-rulesystem.rule_entity.id como root técnico base del concepto catalogal
-company_profile.id como PK técnica propia del profile
-company_profile.company_rule_entity_id como FK técnica única hacia rule_entity.id
+rulesystem.rule_entity.id como root tÃ©cnico base del concepto catalogal
+company_profile.id como PK tÃ©cnica propia del profile
+company_profile.company_rule_entity_id como FK tÃ©cnica Ãºnica hacia rule_entity.id
 Persistencia recomendada
 Tabla base existente
 
@@ -6279,20 +6299,20 @@ country_code
 created_at
 updated_at
 Restricciones recomendadas
-PK técnica en company_profile.id
+PK tÃ©cnica en company_profile.id
 FK obligatoria:
 company_rule_entity_id -> rulesystem.rule_entity.id
 unique:
 company_rule_entity_id
-validación de que la rule_entity referenciada sea de tipo COMPANY
-API pública
+validaciÃ³n de que la rule_entity referenciada sea de tipo COMPANY
+API pÃºblica
 Principio general
 
-Las APIs públicas siguen usando business keys, nunca IDs técnicos. Esto mantiene coherencia con la convención general del proyecto.
+Las APIs pÃºblicas siguen usando business keys, nunca IDs tÃ©cnicos. Esto mantiene coherencia con la convenciÃ³n general del proyecto.
 
-API de catálogo base
+API de catÃ¡logo base
 
-Se mantiene el mantenimiento canónico de rule_entity ya definido:
+Se mantiene el mantenimiento canÃ³nico de rule_entity ya definido:
 
 POST /rule-entities
 GET /rule-entities
@@ -6302,104 +6322,104 @@ POST /rule-entities/{ruleSystemCode}/{ruleEntityTypeCode}/{code}/{startDate}/clo
 DELETE /rule-entities/{ruleSystemCode}/{ruleEntityTypeCode}/{code}/{startDate}
 API de profile enriquecido
 
-Se introduce una API específica orientada a la ficha ampliada de empresa.
+Se introduce una API especÃ­fica orientada a la ficha ampliada de empresa.
 
 Endpoints recomendados:
 
 GET /companies/{ruleSystemCode}/{companyCode}/profile
 PUT /companies/{ruleSystemCode}/{companyCode}/profile
 
-Opcionalmente, si compensa por ergonomía:
+Opcionalmente, si compensa por ergonomÃ­a:
 
 GET /companies/{ruleSystemCode}/{companyCode}
 
 como endpoint agregado de lectura enriquecida.
 
 Reglas de dominio
-1. Separación de responsabilidades
-rule_entity define la identidad catalogal canónica
-company_profile define la ampliación rica
-2. No duplicar semántica de identidad
+1. SeparaciÃ³n de responsabilidades
+rule_entity define la identidad catalogal canÃ³nica
+company_profile define la ampliaciÃ³n rica
+2. No duplicar semÃ¡ntica de identidad
 
-company_profile no define una nueva identidad pública de empresa.
+company_profile no define una nueva identidad pÃºblica de empresa.
 
-3. No mezclar identidad pública y wiring interno
+3. No mezclar identidad pÃºblica y wiring interno
 el exterior usa ruleSystemCode + companyCode
-el interior usa FK técnica a rule_entity.id
+el interior usa FK tÃ©cnica a rule_entity.id
 4. company_profile no reemplaza a rule_entity
 
-No puede existir empresa operativamente válida sin su base catalogal correspondiente.
+No puede existir empresa operativamente vÃ¡lida sin su base catalogal correspondiente.
 
-5. La vigencia canónica sigue residiendo en rule_entity
+5. La vigencia canÃ³nica sigue residiendo en rule_entity
 
-No se traslada a company_profile una lógica temporal propia en esta fase.
+No se traslada a company_profile una lÃ³gica temporal propia en esta fase.
 
-6. taxIdentifier podrá evolucionar
+6. taxIdentifier podrÃ¡ evolucionar
 
-En V1 se modela como dato simple, pero el diseño permite introducir más adelante validaciones específicas por país o regla sin romper la arquitectura.
+En V1 se modela como dato simple, pero el diseÃ±o permite introducir mÃ¡s adelante validaciones especÃ­ficas por paÃ­s o regla sin romper la arquitectura.
 
-Relación con el crecimiento de rule_system
+RelaciÃ³n con el crecimiento de rule_system
 
-Esta decisión se considera importante porque establece una vía general para la evolución del metamodelo.
+Esta decisiÃ³n se considera importante porque establece una vÃ­a general para la evoluciÃ³n del metamodelo.
 
-Patrón emergente
+PatrÃ³n emergente
 
 Un concepto del metamodelo puede recorrer estas fases:
 
-Fase 1 — Catálogo puro
+Fase 1 â€” CatÃ¡logo puro
 
 Solo requiere:
 
 code
 name
 vigencia
-Fase 2 — Catálogo + profile enriquecido
+Fase 2 â€” CatÃ¡logo + profile enriquecido
 
 El concepto sigue siendo reusable, pero necesita ficha ampliada.
 
-Fase 3 — Vertical/autonomía plena
+Fase 3 â€” Vertical/autonomÃ­a plena
 
-Solo cuando además aparecen:
+Solo cuando ademÃ¡s aparecen:
 
-operaciones canónicas propias
+operaciones canÃ³nicas propias
 invariantes fuertes propias
-UX específica de mantenimiento
+UX especÃ­fica de mantenimiento
 procesos donde el concepto es sujeto funcional
 
-Esta progresión evita dos errores:
+Esta progresiÃ³n evita dos errores:
 
-dejar conceptos ricos empobrecidos en el catálogo
-convertir demasiado pronto cualquier catálogo importante en un subdominio grande
+dejar conceptos ricos empobrecidos en el catÃ¡logo
+convertir demasiado pronto cualquier catÃ¡logo importante en un subdominio grande
 Consecuencias positivas
 mantiene a COMPANY como concepto reusable y estable del metamodelo
-evita sobrecargar rule_entity con atributos ricos no propios de un catálogo
-mantiene coherencia con la filosofía general del proyecto: business key fuera, surrogate key dentro
+evita sobrecargar rule_entity con atributos ricos no propios de un catÃ¡logo
+mantiene coherencia con la filosofÃ­a general del proyecto: business key fuera, surrogate key dentro
 abre una senda de crecimiento sana para otros conceptos del rulesystem
-permite enriquecer “datos de empresa” sin crear todavía una arquitectura organizativa prematura
-se alinea con patrones ya conocidos en sistemas como HRAccess, donde el identificador técnico del catálogo funciona como anclaje FK en estructuras derivadas
+permite enriquecer â€œdatos de empresaâ€ sin crear todavÃ­a una arquitectura organizativa prematura
+se alinea con patrones ya conocidos en sistemas como HRAccess, donde el identificador tÃ©cnico del catÃ¡logo funciona como anclaje FK en estructuras derivadas
 Costes / riesgos
-introduce una nueva tabla y lógica de resolución adicional
-obliga a mantener clara la frontera entre catálogo y profile
-deja abierta una futura decisión sobre contactos empresariales
+introduce una nueva tabla y lÃ³gica de resoluciÃ³n adicional
+obliga a mantener clara la frontera entre catÃ¡logo y profile
+deja abierta una futura decisiÃ³n sobre contactos empresariales
 puede requerir refactor si en el futuro COMPANY adquiere procesos y operaciones suficientes para convertirse en vertical plena
 Alternativas consideradas
 1. Mantener todo en rule_entity
 
 Descartado.
 
-Se queda corto para modelar datos empresariales básicos y empuja a usar el catálogo como contenedor genérico.
+Se queda corto para modelar datos empresariales bÃ¡sicos y empuja a usar el catÃ¡logo como contenedor genÃ©rico.
 
 2. Crear ya organization.company como vertical plena
 
 Descartado por prematuro.
 
-No hay todavía suficientes operaciones, invariantes ni semántica propia para justificar esa promoción.
+No hay todavÃ­a suficientes operaciones, invariantes ni semÃ¡ntica propia para justificar esa promociÃ³n.
 
-3. Modelar company_profile solo con business keys y sin FK técnica
+3. Modelar company_profile solo con business keys y sin FK tÃ©cnica
 
 Descartado.
 
-Rompe innecesariamente la filosofía ya consolidada en el proyecto respecto a la separación entre identidad pública y persistencia interna.
+Rompe innecesariamente la filosofÃ­a ya consolidada en el proyecto respecto a la separaciÃ³n entre identidad pÃºblica y persistencia interna.
 
 4. Meter phone/email como campos planos en V1
 
@@ -6409,58 +6429,59 @@ Posible, pero no deseable mientras no se aclare la estrategia de contactos empre
 
 No objetivos
 
-Este ADR no introduce todavía:
+Este ADR no introduce todavÃ­a:
 
-modelo de numeración de empleados
+modelo de numeraciÃ³n de empleados
 vertical de contactos de empresa
-vertical de direcciones de empresa con historización
+vertical de direcciones de empresa con historizaciÃ³n
 bounded context organization
-jerarquía organizativa
-promoción de COMPANY a aggregate root autónomo
-sincronización automática compleja entre catálogo y profile más allá de su relación estructural
-Estrategia recomendada de implementación
+jerarquÃ­a organizativa
+promociÃ³n de COMPANY a aggregate root autÃ³nomo
+sincronizaciÃ³n automÃ¡tica compleja entre catÃ¡logo y profile mÃ¡s allÃ¡ de su relaciÃ³n estructural
+Estrategia recomendada de implementaciÃ³n
 Fase 1
 mantener COMPANY en rule_entity
 crear tabla company_profile
-FK única a rule_entity.id
-exponer lectura y actualización del profile
+FK Ãºnica a rule_entity.id
+exponer lectura y actualizaciÃ³n del profile
 Fase 2
-enriquecer frontend de “datos de empresa”
-mostrar lectura agregada catálogo + profile
+enriquecer frontend de â€œdatos de empresaâ€
+mostrar lectura agregada catÃ¡logo + profile
 introducir validaciones ligeras de taxIdentifier
 Fase 3
 evaluar contactos empresariales
 evaluar si algunos conceptos de company merecen profile adicional o vertical propia
 Fase 4
-revisar si COMPANY sigue siendo “catálogo + profile” o si ya ha madurado hasta necesitar vertical/autonomía plena
+revisar si COMPANY sigue siendo â€œcatÃ¡logo + profileâ€ o si ya ha madurado hasta necesitar vertical/autonomÃ­a plena
 Resumen ejecutivo
 
-COMPANY seguirá siendo en B4RRHH un catálogo reutilizable del metamodelo (rule_entity), porque su identidad canónica y su reutilización transversal así lo justifican.
+COMPANY seguirÃ¡ siendo en B4RRHH un catÃ¡logo reutilizable del metamodelo (rule_entity), porque su identidad canÃ³nica y su reutilizaciÃ³n transversal asÃ­ lo justifican.
 
-Sin embargo, cuando la empresa necesite una ficha ampliada, esta no se modelará dentro de rule_entity, sino mediante un recurso complementario company_profile.
+Sin embargo, cuando la empresa necesite una ficha ampliada, esta no se modelarÃ¡ dentro de rule_entity, sino mediante un recurso complementario company_profile.
 
-company_profile se anclará internamente mediante FK técnica a rulesystem.rule_entity.id, preservando la misma filosofía que ya se usa en employee: business keys en la API pública, IDs técnicos solo en persistencia.
+company_profile se anclarÃ¡ internamente mediante FK tÃ©cnica a rulesystem.rule_entity.id, preservando la misma filosofÃ­a que ya se usa en employee: business keys en la API pÃºblica, IDs tÃ©cnicos solo en persistencia.
 
-La primera versión del profile se limitará a:
+La primera versiÃ³n del profile se limitarÃ¡ a:
 
 nombre legal
 identificador fiscal
-dirección
+direcciÃ³n
 
-y dejará fuera, de momento, numeración y contactos empresariales.
+y dejarÃ¡ fuera, de momento, numeraciÃ³n y contactos empresariales.
 
-Esta decisión no crea todavía un nuevo universo organization.*, pero sí fija una vía muy importante para el crecimiento del rulesystem: catálogo reusable → profile enriquecido → posible vertical plena solo si el dominio lo exige.
+Esta decisiÃ³n no crea todavÃ­a un nuevo universo organization.*, pero sÃ­ fija una vÃ­a muy importante para el crecimiento del rulesystem: catÃ¡logo reusable â†’ profile enriquecido â†’ posible vertical plena solo si el dominio lo exige.
+
 <!-- END FILE: ADR-021-COMPANY-como-catalogo-enriquecido-y-anclado-a-rule_entity.md -->
 
-<a name="file-adr-022-global-message-and-feedback-policy-md"></a>
 
 ---
 
 # FILE: ADR-022-Global-message-and-feedback-policy.md
+<a name="file-adr-022-global-message-and-feedback-policy-md"></a>
 
 <!-- BEGIN FILE: ADR-022-Global-message-and-feedback-policy.md -->
 
-# ADR-0XX — Global Message & Feedback Policy
+# ADR-0XX â€” Global Message & Feedback Policy
 
 ## Status
 
@@ -6497,10 +6518,10 @@ Introduce a **Global Floating Message System** as the single source of truth for
 
 This system is:
 
-* **global** → not tied to any specific section
-* **floating** → overlays UI, does not affect layout
-* **centralized** → managed via a shared service
-* **hierarchical** → distinguishes between message types and scopes
+* **global** â†’ not tied to any specific section
+* **floating** â†’ overlays UI, does not affect layout
+* **centralized** â†’ managed via a shared service
+* **hierarchical** â†’ distinguishes between message types and scopes
 
 ---
 
@@ -6541,7 +6562,7 @@ Messages:
 
 The user MUST always know:
 
-> “If something important happened, I look at the global message layer.”
+> â€œIf something important happened, I look at the global message layer.â€
 
 ---
 
@@ -6594,7 +6615,7 @@ Messages MUST have:
 
 ### Stacking
 
-* limit visible messages (max 2–3)
+* limit visible messages (max 2â€“3)
 * group or summarize if necessary
 
 ---
@@ -6603,7 +6624,7 @@ Messages MUST have:
 
 If a message is linked to a section:
 
-* user can navigate via “Go to section”
+* user can navigate via â€œGo to sectionâ€
 * system may:
 
   * activate tab
@@ -6625,8 +6646,8 @@ If a message is linked to a section:
 
 Examples:
 
-* “Ya existe un contacto para ese tipo”
-* “Invalid working_time configuration”
+* â€œYa existe un contacto para ese tipoâ€
+* â€œInvalid working_time configurationâ€
 
 These MUST be global.
 
@@ -6710,17 +6731,18 @@ All meaningful application feedback must be:
 
 > centralized, visible, predictable, and non-intrusive.
 
+
 <!-- END FILE: ADR-022-Global-message-and-feedback-policy.md -->
 
-<a name="file-adr-023-ui-interaction-contracts-per-vertical-md"></a>
 
 ---
 
 # FILE: ADR-023-UI-interaction-contracts-per-vertical.md
+<a name="file-adr-023-ui-interaction-contracts-per-vertical-md"></a>
 
 <!-- BEGIN FILE: ADR-023-UI-interaction-contracts-per-vertical.md -->
 
-# ADR-0XY — UI Interaction Contracts per Vertical
+# ADR-0XY â€” UI Interaction Contracts per Vertical
 
 ## Status
 
@@ -6778,9 +6800,9 @@ Every user action in a vertical follows this flow:
 3. Backend call
 4. Result handling:
 
-   * success → publish global message
-   * error → publish global message
-   * validation → mark fields locally + optionally publish global
+   * success â†’ publish global message
+   * error â†’ publish global message
+   * validation â†’ mark fields locally + optionally publish global
 5. UI stabilization
 
 ---
@@ -6855,8 +6877,8 @@ Two types:
 
 Example:
 
-* “contactValue invalid” → global + field highlight
-* “duplicate contact type” → global (not just local banner)
+* â€œcontactValue invalidâ€ â†’ global + field highlight
+* â€œduplicate contact typeâ€ â†’ global (not just local banner)
 
 ---
 
@@ -6947,7 +6969,7 @@ All verticals MUST behave consistently:
 
 ---
 
-## Example — Contacts Vertical
+## Example â€” Contacts Vertical
 
 ### Create Contact
 
@@ -6985,7 +7007,7 @@ All verticals MUST behave consistently:
 
 * requires refactoring existing verticals
 * stricter discipline in UI development
-* less “freedom” inside components
+* less â€œfreedomâ€ inside components
 
 ---
 
@@ -6995,7 +7017,7 @@ Future enhancements may include:
 
 * standardized helper hooks for verticals
 * base abstract component for interaction handling
-* unified error mapping from backend → UI
+* unified error mapping from backend â†’ UI
 * analytics on user interaction failures
 
 ---
@@ -7015,56 +7037,57 @@ The system controls how feedback is displayed.
 > If a vertical performs an operation,
 > it MUST publish the outcome to the global system.
 
+
 <!-- END FILE: ADR-023-UI-interaction-contracts-per-vertical.md -->
 
-<a name="file-adr-024-autorizacion-jerarquica-b4rrhh-md"></a>
 
 ---
 
 # FILE: ADR-024_autorizacion_jerarquica_B4RRHH.md
+<a name="file-adr-024-autorizacion-jerarquica-b4rrhh-md"></a>
 
 <!-- BEGIN FILE: ADR-024_autorizacion_jerarquica_B4RRHH.md -->
 
-# ADR — Modelo de autorización jerárquica para recursos funcionales en B4RRHH
+# ADR â€” Modelo de autorizaciÃ³n jerÃ¡rquica para recursos funcionales en B4RRHH
 
 ## Estado
 Propuesto
 
-## Decisión principal
-La autorización en B4RRHH se modela como un dominio propio basado en:
+## DecisiÃ³n principal
+La autorizaciÃ³n en B4RRHH se modela como un dominio propio basado en:
 - roles funcionales
-- recursos funcionales jerárquicos
-- acciones semánticas
+- recursos funcionales jerÃ¡rquicos
+- acciones semÃ¡nticas
 - perfiles de permiso reutilizables
-- políticas rol-recurso con herencia y overrides
+- polÃ­ticas rol-recurso con herencia y overrides
 
 ## Nombre recomendado
-`authorization` (preferible a `security` para no mezclar autenticación con autorización)
+`authorization` (preferible a `security` para no mezclar autenticaciÃ³n con autorizaciÃ³n)
 
 ## Contexto
-B4RRHH ya modela el dominio por verticales funcionales, business keys públicas y operaciones honestas. Falta cerrar la autorización con el mismo rigor.
+B4RRHH ya modela el dominio por verticales funcionales, business keys pÃºblicas y operaciones honestas. Falta cerrar la autorizaciÃ³n con el mismo rigor.
 
-El problema no es solo “añadir roles”, sino resolver:
+El problema no es solo â€œaÃ±adir rolesâ€, sino resolver:
 - lectura global pero mantenimiento parcial por vertical
 - workflows permitidos para unos roles y prohibidos para otros
 - defaults razonables para recursos nuevos
-- extensión a `employee`, `rulesystem` y futuros bounded contexts
+- extensiÃ³n a `employee`, `rulesystem` y futuros bounded contexts
 
 ## Problema
 Un modelo simple de roles por endpoint o por CRUD puro no encaja bien porque:
 - la unidad natural del proyecto es el recurso funcional, no el endpoint
 - el dominio usa acciones como `CLOSE`, `CORRECT`, `EXECUTE`
-- habrá más bounded contexts además de `employee`
+- habrÃ¡ mÃ¡s bounded contexts ademÃ¡s de `employee`
 - no se quiere reconfigurar cada rol cada vez que nazca una vertical
 
-## Decisión
-Se introduce un bounded context técnico-funcional `authorization`.
+## DecisiÃ³n
+Se introduce un bounded context tÃ©cnico-funcional `authorization`.
 
-La cadena lógica del modelo será:
+La cadena lÃ³gica del modelo serÃ¡:
 
-`rol -> política sobre recurso -> perfil de permiso -> acciones permitidas`
+`rol -> polÃ­tica sobre recurso -> perfil de permiso -> acciones permitidas`
 
-El recurso asegurado vive dentro de un árbol jerárquico. Ejemplo:
+El recurso asegurado vive dentro de un Ã¡rbol jerÃ¡rquico. Ejemplo:
 
 - `employee`
   - `employee.employee`
@@ -7089,12 +7112,12 @@ El recurso asegurado vive dentro de un árbol jerárquico. Ejemplo:
 Los workflows se tratan como recursos de primera clase.
 
 ## Principios
-1. Separación fuerte entre autenticación y autorización.
-2. Recurso funcional como unidad canónica de control.
-3. Acciones semánticas honestas.
+1. SeparaciÃ³n fuerte entre autenticaciÃ³n y autorizaciÃ³n.
+2. Recurso funcional como unidad canÃ³nica de control.
+3. Acciones semÃ¡nticas honestas.
 4. Default + override.
 5. Escalabilidad transversal.
-6. No modelar autorización por campo como regla general.
+6. No modelar autorizaciÃ³n por campo como regla general.
 
 ## Modelo relacional propuesto
 
@@ -7116,7 +7139,7 @@ Ejemplos:
 - `READONLY`
 
 ### `authorization.secured_resource`
-Catálogo jerárquico de recursos protegidos.
+CatÃ¡logo jerÃ¡rquico de recursos protegidos.
 
 Campos principales:
 - `resource_code`
@@ -7137,12 +7160,12 @@ Campos principales:
 
 #### Sobre `resource_family_code`
 
-`resource_family_code` es un agrupador funcional de recursos. **No es jerarquía** (eso lo modela `parent_resource_code`) — es agrupación semántica transversal.
+`resource_family_code` es un agrupador funcional de recursos. **No es jerarquÃ­a** (eso lo modela `parent_resource_code`) â€” es agrupaciÃ³n semÃ¡ntica transversal.
 
-**Para qué sirve:**
-- Simplificar autorización: en vez de definir 50 reglas por recurso, se definen 5 reglas por familia.
-- Evitar explosión de políticas: un rol puede autorizarse sobre una familia entera.
-- Permitir reglas transversales: "RRHH ve todo lo de datos de empleado", "Finanzas solo lo económico".
+**Para quÃ© sirve:**
+- Simplificar autorizaciÃ³n: en vez de definir 50 reglas por recurso, se definen 5 reglas por familia.
+- Evitar explosiÃ³n de polÃ­ticas: un rol puede autorizarse sobre una familia entera.
+- Permitir reglas transversales: "RRHH ve todo lo de datos de empleado", "Finanzas solo lo econÃ³mico".
 
 **Familias iniciales recomendadas:**
 
@@ -7156,12 +7179,12 @@ Campos principales:
 
 **Reglas de uso:**
 - Todo `secured_resource` debe declarar su `resource_family_code`.
-- El catálogo de familias es cerrado y se gobierna mediante ADR o enum en código.
-- Las políticas pueden definirse sobre familias en el futuro (extensión de V1, no en V1).
-- En V1 `resource_family_code` es campo informativo/filtro de UI; la evaluación jerárquica no lo usa directamente.
+- El catÃ¡logo de familias es cerrado y se gobierna mediante ADR o enum en cÃ³digo.
+- Las polÃ­ticas pueden definirse sobre familias en el futuro (extensiÃ³n de V1, no en V1).
+- En V1 `resource_family_code` es campo informativo/filtro de UI; la evaluaciÃ³n jerÃ¡rquica no lo usa directamente.
 
 ### `authorization.action`
-Catálogo de acciones.
+CatÃ¡logo de acciones.
 
 Acciones iniciales recomendadas:
 - `READ`
@@ -7185,7 +7208,7 @@ Perfiles iniciales recomendados:
 - `FULL_CONTROL`
 
 ### `authorization.permission_profile_action`
-Tabla de composición perfil -> acción.
+Tabla de composiciÃ³n perfil -> acciÃ³n.
 
 PK compuesta:
 - `permission_profile_code`
@@ -7209,7 +7232,7 @@ PK compuesta:
 - `THIS_RESOURCE_AND_CHILDREN`
 
 ### `authorization.user_role_assignment` (aplazado a V2)
-Solo necesaria si B4RRHH persiste roles internos. En V1 los roles del sujeto se extraen del JWT emitido por el IdP externo — B4RRHH no gestiona la asignación de roles, solo la lee del token.
+Solo necesaria si B4RRHH persiste roles internos. En V1 los roles del sujeto se extraen del JWT emitido por el IdP externo â€” B4RRHH no gestiona la asignaciÃ³n de roles, solo la lee del token.
 
 Campos principales (futuros):
 - `subject_code`
@@ -7218,46 +7241,46 @@ Campos principales (futuros):
 - `active`
 
 ## Reglas de modelado
-- Todo recurso nuevo que requiera autorización debe registrarse en `authorization.secured_resource`.
+- Todo recurso nuevo que requiera autorizaciÃ³n debe registrarse en `authorization.secured_resource`.
 - Todo recurso debe declarar, siempre que exista, un `parent_resource_code`.
 - Todo recurso debe declarar su `resource_family_code`.
 - Los workflows se modelan como recursos de tipo `WORKFLOW`.
-- Las políticas se definen sobre recursos, no sobre endpoints.
-- La ausencia de permiso implica denegación.
-- `NONE` es un perfil que no concede ninguna acción. No es un deny con precedencia sobre otros roles — si otro rol del sujeto concede la acción por otro camino del árbol, la evaluación devuelve ALLOW. `NONE` solo deniega cuando es el único perfil aplicable.
-- En V1 no se introducen deny explícitos con precedencia sobre grants de otros roles.
-- La autorización por campo queda fuera del modelo base.
+- Las polÃ­ticas se definen sobre recursos, no sobre endpoints.
+- La ausencia de permiso implica denegaciÃ³n.
+- `NONE` es un perfil que no concede ninguna acciÃ³n. No es un deny con precedencia sobre otros roles â€” si otro rol del sujeto concede la acciÃ³n por otro camino del Ã¡rbol, la evaluaciÃ³n devuelve ALLOW. `NONE` solo deniega cuando es el Ãºnico perfil aplicable.
+- En V1 no se introducen deny explÃ­citos con precedencia sobre grants de otros roles.
+- La autorizaciÃ³n por campo queda fuera del modelo base.
 
-## Algoritmo de evaluación
+## Algoritmo de evaluaciÃ³n
 Entrada:
 - sujeto autenticado
 - roles efectivos
 - `resource_code`
 - `action_code`
 
-Resolución:
-1. Buscar política exacta para `role_code + resource_code`.
+ResoluciÃ³n:
+1. Buscar polÃ­tica exacta para `role_code + resource_code`.
 2. Si no existe, subir al padre.
-3. Repetir hasta la raíz.
-4. Cuando se encuentre una política, resolver el perfil.
-5. Comprobar si el perfil contiene la acción.
-6. Si algún rol concede, permitir.
+3. Repetir hasta la raÃ­z.
+4. Cuando se encuentre una polÃ­tica, resolver el perfil.
+5. Comprobar si el perfil contiene la acciÃ³n.
+6. Si algÃºn rol concede, permitir.
 7. Si ninguno concede, denegar.
 
 Reglas de precedencia:
-- el recurso más cercano gana sobre ancestros más lejanos
+- el recurso mÃ¡s cercano gana sobre ancestros mÃ¡s lejanos
 - la coincidencia exacta gana sobre la heredada
-- basta una concesión positiva para permitir
-- ausencia de concesión = deny por defecto
+- basta una concesiÃ³n positiva para permitir
+- ausencia de concesiÃ³n = deny por defecto
 
-## Ejemplos de políticas
+## Ejemplos de polÃ­ticas
 
 ### AUDITOR
-- `AUDITOR` sobre `employee` -> `READ_ONLY` con propagación a hijos
-- `AUDITOR` sobre `rulesystem` -> `READ_ONLY` con propagación a hijos
+- `AUDITOR` sobre `employee` -> `READ_ONLY` con propagaciÃ³n a hijos
+- `AUDITOR` sobre `rulesystem` -> `READ_ONLY` con propagaciÃ³n a hijos
 
 ### HR_OPERATOR
-- `HR_OPERATOR` sobre `employee` -> `READ_ONLY` con propagación a hijos
+- `HR_OPERATOR` sobre `employee` -> `READ_ONLY` con propagaciÃ³n a hijos
 - `HR_OPERATOR` sobre `employee.contact` -> `SLOT_MAINTAINER`
 - `HR_OPERATOR` sobre `employee.identifier` -> `SLOT_MAINTAINER`
 - `HR_OPERATOR` sobre `employee.address` -> `TEMPORAL_MAINTAINER`
@@ -7268,13 +7291,13 @@ Reglas de precedencia:
 - `HR_OPERATOR` sobre `employee.lifecycle.rehire` -> `NONE`
 
 ### HR_MANAGER
-- `HR_MANAGER` sobre `employee` -> `READ_ONLY` con propagación a hijos
+- `HR_MANAGER` sobre `employee` -> `READ_ONLY` con propagaciÃ³n a hijos
 - `HR_MANAGER` sobre `employee.contact` -> `SLOT_MAINTAINER`
 - `HR_MANAGER` sobre `employee.identifier` -> `SLOT_MAINTAINER`
 - `HR_MANAGER` sobre `employee.address` -> `TEMPORAL_MAINTAINER`
 - `HR_MANAGER` sobre `employee.work_center` -> `TEMPORAL_MAINTAINER`
 - `HR_MANAGER` sobre `employee.working_time` -> `TEMPORAL_MAINTAINER`
-- `HR_MANAGER` sobre `employee.lifecycle` -> `WORKFLOW_EXECUTOR` con propagación a hijos
+- `HR_MANAGER` sobre `employee.lifecycle` -> `WORKFLOW_EXECUTOR` con propagaciÃ³n a hijos
 
 ### CATALOG_MANAGER
 - `CATALOG_MANAGER` sobre `rulesystem.rule_entity` -> `FULL_CONTROL`
@@ -7282,25 +7305,25 @@ Reglas de precedencia:
 - `CATALOG_MANAGER` sobre `rulesystem.rule_system` -> `READ_ONLY`
 
 ### ADMIN
-- `ADMIN` sobre `employee` -> `FULL_CONTROL` con propagación a hijos
-- `ADMIN` sobre `rulesystem` -> `FULL_CONTROL` con propagación a hijos
-- `ADMIN` sobre `authorization` -> `FULL_CONTROL` con propagación a hijos
+- `ADMIN` sobre `employee` -> `FULL_CONTROL` con propagaciÃ³n a hijos
+- `ADMIN` sobre `rulesystem` -> `FULL_CONTROL` con propagaciÃ³n a hijos
+- `ADMIN` sobre `authorization` -> `FULL_CONTROL` con propagaciÃ³n a hijos
 
-## Ejemplo completo de resolución
-Caso: `HR_OPERATOR` intenta ejecutar `employee.lifecycle.terminate` con acción `EXECUTE`.
+## Ejemplo completo de resoluciÃ³n
+Caso: `HR_OPERATOR` intenta ejecutar `employee.lifecycle.terminate` con acciÃ³n `EXECUTE`.
 
-Resolución:
-1. Existe política exacta sobre `employee.lifecycle.terminate`.
+ResoluciÃ³n:
+1. Existe polÃ­tica exacta sobre `employee.lifecycle.terminate`.
 2. El perfil es `NONE`.
 3. `NONE` no contiene `EXECUTE`.
 4. Resultado: denegado.
 
-Caso: `HR_MANAGER` intenta ejecutar `employee.lifecycle.terminate` con acción `EXECUTE`.
+Caso: `HR_MANAGER` intenta ejecutar `employee.lifecycle.terminate` con acciÃ³n `EXECUTE`.
 
-Resolución:
-1. No existe política exacta.
+ResoluciÃ³n:
+1. No existe polÃ­tica exacta.
 2. Se sube al padre `employee.lifecycle`.
-3. Existe perfil `WORKFLOW_EXECUTOR` con propagación a hijos.
+3. Existe perfil `WORKFLOW_EXECUTOR` con propagaciÃ³n a hijos.
 4. `WORKFLOW_EXECUTOR` contiene `EXECUTE`.
 5. Resultado: permitido.
 
@@ -7309,89 +7332,90 @@ Cuando nazca una vertical nueva, por ejemplo `employee.bank_account`:
 1. se registra en `authorization.secured_resource`
 2. se cuelga de `employee`
 3. hereda permisos por defecto
-4. solo se añade override si el recurso necesita trato especial
+4. solo se aÃ±ade override si el recurso necesita trato especial
 
-## Integración
+## IntegraciÃ³n
 ### Backend
-- Spring Security valida el JWT Bearer en cada request (Resource Server con clave simétrica HS256 en V1).
+- Spring Security valida el JWT Bearer en cada request (Resource Server con clave simÃ©trica HS256 en V1).
 - Los roles del sujeto se extraen del claim `roles` del JWT y se cargan como `GrantedAuthority` en el `SecurityContext`.
-- B4RRHH resuelve autorización por `resource_code + action_code` consultando su propio bounded context `authorization`.
-- Se expone `POST /authorization/evaluate` que recibe `{ resourceCode, actionCode }` y evalúa con los roles del JWT autenticado.
+- B4RRHH resuelve autorizaciÃ³n por `resource_code + action_code` consultando su propio bounded context `authorization`.
+- Se expone `POST /authorization/evaluate` que recibe `{ resourceCode, actionCode }` y evalÃºa con los roles del JWT autenticado.
 - La seguridad real vive en backend.
 
 ### Frontend
 - Puede consultar `POST /authorization/evaluate` para derivar capacidades UI como `canEditContacts` o `canExecuteTerminate`.
-- La ocultación de acciones es UX, no seguridad real.
+- La ocultaciÃ³n de acciones es UX, no seguridad real.
 
 ## No objetivos de V1
-- CRUD API para gestionar roles, recursos, perfiles y políticas (se gestiona por Flyway).
-- Asignación de roles a sujetos desde la API (tabla `user_role_assignment` aplazada).
-- Deny explícito con precedencia sobre grants de otros roles.
-- Autorización aplicada automáticamente en los endpoints de `employee` (interceptores Spring Security). En V1 solo existe el endpoint de evaluación explícita.
+- CRUD API para gestionar roles, recursos, perfiles y polÃ­ticas (se gestiona por Flyway).
+- AsignaciÃ³n de roles a sujetos desde la API (tabla `user_role_assignment` aplazada).
+- Deny explÃ­cito con precedencia sobre grants de otros roles.
+- AutorizaciÃ³n aplicada automÃ¡ticamente en los endpoints de `employee` (interceptores Spring Security). En V1 solo existe el endpoint de evaluaciÃ³n explÃ­cita.
 
 ## No objetivos
-- autorización contextual por instancia concreta
+- autorizaciÃ³n contextual por instancia concreta
 - seguridad por `ruleSystemCode`, `companyCode` o manager scope en V1
-- autorización por campo como modelo base
+- autorizaciÃ³n por campo como modelo base
 - detalle del login OIDC y ciclo de vida del token
-- deny explícitos con precedencias complejas
+- deny explÃ­citos con precedencias complejas
 
 ## Consecuencias
 ### Positivas
-- alinea autorización con el lenguaje funcional de B4RRHH
+- alinea autorizaciÃ³n con el lenguaje funcional de B4RRHH
 - evita acoplar permisos a endpoints
 - permite defaults razonables
 - admite overrides finos
 - trata workflows y verticales bajo un mismo marco
-- deja base sólida para auditoría futura
+- deja base sÃ³lida para auditorÃ­a futura
 
 ### Costes
 - aparece un bounded context adicional
-- hay que gobernar el árbol de recursos
-- la evaluación jerárquica debe estar muy bien testeada
+- hay que gobernar el Ã¡rbol de recursos
+- la evaluaciÃ³n jerÃ¡rquica debe estar muy bien testeada
 
-## Plan de implantación
+## Plan de implantaciÃ³n
 1. Crear schema `authorization` y semillas base.
-2. Implementar evaluación jerárquica en backend.
+2. Implementar evaluaciÃ³n jerÃ¡rquica en backend.
 3. Integrar roles efectivos desde JWT u origen externo.
 4. Exponer capacidades derivadas al frontend.
 5. Extender a `rulesystem` y futuros bounded contexts.
-6. Evaluar futuras extensiones: auditoría, contexto, datos sensibles.
+6. Evaluar futuras extensiones: auditorÃ­a, contexto, datos sensibles.
 
 ## Resumen ejecutivo
-B4RRHH debe modelar la autorización como un dominio propio, separado de la autenticación, apoyado en recursos funcionales jerárquicos. Los roles no conceden permisos sobre endpoints, sino perfiles de permiso sobre recursos del árbol funcional del sistema.
+B4RRHH debe modelar la autorizaciÃ³n como un dominio propio, separado de la autenticaciÃ³n, apoyado en recursos funcionales jerÃ¡rquicos. Los roles no conceden permisos sobre endpoints, sino perfiles de permiso sobre recursos del Ã¡rbol funcional del sistema.
 
-La combinación de recurso jerárquico, perfil reusable y propagación al árbol permite exactamente el equilibrio buscado:
+La combinaciÃ³n de recurso jerÃ¡rquico, perfil reusable y propagaciÃ³n al Ã¡rbol permite exactamente el equilibrio buscado:
 - permisos por defecto razonables
-- overrides explícitos para recursos sensibles o workflows concretos
+- overrides explÃ­citos para recursos sensibles o workflows concretos
 - crecimiento limpio sin mantenimiento infernal
+
 
 <!-- END FILE: ADR-024_autorizacion_jerarquica_B4RRHH.md -->
 
-<a name="file-adr-025-subject-roles-md-md"></a>
 
 ---
 
 # FILE: ADR-025-subject-roles.md.md
+<a name="file-adr-025-subject-roles-md-md"></a>
 
 <!-- BEGIN FILE: ADR-025-subject-roles.md.md -->
 
-ADR — Identidad por Subject y Asignación Interna de Roles en B4RRHH
+ADR â€” Identidad por Subject y AsignaciÃ³n Interna de Roles en B4RRHH
 
 Estado: Propuesto
 
 ## Contexto
-B4RRHH dispone de autenticación JWT y un modelo de autorización interno basado en roles, recursos, perfiles y políticas.
-Actualmente, los roles se transportan en el JWT, lo cual mezcla identidad y autorización.
+B4RRHH dispone de autenticaciÃ³n JWT y un modelo de autorizaciÃ³n interno basado en roles, recursos, perfiles y polÃ­ticas.
+Actualmente, los roles se transportan en el JWT, lo cual mezcla identidad y autorizaciÃ³n.
 
 ## Problema
 Se necesita un modelo coherente que:
-- Separe autenticación de autorización
-- Permita operación en local sin IdP externo
+- Separe autenticaciÃ³n de autorizaciÃ³n
+- Permita operaciÃ³n en local sin IdP externo
 - Evite usar el JWT como fuente de verdad de roles
 
-## Decisión
-B4RRHH utilizará:
+## DecisiÃ³n
+B4RRHH utilizarÃ¡:
 - JWT como fuente de identidad (subject)
 - Base de datos como fuente de roles
 
@@ -7415,11 +7439,11 @@ Clave primaria:
 2. Backend autentica el token
 3. Backend extrae subject
 4. Backend resuelve roles desde BD
-5. Backend evalúa permisos
+5. Backend evalÃºa permisos
 
 ## Consecuencias
 Positivas:
-- Separación clara de responsabilidades
+- SeparaciÃ³n clara de responsabilidades
 - Preparado para futuro IdP
 - Coherencia del modelo
 
@@ -7428,32 +7452,33 @@ Negativas:
 - Mayor complejidad inicial
 
 ## No objetivos
-- No se introduce login con contraseña
+- No se introduce login con contraseÃ±a
 - No se introduce dominio user
 - No se integra IdP externo en esta fase
 
-## Evolución futura
-Integración con proveedor externo manteniendo autorización interna.
+## EvoluciÃ³n futura
+IntegraciÃ³n con proveedor externo manteniendo autorizaciÃ³n interna.
 
 ## Sobre subjeect_code
 subject_code representa la identidad autenticada del actor y se trata como identificador opaco; no se normaliza por case y no se interpreta como business key.
+
 <!-- END FILE: ADR-025-subject-roles.md.md -->
 
-<a name="file-adr-026-payroll-status-workflow-md-md"></a>
 
 ---
 
 # FILE: ADR-026-payroll-status-workflow.md.md
+<a name="file-adr-026-payroll-status-workflow-md-md"></a>
 
 <!-- BEGIN FILE: ADR-026-payroll-status-workflow.md.md -->
 
-# ADR — Payroll Status Workflow and Recalculation Guardrails
+# ADR â€” Payroll Status Workflow and Recalculation Guardrails
 
 ## Estado
 Propuesto
 
 ## Contexto
-Se necesita controlar estrictamente cuándo una nómina puede recalcularse.
+Se necesita controlar estrictamente cuÃ¡ndo una nÃ³mina puede recalcularse.
 
 ## Estados
 - NOT_VALID
@@ -7462,21 +7487,21 @@ Se necesita controlar estrictamente cuándo una nómina puede recalcularse.
 - DEFINITIVE
 
 ## Regla central
-Solo las nóminas en `NOT_VALID` pueden ser recalculadas (borradas y recreadas).
+Solo las nÃ³minas en `NOT_VALID` pueden ser recalculadas (borradas y recreadas).
 
-## Semántica
+## SemÃ¡ntica
 
 ### NOT_VALID
-- Resultado inválido o invalidado manualmente
-- Único estado recalcable
+- Resultado invÃ¡lido o invalidado manualmente
+- Ãšnico estado recalcable
 
 ### CALCULATED
-- Resultado válido provisional
+- Resultado vÃ¡lido provisional
 - No recalculable sin pasar a NOT_VALID
 
 ### EXPLICIT_VALIDATED
 - Validada manualmente
-- Bloqueada frente a recálculo automático
+- Bloqueada frente a recÃ¡lculo automÃ¡tico
 
 ### DEFINITIVE
 - Final, inmutable
@@ -7484,13 +7509,13 @@ Solo las nóminas en `NOT_VALID` pueden ser recalculadas (borradas y recreadas).
 ## Transiciones
 
 ### Desde NOT_VALID
-- -> CALCULATED (cálculo OK)
-- -> NOT_VALID (cálculo sigue inválido)
+- -> CALCULATED (cÃ¡lculo OK)
+- -> NOT_VALID (cÃ¡lculo sigue invÃ¡lido)
 - NO -> EXPLICIT_VALIDATED
 - NO -> DEFINITIVE
 
 ### Desde CALCULATED
-- -> NOT_VALID (invalidación)
+- -> NOT_VALID (invalidaciÃ³n)
 - -> EXPLICIT_VALIDATED
 - -> DEFINITIVE
 
@@ -7508,38 +7533,39 @@ Ejemplos:
 - MASS_RECALC_REQUEST
 
 ## Regla operativa
-El motor solo borra/recrea nóminas en NOT_VALID.
+El motor solo borra/recrea nÃ³minas en NOT_VALID.
 
 ## Resumen
-Workflow seguro que evita recálculos accidentales mediante invalidación explícita previa.
+Workflow seguro que evita recÃ¡lculos accidentales mediante invalidaciÃ³n explÃ­cita previa.
+
 
 <!-- END FILE: ADR-026-payroll-status-workflow.md.md -->
 
-<a name="file-adr-027-payroll-root-model-md-md"></a>
 
 ---
 
 # FILE: ADR-027-payroll-root-model.md.md
+<a name="file-adr-027-payroll-root-model-md-md"></a>
 
 <!-- BEGIN FILE: ADR-027-payroll-root-model.md.md -->
 
-# ADR — Payroll Root Model (`payroll.payroll`)
+# ADR â€” Payroll Root Model (`payroll.payroll`)
 
 ## Estado
 Propuesto
 
 ## Contexto
-B4RRHH organiza por verticales y usa business keys en APIs. `employee.presence` identifica una relación laboral (empleado + presenceNumber).
-La nómina debe modelarse como **resultado de cálculo**, no como documento ni CRUD editable.
+B4RRHH organiza por verticales y usa business keys en APIs. `employee.presence` identifica una relaciÃ³n laboral (empleado + presenceNumber).
+La nÃ³mina debe modelarse como **resultado de cÃ¡lculo**, no como documento ni CRUD editable.
 
-## Decisión
-Se crea el bounded context `payroll` (schema propio) y la raíz:
+## DecisiÃ³n
+Se crea el bounded context `payroll` (schema propio) y la raÃ­z:
 - `payroll.payroll`
 
-Representa el resultado funcional de una nómina para:
+Representa el resultado funcional de una nÃ³mina para:
 - empleado
-- período de nómina
-- tipo de nómina
+- perÃ­odo de nÃ³mina
+- tipo de nÃ³mina
 - presencia
 
 No es:
@@ -7558,7 +7584,7 @@ No es:
 Ejemplo:
 ESP + EMP + 0001 + 202501 + ORD + 2
 
-## Campos raíz
+## Campos raÃ­z
 - status
 - statusReasonCode
 - calculatedAt
@@ -7587,90 +7613,91 @@ ESP + EMP + 0001 + 202501 + ORD + 2
 
 ## Reglas
 - FK hijas con ON DELETE CASCADE
-- No edición manual
-- Sustitución por borrado + recreación
+- No ediciÃ³n manual
+- SustituciÃ³n por borrado + recreaciÃ³n
 - Unicidad por business key
 
 ## Resumen
-`payroll.payroll` es un resultado materializado, no editable, regenerable por cálculo, con conceptos y snapshots dependientes.
+`payroll.payroll` es un resultado materializado, no editable, regenerable por cÃ¡lculo, con conceptos y snapshots dependientes.
+
 
 <!-- END FILE: ADR-027-payroll-root-model.md.md -->
 
-<a name="file-adr-029-payroll-calculate-contract-stub-md"></a>
 
 ---
 
 # FILE: ADR-029-payroll-calculate-contract-stub.md
+<a name="file-adr-029-payroll-calculate-contract-stub-md"></a>
 
 <!-- BEGIN FILE: ADR-029-payroll-calculate-contract-stub.md -->
 
-# ADR — Payroll Calculate Contract (Initial Stub Calculator)
+# ADR â€” Payroll Calculate Contract (Initial Stub Calculator)
 
 ## Estado
 Propuesto
 
 ## Contexto
 
-B4RRHH ya ha decidido que `payroll.payroll` es un resultado materializado, no editable, con business key funcional basada en empleado + período + tipo + presencia, y que los estados del resultado gobiernan si una nómina puede o no ser sustituida. fileciteturn4file1 fileciteturn4file0
+B4RRHH ya ha decidido que `payroll.payroll` es un resultado materializado, no editable, con business key funcional basada en empleado + perÃ­odo + tipo + presencia, y que los estados del resultado gobiernan si una nÃ³mina puede o no ser sustituida. îˆ€fileciteîˆ‚turn4file1îˆ îˆ€fileciteîˆ‚turn4file0îˆ
 
-También se ha decidido ahora que el launch de nómina sólo resuelve y orquesta unidades elegibles, delegando el cálculo real a otro caso de uso especializado.
+TambiÃ©n se ha decidido ahora que el launch de nÃ³mina sÃ³lo resuelve y orquesta unidades elegibles, delegando el cÃ¡lculo real a otro caso de uso especializado.
 
-El proyecto, además, exige:
+El proyecto, ademÃ¡s, exige:
 
 - arquitectura vertical-first;
-- APIs públicas por business keys;
-- naming semántico;
-- evitar sobreingeniería prematura. fileciteturn4file10 fileciteturn4file12 fileciteturn4file13
+- APIs pÃºblicas por business keys;
+- naming semÃ¡ntico;
+- evitar sobreingenierÃ­a prematura. îˆ€fileciteîˆ‚turn4file10îˆ îˆ€fileciteîˆ‚turn4file12îˆ îˆ€fileciteîˆ‚turn4file13îˆ
 
-En esta fase todavía no existe un motor de reglas de nómina real. Sin embargo, hace falta un componente de cálculo inicial que permita probar:
+En esta fase todavÃ­a no existe un motor de reglas de nÃ³mina real. Sin embargo, hace falta un componente de cÃ¡lculo inicial que permita probar:
 
 - el flujo launch -> calculate;
-- la sustitución por borrado + recreación;
-- la creación de `payroll.payroll`;
-- la generación de conceptos;
-- la generación de snapshots;
+- la sustituciÃ³n por borrado + recreaciÃ³n;
+- la creaciÃ³n de `payroll.payroll`;
+- la generaciÃ³n de conceptos;
+- la generaciÃ³n de snapshots;
 - el tratamiento de estados `CALCULATED` y `NOT_VALID`.
 
 ## Problema
 
-Se necesita un contrato de cálculo inicial que permita construir un **stub calculator útil**, suficientemente real para validar el pipeline técnico y funcional, pero deliberadamente pequeño para no anticipar todavía el motor de reglas.
+Se necesita un contrato de cÃ¡lculo inicial que permita construir un **stub calculator Ãºtil**, suficientemente real para validar el pipeline tÃ©cnico y funcional, pero deliberadamente pequeÃ±o para no anticipar todavÃ­a el motor de reglas.
 
-Ese cálculo inicial debe:
+Ese cÃ¡lculo inicial debe:
 
-- recibir unidades explícitas ya resueltas;
+- recibir unidades explÃ­citas ya resueltas;
 - no decidir poblaciones objetivo;
 - materializar resultados en `payroll`;
 - poder generar resultados `CALCULATED` y `NOT_VALID`;
-- ser sustituible en el futuro por el motor real sin romper la semántica externa.
+- ser sustituible en el futuro por el motor real sin romper la semÃ¡ntica externa.
 
-## Decisión
+## DecisiÃ³n
 
-Se introduce el contrato de **Payroll Calculate** como caso de uso/endpoint especializado que recibe una lista explícita de unidades de cálculo y materializa resultados de nómina.
+Se introduce el contrato de **Payroll Calculate** como caso de uso/endpoint especializado que recibe una lista explÃ­cita de unidades de cÃ¡lculo y materializa resultados de nÃ³mina.
 
 `calculate`:
 
-- no resuelve la población objetivo;
-- no selecciona elegibles por sí mismo como responsabilidad principal;
-- no es todavía un motor declarativo de reglas;
-- actúa como calculador inicial del sistema;
-- podrá empezar implementado como **stub calculator**.
+- no resuelve la poblaciÃ³n objetivo;
+- no selecciona elegibles por sÃ­ mismo como responsabilidad principal;
+- no es todavÃ­a un motor declarativo de reglas;
+- actÃºa como calculador inicial del sistema;
+- podrÃ¡ empezar implementado como **stub calculator**.
 
-## Definición funcional
+## DefiniciÃ³n funcional
 
-`calculate` recibe una colección cerrada de unidades de cálculo y, para cada una de ellas:
+`calculate` recibe una colecciÃ³n cerrada de unidades de cÃ¡lculo y, para cada una de ellas:
 
-1. valida precondiciones mínimas;
-2. elimina la nómina previa sólo si existe y es sustituible según reglas;
+1. valida precondiciones mÃ­nimas;
+2. elimina la nÃ³mina previa sÃ³lo si existe y es sustituible segÃºn reglas;
 3. crea una nueva `payroll.payroll`;
-4. crea conceptos de nómina de prueba o cálculo básico;
-5. crea snapshots contextuales mínimos;
+4. crea conceptos de nÃ³mina de prueba o cÃ¡lculo bÃ¡sico;
+5. crea snapshots contextuales mÃ­nimos;
 6. persiste el resultado final en estado:
-   - `CALCULATED`, si el cálculo concluye correctamente;
-   - `NOT_VALID`, si detecta una invalidez funcional del cálculo.
+   - `CALCULATED`, si el cÃ¡lculo concluye correctamente;
+   - `NOT_VALID`, si detecta una invalidez funcional del cÃ¡lculo.
 
 ## Unidad de entrada
 
-La unidad mínima de entrada es:
+La unidad mÃ­nima de entrada es:
 
 - `ruleSystemCode`
 - `employeeTypeCode`
@@ -7683,45 +7710,45 @@ La unidad mínima de entrada es:
 
 ### Regla
 
-`calculate` debe trabajar con unidades **explícitas**.
+`calculate` debe trabajar con unidades **explÃ­citas**.
 
-No debe aceptar un payload ambiguo que implique “resolver toda una población”. Esa responsabilidad pertenece al launch.
+No debe aceptar un payload ambiguo que implique â€œresolver toda una poblaciÃ³nâ€. Esa responsabilidad pertenece al launch.
 
 ## Responsabilidades de calculate
 
 `calculate` debe:
 
-- cargar el contexto funcional mínimo de la unidad;
+- cargar el contexto funcional mÃ­nimo de la unidad;
 - comprobar la existencia previa de `payroll.payroll`;
-- aplicar la política de sustitución;
-- crear nueva raíz `payroll.payroll`;
+- aplicar la polÃ­tica de sustituciÃ³n;
+- crear nueva raÃ­z `payroll.payroll`;
 - crear `payroll_concept`;
 - crear `payroll_context_snapshot`;
 - devolver resultado por unidad.
 
-`calculate` no debe todavía:
+`calculate` no debe todavÃ­a:
 
 - implementar reglas salariales complejas;
 - modelar convenios reales;
 - resolver retroactividad completa;
-- introducir DSLs o engines genéricos;
+- introducir DSLs o engines genÃ©ricos;
 - depender de un metamodelo complejo de reglas.
 
-## Política de sustitución
+## PolÃ­tica de sustituciÃ³n
 
-Para cada unidad explícita:
+Para cada unidad explÃ­cita:
 
-### Si no existe nómina previa
+### Si no existe nÃ³mina previa
 - crear una nueva `payroll.payroll`.
 
-### Si existe y está `NOT_VALID`
-- eliminar la raíz previa;
-- dejar que `ON DELETE CASCADE` elimine conceptos y snapshots; fileciteturn4file6
+### Si existe y estÃ¡ `NOT_VALID`
+- eliminar la raÃ­z previa;
+- dejar que `ON DELETE CASCADE` elimine conceptos y snapshots; îˆ€fileciteîˆ‚turn4file6îˆ
 - crear una nueva `payroll.payroll`.
 
-### Si existe y está `CALCULATED`, `EXPLICIT_VALIDATED` o `DEFINITIVE`
+### Si existe y estÃ¡ `CALCULATED`, `EXPLICIT_VALIDATED` o `DEFINITIVE`
 - no sustituirla;
-- devolver resultado de unidad ignorada/no procesada, según shape final del contrato.
+- devolver resultado de unidad ignorada/no procesada, segÃºn shape final del contrato.
 
 ## Contrato de salida
 
@@ -7733,35 +7760,35 @@ Campos orientativos:
 - `processed = true/false`;
 - `resultStatus = CALCULATED | NOT_VALID | SKIPPED`;
 - motivo cuando no se procese;
-- business key final de la nómina generada, si aplica.
+- business key final de la nÃ³mina generada, si aplica.
 
 ## Stub calculator inicial
 
-Se adopta explícitamente una estrategia de implementación por fases.
+Se adopta explÃ­citamente una estrategia de implementaciÃ³n por fases.
 
 ### Fase inicial permitida
 
-El primer `calculate` puede generar una nómina artificial pero funcionalmente útil.
+El primer `calculate` puede generar una nÃ³mina artificial pero funcionalmente Ãºtil.
 
-Ejemplo mínimo:
+Ejemplo mÃ­nimo:
 
 - crear `payroll.payroll`;
 - generar 2 conceptos de prueba;
 - generar 1 o 2 snapshots de contexto;
 - persistir en `CALCULATED`.
 
-También puede contemplarse una condición de prueba que genere `NOT_VALID` cuando falte algún dato mínimo requerido.
+TambiÃ©n puede contemplarse una condiciÃ³n de prueba que genere `NOT_VALID` cuando falte algÃºn dato mÃ­nimo requerido.
 
 ### Objetivo de esta fase
 
-No hacer nómina real todavía.
+No hacer nÃ³mina real todavÃ­a.
 
 El objetivo es validar el pipeline:
 
 - endpoints;
 - wiring;
 - persistencia;
-- borrado y recreación;
+- borrado y recreaciÃ³n;
 - estados;
 - snapshots;
 - conceptos;
@@ -7769,18 +7796,18 @@ El objetivo es validar el pipeline:
 
 ## Conceptos de prueba
 
-En esta fase, `payroll_concept` puede contener conceptos semilla o de demostración.
+En esta fase, `payroll_concept` puede contener conceptos semilla o de demostraciÃ³n.
 
 Ejemplo conceptual:
 
 - `BASE_TEST`
 - `DEVENGO_TEST`
 
-Los nombres y códigos deben seguir una convención de negocio estable y no reforzar identidades técnicas equivocadas. El proyecto prioriza nombres de negocio y códigos funcionales estables. fileciteturn4file12
+Los nombres y cÃ³digos deben seguir una convenciÃ³n de negocio estable y no reforzar identidades tÃ©cnicas equivocadas. El proyecto prioriza nombres de negocio y cÃ³digos funcionales estables. îˆ€fileciteîˆ‚turn4file12îˆ
 
-## Snapshots mínimos
+## Snapshots mÃ­nimos
 
-`calculate` debe poblar al menos snapshots básicos para demostrar el diseño ya aprobado de `payroll_context_snapshot`. fileciteturn4file6
+`calculate` debe poblar al menos snapshots bÃ¡sicos para demostrar el diseÃ±o ya aprobado de `payroll_context_snapshot`. îˆ€fileciteîˆ‚turn4file6îˆ
 
 Ejemplos iniciales razonables:
 
@@ -7794,77 +7821,78 @@ No es obligatorio arrancar con todos los snapshots futuros.
 
 En esta fase se distinguen dos clases:
 
-### 1. Error técnico
+### 1. Error tÃ©cnico
 Ejemplo:
 - fallo de persistencia;
 - error inesperado de infraestructura.
 
-Esto debe reportarse como error técnico del proceso.
+Esto debe reportarse como error tÃ©cnico del proceso.
 
 ### 2. Resultado funcional `NOT_VALID`
 Ejemplo:
-- falta dato mínimo requerido para construir el cálculo stub;
+- falta dato mÃ­nimo requerido para construir el cÃ¡lculo stub;
 - inconsistencia funcional detectada por el calculador.
 
-En este caso sí puede persistirse una `payroll.payroll` con `status = NOT_VALID`, coherente con el workflow ya aprobado. fileciteturn4file0
+En este caso sÃ­ puede persistirse una `payroll.payroll` con `status = NOT_VALID`, coherente con el workflow ya aprobado. îˆ€fileciteîˆ‚turn4file0îˆ
 
-## Forma de exposición
+## Forma de exposiciÃ³n
 
 A falta de contrato final, se admiten dos estrategias:
 
-### Opción A — calculate sólo como caso de uso interno
-Útil si launch es el único endpoint externo.
+### OpciÃ³n A â€” calculate sÃ³lo como caso de uso interno
+Ãštil si launch es el Ãºnico endpoint externo.
 
-### Opción B — calculate también como endpoint explícito
-Útil para pruebas con Postman y validación incremental del pipeline.
+### OpciÃ³n B â€” calculate tambiÃ©n como endpoint explÃ­cito
+Ãštil para pruebas con Postman y validaciÃ³n incremental del pipeline.
 
-En esta fase, se acepta la opción B por su valor práctico para acelerar aprendizaje y validación del flujo.
+En esta fase, se acepta la opciÃ³n B por su valor prÃ¡ctico para acelerar aprendizaje y validaciÃ³n del flujo.
 
 Nombre conceptual recomendado:
 
 - `POST /payroll/calculations/calculate`
 
-## Qué se rechaza explícitamente
+## QuÃ© se rechaza explÃ­citamente
 
 Se rechaza en esta fase:
 
 - introducir un motor declarativo de reglas;
-- mezclar calculate con resolución de población;
-- convertir calculate en un endpoint de “hazlo todo” sin unidades explícitas;
-- bloquear el diseño futuro con un contrato demasiado acoplado al stub.
+- mezclar calculate con resoluciÃ³n de poblaciÃ³n;
+- convertir calculate en un endpoint de â€œhazlo todoâ€ sin unidades explÃ­citas;
+- bloquear el diseÃ±o futuro con un contrato demasiado acoplado al stub.
 
 ## Consecuencias
 
 ### Positivas
 
 - permite probar el flujo completo desde muy pronto;
-- separa orquestación de cálculo;
-- facilita sustitución futura por motor real;
+- separa orquestaciÃ³n de cÃ¡lculo;
+- facilita sustituciÃ³n futura por motor real;
 - valida conceptos y snapshots sin esperar al dominio salarial completo.
 
 ### Costes
 
-- exige mantener disciplina para que el stub no se convierta en solución definitiva;
-- habrá que evolucionar el contrato interno del calculador en fases posteriores;
-- el primer resultado no representará todavía nómina real.
+- exige mantener disciplina para que el stub no se convierta en soluciÃ³n definitiva;
+- habrÃ¡ que evolucionar el contrato interno del calculador en fases posteriores;
+- el primer resultado no representarÃ¡ todavÃ­a nÃ³mina real.
 
 ## Resumen
 
-En B4RRHH, `calculate` es el caso de uso especializado que recibe unidades explícitas ya resueltas y materializa `payroll.payroll` con conceptos y snapshots.
+En B4RRHH, `calculate` es el caso de uso especializado que recibe unidades explÃ­citas ya resueltas y materializa `payroll.payroll` con conceptos y snapshots.
 
-En la primera iteración, puede implementarse como un **stub calculator útil**, orientado a validar el flujo técnico y funcional, no a resolver todavía el motor real de reglas de nómina.
+En la primera iteraciÃ³n, puede implementarse como un **stub calculator Ãºtil**, orientado a validar el flujo tÃ©cnico y funcional, no a resolver todavÃ­a el motor real de reglas de nÃ³mina.
+
 
 <!-- END FILE: ADR-029-payroll-calculate-contract-stub.md -->
 
-<a name="file-adr-030-payroll-launch-calculation-run-claim-and-internal-calculator-orchestration-md"></a>
 
 ---
 
 # FILE: ADR-030-Payroll-Launch-Calculation-Run-Claim-and-Internal-Calculator-Orchestration.md
+<a name="file-adr-030-payroll-launch-calculation-run-claim-and-internal-calculator-orchestration-md"></a>
 
 <!-- BEGIN FILE: ADR-030-Payroll-Launch-Calculation-Run-Claim-and-Internal-Calculator-Orchestration.md -->
 
-ADR — Payroll Launch, Calculation Run, Claim and Internal Calculator Orchestration
+ADR â€” Payroll Launch, Calculation Run, Claim and Internal Calculator Orchestration
 Estado
 
 Propuesto
@@ -7873,7 +7901,7 @@ Contexto
 
 El bounded context payroll ya ha fijado una base importante:
 
-la raíz funcional es payroll.payroll;
+la raÃ­z funcional es payroll.payroll;
 su identidad funcional es:
 ruleSystemCode
 employeeTypeCode
@@ -7881,81 +7909,81 @@ employeeNumber
 payrollPeriodCode
 payrollTypeCode
 presenceNumber;
-payroll.payroll representa un resultado materializado de cálculo, no un CRUD editable;
-sus hijos (payroll_concept, payroll_context_snapshot) dependen completamente de la raíz y deben eliminarse por cascade;
-los estados de nómina gobiernan si una nómina puede o no ser sustituida;
-una nómina existente solo es recalculable si está en NOT_VALID;
-una unidad sin nómina previa también debe ser elegible para cálculo inicial.
+payroll.payroll representa un resultado materializado de cÃ¡lculo, no un CRUD editable;
+sus hijos (payroll_concept, payroll_context_snapshot) dependen completamente de la raÃ­z y deben eliminarse por cascade;
+los estados de nÃ³mina gobiernan si una nÃ³mina puede o no ser sustituida;
+una nÃ³mina existente solo es recalculable si estÃ¡ en NOT_VALID;
+una unidad sin nÃ³mina previa tambiÃ©n debe ser elegible para cÃ¡lculo inicial.
 
-También se ha decidido ya que el endpoint actual POST /payrolls/calculate no representa el futuro motor real, sino un stub temporal de validación de pipeline, donde el cliente aún aporta conceptos y snapshots explícitamente para poder probar el flujo de extremo a extremo antes de diseñar el lanzador real y el calculador definitivo.
+TambiÃ©n se ha decidido ya que el endpoint actual POST /payrolls/calculate no representa el futuro motor real, sino un stub temporal de validaciÃ³n de pipeline, donde el cliente aÃºn aporta conceptos y snapshots explÃ­citamente para poder probar el flujo de extremo a extremo antes de diseÃ±ar el lanzador real y el calculador definitivo.
 
 En paralelo, B4RRHH tiene reglas de arquitectura muy claras:
 
 primero se organiza por vertical/subdominio y dentro de cada vertical se aplica arquitectura hexagonal;
-las APIs públicas deben usar business keys, no IDs técnicos;
-cuando una operación no encaja como CRUD plano, debe modelarse como workflow/caso de uso explícito y no como recurso falso o tabla oportunista.
+las APIs pÃºblicas deben usar business keys, no IDs tÃ©cnicos;
+cuando una operaciÃ³n no encaja como CRUD plano, debe modelarse como workflow/caso de uso explÃ­cito y no como recurso falso o tabla oportunista.
 
-Al hablar del lanzamiento de nómina aparecen dos problemas de diseño que no deben mezclarse:
+Al hablar del lanzamiento de nÃ³mina aparecen dos problemas de diseÃ±o que no deben mezclarse:
 
-qué significa lanzar un cálculo;
-cómo evitar que dos lanzamientos simultáneos procesen la misma unidad de cálculo.
+quÃ© significa lanzar un cÃ¡lculo;
+cÃ³mo evitar que dos lanzamientos simultÃ¡neos procesen la misma unidad de cÃ¡lculo.
 
-Además, si el lanzamiento solo devuelve un body HTTP efímero, se pierde una capacidad que será útil muy pronto:
+AdemÃ¡s, si el lanzamiento solo devuelve un body HTTP efÃ­mero, se pierde una capacidad que serÃ¡ Ãºtil muy pronto:
 
-consultar desde frontend cómo va un cálculo;
-saber cuántas unidades se han procesado;
-ver qué se ha omitido, qué se ha reclamado, qué terminó en CALCULATED, qué quedó en NOT_VALID y qué falló.
+consultar desde frontend cÃ³mo va un cÃ¡lculo;
+saber cuÃ¡ntas unidades se han procesado;
+ver quÃ© se ha omitido, quÃ© se ha reclamado, quÃ© terminÃ³ en CALCULATED, quÃ© quedÃ³ en NOT_VALID y quÃ© fallÃ³.
 
-Por todo ello, hace falta un modelo explícito para:
+Por todo ello, hace falta un modelo explÃ­cito para:
 
 el workflow de launch;
 la persistencia de los runs;
-la exclusión concurrente por unidad de cálculo;
-el desacoplamiento del calculador real respecto del endpoint público.
+la exclusiÃ³n concurrente por unidad de cÃ¡lculo;
+el desacoplamiento del calculador real respecto del endpoint pÃºblico.
 Problema
 
-Se necesita definir una arquitectura de lanzamiento de nómina que:
+Se necesita definir una arquitectura de lanzamiento de nÃ³mina que:
 
-permita lanzar cálculos sobre una población objetivo;
-resuelva y expanda dicha población a unidades reales de cálculo;
+permita lanzar cÃ¡lculos sobre una poblaciÃ³n objetivo;
+resuelva y expanda dicha poblaciÃ³n a unidades reales de cÃ¡lculo;
 filtre elegibilidad sin recalcular resultados protegidos;
 permita concurrencia segura;
-deje preparada la paralelización futura;
+deje preparada la paralelizaciÃ³n futura;
 permita seguimiento de progreso;
-desacople el launch del motor de cálculo real;
-evite convertir el cálculo actual stub en contrato definitivo por accidente.
-Decisión
+desacople el launch del motor de cÃ¡lculo real;
+evite convertir el cÃ¡lculo actual stub en contrato definitivo por accidente.
+DecisiÃ³n
 
-Se adopta una arquitectura de orquestación de cálculo basada en cuatro piezas distintas:
+Se adopta una arquitectura de orquestaciÃ³n de cÃ¡lculo basada en cuatro piezas distintas:
 
 payroll.payroll
-Resultado materializado de una unidad de cálculo.
+Resultado materializado de una unidad de cÃ¡lculo.
 payroll.calculation_run
-Recurso técnico-operativo persistido que representa una ejecución de lanzamiento.
+Recurso tÃ©cnico-operativo persistido que representa una ejecuciÃ³n de lanzamiento.
 payroll.calculation_claim
-Recurso técnico de exclusión concurrente por unidad de cálculo.
-calculate como caso de uso interno especializado, no como contrato público canónico del motor definitivo.
+Recurso tÃ©cnico de exclusiÃ³n concurrente por unidad de cÃ¡lculo.
+calculate como caso de uso interno especializado, no como contrato pÃºblico canÃ³nico del motor definitivo.
 
-El lanzamiento de nómina se modela como un workflow explícito que:
+El lanzamiento de nÃ³mina se modela como un workflow explÃ­cito que:
 
 crea un calculation_run;
-resuelve población objetivo;
-expande a unidades de cálculo;
+resuelve poblaciÃ³n objetivo;
+expande a unidades de cÃ¡lculo;
 determina elegibilidad;
 intenta adquirir claims por unidad;
-delega el cálculo efectivo a un calculador interno;
+delega el cÃ¡lculo efectivo a un calculador interno;
 registra progreso y resumen.
 Principio madre
 
 Launch no calcula; launch coordina.
-Calculate no decide población; calculate materializa una unidad.
+Calculate no decide poblaciÃ³n; calculate materializa una unidad.
 
-Esta separación es obligatoria.
+Esta separaciÃ³n es obligatoria.
 
 Definiciones principales
-1. Unidad de cálculo
+1. Unidad de cÃ¡lculo
 
-La unidad mínima de cálculo es:
+La unidad mÃ­nima de cÃ¡lculo es:
 
 ruleSystemCode
 employeeTypeCode
@@ -7964,54 +7992,54 @@ payrollPeriodCode
 payrollTypeCode
 presenceNumber
 
-Esta unidad es coherente con la business key de payroll.payroll ya adoptada y con el hecho de que una presencia concreta representa una relación laboral concreta del empleado.
+Esta unidad es coherente con la business key de payroll.payroll ya adoptada y con el hecho de que una presencia concreta representa una relaciÃ³n laboral concreta del empleado.
 
 Regla
 
-El launch siempre trabaja con una colección de unidades de cálculo, no con empleados abstractos.
+El launch siempre trabaja con una colecciÃ³n de unidades de cÃ¡lculo, no con empleados abstractos.
 
 2. Population target vs eligible units
 
 Se distinguen dos conceptos.
 
-Población objetivo
+PoblaciÃ³n objetivo
 
-Es el conjunto de empleados o ámbitos que el usuario quiere lanzar.
+Es el conjunto de empleados o Ã¡mbitos que el usuario quiere lanzar.
 
 Ejemplos:
 
 un empleado concreto;
-una lista explícita de empleados;
+una lista explÃ­cita de empleados;
 todos los empleados de un scope determinado.
 Unidades elegibles
 
-Son las unidades de cálculo que realmente pueden entrar al cálculo.
+Son las unidades de cÃ¡lculo que realmente pueden entrar al cÃ¡lculo.
 
 Una unidad es elegible si:
 
 no existe payroll.payroll previa para su business key, o
 existe y su estado actual es NOT_VALID.
 
-Una unidad no es elegible si existe y está en:
+Una unidad no es elegible si existe y estÃ¡ en:
 
 CALCULATED
 EXPLICIT_VALIDATED
 DEFINITIVE
 
-Esta regla mantiene el guardarraíl funcional ya fijado para payroll y evita recálculos accidentales sobre resultados vigentes o protegidos.
+Esta regla mantiene el guardarraÃ­l funcional ya fijado para payroll y evita recÃ¡lculos accidentales sobre resultados vigentes o protegidos.
 
 3. payroll.calculation_run
 
-Se introduce un recurso técnico-operativo persistido:
+Se introduce un recurso tÃ©cnico-operativo persistido:
 
 payroll.calculation_run
 Naturaleza
 
-No es una nómina.
+No es una nÃ³mina.
 No es un resultado de negocio final.
 No sustituye a payroll.payroll.
 
-Representa una ejecución de lanzamiento.
+Representa una ejecuciÃ³n de lanzamiento.
 
 Objetivo
 
@@ -8021,9 +8049,9 @@ seguimiento del progreso;
 trazabilidad del lanzamiento;
 resumen persistido;
 futura consulta desde frontend;
-base para asincronía o paralelización posterior.
-Campos mínimos recomendados
-id técnico interno
+base para asincronÃ­a o paralelizaciÃ³n posterior.
+Campos mÃ­nimos recomendados
+id tÃ©cnico interno
 ruleSystemCode
 payrollPeriodCode
 payrollTypeCode
@@ -8042,26 +8070,26 @@ COMPLETED_WITH_ERRORS
 FAILED
 Regla
 
-La máquina de estados de calculation_run es independiente de la máquina de estados de payroll.payroll.
+La mÃ¡quina de estados de calculation_run es independiente de la mÃ¡quina de estados de payroll.payroll.
 
 No deben mezclarse.
 
 4. payroll.calculation_claim
 
-Se introduce un recurso técnico de exclusión concurrente:
+Se introduce un recurso tÃ©cnico de exclusiÃ³n concurrente:
 
 payroll.calculation_claim
 Naturaleza
 
 No representa negocio visible al usuario final.
 No sustituye a locks de BD del aggregate.
-No es un recurso funcional público.
+No es un recurso funcional pÃºblico.
 
-Su misión es impedir que dos runs distintos procesen simultáneamente la misma unidad de cálculo.
+Su misiÃ³n es impedir que dos runs distintos procesen simultÃ¡neamente la misma unidad de cÃ¡lculo.
 
 Claim key
 
-La identidad funcional del claim es exactamente la unidad de cálculo:
+La identidad funcional del claim es exactamente la unidad de cÃ¡lculo:
 
 ruleSystemCode
 employeeTypeCode
@@ -8070,44 +8098,44 @@ payrollPeriodCode
 payrollTypeCode
 presenceNumber
 Campos recomendados
-id técnico
+id tÃ©cnico
 claim key completa
 runId
 claimedAt
 claimedBy nullable
-Restricción obligatoria
+RestricciÃ³n obligatoria
 
-Debe existir una restricción única por claim key completa.
+Debe existir una restricciÃ³n Ãºnica por claim key completa.
 
-Regla de adquisición
+Regla de adquisiciÃ³n
 
-La adquisición del claim debe ser atómica.
+La adquisiciÃ³n del claim debe ser atÃ³mica.
 
-No se recomienda una lógica de:
+No se recomienda una lÃ³gica de:
 
 leer si existe
 y luego insertar
 
 por riesgo de carrera.
 
-La lógica correcta es:
+La lÃ³gica correcta es:
 
 intentar insertar claim;
 si inserta, la unidad queda reclamada por ese run;
-si falla por unicidad, esa unidad ya está siendo procesada por otro run y debe ignorarse o marcarse como no reclamada.
+si falla por unicidad, esa unidad ya estÃ¡ siendo procesada por otro run y debe ignorarse o marcarse como no reclamada.
 Regla de limpieza
 
 Al finalizar el procesamiento de la unidad, el claim se elimina.
 
-Extensión futura
+ExtensiÃ³n futura
 
-Más adelante puede añadirse:
+MÃ¡s adelante puede aÃ±adirse:
 
 expiresAt
-recuperación de claims huérfanos
-housekeeping periódico
+recuperaciÃ³n de claims huÃ©rfanos
+housekeeping periÃ³dico
 
-pero no es requisito de esta decisión base.
+pero no es requisito de esta decisiÃ³n base.
 
 5. payroll.calculation_run_item
 
@@ -8123,7 +8151,7 @@ Objetivo
 Permitir:
 
 trazabilidad por unidad;
-saber qué pasó con cada cálculo;
+saber quÃ© pasÃ³ con cada cÃ¡lculo;
 alimentar frontend con progreso real;
 distinguir skip, claim conflict, calculated, not valid, error, etc.
 Campos recomendados
@@ -8144,25 +8172,25 @@ NOT_VALID
 ERROR
 Regla
 
-calculation_run_item pertenece al seguimiento del run, no al dominio raíz de payroll result.
+calculation_run_item pertenece al seguimiento del run, no al dominio raÃ­z de payroll result.
 
-Semántica de Launch
-Definición
+SemÃ¡ntica de Launch
+DefiniciÃ³n
 
-Lanzar nómina significa:
+Lanzar nÃ³mina significa:
 
-crear una ejecución persistida de cálculo, resolver una población objetivo, expandirla a unidades de cálculo, filtrar unidades elegibles, intentar reclamar cada unidad de forma exclusiva, delegar el cálculo efectivo al calculador interno y registrar el progreso y resultado del proceso.
+crear una ejecuciÃ³n persistida de cÃ¡lculo, resolver una poblaciÃ³n objetivo, expandirla a unidades de cÃ¡lculo, filtrar unidades elegibles, intentar reclamar cada unidad de forma exclusiva, delegar el cÃ¡lculo efectivo al calculador interno y registrar el progreso y resultado del proceso.
 
 Responsabilidades obligatorias del launch
 
 El launch debe:
 
 crear calculation_run;
-validar contexto de ejecución;
-resolver la población objetivo;
-expandirla a unidades de cálculo;
+validar contexto de ejecuciÃ³n;
+resolver la poblaciÃ³n objetivo;
+expandirla a unidades de cÃ¡lculo;
 determinar elegibilidad;
-crear run_items o equivalente lógico;
+crear run_items o equivalente lÃ³gico;
 intentar adquirir claim por unidad elegible;
 delegar en calculate interno;
 consolidar estados por unidad;
@@ -8170,11 +8198,11 @@ actualizar resumen y estado final del run.
 
 El launch no debe:
 
-generar conceptos él mismo;
+generar conceptos Ã©l mismo;
 implementar reglas salariales;
-convertirse en motor de cálculo;
+convertirse en motor de cÃ¡lculo;
 depender de HTTP interno al propio backend si launch y calculate viven en el mismo servicio.
-Input mínimo del launch
+Input mÃ­nimo del launch
 
 Se recomienda que el launch reciba al menos:
 
@@ -8189,14 +8217,14 @@ targetSelection
 Debe permitir al menos:
 
 empleado concreto
-lista explícita
-ámbito masivo simple
+lista explÃ­cita
+Ã¡mbito masivo simple
 
-El shape contractual exacto podrá evolucionar, pero el launch debe conservar esta responsabilidad de resolución.
+El shape contractual exacto podrÃ¡ evolucionar, pero el launch debe conservar esta responsabilidad de resoluciÃ³n.
 
 Output del launch
 
-El launch no debe limitarse a devolver “201 created” con un resumen efímero.
+El launch no debe limitarse a devolver â€œ201 createdâ€ con un resumen efÃ­mero.
 
 Debe devolver, al menos:
 
@@ -8204,73 +8232,73 @@ runId
 estado inicial o final del run
 resumen agregado
 
-y permitir después consultar el run persistido.
+y permitir despuÃ©s consultar el run persistido.
 
 Calculate interno
-Decisión clave
+DecisiÃ³n clave
 
-El futuro calculate no debe consolidarse como endpoint público canónico.
+El futuro calculate no debe consolidarse como endpoint pÃºblico canÃ³nico.
 
-El endpoint actual de calculate se acepta solo como stub temporal de validación de pipeline, tal como ya está documentado en OpenAPI.
+El endpoint actual de calculate se acepta solo como stub temporal de validaciÃ³n de pipeline, tal como ya estÃ¡ documentado en OpenAPI.
 
-La decisión de fondo es:
+La decisiÃ³n de fondo es:
 
-el cálculo serio será largo, cambiante y costoso de desarrollar;
-por tanto, el launch no debe acoplarse a un endpoint público rígido del motor.
-Regla arquitectónica
+el cÃ¡lculo serio serÃ¡ largo, cambiante y costoso de desarrollar;
+por tanto, el launch no debe acoplarse a un endpoint pÃºblico rÃ­gido del motor.
+Regla arquitectÃ³nica
 
-El launch debe invocar un caso de uso interno de cálculo, no un endpoint HTTP del propio backend.
+El launch debe invocar un caso de uso interno de cÃ¡lculo, no un endpoint HTTP del propio backend.
 
 Ejemplo conceptual:
 
 CalculatePayrollUnitUseCase
 Responsabilidad del calculate interno
 
-Recibir una unidad explícita y materializar un resultado:
+Recibir una unidad explÃ­cita y materializar un resultado:
 
 creando payroll.payroll si no existe;
-sustituyéndola si existe y es recalculable;
-generando CALCULATED o NOT_VALID según corresponda.
+sustituyÃ©ndola si existe y es recalculable;
+generando CALCULATED o NOT_VALID segÃºn corresponda.
 Importante
 
 El calculate interno no resuelve poblaciones.
 Eso pertenece exclusivamente al launch.
 
 Concurrencia
-Decisión principal
+DecisiÃ³n principal
 
 La concurrencia se gobierna mediante payroll.calculation_claim, no mediante el aggregate payroll.payroll.
 
-Justificación
+JustificaciÃ³n
 
-La concurrencia aquí es un problema del workflow de ejecución, no de la identidad del recurso raíz.
+La concurrencia aquÃ­ es un problema del workflow de ejecuciÃ³n, no de la identidad del recurso raÃ­z.
 
 Reglas
-dos runs pueden existir simultáneamente;
-dos runs no pueden procesar simultáneamente la misma unidad de cálculo;
-si una unidad ya está reclamada por otro run, el launch actual debe marcarla como no reclamada / ya en curso y seguir adelante.
-Diseño objetivo vs implementación inicial
-Diseño objetivo
+dos runs pueden existir simultÃ¡neamente;
+dos runs no pueden procesar simultÃ¡neamente la misma unidad de cÃ¡lculo;
+si una unidad ya estÃ¡ reclamada por otro run, el launch actual debe marcarla como no reclamada / ya en curso y seguir adelante.
+DiseÃ±o objetivo vs implementaciÃ³n inicial
+DiseÃ±o objetivo
 
-Exclusión por unidad de cálculo.
+ExclusiÃ³n por unidad de cÃ¡lculo.
 
-Implementación inicial recomendada
+ImplementaciÃ³n inicial recomendada
 
-La propia claim table ya permite ese diseño desde la primera iteración, por lo que no se considera necesario arrancar con un bloqueo global de launch.
+La propia claim table ya permite ese diseÃ±o desde la primera iteraciÃ³n, por lo que no se considera necesario arrancar con un bloqueo global de launch.
 
 Consecuencia
 
-La paralelización futura queda abierta desde el primer día, aunque inicialmente el procesamiento interno pueda seguir siendo secuencial.
+La paralelizaciÃ³n futura queda abierta desde el primer dÃ­a, aunque inicialmente el procesamiento interno pueda seguir siendo secuencial.
 
-Relación entre claim y business key de payroll
+RelaciÃ³n entre claim y business key de payroll
 
-La restricción única de payroll.payroll por business key sigue siendo obligatoria y valiosa, pero no se considera mecanismo principal de coordinación concurrente.
+La restricciÃ³n Ãºnica de payroll.payroll por business key sigue siendo obligatoria y valiosa, pero no se considera mecanismo principal de coordinaciÃ³n concurrente.
 
 Papel de la unique en payroll
 protege integridad final del resultado;
-actúa como última línea de defensa.
+actÃºa como Ãºltima lÃ­nea de defensa.
 Papel del claim
-evita que dos runs intenten procesar simultáneamente la misma unidad.
+evita que dos runs intenten procesar simultÃ¡neamente la misma unidad.
 
 Por tanto:
 
@@ -8282,25 +8310,25 @@ Ambas son necesarias y cumplen papeles distintos.
 Procesamiento secuencial vs paralelo
 Regla base
 
-El ADR no obliga a que el launch sea síncrono o asíncrono, ni a que procese secuencial o paralelamente.
+El ADR no obliga a que el launch sea sÃ­ncrono o asÃ­ncrono, ni a que procese secuencial o paralelamente.
 
-Lo que sí fija es la semántica.
+Lo que sÃ­ fija es la semÃ¡ntica.
 
 V1 aceptable
 run persistido
 claims por unidad
 procesamiento secuencial dentro del launch
 resumen final persistido
-Evolución natural
-paralelización por chunks o workers
-asíncrono
+EvoluciÃ³n natural
+paralelizaciÃ³n por chunks o workers
+asÃ­ncrono
 polling desde frontend del estado del run
 reintentos por unidad
 
-El diseño aquí debe soportar esas evoluciones sin rehacer la semántica.
+El diseÃ±o aquÃ­ debe soportar esas evoluciones sin rehacer la semÃ¡ntica.
 
-API pública recomendada
-Endpoints canónicos de resultado
+API pÃºblica recomendada
+Endpoints canÃ³nicos de resultado
 
 Se mantienen por business key:
 
@@ -8309,15 +8337,15 @@ invalidate
 explicit-validate
 finalize
 
-Esto sigue la convención general del proyecto de usar business keys públicas y acciones explícitas cuando el dominio lo pide.
+Esto sigue la convenciÃ³n general del proyecto de usar business keys pÃºblicas y acciones explÃ­citas cuando el dominio lo pide.
 
 Endpoint de launch
 
-Se recomienda un endpoint público explícito de negocio, por ejemplo:
+Se recomienda un endpoint pÃºblico explÃ­cito de negocio, por ejemplo:
 
 POST /payroll/calculation-runs/launch
 
-o naming equivalente claramente orientado a ejecución.
+o naming equivalente claramente orientado a ejecuciÃ³n.
 
 Lectura de run
 
@@ -8329,32 +8357,32 @@ y eventualmente listar runs recientes o items asociados.
 
 Calculate
 
-El endpoint actual de calculate no se considera canónico a futuro. Su continuidad se limita a la fase stub/pre-launch ya documentada.
+El endpoint actual de calculate no se considera canÃ³nico a futuro. Su continuidad se limita a la fase stub/pre-launch ya documentada.
 
-Qué se rechaza explícitamente
+QuÃ© se rechaza explÃ­citamente
 
 Se rechaza:
 
 tratar launch como CRUD;
 hacer que launch invoque HTTP contra su propio backend como arquitectura permanente;
 bloquear necesariamente todo el sistema a un solo launch global;
-usar solo la unique de payroll como solución de concurrencia;
+usar solo la unique de payroll como soluciÃ³n de concurrencia;
 mezclar calculation_run con payroll.payroll;
-convertir calculation_run en una nueva raíz funcional de negocio;
-fijar ya el contrato definitivo del motor de cálculo real;
-acoplar la semántica de launch al stub actual de calculate.
+convertir calculation_run en una nueva raÃ­z funcional de negocio;
+fijar ya el contrato definitivo del motor de cÃ¡lculo real;
+acoplar la semÃ¡ntica de launch al stub actual de calculate.
 Consecuencias
 Positivas
-separación limpia entre resultado, ejecución, concurrencia y motor;
-base sólida para meses de evolución sin rehacer el modelo;
+separaciÃ³n limpia entre resultado, ejecuciÃ³n, concurrencia y motor;
+base sÃ³lida para meses de evoluciÃ³n sin rehacer el modelo;
 posibilidad de seguimiento de runs desde frontend;
-paralelización futura preparada desde el diseño;
+paralelizaciÃ³n futura preparada desde el diseÃ±o;
 acoplamiento bajo entre launch y motor real;
-protección real frente a colisiones concurrentes.
+protecciÃ³n real frente a colisiones concurrentes.
 Costes
-introduce recursos técnicos adicionales (calculation_run, calculation_claim, probablemente calculation_run_item);
+introduce recursos tÃ©cnicos adicionales (calculation_run, calculation_claim, probablemente calculation_run_item);
 exige disciplina para no mezclar estados de run con estados de payroll;
-añade trabajo de persistencia y de resumen/progreso.
+aÃ±ade trabajo de persistencia y de resumen/progreso.
 Plan recomendado por fases
 Fase 1
 introducir calculation_run
@@ -8362,39 +8390,40 @@ introducir calculation_claim
 introducir launch
 mantener procesamiento secuencial
 calculate sigue siendo interno
-persistir resumen básico del run
+persistir resumen bÃ¡sico del run
 Fase 2
 introducir calculation_run_item
 seguimiento fino por unidad
 consulta desde frontend del progreso
 Fase 3
-paralelización real
+paralelizaciÃ³n real
 workers o executor
-asincronía y polling más rico
+asincronÃ­a y polling mÃ¡s rico
 posible housekeeping de claims
 Resumen ejecutivo
 
-En B4RRHH, el lanzamiento de nómina no se modelará como un simple POST que calcula y devuelve un body efímero.
+En B4RRHH, el lanzamiento de nÃ³mina no se modelarÃ¡ como un simple POST que calcula y devuelve un body efÃ­mero.
 
 Se adopta una arquitectura en la que:
 
 payroll.payroll sigue siendo el resultado materializado por unidad;
-payroll.calculation_run representa una ejecución persistida de lanzamiento;
-payroll.calculation_claim garantiza exclusión concurrente por unidad de cálculo;
-calculate será un caso de uso interno especializado y desacoplado del contrato público final;
+payroll.calculation_run representa una ejecuciÃ³n persistida de lanzamiento;
+payroll.calculation_claim garantiza exclusiÃ³n concurrente por unidad de cÃ¡lculo;
+calculate serÃ¡ un caso de uso interno especializado y desacoplado del contrato pÃºblico final;
 el launch coordina, reclama, delega y registra;
-la semántica queda preparada tanto para una V1 secuencial como para una evolución futura paralelizable y observable.
+la semÃ¡ntica queda preparada tanto para una V1 secuencial como para una evoluciÃ³n futura paralelizable y observable.
+
 <!-- END FILE: ADR-030-Payroll-Launch-Calculation-Run-Claim-and-Internal-Calculator-Orchestration.md -->
 
-<a name="file-adr-031-modelo-f-sico-de-payroll-launch--calculation-run-claims-y-mensajes-md"></a>
 
 ---
 
 # FILE: ADR-031-Modelo-físico-de-payroll-launch- calculation-run-claims-y-mensajes.md
+<a name="file-adr-031-modelo-f-sico-de-payroll-launch--calculation-run-claims-y-mensajes-md"></a>
 
 <!-- BEGIN FILE: ADR-031-Modelo-físico-de-payroll-launch- calculation-run-claims-y-mensajes.md -->
 
-ADR — Modelo físico de payroll launch, calculation run, claims y mensajes
+ADR â€” Modelo fÃ­sico de payroll launch, calculation run, claims y mensajes
 Estado
 
 Propuesto
@@ -8403,7 +8432,7 @@ Contexto
 
 El bounded context payroll ya tiene fijadas varias decisiones estructurales:
 
-payroll.payroll es la raíz funcional del resultado materializado de nómina;
+payroll.payroll es la raÃ­z funcional del resultado materializado de nÃ³mina;
 su business key es:
 ruleSystemCode
 employeeTypeCode
@@ -8411,62 +8440,62 @@ employeeNumber
 payrollPeriodCode
 payrollTypeCode
 presenceNumber;
-payroll.payroll no es un CRUD editable, sino un resultado de cálculo;
-los hijos payroll_concept y payroll_context_snapshot dependen completamente de la raíz y se eliminan por cascade;
-el estado de la nómina (NOT_VALID, CALCULATED, EXPLICIT_VALIDATED, DEFINITIVE) vive en la propia payroll y gobierna si puede ser sustituida o no;
-una unidad sin nómina previa también debe ser elegible para cálculo inicial.
+payroll.payroll no es un CRUD editable, sino un resultado de cÃ¡lculo;
+los hijos payroll_concept y payroll_context_snapshot dependen completamente de la raÃ­z y se eliminan por cascade;
+el estado de la nÃ³mina (NOT_VALID, CALCULATED, EXPLICIT_VALIDATED, DEFINITIVE) vive en la propia payroll y gobierna si puede ser sustituida o no;
+una unidad sin nÃ³mina previa tambiÃ©n debe ser elegible para cÃ¡lculo inicial.
 
-También se ha consolidado otra separación importante:
+TambiÃ©n se ha consolidado otra separaciÃ³n importante:
 
 launch coordina;
 calculate materializa una unidad;
-la concurrencia no debe gobernarse dentro del aggregate payroll.payroll, sino en una capa técnica de ejecución;
-el proyecto prefiere workflows explícitos cuando una operación no encaja como CRUD plano.
+la concurrencia no debe gobernarse dentro del aggregate payroll.payroll, sino en una capa tÃ©cnica de ejecuciÃ³n;
+el proyecto prefiere workflows explÃ­citos cuando una operaciÃ³n no encaja como CRUD plano.
 
-Durante el diseño del lanzamiento apareció una discusión relevante sobre el detalle por unidad de ejecución.
+Durante el diseÃ±o del lanzamiento apareciÃ³ una discusiÃ³n relevante sobre el detalle por unidad de ejecuciÃ³n.
 
-Se descarta como núcleo inicial una tabla obligatoria de calculation_run_item porque:
+Se descarta como nÃºcleo inicial una tabla obligatoria de calculation_run_item porque:
 
-generaría una fila por unidad para cada run;
+generarÃ­a una fila por unidad para cada run;
 puede producir mucho volumen con poco valor persistente;
-muchos errores funcionales pertenecen realmente a la nómina materializada y no al run;
-tras un nuevo cálculo de esa unidad, gran parte de ese detalle pierde relevancia operativa.
+muchos errores funcionales pertenecen realmente a la nÃ³mina materializada y no al run;
+tras un nuevo cÃ¡lculo de esa unidad, gran parte de ese detalle pierde relevancia operativa.
 
-En cambio, sí se considera útil distinguir dos tipos de mensajes:
+En cambio, sÃ­ se considera Ãºtil distinguir dos tipos de mensajes:
 
-mensajes adheridos a la nómina
+mensajes adheridos a la nÃ³mina
 pertenecen al resultado materializado y deben vivir como vertical hija de payroll.payroll;
 mensajes del run
-pertenecen a la ejecución técnica del launch y pueden existir incluso cuando no se materializa una nueva payroll.
+pertenecen a la ejecuciÃ³n tÃ©cnica del launch y pueden existir incluso cuando no se materializa una nueva payroll.
 Problema
 
-Se necesita un modelo físico que permita:
+Se necesita un modelo fÃ­sico que permita:
 
 persistir ejecuciones de launch;
 seguir su progreso general;
-impedir concurrencia simultánea sobre la misma unidad de cálculo;
-registrar mensajes operativos/técnicos del run;
+impedir concurrencia simultÃ¡nea sobre la misma unidad de cÃ¡lculo;
+registrar mensajes operativos/tÃ©cnicos del run;
 registrar mensajes funcionales o revisables adheridos a una payroll;
 mantener separado:
 el resultado materializado (payroll.payroll)
-de la ejecución técnica (calculation_run, calculation_claim, calculation_run_message).
+de la ejecuciÃ³n tÃ©cnica (calculation_run, calculation_claim, calculation_run_message).
 
-El modelo debe ser suficiente para meses de evolución, sin fijar todavía el motor real de reglas.
+El modelo debe ser suficiente para meses de evoluciÃ³n, sin fijar todavÃ­a el motor real de reglas.
 
-Decisión
+DecisiÃ³n
 
-Se adopta dentro del schema payroll el siguiente modelo físico base:
+Se adopta dentro del schema payroll el siguiente modelo fÃ­sico base:
 
 payroll.payroll
-resultado materializado de una unidad de cálculo. Ya existente.
+resultado materializado de una unidad de cÃ¡lculo. Ya existente.
 payroll.payroll_warning
-mensajes funcionales adheridos a una nómina concreta.
+mensajes funcionales adheridos a una nÃ³mina concreta.
 payroll.calculation_run
-ejecución técnica persistida de un launch.
+ejecuciÃ³n tÃ©cnica persistida de un launch.
 payroll.calculation_claim
-exclusión concurrente por unidad de cálculo.
+exclusiÃ³n concurrente por unidad de cÃ¡lculo.
 payroll.calculation_run_message
-mensajes operativos, técnicos o de exclusión del propio run.
+mensajes operativos, tÃ©cnicos o de exclusiÃ³n del propio run.
 
 Se decide no introducir payroll.calculation_run_item como tabla obligatoria en la base inicial.
 
@@ -8474,19 +8503,19 @@ Principio estructural
 
 La payroll persiste resultado.
 La payroll_warning persiste mensajes funcionales de ese resultado.
-El run persiste la ejecución.
-El claim persiste exclusión concurrente.
-El run_message persiste incidencias y mensajes de la ejecución.
+El run persiste la ejecuciÃ³n.
+El claim persiste exclusiÃ³n concurrente.
+El run_message persiste incidencias y mensajes de la ejecuciÃ³n.
 
 Cada pieza resuelve un problema distinto.
 
 1. Tabla payroll.calculation_run
-Propósito
+PropÃ³sito
 
-Representar una ejecución técnica de lanzamiento de nómina.
+Representar una ejecuciÃ³n tÃ©cnica de lanzamiento de nÃ³mina.
 
 No es una payroll.
-No es una raíz funcional de negocio.
+No es una raÃ­z funcional de negocio.
 No sustituye a payroll.payroll.
 
 Sirve para:
@@ -8494,7 +8523,7 @@ Sirve para:
 trazabilidad operativa;
 seguimiento desde backend y frontend;
 resumen persistido del lanzamiento;
-futura asincronía o paralelización.
+futura asincronÃ­a o paralelizaciÃ³n.
 Columnas propuestas
 id bigint generated always as identity primary key
 rule_system_code varchar(5) not null
@@ -8519,7 +8548,7 @@ finished_at timestamp null
 summary_json json null
 created_at timestamp not null default now()
 updated_at timestamp not null default now()
-Justificación
+JustificaciÃ³n
 Contexto del run
 rule_system_code
 payroll_period_code
@@ -8531,13 +8560,13 @@ definen el marco operativo del lanzamiento.
 
 target_selection_json
 
-Se persiste en JSON porque representa la selección objetivo del launch y todavía no compensa fijar un modelo relacional complejo para todas sus variantes.
+Se persiste en JSON porque representa la selecciÃ³n objetivo del launch y todavÃ­a no compensa fijar un modelo relacional complejo para todas sus variantes.
 
 Contadores agregados
 
-Se mantienen como columnas explícitas porque permiten:
+Se mantienen como columnas explÃ­citas porque permiten:
 
-seguimiento rápido;
+seguimiento rÃ¡pido;
 respuesta de UI;
 observabilidad del run;
 resumen estable sin depender de una tabla hija por unidad.
@@ -8554,16 +8583,16 @@ FAILED
 Restricciones recomendadas
 checks de no negatividad en contadores
 check (finished_at is null or started_at is not null)
-Índices recomendados
+Ãndices recomendados
 (rule_system_code, payroll_period_code, payroll_type_code)
 (status)
 (requested_at desc)
 2. Tabla payroll.calculation_claim
-Propósito
+PropÃ³sito
 
-Persistir la exclusión concurrente por unidad de cálculo.
+Persistir la exclusiÃ³n concurrente por unidad de cÃ¡lculo.
 
-Su misión es impedir que dos runs distintos procesen al mismo tiempo la misma unidad:
+Su misiÃ³n es impedir que dos runs distintos procesen al mismo tiempo la misma unidad:
 
 ruleSystemCode
 employeeTypeCode
@@ -8586,34 +8615,34 @@ FK recomendada
 fk_calculation_claim_run
 run_id -> payroll.calculation_run(id)
 on delete cascade
-Restricción clave
+RestricciÃ³n clave
 
 Debe existir una unique fuerte por la calculation key completa:
 
 (rule_system_code, employee_type_code, employee_number, payroll_period_code, payroll_type_code, presence_number)
-Regla de adquisición
+Regla de adquisiciÃ³n
 
-La adquisición del claim debe ser atómica mediante insert.
+La adquisiciÃ³n del claim debe ser atÃ³mica mediante insert.
 
-No se acepta como patrón base:
+No se acepta como patrÃ³n base:
 
 leer si existe;
 luego insertar.
-Semántica de vida
+SemÃ¡ntica de vida
 si el insert entra, la unidad queda reclamada;
-si falla por unique, la unidad ya está en curso en otro run;
+si falla por unique, la unidad ya estÃ¡ en curso en otro run;
 al terminar de procesar la unidad, el claim se elimina.
-Por qué no guardar status en claim
+Por quÃ© no guardar status en claim
 
-Porque claim no es una mini máquina de estados.
-Su única misión es representar posesión exclusiva temporal de una unidad.
+Porque claim no es una mini mÃ¡quina de estados.
+Su Ãºnica misiÃ³n es representar posesiÃ³n exclusiva temporal de una unidad.
 
-Índice recomendado
+Ãndice recomendado
 (run_id)
 3. Tabla payroll.payroll_warning
-Propósito
+PropÃ³sito
 
-Persistir mensajes funcionales adheridos a una nómina concreta.
+Persistir mensajes funcionales adheridos a una nÃ³mina concreta.
 
 No representan incidencias del run, sino mensajes del resultado materializado.
 
@@ -8624,11 +8653,11 @@ avisos;
 observaciones;
 cosas a revisar por usuario;
 mensajes no bloqueantes pero relevantes.
-Naturaleza semántica
+Naturaleza semÃ¡ntica
 
-Se adopta el término warning de forma deliberada para no encerrar la semántica en “error”.
+Se adopta el tÃ©rmino warning de forma deliberada para no encerrar la semÃ¡ntica en â€œerrorâ€.
 
-El diseño debe permitir:
+El diseÃ±o debe permitir:
 
 payroll NOT_VALID con warnings de severidad ERROR;
 payroll CALCULATED con warnings de severidad WARNING;
@@ -8644,60 +8673,60 @@ FK recomendada
 fk_payroll_warning_payroll
 payroll_id -> payroll.payroll(id)
 on delete cascade
-Restricción única recomendada
+RestricciÃ³n Ãºnica recomendada
 
-No fijaría una unique demasiado agresiva de entrada.
+No fijarÃ­a una unique demasiado agresiva de entrada.
 
-Podría existir más de un warning con el mismo warning_code si en el futuro aparece necesidad de varias ocurrencias contextualizadas.
-Si se quiere una deduplicación ligera, preferiría resolverla en dominio antes que forzarla ya en esquema.
+PodrÃ­a existir mÃ¡s de un warning con el mismo warning_code si en el futuro aparece necesidad de varias ocurrencias contextualizadas.
+Si se quiere una deduplicaciÃ³n ligera, preferirÃ­a resolverla en dominio antes que forzarla ya en esquema.
 
-Por qué no tiene created_at
+Por quÃ© no tiene created_at
 
-Se decide explícitamente no añadir created_at.
+Se decide explÃ­citamente no aÃ±adir created_at.
 
-Justificación:
+JustificaciÃ³n:
 
 payroll_warning nace y muere con la payroll.payroll;
-el instante relevante ya está representado por payroll.calculated_at;
-añadir otro timestamp duplicaría semántica sin aportar valor real.
+el instante relevante ya estÃ¡ representado por payroll.calculated_at;
+aÃ±adir otro timestamp duplicarÃ­a semÃ¡ntica sin aportar valor real.
 Severidades recomendadas
 INFO
 WARNING
 ERROR
-Índices recomendados
+Ãndices recomendados
 (payroll_id)
-opcionalmente (severity_code) si más adelante se consulta mucho por severidad
+opcionalmente (severity_code) si mÃ¡s adelante se consulta mucho por severidad
 4. Tabla payroll.calculation_run_message
-Propósito
+PropÃ³sito
 
 Persistir mensajes del propio run.
 
 Representa:
 
 incidencias operativas;
-errores técnicos;
+errores tÃ©cnicos;
 descartes por claim;
 descartes por no elegibilidad;
-mensajes de ejecución no adheribles a una payroll concreta.
+mensajes de ejecuciÃ³n no adheribles a una payroll concreta.
 
 Ejemplos:
 
-“unidad descartada por claim activo”
-“unidad omitida por estado EXPLICIT_VALIDATED”
-“error técnico en acceso a BD”
-“fallo al resolver población”
-“run completado con conflictos parciales”
-Regla semántica
+â€œunidad descartada por claim activoâ€
+â€œunidad omitida por estado EXPLICIT_VALIDATEDâ€
+â€œerror tÃ©cnico en acceso a BDâ€
+â€œfallo al resolver poblaciÃ³nâ€
+â€œrun completado con conflictos parcialesâ€
+Regla semÃ¡ntica
 
 calculation_run_message no reemplaza a payroll_warning.
 
 payroll_warning
 
-mensaje funcional del resultado de nómina
+mensaje funcional del resultado de nÃ³mina
 
 calculation_run_message
 
-mensaje operativo/técnico/de ejecución del run
+mensaje operativo/tÃ©cnico/de ejecuciÃ³n del run
 
 Columnas propuestas
 id bigint generated always as identity primary key
@@ -8717,16 +8746,16 @@ FK recomendada
 fk_calculation_run_message_run
 run_id -> payroll.calculation_run(id)
 on delete cascade
-Justificación de la calculation key nullable
+JustificaciÃ³n de la calculation key nullable
 
 Se permite asociar un mensaje del run a:
 
-una ejecución global;
+una ejecuciÃ³n global;
 o a una unidad concreta dentro del run.
 
 Por eso la calculation key es nullable:
 
-si el mensaje es global, queda vacía;
+si el mensaje es global, queda vacÃ­a;
 si el mensaje se refiere a una unidad concreta, se rellena.
 
 Esto evita la necesidad de una tabla run_item obligatoria por cada unidad.
@@ -8735,42 +8764,42 @@ Severidades recomendadas
 INFO
 WARNING
 ERROR
-Índices recomendados
+Ãndices recomendados
 (run_id)
 (run_id, severity_code)
-opcionalmente (run_id, employee_type_code, employee_number) si más adelante se necesita drill-down por empleado
-5. Relación con payroll.payroll
+opcionalmente (run_id, employee_type_code, employee_number) si mÃ¡s adelante se necesita drill-down por empleado
+5. RelaciÃ³n con payroll.payroll
 Regla estructural
 
 payroll.payroll permanece como resultado materializado y no absorbe campos de launch, run, claim ni mensajes operativos.
 
-No se deben añadir a payroll.payroll cosas como:
+No se deben aÃ±adir a payroll.payroll cosas como:
 
 estado del run;
 claim status;
-resumen de ejecución;
-mensajes técnicos del launch.
-Lo que sí absorbe
+resumen de ejecuciÃ³n;
+mensajes tÃ©cnicos del launch.
+Lo que sÃ­ absorbe
 
-Sí absorbe:
+SÃ­ absorbe:
 
 su estado funcional (status);
-su razón (statusReasonCode);
+su razÃ³n (statusReasonCode);
 y sus payroll_warning.
 
-Esto mantiene coherente la separación entre:
+Esto mantiene coherente la separaciÃ³n entre:
 
 resultado de negocio materializado
-ejecución técnica que lo produjo
-6. Decisión explícita sobre calculation_run_item
-Decisión
+ejecuciÃ³n tÃ©cnica que lo produjo
+6. DecisiÃ³n explÃ­cita sobre calculation_run_item
+DecisiÃ³n
 
 Se decide no introducir payroll.calculation_run_item como tabla base obligatoria.
 
-Justificación
+JustificaciÃ³n
 1. Volumen
 
-Generaría una fila por unidad y por run, con mucho crecimiento potencial para poco valor si la mayoría de unidades se comportan normalmente.
+GenerarÃ­a una fila por unidad y por run, con mucho crecimiento potencial para poco valor si la mayorÃ­a de unidades se comportan normalmente.
 
 2. Relevancia temporal
 
@@ -8778,11 +8807,11 @@ Una vez existe un nuevo run sobre la misma unidad, buena parte del detalle fino 
 
 3. Errores funcionales
 
-Los errores funcionales importantes pertenecen a la nómina materializada y deben vivir en payroll.payroll mediante payroll_warning, no en el run.
+Los errores funcionales importantes pertenecen a la nÃ³mina materializada y deben vivir en payroll.payroll mediante payroll_warning, no en el run.
 
 4. Observabilidad suficiente para V1
 
-La combinación de:
+La combinaciÃ³n de:
 
 calculation_run
 calculation_claim
@@ -8791,11 +8820,11 @@ payroll_warning
 
 proporciona una observabilidad suficientemente rica sin necesidad de una tabla hija obligatoria por unidad.
 
-Evolución futura posible
+EvoluciÃ³n futura posible
 
-No se prohíbe introducir calculation_run_item más adelante si la observabilidad operativa futura lo justifica.
+No se prohÃ­be introducir calculation_run_item mÃ¡s adelante si la observabilidad operativa futura lo justifica.
 
-Pero no forma parte del núcleo inicial.
+Pero no forma parte del nÃºcleo inicial.
 
 7. JSON vs relacional
 JSON permitido
@@ -8807,11 +8836,11 @@ summary_json
 details_json de warnings
 details_json de run messages
 
-porque ahí la variación todavía no compensa fijarla toda en columnas.
+porque ahÃ­ la variaciÃ³n todavÃ­a no compensa fijarla toda en columnas.
 
 Relacional obligatorio
 
-Se exige modelado relacional explícito en:
+Se exige modelado relacional explÃ­cito en:
 
 calculation key del claim
 contexto base del run
@@ -8819,12 +8848,12 @@ estado del run
 referencias payroll/run
 contadores agregados
 
-porque esas piezas sí son núcleo estable del diseño.
+porque esas piezas sÃ­ son nÃºcleo estable del diseÃ±o.
 
-8. Restricciones e índices recomendados completos
+8. Restricciones e Ã­ndices recomendados completos
 calculation_run
 pk (id)
-índices:
+Ã­ndices:
 (rule_system_code, payroll_period_code, payroll_type_code)
 (status)
 (requested_at desc)
@@ -8833,49 +8862,49 @@ pk (id)
 fk run_id -> calculation_run(id) on delete cascade
 unique:
 calculation key completa
-índice:
+Ã­ndice:
 (run_id)
 payroll_warning
 pk (id)
 fk payroll_id -> payroll(id) on delete cascade
-índice:
+Ã­ndice:
 (payroll_id)
 calculation_run_message
 pk (id)
 fk run_id -> calculation_run(id) on delete cascade
-índices:
+Ã­ndices:
 (run_id)
 (run_id, severity_code)
-9. Qué se rechaza explícitamente
+9. QuÃ© se rechaza explÃ­citamente
 
-Se rechaza en este modelo físico:
+Se rechaza en este modelo fÃ­sico:
 
-usar solo la unique de payroll.payroll como solución de concurrencia;
-meter mensajes técnicos del run dentro de payroll.payroll;
+usar solo la unique de payroll.payroll como soluciÃ³n de concurrencia;
+meter mensajes tÃ©cnicos del run dentro de payroll.payroll;
 convertir calculation_claim en una tabla de workflow compleja;
 introducir calculation_run_item por inercia sin haber demostrado valor real;
-fijar ya el contrato definitivo del motor de cálculo;
-acoplar launch al endpoint stub actual de calculate, que sigue siendo temporal y no canónico
+fijar ya el contrato definitivo del motor de cÃ¡lculo;
+acoplar launch al endpoint stub actual de calculate, que sigue siendo temporal y no canÃ³nico
 10. Consecuencias
 Positivas
-separación muy limpia entre resultado, mensajes funcionales, ejecución y concurrencia;
+separaciÃ³n muy limpia entre resultado, mensajes funcionales, ejecuciÃ³n y concurrencia;
 menos volumen estructural que con una tabla obligatoria de run items;
 observabilidad suficiente para V1;
 posibilidad de seguimiento desde frontend;
 motor real desacoplado del workflow;
-base sólida para meses de evolución.
+base sÃ³lida para meses de evoluciÃ³n.
 Costes
-añade cuatro tablas nuevas respecto al payroll root original;
+aÃ±ade cuatro tablas nuevas respecto al payroll root original;
 obliga a distinguir bien mensajes funcionales vs mensajes de run;
-deja para una fase futura el drill-down total por unidad si algún día se necesita.
-11. Estrategia de implementación recomendada
+deja para una fase futura el drill-down total por unidad si algÃºn dÃ­a se necesita.
+11. Estrategia de implementaciÃ³n recomendada
 Fase 1
 crear calculation_run
 crear calculation_claim
 crear payroll_warning
 crear calculation_run_message
 Fase 2
-implementar launch síncrono
+implementar launch sÃ­ncrono
 persistir run + summary + messages
 mantener calculate como caso de uso interno
 Fase 3
@@ -8883,30 +8912,31 @@ exponer lectura de runs y mensajes
 permitir seguimiento desde frontend
 Fase 4
 revaluar si la observabilidad futura justifica calculation_run_item
-añadir housekeeping de claims si hace falta
-introducir paralelización real
+aÃ±adir housekeeping de claims si hace falta
+introducir paralelizaciÃ³n real
 12. Resumen ejecutivo
 
-Se adopta para payroll un modelo físico donde:
+Se adopta para payroll un modelo fÃ­sico donde:
 
 payroll.payroll sigue siendo el resultado materializado;
-payroll.payroll_warning concentra mensajes funcionales adheridos a la nómina;
+payroll.payroll_warning concentra mensajes funcionales adheridos a la nÃ³mina;
 payroll.calculation_run representa el launch persistido;
-payroll.calculation_claim garantiza exclusión concurrente por unidad;
-payroll.calculation_run_message concentra mensajes operativos/técnicos del run;
-calculation_run_item no forma parte del núcleo inicial;
-el sistema queda preparado para diseñar launch sin acoplarlo prematuramente al motor real.
+payroll.calculation_claim garantiza exclusiÃ³n concurrente por unidad;
+payroll.calculation_run_message concentra mensajes operativos/tÃ©cnicos del run;
+calculation_run_item no forma parte del nÃºcleo inicial;
+el sistema queda preparado para diseÃ±ar launch sin acoplarlo prematuramente al motor real.
+
 <!-- END FILE: ADR-031-Modelo-físico-de-payroll-launch- calculation-run-claims-y-mensajes.md -->
 
-<a name="file-adr-032-payroll-launch-workflow--s-ncrono--con-run-persistido-y-claims-por-unidad--estado-md"></a>
 
 ---
 
 # FILE: ADR-032-Payroll-Launch-Workflow-(síncrono, con-run-persistido-y-claims-por-unidad)-Estado.md
+<a name="file-adr-032-payroll-launch-workflow--s-ncrono--con-run-persistido-y-claims-por-unidad--estado-md"></a>
 
 <!-- BEGIN FILE: ADR-032-Payroll-Launch-Workflow-(síncrono, con-run-persistido-y-claims-por-unidad)-Estado.md -->
 
-ADR — Payroll Launch Workflow (síncrono, con run persistido y claims por unidad)
+ADR â€” Payroll Launch Workflow (sÃ­ncrono, con run persistido y claims por unidad)
 Estado
 
 Propuesto
@@ -8915,33 +8945,33 @@ Contexto
 
 El bounded context payroll ya dispone de:
 
-payroll.payroll como resultado materializado de una unidad de cálculo, identificado por:
+payroll.payroll como resultado materializado de una unidad de cÃ¡lculo, identificado por:
 ruleSystemCode
 employeeTypeCode
 employeeNumber
 payrollPeriodCode
 payrollTypeCode
 presenceNumber
-payroll.calculation_run como persistencia del lanzamiento técnico;
-payroll.calculation_claim como exclusión concurrente por unidad;
-payroll.payroll_warning para mensajes funcionales adheridos a la nómina;
-payroll.calculation_run_message para mensajes operativos o técnicos del run.
+payroll.calculation_run como persistencia del lanzamiento tÃ©cnico;
+payroll.calculation_claim como exclusiÃ³n concurrente por unidad;
+payroll.payroll_warning para mensajes funcionales adheridos a la nÃ³mina;
+payroll.calculation_run_message para mensajes operativos o tÃ©cnicos del run.
 
-También se ha fijado ya que:
+TambiÃ©n se ha fijado ya que:
 
-una unidad es elegible para cálculo si no existe nómina previa o si existe y está NOT_VALID;
-una nómina en CALCULATED, EXPLICIT_VALIDATED o DEFINITIVE no debe recalcularse automáticamente;
-el endpoint actual POST /payrolls/calculate sigue siendo un stub temporal de validación del pipeline y no el contrato final del motor real.
+una unidad es elegible para cÃ¡lculo si no existe nÃ³mina previa o si existe y estÃ¡ NOT_VALID;
+una nÃ³mina en CALCULATED, EXPLICIT_VALIDATED o DEFINITIVE no debe recalcularse automÃ¡ticamente;
+el endpoint actual POST /payrolls/calculate sigue siendo un stub temporal de validaciÃ³n del pipeline y no el contrato final del motor real.
 
-El proyecto, además, exige que cuando una operación no encaja como CRUD plano se modele como workflow explícito y que el naming refleje semántica de negocio real.
+El proyecto, ademÃ¡s, exige que cuando una operaciÃ³n no encaja como CRUD plano se modele como workflow explÃ­cito y que el naming refleje semÃ¡ntica de negocio real.
 
 Problema
 
-Se necesita implementar el launch de nómina como workflow real, de forma que:
+Se necesita implementar el launch de nÃ³mina como workflow real, de forma que:
 
 reciba un contexto de lanzamiento;
-resuelva una población objetivo;
-la expanda a unidades reales de cálculo;
+resuelva una poblaciÃ³n objetivo;
+la expanda a unidades reales de cÃ¡lculo;
 filtre elegibilidad;
 adquiera claims por unidad de forma segura;
 invoque el calculador interno;
@@ -8950,20 +8980,20 @@ deje trazabilidad suficiente para consulta posterior.
 
 Todo esto debe hacerse sin:
 
-convertir el launch en motor de cálculo;
-acoplarlo al endpoint público stub actual;
-fijar todavía el contrato del motor real de reglas;
-introducir asincronía o paralelización real en la primera iteración.
-Decisión
+convertir el launch en motor de cÃ¡lculo;
+acoplarlo al endpoint pÃºblico stub actual;
+fijar todavÃ­a el contrato del motor real de reglas;
+introducir asincronÃ­a o paralelizaciÃ³n real en la primera iteraciÃ³n.
+DecisiÃ³n
 
-Se adopta un Payroll Launch Workflow síncrono, con estas características:
+Se adopta un Payroll Launch Workflow sÃ­ncrono, con estas caracterÃ­sticas:
 
 crea un calculation_run persistido;
-resuelve la población objetivo;
-expande a unidades de cálculo;
+resuelve la poblaciÃ³n objetivo;
+expande a unidades de cÃ¡lculo;
 determina elegibilidad;
 intenta adquirir claim por cada unidad elegible;
-invoca un caso de uso interno de cálculo por unidad;
+invoca un caso de uso interno de cÃ¡lculo por unidad;
 actualiza contadores y estado del run;
 registra mensajes del run cuando proceda;
 devuelve runId y resumen del resultado.
@@ -8974,9 +9004,9 @@ Calculate materializa.
 Claim excluye.
 Run resume.
 
-Unidad mínima de cálculo
+Unidad mÃ­nima de cÃ¡lculo
 
-La unidad mínima de cálculo queda fijada como:
+La unidad mÃ­nima de cÃ¡lculo queda fijada como:
 
 ruleSystemCode
 employeeTypeCode
@@ -8985,7 +9015,7 @@ payrollPeriodCode
 payrollTypeCode
 presenceNumber
 
-Esta unidad coincide con la identidad funcional de payroll.payroll y con la semántica ya fijada del dominio.
+Esta unidad coincide con la identidad funcional de payroll.payroll y con la semÃ¡ntica ya fijada del dominio.
 
 Input del launch
 
@@ -9002,10 +9032,10 @@ targetSelection
 Debe permitir al menos estas variantes iniciales:
 
 un empleado concreto
-una lista explícita de empleados
-una selección masiva simple dentro de un ruleSystemCode
+una lista explÃ­cita de empleados
+una selecciÃ³n masiva simple dentro de un ruleSystemCode
 
-No se fija aún un DSL complejo de filtros.
+No se fija aÃºn un DSL complejo de filtros.
 
 Output del launch
 
@@ -9017,7 +9047,7 @@ contadores agregados
 timestamps principales
 opcionalmente resumen
 
-Y el sistema debe permitir consultar después el run persistido.
+Y el sistema debe permitir consultar despuÃ©s el run persistido.
 
 Flujo del launch
 1. Crear run
@@ -9028,27 +9058,27 @@ REQUESTED
 
 con:
 
-contexto de ejecución
+contexto de ejecuciÃ³n
 targetSelectionJson
 contadores a cero
 2. Cambiar a RUNNING
 
-Al comenzar la ejecución real:
+Al comenzar la ejecuciÃ³n real:
 
 status = RUNNING
 startedAt = now
-3. Resolver población objetivo
+3. Resolver poblaciÃ³n objetivo
 
 Transformar targetSelection en empleados concretos.
 
-4. Expandir a unidades de cálculo
+4. Expandir a unidades de cÃ¡lculo
 
 Por cada empleado objetivo, resolver las presences relevantes para:
 
 payrollPeriodCode
 payrollTypeCode
 
-y generar unidades explícitas:
+y generar unidades explÃ­citas:
 
 empleado + periodo + tipo + presencia
 5. Determinar elegibilidad
@@ -9056,9 +9086,9 @@ empleado + periodo + tipo + presencia
 Una unidad es elegible si:
 
 no existe payroll.payroll, o
-existe y está NOT_VALID
+existe y estÃ¡ NOT_VALID
 
-Si existe y está en:
+Si existe y estÃ¡ en:
 
 CALCULATED
 EXPLICIT_VALIDATED
@@ -9080,34 +9110,34 @@ intentar insertar calculation_claim
 Si el insert:
 
 entra: la unidad queda reclamada por este run
-falla por unique: la unidad ya está en curso en otro run
+falla por unique: la unidad ya estÃ¡ en curso en otro run
 
-Si está ya reclamada:
+Si estÃ¡ ya reclamada:
 
 no se calcula
 incrementa totalSkippedAlreadyClaimed
 se registra calculation_run_message con contexto de unidad
-7. Invocar cálculo interno
+7. Invocar cÃ¡lculo interno
 
 Para cada unidad con claim adquirido:
 
-invocar un caso de uso interno de cálculo por unidad
+invocar un caso de uso interno de cÃ¡lculo por unidad
 
 No debe hacerse HTTP interno contra el endpoint stub actual.
 
 8. Interpretar resultado
 
-El cálculo interno puede producir:
+El cÃ¡lculo interno puede producir:
 
 CALCULATED
 NOT_VALID
-error técnico
+error tÃ©cnico
 
 Entonces:
 
 CALCULATED incrementa totalCalculated
 NOT_VALID incrementa totalNotValid
-error técnico incrementa totalErrors y genera calculation_run_message
+error tÃ©cnico incrementa totalErrors y genera calculation_run_message
 9. Liberar claim
 
 El claim de la unidad debe eliminarse al terminar su procesamiento, tanto si sale bien como si falla.
@@ -9117,43 +9147,43 @@ El claim de la unidad debe eliminarse al terminar su procesamiento, tanto si sal
 Al finalizar todas las unidades:
 
 finishedAt = now
-status = COMPLETED si no hubo errores técnicos
-status = COMPLETED_WITH_ERRORS si hubo errores técnicos parciales
-status = FAILED solo si el launch falla globalmente antes de completar su ciclo mínimo
-Política de concurrencia
+status = COMPLETED si no hubo errores tÃ©cnicos
+status = COMPLETED_WITH_ERRORS si hubo errores tÃ©cnicos parciales
+status = FAILED solo si el launch falla globalmente antes de completar su ciclo mÃ­nimo
+PolÃ­tica de concurrencia
 Regla principal
 
 La concurrencia se gobierna exclusivamente mediante payroll.calculation_claim.
 
-La unique de payroll.payroll sigue siendo una defensa final de integridad, pero no es el mecanismo principal de coordinación.
+La unique de payroll.payroll sigue siendo una defensa final de integridad, pero no es el mecanismo principal de coordinaciÃ³n.
 
 Regla operativa
 
-Dos launches simultáneos:
+Dos launches simultÃ¡neos:
 
 pueden coexistir;
-no pueden procesar al mismo tiempo la misma unidad de cálculo.
-Implementación base
+no pueden procesar al mismo tiempo la misma unidad de cÃ¡lculo.
+ImplementaciÃ³n base
 
-La adquisición del claim se hace con insert atómico sobre la calculation key completa.
+La adquisiciÃ³n del claim se hace con insert atÃ³mico sobre la calculation key completa.
 
-Naturaleza del cálculo interno
+Naturaleza del cÃ¡lculo interno
 
-El launch no debe depender del endpoint público stub actual.
+El launch no debe depender del endpoint pÃºblico stub actual.
 
 Debe usar un caso de uso interno del estilo:
 
 CalculatePayrollUnitUseCase
 
-o naming equivalente, orientado a negocio y no a detalle técnico, siguiendo la guía de naming del proyecto.
+o naming equivalente, orientado a negocio y no a detalle tÃ©cnico, siguiendo la guÃ­a de naming del proyecto.
 
-Responsabilidad del cálculo interno
-materializar una unidad explícita
-crear/reemplazar payroll.payroll según reglas ya fijadas
+Responsabilidad del cÃ¡lculo interno
+materializar una unidad explÃ­cita
+crear/reemplazar payroll.payroll segÃºn reglas ya fijadas
 persistir payroll_warning cuando proceda
 devolver resultado funcional de la unidad
 Lo que no hace
-no resuelve población
+no resuelve poblaciÃ³n
 no gestiona claims
 no crea runs
 no resume progreso global
@@ -9161,13 +9191,13 @@ Mensajes del run
 
 calculation_run_message se usa para:
 
-errores técnicos;
+errores tÃ©cnicos;
 unidades omitidas por claim;
 unidades omitidas por no elegibilidad cuando interese dejar rastro;
-problemas de resolución de población;
+problemas de resoluciÃ³n de poblaciÃ³n;
 incidencias globales del launch.
 
-No debe usarse para modelar errores funcionales propios de la nómina.
+No debe usarse para modelar errores funcionales propios de la nÃ³mina.
 Esos pertenecen a payroll_warning.
 
 Severidades recomendadas
@@ -9184,35 +9214,35 @@ INFO
 WARNING
 ERROR
 
-La diferencia no está en la severidad, sino en la pertenencia semántica:
+La diferencia no estÃ¡ en la severidad, sino en la pertenencia semÃ¡ntica:
 
 run
 vs payroll
-Primera iteración aceptada
+Primera iteraciÃ³n aceptada
 
-La primera iteración del launch será:
+La primera iteraciÃ³n del launch serÃ¡:
 
-síncrona
+sÃ­ncrona
 secuencial
 con run persistido
 con claims por unidad
-con cálculo interno por unidad
-sin paralelización real
-sin asincronía
+con cÃ¡lculo interno por unidad
+sin paralelizaciÃ³n real
+sin asincronÃ­a
 sin workers
-Justificación
+JustificaciÃ³n
 
 Esto permite validar:
 
-semántica
-integración
+semÃ¡ntica
+integraciÃ³n
 counters
-exclusión concurrente
+exclusiÃ³n concurrente
 wiring
 
-sin abrir todavía el melón del motor real ni de la ejecución distribuida.
+sin abrir todavÃ­a el melÃ³n del motor real ni de la ejecuciÃ³n distribuida.
 
-API pública recomendada
+API pÃºblica recomendada
 Crear launch
 
 POST /payroll/calculation-runs/launch
@@ -9225,152 +9255,154 @@ Lecturas futuras opcionales
 listar runs recientes
 listar mensajes de run
 
-No se considera canónico exponer todavía el cálculo interno como API pública definitiva.
+No se considera canÃ³nico exponer todavÃ­a el cÃ¡lculo interno como API pÃºblica definitiva.
 
-Qué se rechaza explícitamente
+QuÃ© se rechaza explÃ­citamente
 
 Se rechaza:
 
 que launch invoque por HTTP al mismo backend como arquitectura permanente;
-que launch haga de motor de cálculo;
-que calculate resuelva población objetivo;
+que launch haga de motor de cÃ¡lculo;
+que calculate resuelva poblaciÃ³n objetivo;
 que la concurrencia se gobierne solo por la unique de payroll.payroll;
 que el endpoint stub actual de calculate se tome como contrato final del motor;
-introducir ya paralelización real o asincronía obligatoria.
+introducir ya paralelizaciÃ³n real o asincronÃ­a obligatoria.
 Consecuencias
 Positivas
 launch claro y desacoplado
 concurrencia segura por unidad
 run consultable desde frontend
-base sana para paralelización futura
-separación nítida entre ejecución y resultado
+base sana para paralelizaciÃ³n futura
+separaciÃ³n nÃ­tida entre ejecuciÃ³n y resultado
 Costes
-más wiring en aplicación
-gestión explícita de claims
+mÃ¡s wiring en aplicaciÃ³n
+gestiÃ³n explÃ­cita de claims
 necesidad de mantener contadores y estados del run
 Resumen ejecutivo
 
-Se adopta un launch síncrono y secuencial que:
+Se adopta un launch sÃ­ncrono y secuencial que:
 
 crea un calculation_run
-resuelve población
+resuelve poblaciÃ³n
 expande a unidades
 filtra elegibilidad
 adquiere calculation_claim
-invoca un cálculo interno por unidad
+invoca un cÃ¡lculo interno por unidad
 actualiza contadores y estado del run
 registra mensajes del run
 
-Todo ello sin acoplar todavía el workflow al motor real de nómina.
+Todo ello sin acoplar todavÃ­a el workflow al motor real de nÃ³mina.
+
 <!-- END FILE: ADR-032-Payroll-Launch-Workflow-(síncrono, con-run-persistido-y-claims-por-unidad)-Estado.md -->
 
-<a name="file-adr-033-payrollobject-como-ra-z-metamodelo-can-nica-del-motor-n-mina-md"></a>
 
 ---
 
 # FILE: ADR-033-PayrollObject-como-raíz-metamodelo-canónica-del-motor-nómina.md
+<a name="file-adr-033-payrollobject-como-ra-z-metamodelo-can-nica-del-motor-n-mina-md"></a>
 
 <!-- BEGIN FILE: ADR-033-PayrollObject-como-raíz-metamodelo-canónica-del-motor-nómina.md -->
 
-ADR — PayrollObject como raíz metamodelo canónica del motor de nómina
+ADR â€” PayrollObject como raÃ­z metamodelo canÃ³nica del motor de nÃ³mina
 Estado
 
 Propuesto
 
 Contexto
 
-El diseño del motor de nómina de B4RRHH está empezando a consolidarse alrededor de varios tipos de elementos configurables del dominio de payroll.
+El diseÃ±o del motor de nÃ³mina de B4RRHH estÃ¡ empezando a consolidarse alrededor de varios tipos de elementos configurables del dominio de payroll.
 
-Inicialmente, la conversación se ha centrado en los conceptos de nómina, pero rápidamente han aparecido también otros candidatos naturales del mismo espacio funcional, como:
+Inicialmente, la conversaciÃ³n se ha centrado en los conceptos de nÃ³mina, pero rÃ¡pidamente han aparecido tambiÃ©n otros candidatos naturales del mismo espacio funcional, como:
 
 tablas
 constantes
 futuros objetos auxiliares o parametrizables del motor
 
-Si el modelo parte directamente de payrollConcept como raíz, existe el riesgo de:
+Si el modelo parte directamente de payrollConcept como raÃ­z, existe el riesgo de:
 
-sobredimensionar el concepto de nómina para que absorba responsabilidades que no le pertenecen
+sobredimensionar el concepto de nÃ³mina para que absorba responsabilidades que no le pertenecen
 acabar creando metamodelos paralelos inconsistentes para tablas, constantes y otros elementos
-mezclar identidad común con semántica específica de un subtipo concreto
+mezclar identidad comÃºn con semÃ¡ntica especÃ­fica de un subtipo concreto
 
-Por tanto, antes de profundizar en el modelado específico de los conceptos, es necesario fijar una raíz metamodelo común para todos los objetos configurables del motor.
+Por tanto, antes de profundizar en el modelado especÃ­fico de los conceptos, es necesario fijar una raÃ­z metamodelo comÃºn para todos los objetos configurables del motor.
 
-Decisión
+DecisiÃ³n
 
-Se introduce PayrollObject como raíz metamodelo canónica del motor de nómina.
+Se introduce PayrollObject como raÃ­z metamodelo canÃ³nica del motor de nÃ³mina.
 
-Todo elemento configurable del metamodelo de payroll deberá modelarse primero como un PayrollObject, con una identidad funcional común basada en business keys.
+Todo elemento configurable del metamodelo de payroll deberÃ¡ modelarse primero como un PayrollObject, con una identidad funcional comÃºn basada en business keys.
 
-La business key canónica de PayrollObject será:
+La business key canÃ³nica de PayrollObject serÃ¡:
 
 ruleSystemCode
 objectTypeCode
 objectCode
 
-PayrollObject actuará como raíz común para distintos tipos de objeto del dominio payroll, incluyendo al menos:
+PayrollObject actuarÃ¡ como raÃ­z comÃºn para distintos tipos de objeto del dominio payroll, incluyendo al menos:
 
 CONCEPT
 TABLE
 CONSTANT
 
-El atributo canónico de identidad del objeto será objectCode.
+El atributo canÃ³nico de identidad del objeto serÃ¡ objectCode.
 
-Cuando se trabaje dentro de un subtipo concreto, podrán usarse alias semánticos de contexto, por ejemplo:
+Cuando se trabaje dentro de un subtipo concreto, podrÃ¡n usarse alias semÃ¡nticos de contexto, por ejemplo:
 
 conceptCode
 tableCode
 constantCode
 
-Sin embargo, esos nombres no definen identidades alternativas ni nuevas business keys. Son únicamente proyecciones semánticas del mismo objectCode dentro del contexto de cada subtipo.
+Sin embargo, esos nombres no definen identidades alternativas ni nuevas business keys. Son Ãºnicamente proyecciones semÃ¡nticas del mismo objectCode dentro del contexto de cada subtipo.
 
 Consecuencias
 Positivas
-Se fija una raíz común clara para el metamodelo del motor de nómina.
+Se fija una raÃ­z comÃºn clara para el metamodelo del motor de nÃ³mina.
 Se evita construir un modelo demasiado centrado exclusivamente en conceptos.
-Se facilita la incorporación futura de tablas, constantes y otros objetos parametrizables sin rediseñar la base del modelo.
-Se mantiene coherencia con las reglas generales de B4RRHH, donde la identidad pública se expresa mediante business keys funcionales y no mediante IDs técnicos.
-Se separa correctamente la identidad común del objeto de la semántica específica de cada subtipo.
+Se facilita la incorporaciÃ³n futura de tablas, constantes y otros objetos parametrizables sin rediseÃ±ar la base del modelo.
+Se mantiene coherencia con las reglas generales de B4RRHH, donde la identidad pÃºblica se expresa mediante business keys funcionales y no mediante IDs tÃ©cnicos.
+Se separa correctamente la identidad comÃºn del objeto de la semÃ¡ntica especÃ­fica de cada subtipo.
 Costes o limitaciones
-Obliga a introducir una capa de abstracción adicional antes de modelar los subtipos concretos.
-Requiere disciplina para no contaminar el modelo raíz con propiedades específicas de PayrollConcept u otros tipos.
-Puede parecer más abstracto al inicio que arrancar directamente desde payrollConcept, aunque a medio plazo reduce deuda semántica.
+Obliga a introducir una capa de abstracciÃ³n adicional antes de modelar los subtipos concretos.
+Requiere disciplina para no contaminar el modelo raÃ­z con propiedades especÃ­ficas de PayrollConcept u otros tipos.
+Puede parecer mÃ¡s abstracto al inicio que arrancar directamente desde payrollConcept, aunque a medio plazo reduce deuda semÃ¡ntica.
 No objetivos
 
-Este ADR no define todavía:
+Este ADR no define todavÃ­a:
 
-las propiedades específicas de PayrollConcept
+las propiedades especÃ­ficas de PayrollConcept
 el modelo de versionado de los objetos de payroll
-la estrategia de cálculo
-la segmentación intrames
-las reglas de cálculo ni su representación
-la implementación física en base de datos o APIs
+la estrategia de cÃ¡lculo
+la segmentaciÃ³n intrames
+las reglas de cÃ¡lculo ni su representaciÃ³n
+la implementaciÃ³n fÃ­sica en base de datos o APIs
 
-Este ADR solo fija la raíz metamodelo común y su identidad funcional.
+Este ADR solo fija la raÃ­z metamodelo comÃºn y su identidad funcional.
 
 Resumen ejecutivo
 
-El motor de nómina de B4RRHH no se modelará partiendo directamente de conceptos aislados, sino desde una raíz metamodelo común llamada PayrollObject.
+El motor de nÃ³mina de B4RRHH no se modelarÃ¡ partiendo directamente de conceptos aislados, sino desde una raÃ­z metamodelo comÃºn llamada PayrollObject.
 
-La identidad funcional canónica será:
+La identidad funcional canÃ³nica serÃ¡:
 
 ruleSystemCode
 objectTypeCode
 objectCode
 
-Los subtipos como PayrollConcept, PayrollTable o PayrollConstant heredarán esa identidad común.
+Los subtipos como PayrollConcept, PayrollTable o PayrollConstant heredarÃ¡n esa identidad comÃºn.
 
-Los nombres como conceptCode o tableCode se consideran alias semánticos contextuales del objectCode, no nuevas business keys.
+Los nombres como conceptCode o tableCode se consideran alias semÃ¡nticos contextuales del objectCode, no nuevas business keys.
+
 <!-- END FILE: ADR-033-PayrollObject-como-raíz-metamodelo-canónica-del-motor-nómina.md -->
 
-<a name="file-adr-034-modelo-sem-ntico-de-payrollconcept-md"></a>
 
 ---
 
 # FILE: ADR-034-Modelo-semántico-de-PayrollConcept.md
+<a name="file-adr-034-modelo-sem-ntico-de-payrollconcept-md"></a>
 
 <!-- BEGIN FILE: ADR-034-Modelo-semántico-de-PayrollConcept.md -->
 
-# ADR-034 — Modelo semántico de `PayrollConcept`
+# ADR-034 â€” Modelo semÃ¡ntico de `PayrollConcept`
 
 ## Estado
 Propuesto
@@ -9379,56 +9411,56 @@ Propuesto
 
 ## Contexto
 
-El ADR-033 introduce `PayrollObject` como raíz metamodelo canónica del motor de nómina y fija su identidad funcional común mediante la business key:
+El ADR-033 introduce `PayrollObject` como raÃ­z metamodelo canÃ³nica del motor de nÃ³mina y fija su identidad funcional comÃºn mediante la business key:
 
 - `ruleSystemCode`
 - `objectTypeCode`
 - `objectCode`
 
-Dentro de ese metamodelo común, el tipo de objeto `CONCEPT` requiere un modelo semántico propio que permita distinguir claramente:
+Dentro de ese metamodelo comÃºn, el tipo de objeto `CONCEPT` requiere un modelo semÃ¡ntico propio que permita distinguir claramente:
 
-- la identidad común heredada de `PayrollObject`
-- la naturaleza estable del concepto de nómina
-- las características mutables o versionables (definidas en ADRs posteriores)
+- la identidad comÃºn heredada de `PayrollObject`
+- la naturaleza estable del concepto de nÃ³mina
+- las caracterÃ­sticas mutables o versionables (definidas en ADRs posteriores)
 
-Sin esta separación, existe el riesgo de mezclar en un mismo nivel:
+Sin esta separaciÃ³n, existe el riesgo de mezclar en un mismo nivel:
 
 - identidad
-- tipo de cálculo
-- presentación en recibo
-- parámetros de cálculo
+- tipo de cÃ¡lculo
+- presentaciÃ³n en recibo
+- parÃ¡metros de cÃ¡lculo
 - fuentes de datos
 - efectos funcionales
 
-Esto dificultaría la trazabilidad, la retroactividad y la comprensión funcional del sistema de nómina.
+Esto dificultarÃ­a la trazabilidad, la retroactividad y la comprensiÃ³n funcional del sistema de nÃ³mina.
 
 El proyecto B4RRHH sigue principios claros:
 
 - uso de business keys funcionales
-- separación entre identidad estable y detalle mutable
+- separaciÃ³n entre identidad estable y detalle mutable
 - naming orientado a negocio
-- evitar IDs técnicos en APIs
+- evitar IDs tÃ©cnicos en APIs
 
 ---
 
-## Decisión
+## DecisiÃ³n
 
-Se introduce `PayrollConcept` como subtipo semántico de `PayrollObject`.
+Se introduce `PayrollConcept` como subtipo semÃ¡ntico de `PayrollObject`.
 
 `PayrollConcept` **no define una business key propia**.  
-Hereda la identidad canónica de `PayrollObject`:
+Hereda la identidad canÃ³nica de `PayrollObject`:
 
 - `ruleSystemCode`
 - `objectTypeCode`
 - `objectCode`
 
-Cuando `objectTypeCode = CONCEPT`, `objectCode` podrá nombrarse como `conceptCode` a nivel semántico, sin crear una nueva identidad.
+Cuando `objectTypeCode = CONCEPT`, `objectCode` podrÃ¡ nombrarse como `conceptCode` a nivel semÃ¡ntico, sin crear una nueva identidad.
 
 ---
 
 ## Propiedades maestras de `PayrollConcept`
 
-Las siguientes propiedades definen la **naturaleza semántica estable** del concepto:
+Las siguientes propiedades definen la **naturaleza semÃ¡ntica estable** del concepto:
 
 - `conceptMnemonic`
 - `calculationType`
@@ -9438,18 +9470,18 @@ Las siguientes propiedades definen la **naturaleza semántica estable** del conc
 
 El modelo queda preparado para incorporar en el futuro:
 
-- `functionalSubnature` (clasificación funcional secundaria)
+- `functionalSubnature` (clasificaciÃ³n funcional secundaria)
 
 ---
 
 ## Significado de las propiedades
 
 ### `conceptMnemonic`
-Alias semántico legible del concepto.
+Alias semÃ¡ntico legible del concepto.
 
 Uso:
 - reglas
-- documentación
+- documentaciÃ³n
 - trazabilidad
 - debugging
 
@@ -9458,7 +9490,7 @@ No forma parte de la business key.
 ---
 
 ### `calculationType`
-Define la naturaleza del cálculo del concepto.
+Define la naturaleza del cÃ¡lculo del concepto.
 
 Ejemplos:
 
@@ -9471,7 +9503,7 @@ Ejemplos:
 ---
 
 ### `functionalNature`
-Define el papel funcional dentro de la nómina.
+Define el papel funcional dentro de la nÃ³mina.
 
 Valores iniciales:
 
@@ -9485,22 +9517,22 @@ Valores iniciales:
 ---
 
 ### `resultCompositionMode`
-Define cómo se combinan múltiples resultados parciales del concepto dentro de una nómina.
+Define cÃ³mo se combinan mÃºltiples resultados parciales del concepto dentro de una nÃ³mina.
 
-Evita asumir que siempre debe existir una única línea final.
+Evita asumir que siempre debe existir una Ãºnica lÃ­nea final.
 
 ---
 
 ### `payslipOrderCode`
 
-Define la posición lógica en el recibo.
+Define la posiciÃ³n lÃ³gica en el recibo.
 
 Reglas:
 
-- `NULL` → no se muestra en recibo
-- valor informado → se muestra
+- `NULL` â†’ no se muestra en recibo
+- valor informado â†’ se muestra
 
-Ordenación:
+OrdenaciÃ³n:
 
 
 payslipOrderCode + objectCode
@@ -9510,21 +9542,21 @@ Sustituye conceptualmente a un `visibleInPayslip`.
 
 ---
 
-## Regla crítica de inmutabilidad
+## Regla crÃ­tica de inmutabilidad
 
 `calculationType` es **inmutable**.
 
-Si un concepto cambia su naturaleza de cálculo:
+Si un concepto cambia su naturaleza de cÃ¡lculo:
 
-➡️ **NO se versiona**  
-➡️ **Se crea un concepto nuevo**
+âž¡ï¸ **NO se versiona**  
+âž¡ï¸ **Se crea un concepto nuevo**
 
 Motivo:
 
-- coherencia histórica
+- coherencia histÃ³rica
 - retroactividad fiable
 - trazabilidad clara
-- comprensión funcional
+- comprensiÃ³n funcional
 
 ---
 
@@ -9532,10 +9564,10 @@ Motivo:
 
 ### Positivas
 
-- separación clara entre identidad y semántica
-- modelo más robusto frente a cambios
+- separaciÃ³n clara entre identidad y semÃ¡ntica
+- modelo mÃ¡s robusto frente a cambios
 - mejor trazabilidad y retro
-- base sólida para evolución futura
+- base sÃ³lida para evoluciÃ³n futura
 - coherencia con arquitectura B4RRHH
 
 ---
@@ -9544,7 +9576,7 @@ Motivo:
 
 - algunos cambios requieren nuevos conceptos
 - mayor disciplina de modelado
-- separación más estricta entre semántica y parametrización
+- separaciÃ³n mÃ¡s estricta entre semÃ¡ntica y parametrizaciÃ³n
 
 ---
 
@@ -9553,19 +9585,19 @@ Motivo:
 Este ADR **NO define**:
 
 - versionado de conceptos
-- reglas de cálculo
-- segmentación intrames
+- reglas de cÃ¡lculo
+- segmentaciÃ³n intrames
 - relaciones con tablas o constantes
-- implementación en BBDD
+- implementaciÃ³n en BBDD
 - APIs
 
 ---
 
 ## Resumen ejecutivo
 
-`PayrollConcept` es un subtipo semántico de `PayrollObject` sin identidad propia adicional.
+`PayrollConcept` es un subtipo semÃ¡ntico de `PayrollObject` sin identidad propia adicional.
 
-Su núcleo estable está formado por:
+Su nÃºcleo estable estÃ¡ formado por:
 
 - `conceptMnemonic`
 - `calculationType`
@@ -9575,18 +9607,19 @@ Su núcleo estable está formado por:
 
 `calculationType` es inmutable.
 
-Los cambios en la naturaleza del concepto implican la creación de un nuevo concepto.
+Los cambios en la naturaleza del concepto implican la creaciÃ³n de un nuevo concepto.
+
 <!-- END FILE: ADR-034-Modelo-semántico-de-PayrollConcept.md -->
 
-<a name="file-adr-036-tipolog-as-can-nicas-de-c-lculo-de-payrollconcept-md"></a>
 
 ---
 
 # FILE: ADR-036-Tipologías-canónicas-de-cálculo-de-payrollconcept.md
+<a name="file-adr-036-tipolog-as-can-nicas-de-c-lculo-de-payrollconcept-md"></a>
 
 <!-- BEGIN FILE: ADR-036-Tipologías-canónicas-de-cálculo-de-payrollconcept.md -->
 
-# ADR-036 — Tipologías canónicas de cálculo de `PayrollConcept`
+# ADR-036 â€” TipologÃ­as canÃ³nicas de cÃ¡lculo de `PayrollConcept`
 
 ## Estado
 Aceptado
@@ -9595,50 +9628,50 @@ Aceptado
 
 ## Contexto
 
-El proyecto B4RRHH define un motor de nómina basado en un metamodelo de objetos (`PayrollObject`), donde los conceptos de nómina (`PayrollConcept`) representan unidades funcionales de cálculo dentro de una nómina.
+El proyecto B4RRHH define un motor de nÃ³mina basado en un metamodelo de objetos (`PayrollObject`), donde los conceptos de nÃ³mina (`PayrollConcept`) representan unidades funcionales de cÃ¡lculo dentro de una nÃ³mina.
 
-Una de las decisiones clave del motor es evitar implementar lógica específica por concepto mediante código, y en su lugar permitir que los conceptos se configuren a partir de un conjunto limitado de tipologías de cálculo y reglas de composición.
+Una de las decisiones clave del motor es evitar implementar lÃ³gica especÃ­fica por concepto mediante cÃ³digo, y en su lugar permitir que los conceptos se configuren a partir de un conjunto limitado de tipologÃ­as de cÃ¡lculo y reglas de composiciÃ³n.
 
-Sin una tipología clara:
+Sin una tipologÃ­a clara:
 
-- el sistema tendería a crecer mediante lógica específica por concepto;
-- se perdería la capacidad de configuración;
-- aumentaría la deuda técnica;
-- se dificultaría la trazabilidad y la retroactividad.
+- el sistema tenderÃ­a a crecer mediante lÃ³gica especÃ­fica por concepto;
+- se perderÃ­a la capacidad de configuraciÃ³n;
+- aumentarÃ­a la deuda tÃ©cnica;
+- se dificultarÃ­a la trazabilidad y la retroactividad.
 
-Por tanto, es necesario definir un conjunto reducido, estable y expresivo de **tipos de cálculo canónicos** que cubran la mayoría de casos reales sin inflar el modelo.
+Por tanto, es necesario definir un conjunto reducido, estable y expresivo de **tipos de cÃ¡lculo canÃ³nicos** que cubran la mayorÃ­a de casos reales sin inflar el modelo.
 
 ---
 
-## Decisión
+## DecisiÃ³n
 
-Se definen las siguientes tipologías canónicas de cálculo para `PayrollConcept`:
+Se definen las siguientes tipologÃ­as canÃ³nicas de cÃ¡lculo para `PayrollConcept`:
 
 - `DIRECT_AMOUNT`
 - `RATE_BY_QUANTITY`
 - `PERCENTAGE`
 - `AGGREGATE`
 
-Cada tipo representa una **forma fundamental de cálculo**, no un caso de negocio concreto.
+Cada tipo representa una **forma fundamental de cÃ¡lculo**, no un caso de negocio concreto.
 
 ---
 
 ## Principio rector
 
-El tipo de cálculo describe el **operador principal** del concepto.
+El tipo de cÃ¡lculo describe el **operador principal** del concepto.
 
 No describe:
 - el origen de los datos;
-- la semántica concreta del concepto (ej. “salario base”, “IRPF”);
-- ni la forma específica en que se obtienen sus operandos.
+- la semÃ¡ntica concreta del concepto (ej. â€œsalario baseâ€, â€œIRPFâ€);
+- ni la forma especÃ­fica en que se obtienen sus operandos.
 
 ---
 
-## Tipologías definidas
+## TipologÃ­as definidas
 
 ### 1. `DIRECT_AMOUNT`
 
-#### Definición
+#### DefiniciÃ³n
 El resultado del concepto es un importe directo ya resuelto.
 
 #### Forma general
@@ -9646,185 +9679,185 @@ El resultado del concepto es un importe directo ya resuelto.
 resultado = amount
 
 
-#### Características
+#### CaracterÃ­sticas
 - No depende de otros operandos estructurados.
 - Representa un valor final ya calculado o informado.
 
 #### Ejemplos
 - ajuste manual
 - plus fijo mensual
-- cuantía fija por tabla
-- regularización directa
+- cuantÃ­a fija por tabla
+- regularizaciÃ³n directa
 
 ---
 
 ### 2. `RATE_BY_QUANTITY`
 
-#### Definición
+#### DefiniciÃ³n
 El resultado del concepto se obtiene como el producto de una cantidad por un precio.
 
 #### Forma general
 
-resultado = quantity × rate
+resultado = quantity Ã— rate
 
 
-#### Características
-- Generaliza múltiples casos de negocio:
-  - días × precio día
-  - horas × precio hora
-  - unidades × tarifa
-- No define cómo se obtienen `quantity` ni `rate`.
+#### CaracterÃ­sticas
+- Generaliza mÃºltiples casos de negocio:
+  - dÃ­as Ã— precio dÃ­a
+  - horas Ã— precio hora
+  - unidades Ã— tarifa
+- No define cÃ³mo se obtienen `quantity` ni `rate`.
 
 #### Ejemplos
 - salario base diario
 - horas extra
-- plus por día trabajado
+- plus por dÃ­a trabajado
 - dietas
 - kilometraje
 
 #### Nota importante
-Conceptos tradicionalmente considerados como “basados en presencia” se modelan como casos particulares de este tipo, donde la cantidad representa días computables.
+Conceptos tradicionalmente considerados como â€œbasados en presenciaâ€ se modelan como casos particulares de este tipo, donde la cantidad representa dÃ­as computables.
 
 ---
 
 ### 3. `PERCENTAGE`
 
-#### Definición
+#### DefiniciÃ³n
 El resultado del concepto se obtiene aplicando un porcentaje sobre una base.
 
 #### Forma general
 
-resultado = base × percentage
+resultado = base Ã— percentage
 
 
-#### Características
+#### CaracterÃ­sticas
 - Separa claramente la base del porcentaje.
-- No define cómo se obtiene el porcentaje.
+- No define cÃ³mo se obtiene el porcentaje.
 
 #### Ejemplos
-- cotización a la seguridad social
+- cotizaciÃ³n a la seguridad social
 - IRPF
 - complementos porcentuales
 
 #### Nota importante
-Incluso cuando el porcentaje se obtiene mediante lógica compleja (ej. IRPF), el concepto sigue perteneciendo a esta tipología.  
-La complejidad se desplaza a la obtención del porcentaje, no al tipo de cálculo.
+Incluso cuando el porcentaje se obtiene mediante lÃ³gica compleja (ej. IRPF), el concepto sigue perteneciendo a esta tipologÃ­a.  
+La complejidad se desplaza a la obtenciÃ³n del porcentaje, no al tipo de cÃ¡lculo.
 
 ---
 
 ### 4. `AGGREGATE`
 
-#### Definición
+#### DefiniciÃ³n
 El resultado del concepto se obtiene combinando resultados de otros conceptos ya calculados, pudiendo invertir el signo de cada contribuyente individualmente.
 
 #### Forma general
 
-resultado = SUM(feed_i × sign_i)
+resultado = SUM(feed_i Ã— sign_i)
 
-donde `sign_i` es +1 si la relación de feed tiene `invert_sign = false`, y −1 si tiene `invert_sign = true`.
+donde `sign_i` es +1 si la relaciÃ³n de feed tiene `invert_sign = false`, y âˆ’1 si tiene `invert_sign = true`.
 
-#### El flag `invert_sign` en la relación de feed
+#### El flag `invert_sign` en la relaciÃ³n de feed
 
-El flag `invert_sign` reside en la **relación de feed** (no en el concepto fuente). Esto permite que un mismo concepto contribuya positivamente a un agregado y negativamente a otro:
+El flag `invert_sign` reside en la **relaciÃ³n de feed** (no en el concepto fuente). Esto permite que un mismo concepto contribuya positivamente a un agregado y negativamente a otro:
 
 | Concepto fuente       | Feeds aggregate | `invert_sign` | Efecto         |
 |-----------------------|-----------------|---------------|----------------|
 | 101 SALARIO_BASE      | 970             | false         | + importe      |
 | 101 SALARIO_BASE      | 990             | false         | + importe      |
-| concepto deducción X  | 980             | false         | + importe      |
-| concepto deducción X  | 990             | true          | − importe      |
+| concepto deducciÃ³n X  | 980             | false         | + importe      |
+| concepto deducciÃ³n X  | 990             | true          | âˆ’ importe      |
 
 #### Modelo de grafo plano (flat graph)
 
-Los conceptos hoja alimentan **directamente** tanto su agregado lateral (devengos o deducciones) como el agregado de líquido neto (990). El concepto 990 **nunca depende de 970 ni de 980**; agrega los mismos conceptos hoja que ellos.
+Los conceptos hoja alimentan **directamente** tanto su agregado lateral (devengos o deducciones) como el agregado de lÃ­quido neto (990). El concepto 990 **nunca depende de 970 ni de 980**; agrega los mismos conceptos hoja que ellos.
 
 ```
-EARNING leaf ──────────►  970 (invert=false)
-                    └────►  990 (invert=false)
+EARNING leaf â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–º  970 (invert=false)
+                    â””â”€â”€â”€â”€â–º  990 (invert=false)
 
-DEDUCTION leaf ─────────►  980 (invert=false)
-                    └────►  990 (invert=true)
+DEDUCTION leaf â”€â”€â”€â”€â”€â”€â”€â”€â”€â–º  980 (invert=false)
+                    â””â”€â”€â”€â”€â–º  990 (invert=true)
 ```
 
-Esto evita dependencias en cascada entre agregados y garantiza que el grafo de cálculo sea siempre un DAG sin nodos intermedios de agregado encadenados.
+Esto evita dependencias en cascada entre agregados y garantiza que el grafo de cÃ¡lculo sea siempre un DAG sin nodos intermedios de agregado encadenados.
 
-#### Activación explícita
+#### ActivaciÃ³n explÃ­cita
 
-Los conceptos AGGREGATE **no se activan automáticamente** por el hecho de que sus fuentes estén activadas. Requieren una fila explícita en `payroll_object_activation`, igual que el resto de conceptos.
+Los conceptos AGGREGATE **no se activan automÃ¡ticamente** por el hecho de que sus fuentes estÃ©n activadas. Requieren una fila explÃ­cita en `payroll_object_activation`, igual que el resto de conceptos.
 
-#### Características
+#### CaracterÃ­sticas
 - No opera sobre datos primarios, sino sobre resultados previos.
-- Representa composición o acumulación con signo controlado a nivel de relación.
+- Representa composiciÃ³n o acumulaciÃ³n con signo controlado a nivel de relaciÃ³n.
 
 #### Ejemplos
 - total devengos (970)
 - total deducciones (980)
-- líquido a pagar / neto (990)
-- bases de cotización
+- lÃ­quido a pagar / neto (990)
+- bases de cotizaciÃ³n
 - bases fiscales
 
 #### Nota importante
-La estrategia de agregación con signo queda definida aquí. La forma de registrar las relaciones de feed y persistirlas se trata en los ADRs de infraestructura del motor de nómina.
+La estrategia de agregaciÃ³n con signo queda definida aquÃ­. La forma de registrar las relaciones de feed y persistirlas se trata en los ADRs de infraestructura del motor de nÃ³mina.
 
 ---
 
 ## `FunctionalNature` para conceptos agregados totales
 
-Los conceptos de tipo `AGGREGATE` que representan totales de nómina reciben valores específicos en el enum `FunctionalNature` para que el frontend pueda distinguirlos de las líneas de detalle al renderizar el recibo de salario.
+Los conceptos de tipo `AGGREGATE` que representan totales de nÃ³mina reciben valores especÃ­ficos en el enum `FunctionalNature` para que el frontend pueda distinguirlos de las lÃ­neas de detalle al renderizar el recibo de salario.
 
-Se añaden los siguientes valores al enum:
+Se aÃ±aden los siguientes valores al enum:
 
-| Valor              | Semántica                                      | Concepto típico |
+| Valor              | SemÃ¡ntica                                      | Concepto tÃ­pico |
 |--------------------|------------------------------------------------|-----------------|
 | `TOTAL_EARNING`    | Suma de todos los devengos                     | 970             |
 | `TOTAL_DEDUCTION`  | Suma de todas las deducciones                  | 980             |
-| `NET_PAY`          | Líquido a pagar (devengos − deducciones)       | 990             |
+| `NET_PAY`          | LÃ­quido a pagar (devengos âˆ’ deducciones)       | 990             |
 
 Estos tres valores coexisten con los valores preexistentes (`EARNING`, `DEDUCTION`, `BASE`, `INFORMATIONAL`).
 
-La `FunctionalNature` es un atributo de presentación/semántica del concepto; no altera la lógica de cálculo. Un concepto con `calculationType = AGGREGATE` y `functionalNature = NET_PAY` ejecuta exactamente la misma operación `SUM(feed_i × sign_i)` que cualquier otro AGGREGATE.
+La `FunctionalNature` es un atributo de presentaciÃ³n/semÃ¡ntica del concepto; no altera la lÃ³gica de cÃ¡lculo. Un concepto con `calculationType = AGGREGATE` y `functionalNature = NET_PAY` ejecuta exactamente la misma operaciÃ³n `SUM(feed_i Ã— sign_i)` que cualquier otro AGGREGATE.
 
 ---
 
-## Reglas de diseño
+## Reglas de diseÃ±o
 
-### 1. Minimalismo tipológico
+### 1. Minimalismo tipolÃ³gico
 
-No se crearán nuevos tipos de cálculo por cada caso de negocio frecuente.
+No se crearÃ¡n nuevos tipos de cÃ¡lculo por cada caso de negocio frecuente.
 
 Ejemplo descartado:
 - `PRESENCE_BASED`
 
 Motivo:
-- no representa una operación distinta;
-- describe una forma de obtener un operando (`quantity`), no un tipo de cálculo.
+- no representa una operaciÃ³n distinta;
+- describe una forma de obtener un operando (`quantity`), no un tipo de cÃ¡lculo.
 
 ---
 
-### 2. Separación de responsabilidades
+### 2. SeparaciÃ³n de responsabilidades
 
 Se separan claramente:
 
-- tipo de cálculo → define la operación
-- resolución de operandos → define de dónde salen los datos
+- tipo de cÃ¡lculo â†’ define la operaciÃ³n
+- resoluciÃ³n de operandos â†’ define de dÃ³nde salen los datos
 
-Esta separación es fundamental para:
+Esta separaciÃ³n es fundamental para:
 
-- evitar explosión de tipos;
-- permitir configuración;
-- facilitar reutilización.
+- evitar explosiÃ³n de tipos;
+- permitir configuraciÃ³n;
+- facilitar reutilizaciÃ³n.
 
 ---
 
 ### 3. Composicionalidad
 
-Los tipos de cálculo deben permitir que los operandos provengan de resultados de otros conceptos.
+Los tipos de cÃ¡lculo deben permitir que los operandos provengan de resultados de otros conceptos.
 
 Esto habilita:
 
-- conceptos técnicos intermedios;
-- cadenas de cálculo reutilizables;
-- construcción incremental del resultado de nómina.
+- conceptos tÃ©cnicos intermedios;
+- cadenas de cÃ¡lculo reutilizables;
+- construcciÃ³n incremental del resultado de nÃ³mina.
 
 ---
 
@@ -9833,13 +9866,13 @@ Esto habilita:
 El `calculationType` de un `PayrollConcept` es inmutable.
 
 #### Consecuencia
-Si un concepto cambia su naturaleza de cálculo:
+Si un concepto cambia su naturaleza de cÃ¡lculo:
 - no se versiona;
 - se crea un nuevo concepto.
 
-#### Motivación
-- preservar coherencia histórica;
-- evitar ambigüedad semántica;
+#### MotivaciÃ³n
+- preservar coherencia histÃ³rica;
+- evitar ambigÃ¼edad semÃ¡ntica;
 - simplificar retroactividad.
 
 ---
@@ -9849,18 +9882,18 @@ Si un concepto cambia su naturaleza de cálculo:
 ### Positivas
 
 - modelo estable y predecible;
-- reducción drástica de lógica específica por concepto;
-- alta capacidad de configuración;
-- base sólida para evolución del motor;
-- alineación con arquitectura hexagonal y metamodelo del proyecto.
+- reducciÃ³n drÃ¡stica de lÃ³gica especÃ­fica por concepto;
+- alta capacidad de configuraciÃ³n;
+- base sÃ³lida para evoluciÃ³n del motor;
+- alineaciÃ³n con arquitectura hexagonal y metamodelo del proyecto.
 
 ---
 
 ### Costes
 
 - necesidad de modelar correctamente operandos y sources;
-- mayor esfuerzo inicial de diseño;
-- algunos casos complejos requerirán conceptos técnicos adicionales en lugar de lógica directa.
+- mayor esfuerzo inicial de diseÃ±o;
+- algunos casos complejos requerirÃ¡n conceptos tÃ©cnicos adicionales en lugar de lÃ³gica directa.
 
 ---
 
@@ -9868,44 +9901,45 @@ Si un concepto cambia su naturaleza de cálculo:
 
 Este ADR no define:
 
-- cómo se resuelven los operandos (`sources`);
-- cómo se versionan las reglas;
-- el orden de ejecución de los conceptos;
+- cÃ³mo se resuelven los operandos (`sources`);
+- cÃ³mo se versionan las reglas;
+- el orden de ejecuciÃ³n de los conceptos;
 - el modelo de persistencia;
-- la API de configuración.
+- la API de configuraciÃ³n.
 
 ---
 
 ## Resumen ejecutivo
 
-Se establece un conjunto mínimo y completo de tipologías de cálculo para `PayrollConcept`:
+Se establece un conjunto mÃ­nimo y completo de tipologÃ­as de cÃ¡lculo para `PayrollConcept`:
 
 - `DIRECT_AMOUNT`
 - `RATE_BY_QUANTITY`
 - `PERCENTAGE`
 - `AGGREGATE`
 
-Estas tipologías representan las formas fundamentales de cálculo del motor y permiten modelar la mayoría de los conceptos de nómina mediante configuración, sin necesidad de lógica específica por concepto.
+Estas tipologÃ­as representan las formas fundamentales de cÃ¡lculo del motor y permiten modelar la mayorÃ­a de los conceptos de nÃ³mina mediante configuraciÃ³n, sin necesidad de lÃ³gica especÃ­fica por concepto.
 
-El modelo se apoya en la separación entre:
+El modelo se apoya en la separaciÃ³n entre:
 
-- operación (tipo de cálculo)
-- resolución de datos (operandos)
+- operaciÃ³n (tipo de cÃ¡lculo)
+- resoluciÃ³n de datos (operandos)
 
 lo que habilita un motor flexible, composicional y extensible.
+
 <!-- END FILE: ADR-036-Tipologías-canónicas-de-cálculo-de-payrollconcept.md -->
 
-<a name="file-adr-037-sources-y-resoluci-n-de-operandos-en-payrollconcept-md"></a>
 
 ---
 
 # FILE: ADR-037-Sources-y-resolución-de-operandos-en-PayrollConcept.md
+<a name="file-adr-037-sources-y-resoluci-n-de-operandos-en-payrollconcept-md"></a>
 
 <!-- BEGIN FILE: ADR-037-Sources-y-resolución-de-operandos-en-PayrollConcept.md -->
 
-Vamos a por el siguiente bloque clave. Este ADR es el que convierte las tipologías en motor real configurable.
+Vamos a por el siguiente bloque clave. Este ADR es el que convierte las tipologÃ­as en motor real configurable.
 
-# ADR-037 — Sources y resolución de operandos en `PayrollConcept`
+# ADR-037 â€” Sources y resoluciÃ³n de operandos en `PayrollConcept`
 
 ## Estado
 Propuesto
@@ -9914,50 +9948,50 @@ Propuesto
 
 ## Contexto
 
-El ADR-036 define las tipologías canónicas de cálculo de `PayrollConcept`:
+El ADR-036 define las tipologÃ­as canÃ³nicas de cÃ¡lculo de `PayrollConcept`:
 
 - `DIRECT_AMOUNT`
 - `RATE_BY_QUANTITY`
 - `PERCENTAGE`
 - `AGGREGATE`
 
-Estas tipologías describen únicamente la **forma del cálculo**, pero no especifican:
+Estas tipologÃ­as describen Ãºnicamente la **forma del cÃ¡lculo**, pero no especifican:
 
-- de dónde provienen los valores necesarios;
-- cómo se resuelven los operandos en tiempo de ejecución.
+- de dÃ³nde provienen los valores necesarios;
+- cÃ³mo se resuelven los operandos en tiempo de ejecuciÃ³n.
 
-Sin una capa explícita de resolución de operandos:
+Sin una capa explÃ­cita de resoluciÃ³n de operandos:
 
-- el sistema tendería a introducir lógica específica por concepto;
-- se perdería configurabilidad;
-- se dificultaría la reutilización;
-- aumentaría el acoplamiento entre cálculo y origen de datos.
+- el sistema tenderÃ­a a introducir lÃ³gica especÃ­fica por concepto;
+- se perderÃ­a configurabilidad;
+- se dificultarÃ­a la reutilizaciÃ³n;
+- aumentarÃ­a el acoplamiento entre cÃ¡lculo y origen de datos.
 
 Por tanto, es necesario definir un modelo claro de **sources de operandos** que permita desacoplar completamente:
 
-- la operación (tipo de cálculo)
+- la operaciÃ³n (tipo de cÃ¡lculo)
 - el origen de los datos
 
 ---
 
-## Decisión
+## DecisiÃ³n
 
-Se introduce el concepto de **source de operando**, que define el origen del valor utilizado en un cálculo.
+Se introduce el concepto de **source de operando**, que define el origen del valor utilizado en un cÃ¡lculo.
 
 Cada operando de un `PayrollConcept` se resuelve mediante:
 
 - un `sourceType`
-- una referencia asociada (según el tipo)
+- una referencia asociada (segÃºn el tipo)
 
 ---
 
 ## Principio rector
 
-Un operando no contiene un valor directo, sino una **instrucción de resolución**.
+Un operando no contiene un valor directo, sino una **instrucciÃ³n de resoluciÃ³n**.
 
 ---
 
-## Sources canónicos iniciales
+## Sources canÃ³nicos iniciales
 
 Se definen los siguientes tipos de source:
 
@@ -9971,19 +10005,19 @@ Se definen los siguientes tipos de source:
 
 ---
 
-## Definición de cada source
+## DefiniciÃ³n de cada source
 
 ### 1. `INPUT`
 
-#### Descripción
-Valor informado externamente para el cálculo.
+#### DescripciÃ³n
+Valor informado externamente para el cÃ¡lculo.
 
 #### Ejemplos
 - horas extra introducidas
 - unidades manuales
 - importes excepcionales
 
-#### Uso típico
+#### Uso tÃ­pico
 - `quantity`
 - `amount`
 
@@ -9991,15 +10025,15 @@ Valor informado externamente para el cálculo.
 
 ### 2. `CONSTANT`
 
-#### Descripción
+#### DescripciÃ³n
 Valor fijo parametrizado en el sistema.
 
 #### Ejemplos
 - importe fijo mensual
 - porcentaje fijo
-- divisor estándar (ej. 30)
+- divisor estÃ¡ndar (ej. 30)
 
-#### Uso típico
+#### Uso tÃ­pico
 - `rate`
 - `percentage`
 - `amount`
@@ -10008,15 +10042,15 @@ Valor fijo parametrizado en el sistema.
 
 ### 3. `TABLE`
 
-#### Descripción
+#### DescripciÃ³n
 Valor obtenido a partir de una tabla parametrizada.
 
 #### Ejemplos
-- salario por categoría
+- salario por categorÃ­a
 - tarifa por hora
 - porcentaje por tramo
 
-#### Uso típico
+#### Uso tÃ­pico
 - `rate`
 - `percentage`
 - `amount`
@@ -10025,7 +10059,7 @@ Valor obtenido a partir de una tabla parametrizada.
 
 ### 4. `CONCEPT`
 
-#### Descripción
+#### DescripciÃ³n
 Valor obtenido a partir del resultado de otro `PayrollConcept`.
 
 #### Ejemplos
@@ -10034,63 +10068,63 @@ Valor obtenido a partir del resultado de otro `PayrollConcept`.
 - `DIAS_PRESENCIA`
 - `PRECIO_DIA`
 
-#### Uso típico
+#### Uso tÃ­pico
 - cualquier operando
 
 #### Nota clave
-Este source habilita la **composición del motor**, permitiendo construir cadenas de cálculo reutilizables.
+Este source habilita la **composiciÃ³n del motor**, permitiendo construir cadenas de cÃ¡lculo reutilizables.
 
 ---
 
 ### 5. `EMPLOYEE_DATA`
 
-#### Descripción
+#### DescripciÃ³n
 Dato estructural del empleado.
 
 #### Ejemplos
 - porcentaje de jornada
-- categoría profesional
+- categorÃ­a profesional
 - tipo de contrato
 
-#### Uso típico
+#### Uso tÃ­pico
 - inputs para tablas
-- cálculo de valores derivados
+- cÃ¡lculo de valores derivados
 
 ---
 
 ### 6. `PERIOD_DATA`
 
-#### Descripción
-Dato asociado al período completo de cálculo.
+#### DescripciÃ³n
+Dato asociado al perÃ­odo completo de cÃ¡lculo.
 
 #### Ejemplos
-- días del mes
-- año/mes
-- número de pagas
+- dÃ­as del mes
+- aÃ±o/mes
+- nÃºmero de pagas
 
-#### Uso típico
+#### Uso tÃ­pico
 - `quantity`
-- cálculos base
+- cÃ¡lculos base
 
 ---
 
 ### 7. `SEGMENT_DATA`
 
-#### Descripción
-Dato asociado a un tramo homogéneo de cálculo dentro del período.
+#### DescripciÃ³n
+Dato asociado a un tramo homogÃ©neo de cÃ¡lculo dentro del perÃ­odo.
 
 #### Ejemplos
-- días del segmento
+- dÃ­as del segmento
 - jornada vigente en el segmento
 - condiciones activas en el tramo
 
-#### Uso típico
+#### Uso tÃ­pico
 - `quantity`
-- cálculos intraperiodo
+- cÃ¡lculos intraperiodo
 
 ---
 
-## Resolución de operandos por tipo de cálculo
+## ResoluciÃ³n de operandos por tipo de cÃ¡lculo
 
 ---
 
@@ -10150,13 +10184,13 @@ Dato asociado a un tramo homogéneo de cálculo dentro del período.
 - `membership`
 
 #### Nota
-La resolución de miembros no se modela como source, sino mediante estrategias de agregación definidas en ADR posterior.
+La resoluciÃ³n de miembros no se modela como source, sino mediante estrategias de agregaciÃ³n definidas en ADR posterior.
 
 ---
 
 ## Regla fundamental
 
-Los tipos de cálculo **no contienen lógica de negocio específica**, sino que delegan completamente la obtención de valores en los sources.
+Los tipos de cÃ¡lculo **no contienen lÃ³gica de negocio especÃ­fica**, sino que delegan completamente la obtenciÃ³n de valores en los sources.
 
 ---
 
@@ -10164,9 +10198,9 @@ Los tipos de cálculo **no contienen lógica de negocio específica**, sino que 
 
 El uso de `CONCEPT` como source permite:
 
-- construir conceptos técnicos reutilizables;
-- encadenar cálculos;
-- separar lógica compleja en piezas simples;
+- construir conceptos tÃ©cnicos reutilizables;
+- encadenar cÃ¡lculos;
+- separar lÃ³gica compleja en piezas simples;
 - mejorar trazabilidad y debugging.
 
 ---
@@ -10178,7 +10212,7 @@ El uso de `CONCEPT` como source permite:
 
 quantity = CONCEPT(DIAS_PRESENCIA)
 rate = CONCEPT(PRECIO_DIA)
-resultado = quantity × rate
+resultado = quantity Ã— rate
 
 
 ---
@@ -10188,7 +10222,7 @@ resultado = quantity × rate
 
 base = CONCEPT(BASE_IRPF)
 percentage = CONCEPT(TIPO_IRPF_EFECTIVO)
-resultado = base × percentage
+resultado = base Ã— percentage
 
 
 ---
@@ -10197,17 +10231,17 @@ resultado = base × percentage
 
 ### Positivas
 
-- desacoplamiento total entre cálculo y origen de datos;
+- desacoplamiento total entre cÃ¡lculo y origen de datos;
 - alta configurabilidad;
-- reutilización de lógica;
-- facilidad para introducir conceptos técnicos;
+- reutilizaciÃ³n de lÃ³gica;
+- facilidad para introducir conceptos tÃ©cnicos;
 - base para motor declarativo.
 
 ---
 
 ### Costes
 
-- necesidad de definir correctamente catálogo de conceptos técnicos;
+- necesidad de definir correctamente catÃ¡logo de conceptos tÃ©cnicos;
 - mayor complejidad conceptual inicial;
 - necesidad de validaciones fuertes entre tipos y sources.
 
@@ -10217,35 +10251,36 @@ resultado = base × percentage
 
 Este ADR no define:
 
-- modelo físico de persistencia de sources;
-- resolución concreta de tablas;
-- implementación de motor de cálculo;
-- orden de ejecución de conceptos;
-- versionado de parámetros.
+- modelo fÃ­sico de persistencia de sources;
+- resoluciÃ³n concreta de tablas;
+- implementaciÃ³n de motor de cÃ¡lculo;
+- orden de ejecuciÃ³n de conceptos;
+- versionado de parÃ¡metros.
 
 ---
 
 ## Resumen ejecutivo
 
-Se define un modelo de resolución de operandos basado en sources tipados.
+Se define un modelo de resoluciÃ³n de operandos basado en sources tipados.
 
 Cada operando de un concepto se resuelve mediante un source, desacoplando completamente:
 
-- el tipo de cálculo
+- el tipo de cÃ¡lculo
 - el origen de los datos
 
 Este modelo permite construir un motor composicional, reutilizable y altamente con
+
 <!-- END FILE: ADR-037-Sources-y-resolución-de-operandos-en-PayrollConcept.md -->
 
-<a name="file-adr-038-estrategias-de-agregaci-n-y-relaciones-de-alimentaci-n-en-payrollconcept-md"></a>
 
 ---
 
 # FILE: ADR-038-Estrategias-de-agregación-y-relaciones-de-alimentación-en-PayrollConcept.md
+<a name="file-adr-038-estrategias-de-agregaci-n-y-relaciones-de-alimentaci-n-en-payrollconcept-md"></a>
 
 <!-- BEGIN FILE: ADR-038-Estrategias-de-agregación-y-relaciones-de-alimentación-en-PayrollConcept.md -->
 
-# ADR-038 — Estrategias de agregación y relaciones de alimentación en `PayrollConcept`
+# ADR-038 â€” Estrategias de agregaciÃ³n y relaciones de alimentaciÃ³n en `PayrollConcept`
 
 ## Estado
 Propuesto
@@ -10254,38 +10289,38 @@ Propuesto
 
 ## Contexto
 
-El ADR-036 define las tipologías canónicas de cálculo:
+El ADR-036 define las tipologÃ­as canÃ³nicas de cÃ¡lculo:
 
 - `DIRECT_AMOUNT`
 - `RATE_BY_QUANTITY`
 - `PERCENTAGE`
 - `AGGREGATE`
 
-El ADR-037 define la resolución de operandos mediante sources tipados.
+El ADR-037 define la resoluciÃ³n de operandos mediante sources tipados.
 
-Sin embargo, el tipo `AGGREGATE` requiere una definición adicional:
+Sin embargo, el tipo `AGGREGATE` requiere una definiciÃ³n adicional:
 
-- cómo se determinan los conceptos que participan en el agregado;
-- dónde reside la responsabilidad de dicha pertenencia;
-- cómo evitar modelos frágiles basados en listas manuales.
+- cÃ³mo se determinan los conceptos que participan en el agregado;
+- dÃ³nde reside la responsabilidad de dicha pertenencia;
+- cÃ³mo evitar modelos frÃ¡giles basados en listas manuales.
 
-En nómina real existen dos patrones claramente diferenciados:
+En nÃ³mina real existen dos patrones claramente diferenciados:
 
 1. Bases o acumulados donde cada concepto decide si participa  
-2. Totales o subtotales donde la pertenencia se deriva automáticamente
+2. Totales o subtotales donde la pertenencia se deriva automÃ¡ticamente
 
 Es necesario modelar ambas realidades sin mezclarlas.
 
 ---
 
-## Decisión
+## DecisiÃ³n
 
-Se definen dos estrategias canónicas de agregación para `AGGREGATE`:
+Se definen dos estrategias canÃ³nicas de agregaciÃ³n para `AGGREGATE`:
 
 - `FEED_BY_SOURCE`
 - `SELECT_BY_RULE`
 
-Estas estrategias determinan cómo se construye el conjunto de miembros del agregado.
+Estas estrategias determinan cÃ³mo se construye el conjunto de miembros del agregado.
 
 ---
 
@@ -10293,18 +10328,18 @@ Estas estrategias determinan cómo se construye el conjunto de miembros del agre
 
 La pertenencia a un agregado puede definirse:
 
-- desde el concepto origen (semántica declarativa del concepto)
-- o desde el agregado destino (regla de selección)
+- desde el concepto origen (semÃ¡ntica declarativa del concepto)
+- o desde el agregado destino (regla de selecciÃ³n)
 
 Ambas aproximaciones son necesarias y no son equivalentes.
 
 ---
 
-## Definición de `AGGREGATE`
+## DefiniciÃ³n de `AGGREGATE`
 
 Un `AGGREGATE` es un concepto cuyo resultado se obtiene combinando resultados de otros conceptos ya calculados.
 
-### Operación inicial soportada
+### OperaciÃ³n inicial soportada
 - `SUM`
 
 ---
@@ -10315,11 +10350,11 @@ Un `AGGREGATE` es un concepto cuyo resultado se obtiene combinando resultados de
 
 ### 1. `FEED_BY_SOURCE`
 
-#### Definición
+#### DefiniciÃ³n
 La pertenencia al agregado se declara en el concepto origen.
 
 #### Modelo conceptual
-Cada concepto define a qué agregados alimenta.
+Cada concepto define a quÃ© agregados alimenta.
 
 #### Ejemplo
 - `SALARIO_BASE` alimenta `BASE_CC`
@@ -10328,35 +10363,35 @@ Cada concepto define a qué agregados alimenta.
 
 ---
 
-#### Motivación
+#### MotivaciÃ³n
 
-La semántica relevante en muchos casos pertenece al concepto:
+La semÃ¡ntica relevante en muchos casos pertenece al concepto:
 
 - cotiza / no cotiza
 - tributa / no tributa
 - alimenta base / no alimenta
 
-Esta información es intrínseca al concepto, no al agregado.
+Esta informaciÃ³n es intrÃ­nseca al concepto, no al agregado.
 
 ---
 
-#### Resolución en runtime
+#### ResoluciÃ³n en runtime
 
 Para calcular un agregado:
 
-1. se evalúan todos los conceptos;
-2. se seleccionan aquellos con relación activa hacia el target;
-3. se combinan según `feedMode`.
+1. se evalÃºan todos los conceptos;
+2. se seleccionan aquellos con relaciÃ³n activa hacia el target;
+3. se combinan segÃºn `feedMode`.
 
 ---
 
-#### Relación de alimentación
+#### RelaciÃ³n de alimentaciÃ³n
 
-Se introduce la relación conceptual:
+Se introduce la relaciÃ³n conceptual:
 
 ### `ConceptFeedRelation`
 
-Campos mínimos:
+Campos mÃ­nimos:
 
 - `sourceConceptCode`
 - `targetObjectCode`
@@ -10369,16 +10404,16 @@ Campos mínimos:
 
 #### Modos iniciales
 
-- `INCLUDE` → aporta el 100% del importe
-- `PERCENTAGE` → aporta un porcentaje del importe
+- `INCLUDE` â†’ aporta el 100% del importe
+- `PERCENTAGE` â†’ aporta un porcentaje del importe
 
 ---
 
 #### Uso recomendado
 
-- bases de cotización
+- bases de cotizaciÃ³n
 - bases fiscales
-- acumulados técnicos
+- acumulados tÃ©cnicos
 - provisiones
 - cualquier agregado donde la pertenencia dependa del concepto origen
 
@@ -10386,16 +10421,16 @@ Campos mínimos:
 
 #### Ventajas
 
-- semántica clara y localizada;
+- semÃ¡ntica clara y localizada;
 - menor riesgo de omisiones al introducir nuevos conceptos;
-- alineación con lógica de negocio real.
+- alineaciÃ³n con lÃ³gica de negocio real.
 
 ---
 
 #### Costes
 
-- la composición del agregado no es visible directamente desde el destino;
-- requiere resolución inversa en runtime.
+- la composiciÃ³n del agregado no es visible directamente desde el destino;
+- requiere resoluciÃ³n inversa en runtime.
 
 ---
 
@@ -10403,34 +10438,34 @@ Campos mínimos:
 
 ### 2. `SELECT_BY_RULE`
 
-#### Definición
+#### DefiniciÃ³n
 La pertenencia al agregado se define mediante una regla en el propio agregado.
 
 ---
 
 #### Modelo conceptual
-El agregado define una condición de selección sobre el conjunto de conceptos.
+El agregado define una condiciÃ³n de selecciÃ³n sobre el conjunto de conceptos.
 
 ---
 
 #### Ejemplos
 
-- `TOTAL_DEVENGOS` → todos los conceptos con `functionalNature = EARNING`
-- `TOTAL_DEDUCCIONES` → todos los conceptos con `functionalNature = DEDUCTION`
+- `TOTAL_DEVENGOS` â†’ todos los conceptos con `functionalNature = EARNING`
+- `TOTAL_DEDUCCIONES` â†’ todos los conceptos con `functionalNature = DEDUCTION`
 
 ---
 
-#### Motivación
+#### MotivaciÃ³n
 
-Existen agregados cuya composición:
+Existen agregados cuya composiciÃ³n:
 
 - no debe mantenerse manualmente;
-- debe adaptarse automáticamente a nuevos conceptos;
+- debe adaptarse automÃ¡ticamente a nuevos conceptos;
 - depende de la naturaleza funcional, no de decisiones individuales.
 
 ---
 
-#### Parametrización mínima
+#### ParametrizaciÃ³n mÃ­nima
 
 - `selectionRuleType`
 - `selectionRuleValue`
@@ -10449,29 +10484,29 @@ Existen agregados cuya composición:
 
 - totales de recibo
 - subtotales funcionales
-- agrupaciones lógicas
-- bloques de presentación
+- agrupaciones lÃ³gicas
+- bloques de presentaciÃ³n
 
 ---
 
 #### Ventajas
 
 - evita mantenimiento manual;
-- escala automáticamente con nuevos conceptos;
-- reduce riesgo de errores por omisión.
+- escala automÃ¡ticamente con nuevos conceptos;
+- reduce riesgo de errores por omisiÃ³n.
 
 ---
 
 #### Costes
 
 - menor control individual por concepto;
-- requiere definición clara de taxonomías funcionales.
+- requiere definiciÃ³n clara de taxonomÃ­as funcionales.
 
 ---
 
-## Regla clave de diseño
+## Regla clave de diseÃ±o
 
-No se modelará `AGGREGATE` como una lista fija de miembros en todos los casos.
+No se modelarÃ¡ `AGGREGATE` como una lista fija de miembros en todos los casos.
 
 ---
 
@@ -10479,19 +10514,19 @@ No se modelará `AGGREGATE` como una lista fija de miembros en todos los casos.
 
 | Tipo de agregado        | Estrategia recomendada |
 |------------------------|------------------------|
-| Bases (cotización)     | FEED_BY_SOURCE         |
+| Bases (cotizaciÃ³n)     | FEED_BY_SOURCE         |
 | Bases (fiscalidad)     | FEED_BY_SOURCE         |
-| Acumulados técnicos    | FEED_BY_SOURCE         |
+| Acumulados tÃ©cnicos    | FEED_BY_SOURCE         |
 | Totales funcionales    | SELECT_BY_RULE         |
 | Subtotales             | SELECT_BY_RULE         |
 
 ---
 
-## Interacción con otros ADR
+## InteracciÃ³n con otros ADR
 
 - ADR-036 define el tipo `AGGREGATE`
-- ADR-037 define cómo se resuelven operandos
-- Este ADR define cómo se resuelven los miembros
+- ADR-037 define cÃ³mo se resuelven operandos
+- Este ADR define cÃ³mo se resuelven los miembros
 
 ---
 
@@ -10499,10 +10534,10 @@ No se modelará `AGGREGATE` como una lista fija de miembros en todos los casos.
 
 ### Positivas
 
-- modelo robusto frente a crecimiento del catálogo;
-- separación clara de responsabilidades;
-- alineación con lógica real de nómina;
-- soporte tanto para control fino como para automatización.
+- modelo robusto frente a crecimiento del catÃ¡logo;
+- separaciÃ³n clara de responsabilidades;
+- alineaciÃ³n con lÃ³gica real de nÃ³mina;
+- soporte tanto para control fino como para automatizaciÃ³n.
 
 ---
 
@@ -10518,38 +10553,39 @@ No se modelará `AGGREGATE` como una lista fija de miembros en todos los casos.
 
 Este ADR no define:
 
-- ejecución del motor de cálculo;
-- orden de evaluación de conceptos;
-- resolución de conflictos entre feeds;
+- ejecuciÃ³n del motor de cÃ¡lculo;
+- orden de evaluaciÃ³n de conceptos;
+- resoluciÃ³n de conflictos entre feeds;
 - filtros avanzados o condiciones complejas;
-- modelo físico de persistencia.
+- modelo fÃ­sico de persistencia.
 
 ---
 
 ## Resumen ejecutivo
 
-Se establecen dos estrategias complementarias para la construcción de agregados:
+Se establecen dos estrategias complementarias para la construcciÃ³n de agregados:
 
 - `FEED_BY_SOURCE`: la pertenencia se declara en el concepto origen  
 - `SELECT_BY_RULE`: la pertenencia se define mediante reglas en el agregado
 
 Ambas estrategias son necesarias para modelar correctamente:
 
-- bases técnicas (controladas por concepto)
-- totales funcionales (derivados automáticamente)
+- bases tÃ©cnicas (controladas por concepto)
+- totales funcionales (derivados automÃ¡ticamente)
 
-Este modelo evita listas manuales frágiles y permite construir un motor de nómina flexible, escalable y alineado con el dominio.
+Este modelo evita listas manuales frÃ¡giles y permite construir un motor de nÃ³mina flexible, escalable y alineado con el dominio.
+
 <!-- END FILE: ADR-038-Estrategias-de-agregación-y-relaciones-de-alimentación-en-PayrollConcept.md -->
 
-<a name="file-adr-039-modelo-dependencias-y-grafo-de-c-lculo-de-payrollconcept-md"></a>
 
 ---
 
 # FILE: ADR-039-Modelo-dependencias-y-grafo-de-cálculo-de-PayrollConcept.md
+<a name="file-adr-039-modelo-dependencias-y-grafo-de-c-lculo-de-payrollconcept-md"></a>
 
 <!-- BEGIN FILE: ADR-039-Modelo-dependencias-y-grafo-de-cálculo-de-PayrollConcept.md -->
 
-# ADR-039 — Modelo de dependencias y grafo de cálculo de `PayrollConcept`
+# ADR-039 â€” Modelo de dependencias y grafo de cÃ¡lculo de `PayrollConcept`
 
 ## Estado
 Propuesto
@@ -10560,38 +10596,38 @@ Propuesto
 
 Los ADR previos han establecido:
 
-- ADR-036 — Tipologías canónicas de cálculo (`DIRECT_AMOUNT`, `RATE_BY_QUANTITY`, `PERCENTAGE`, `AGGREGATE`)
-- ADR-037 — Resolución de operandos mediante sources tipados
-- ADR-038 — Estrategias de agregación (`FEED_BY_SOURCE`, `SELECT_BY_RULE`)
+- ADR-036 â€” TipologÃ­as canÃ³nicas de cÃ¡lculo (`DIRECT_AMOUNT`, `RATE_BY_QUANTITY`, `PERCENTAGE`, `AGGREGATE`)
+- ADR-037 â€” ResoluciÃ³n de operandos mediante sources tipados
+- ADR-038 â€” Estrategias de agregaciÃ³n (`FEED_BY_SOURCE`, `SELECT_BY_RULE`)
 
 Estas decisiones permiten que un `PayrollConcept`:
 
 - consuma resultados de otros conceptos (`source = CONCEPT`);
 - participe en agregados;
-- sea utilizado como base o componente de otros cálculos.
+- sea utilizado como base o componente de otros cÃ¡lculos.
 
 Como consecuencia, el conjunto de conceptos deja de ser independiente y pasa a formar una red de relaciones.
 
-Es necesario formalizar esta red como un **modelo explícito de dependencias**, base para cualquier estrategia de ejecución posterior.
+Es necesario formalizar esta red como un **modelo explÃ­cito de dependencias**, base para cualquier estrategia de ejecuciÃ³n posterior.
 
 ---
 
-## Decisión
+## DecisiÃ³n
 
-Se define un modelo explícito de dependencias entre `PayrollConcept` y su representación como un **grafo dirigido de cálculo**.
+Se define un modelo explÃ­cito de dependencias entre `PayrollConcept` y su representaciÃ³n como un **grafo dirigido de cÃ¡lculo**.
 
 ---
 
-## Definición de dependencia
+## DefiniciÃ³n de dependencia
 
 Se establece que:
 
-> Un `PayrollConcept` A depende de otro concepto B si el cálculo de A requiere que B haya sido previamente calculado.
+> Un `PayrollConcept` A depende de otro concepto B si el cÃ¡lculo de A requiere que B haya sido previamente calculado.
 
-Esta relación se representa como una arista dirigida:
+Esta relaciÃ³n se representa como una arista dirigida:
 
 
-B → A
+B â†’ A
 
 
 donde B debe evaluarse antes que A.
@@ -10600,13 +10636,13 @@ donde B debe evaluarse antes que A.
 
 ## Tipos de dependencia
 
-Se definen tres tipos canónicos de dependencia.
+Se definen tres tipos canÃ³nicos de dependencia.
 
 ---
 
 ### 1. `OPERAND_DEPENDENCY`
 
-#### Definición
+#### DefiniciÃ³n
 Se produce cuando un operando de un concepto se resuelve mediante `source = CONCEPT`.
 
 #### Ejemplos
@@ -10616,67 +10652,67 @@ Se produce cuando un operando de un concepto se resuelve mediante `source = CONC
 - `IRPF` depende de `TIPO_IRPF_EFECTIVO`
 
 #### Origen
-ADR-037 — Sources y resolución de operandos
+ADR-037 â€” Sources y resoluciÃ³n de operandos
 
 #### Naturaleza
-- explícita
-- declarada directamente en la configuración del concepto
+- explÃ­cita
+- declarada directamente en la configuraciÃ³n del concepto
 
 ---
 
 ### 2. `FEED_DEPENDENCY`
 
-#### Definición
-Se produce cuando un `AGGREGATE` con estrategia `FEED_BY_SOURCE` recibe alimentación desde conceptos origen.
+#### DefiniciÃ³n
+Se produce cuando un `AGGREGATE` con estrategia `FEED_BY_SOURCE` recibe alimentaciÃ³n desde conceptos origen.
 
 #### Ejemplos
 - `BASE_CC` depende de `SALARIO_BASE`
 - `BASE_IRPF` depende de `PRORRATA_EXTRA`
 
 #### Origen
-ADR-038 — Estrategias de agregación
+ADR-038 â€” Estrategias de agregaciÃ³n
 
 #### Naturaleza
-- derivada de relaciones de alimentación (`ConceptFeedRelation`)
+- derivada de relaciones de alimentaciÃ³n (`ConceptFeedRelation`)
 - definida en el concepto origen
 
 ---
 
 ### 3. `SELECTION_DEPENDENCY`
 
-#### Definición
-Se produce cuando un `AGGREGATE` con estrategia `SELECT_BY_RULE` depende de los conceptos que cumplen su regla de selección.
+#### DefiniciÃ³n
+Se produce cuando un `AGGREGATE` con estrategia `SELECT_BY_RULE` depende de los conceptos que cumplen su regla de selecciÃ³n.
 
 #### Ejemplos
 - `TOTAL_DEVENGOS` depende de todos los conceptos con `functionalNature = EARNING`
 - `TOTAL_DEDUCCIONES` depende de todos los conceptos con `functionalNature = DEDUCTION`
 
 #### Origen
-ADR-038 — Estrategias de agregación
+ADR-038 â€” Estrategias de agregaciÃ³n
 
 #### Naturaleza
 - derivada
-- dependiente del catálogo de conceptos y del contexto de evaluación
+- dependiente del catÃ¡logo de conceptos y del contexto de evaluaciÃ³n
 
 ---
 
-## Grafo de cálculo
+## Grafo de cÃ¡lculo
 
-### Definición
+### DefiniciÃ³n
 
-El conjunto de conceptos y sus dependencias forma un **grafo dirigido de cálculo** donde:
+El conjunto de conceptos y sus dependencias forma un **grafo dirigido de cÃ¡lculo** donde:
 
 - los nodos representan `PayrollConcept`
 - las aristas representan dependencias
 
 ---
 
-### Interpretación
+### InterpretaciÃ³n
 
 Una arista:
 
 
-B → A
+B â†’ A
 
 
 significa:
@@ -10691,27 +10727,27 @@ significa:
 
 ### 1. Aciclicidad
 
-El grafo debe ser un **grafo dirigido acíclico (DAG)**.
+El grafo debe ser un **grafo dirigido acÃ­clico (DAG)**.
 
 #### Consecuencia
 No se permiten ciclos de dependencias entre conceptos.
 
-#### Ejemplo inválido
+#### Ejemplo invÃ¡lido
 - `BASE_CC` depende de `TOTAL_DEVENGOS`
 - `TOTAL_DEVENGOS` depende de `SALARIO_BASE`
 - `SALARIO_BASE` depende de `BASE_CC`
 
 ---
 
-### 2. Dependencias explícitas o derivables
+### 2. Dependencias explÃ­citas o derivables
 
 Toda dependencia debe ser:
 
-- explícita (operandos con `source = CONCEPT`)
-- o derivable (feeds o reglas de selección)
+- explÃ­cita (operandos con `source = CONCEPT`)
+- o derivable (feeds o reglas de selecciÃ³n)
 
 #### Regla
-No se permiten dependencias implícitas o no declaradas.
+No se permiten dependencias implÃ­citas o no declaradas.
 
 ---
 
@@ -10720,24 +10756,24 @@ No se permiten dependencias implícitas o no declaradas.
 El sistema debe ser capaz de:
 
 - construir el conjunto completo de dependencias
-- a partir de la configuración del modelo
+- a partir de la configuraciÃ³n del modelo
 
-antes de cualquier ejecución.
+antes de cualquier ejecuciÃ³n.
 
 ---
 
-### 4. Independencia del contexto de ejecución
+### 4. Independencia del contexto de ejecuciÃ³n
 
 El modelo de dependencias es una propiedad estructural del sistema y:
 
 - no depende de un empleado concreto
-- no depende de una nómina concreta
+- no depende de una nÃ³mina concreta
 
 ---
 
 ## Grafo configurado y grafo efectivo
 
-Se distinguen dos niveles de representación.
+Se distinguen dos niveles de representaciÃ³n.
 
 ---
 
@@ -10749,9 +10785,9 @@ Representa:
 
 Uso:
 
-- validación estructural
-- detección de ciclos
-- análisis de impacto
+- validaciÃ³n estructural
+- detecciÃ³n de ciclos
+- anÃ¡lisis de impacto
 - tooling
 
 ---
@@ -10760,23 +10796,23 @@ Uso:
 
 Representa:
 
-- las dependencias realmente activas en una ejecución concreta
+- las dependencias realmente activas en una ejecuciÃ³n concreta
 
 Uso:
 
-- ejecución del cálculo
+- ejecuciÃ³n del cÃ¡lculo
 - trazabilidad
 - debugging
 
 ---
 
-## Construcción del grafo
+## ConstrucciÃ³n del grafo
 
 El grafo se construye a partir de:
 
 1. dependencias por operandos (`source = CONCEPT`)
-2. relaciones de alimentación (`FEED_BY_SOURCE`)
-3. reglas de selección (`SELECT_BY_RULE`)
+2. relaciones de alimentaciÃ³n (`FEED_BY_SOURCE`)
+3. reglas de selecciÃ³n (`SELECT_BY_RULE`)
 
 ---
 
@@ -10786,10 +10822,10 @@ El grafo se construye a partir de:
 
 ### Positivas
 
-- orden de cálculo derivable automáticamente  
-- detección temprana de ciclos  
-- trazabilidad completa del cálculo  
-- base para ejecución declarativa  
+- orden de cÃ¡lculo derivable automÃ¡ticamente  
+- detecciÃ³n temprana de ciclos  
+- trazabilidad completa del cÃ¡lculo  
+- base para ejecuciÃ³n declarativa  
 - desacoplamiento entre conceptos  
 
 ---
@@ -10797,8 +10833,8 @@ El grafo se construye a partir de:
 ### Costes
 
 - mayor complejidad conceptual  
-- necesidad de validación estructural  
-- necesidad de herramientas de inspección del grafo  
+- necesidad de validaciÃ³n estructural  
+- necesidad de herramientas de inspecciÃ³n del grafo  
 
 ---
 
@@ -10814,11 +10850,11 @@ Dependencias encadenadas pueden generar ciclos no triviales.
 
 ### 2. Dependencias mal definidas
 
-Errores en configuración pueden generar dependencias inexistentes o incoherentes.
+Errores en configuraciÃ³n pueden generar dependencias inexistentes o incoherentes.
 
 ---
 
-### 3. Selección dinámica no controlada
+### 3. SelecciÃ³n dinÃ¡mica no controlada
 
 `SELECT_BY_RULE` debe mantenerse dentro de un conjunto acotado de reglas para evitar comportamientos impredecibles.
 
@@ -10828,12 +10864,12 @@ Errores en configuración pueden generar dependencias inexistentes o incoherente
 
 Este ADR no define:
 
-- estrategia de ejecución del grafo  
-- orden de evaluación concreto  
-- paralelización  
+- estrategia de ejecuciÃ³n del grafo  
+- orden de evaluaciÃ³n concreto  
+- paralelizaciÃ³n  
 - caching  
-- segmentación temporal  
-- activación contextual de conceptos  
+- segmentaciÃ³n temporal  
+- activaciÃ³n contextual de conceptos  
 
 ---
 
@@ -10850,20 +10886,21 @@ Se definen tres tipos de dependencia:
 - `FEED_DEPENDENCY`
 - `SELECTION_DEPENDENCY`
 
-El grafo debe ser acíclico, explícito y completamente derivable de la configuración.
+El grafo debe ser acÃ­clico, explÃ­cito y completamente derivable de la configuraciÃ³n.
 
-Este modelo constituye la base para la futura ejecución del motor de cálculo.
+Este modelo constituye la base para la futura ejecuciÃ³n del motor de cÃ¡lculo.
+
 <!-- END FILE: ADR-039-Modelo-dependencias-y-grafo-de-cálculo-de-PayrollConcept.md -->
 
-<a name="file-adr-040-macro-grafo-activaci-n-de-conceptos-y-plan-de-c-lculo-efectivo-md"></a>
 
 ---
 
 # FILE: ADR-040-Macro-grafo-activación-de-conceptos-y-plan-de-cálculo-efectivo.md
+<a name="file-adr-040-macro-grafo-activaci-n-de-conceptos-y-plan-de-c-lculo-efectivo-md"></a>
 
 <!-- BEGIN FILE: ADR-040-Macro-grafo-activación-de-conceptos-y-plan-de-cálculo-efectivo.md -->
 
-# ADR-040 — Macro-grafo, activación de conceptos y plan de cálculo efectivo
+# ADR-040 â€” Macro-grafo, activaciÃ³n de conceptos y plan de cÃ¡lculo efectivo
 
 ## Estado
 Implementado (ver ADR-045)
@@ -10872,7 +10909,7 @@ Implementado (ver ADR-045)
 
 ## Contexto
 
-El ADR-039 define que los `PayrollConcept` forman un grafo dirigido acíclico (DAG) basado en dependencias:
+El ADR-039 define que los `PayrollConcept` forman un grafo dirigido acÃ­clico (DAG) basado en dependencias:
 
 - `OPERAND_DEPENDENCY`
 - `FEED_DEPENDENCY`
@@ -10881,29 +10918,29 @@ El ADR-039 define que los `PayrollConcept` forman un grafo dirigido acíclico (D
 Sin embargo, este grafo:
 
 - representa **todas las dependencias posibles**
-- no distingue qué conceptos deben calcularse en una ejecución concreta
+- no distingue quÃ© conceptos deben calcularse en una ejecuciÃ³n concreta
 
 Para poder ejecutar el motor, es necesario definir:
 
-1. cómo se determina qué conceptos participan
-2. cómo se reduce el grafo al subconjunto relevante
-3. cómo se obtiene un orden de cálculo válido
+1. cÃ³mo se determina quÃ© conceptos participan
+2. cÃ³mo se reduce el grafo al subconjunto relevante
+3. cÃ³mo se obtiene un orden de cÃ¡lculo vÃ¡lido
 
 ---
 
-## Decisión
+## DecisiÃ³n
 
-Se introduce un modelo de **macro-grafo + activación + plan efectivo** en tres fases:
+Se introduce un modelo de **macro-grafo + activaciÃ³n + plan efectivo** en tres fases:
 
 1. **Macro-grafo configurado**
-2. **Activación de conceptos**
-3. **Plan de cálculo efectivo**
+2. **ActivaciÃ³n de conceptos**
+3. **Plan de cÃ¡lculo efectivo**
 
 ---
 
 ## 1. Macro-grafo configurado
 
-### Definición
+### DefiniciÃ³n
 
 El macro-grafo es:
 
@@ -10920,60 +10957,60 @@ Incluye:
 
 - es global al `ruleSystem`
 - es independiente de empleado o periodo
-- es estático salvo cambios de configuración
+- es estÃ¡tico salvo cambios de configuraciÃ³n
 - es validado estructuralmente (ciclos, coherencia)
 
 ---
 
 ### Uso
 
-- validación del sistema
-- análisis de impacto
-- tooling (visualización, debugging)
-- base para generación de planes efectivos
+- validaciÃ³n del sistema
+- anÃ¡lisis de impacto
+- tooling (visualizaciÃ³n, debugging)
+- base para generaciÃ³n de planes efectivos
 
 ---
 
-## 2. Activación de conceptos
+## 2. ActivaciÃ³n de conceptos
 
-### Definición
+### DefiniciÃ³n
 
-La activación determina:
+La activaciÃ³n determina:
 
-> qué conceptos deben calcularse en una ejecución concreta
-
----
-
-### Tipos de activación
-
-Se definen tres mecanismos canónicos:
+> quÃ© conceptos deben calcularse en una ejecuciÃ³n concreta
 
 ---
 
-#### 2.1 Activación explícita (`EXPLICIT`)
+### Tipos de activaciÃ³n
+
+Se definen tres mecanismos canÃ³nicos:
+
+---
+
+#### 2.1 ActivaciÃ³n explÃ­cita (`EXPLICIT`)
 
 Conceptos solicitados directamente por el sistema.
 
 #### Ejemplos
 
-- cálculo de `NETO_A_PERCIBIR`
-- cálculo de `TOTAL_DEVENGOS`
+- cÃ¡lculo de `NETO_A_PERCIBIR`
+- cÃ¡lculo de `TOTAL_DEVENGOS`
 
 ---
 
-#### 2.2 Activación por dependencia (`DEPENDENCY`)
+#### 2.2 ActivaciÃ³n por dependencia (`DEPENDENCY`)
 
-Se activan todos los conceptos necesarios para calcular los conceptos explícitos.
+Se activan todos los conceptos necesarios para calcular los conceptos explÃ­citos.
 
 #### Regla
 
-Si A está activado y A depende de B, entonces B se activa.
+Si A estÃ¡ activado y A depende de B, entonces B se activa.
 
 ---
 
-#### 2.3 Activación por selección (`SELECTION`)
+#### 2.3 ActivaciÃ³n por selecciÃ³n (`SELECTION`)
 
-Se activan conceptos seleccionados dinámicamente por reglas de agregación.
+Se activan conceptos seleccionados dinÃ¡micamente por reglas de agregaciÃ³n.
 
 #### Ejemplos
 
@@ -10982,7 +11019,7 @@ Se activan conceptos seleccionados dinámicamente por reglas de agregación.
 
 ---
 
-### Resultado de la activación
+### Resultado de la activaciÃ³n
 
 Se obtiene:
 
@@ -10992,7 +11029,7 @@ Se obtiene:
 
 ## 3. Subgrafo efectivo
 
-### Definición
+### DefiniciÃ³n
 
 El subgrafo efectivo es:
 
@@ -11008,42 +11045,42 @@ Incluye:
 ### Propiedades
 
 - es un subgrafo del macro-grafo
-- sigue siendo acíclico
-- es específico de una ejecución
+- sigue siendo acÃ­clico
+- es especÃ­fico de una ejecuciÃ³n
 
 ---
 
-## 4. Plan de cálculo efectivo
+## 4. Plan de cÃ¡lculo efectivo
 
-### Definición
+### DefiniciÃ³n
 
-El plan de cálculo es:
+El plan de cÃ¡lculo es:
 
-> una ordenación válida de los conceptos activos que respeta todas las dependencias
+> una ordenaciÃ³n vÃ¡lida de los conceptos activos que respeta todas las dependencias
 
 ---
 
-### Construcción
+### ConstrucciÃ³n
 
-Se obtiene mediante una **ordenación topológica** del subgrafo efectivo.
+Se obtiene mediante una **ordenaciÃ³n topolÃ³gica** del subgrafo efectivo.
 
 ---
 
 ### Propiedades
 
-- todo concepto se evalúa después de sus dependencias
-- no existe ambigüedad en el orden relativo necesario
-- puede existir más de un orden válido
+- todo concepto se evalÃºa despuÃ©s de sus dependencias
+- no existe ambigÃ¼edad en el orden relativo necesario
+- puede existir mÃ¡s de un orden vÃ¡lido
 
 ---
 
-### Representación
+### RepresentaciÃ³n
 
 El plan puede representarse como:
 
 - lista ordenada de conceptos
-- niveles de cálculo (capas paralelizables)
-- pipeline de ejecución
+- niveles de cÃ¡lculo (capas paralelizables)
+- pipeline de ejecuciÃ³n
 
 ---
 
@@ -11055,7 +11092,7 @@ Dado el objetivo:
 NETO_A_PERCIBIR
 
 
-### Activación
+### ActivaciÃ³n
 
 Se activan:
 
@@ -11080,36 +11117,36 @@ IRPF
 TOTAL_DEVENGOS
 TOTAL_DEDUCCIONES
 NETO_A_PERCIBIR
-Separación de responsabilidades
+SeparaciÃ³n de responsabilidades
 
-Este ADR establece una separación clara:
+Este ADR establece una separaciÃ³n clara:
 
 Fase	Responsabilidad
 Macro-grafo	modelo estructural
-Activación	qué calcular
-Subgrafo	reducción del problema
-Plan	cómo ordenarlo
+ActivaciÃ³n	quÃ© calcular
+Subgrafo	reducciÃ³n del problema
+Plan	cÃ³mo ordenarlo
 Consecuencias
 Positivas
-ejecución derivada automáticamente
-desacoplamiento total entre definición y ejecución
+ejecuciÃ³n derivada automÃ¡ticamente
+desacoplamiento total entre definiciÃ³n y ejecuciÃ³n
 capacidad de calcular subconjuntos
-base para paralelización futura
+base para paralelizaciÃ³n futura
 trazabilidad clara
 Costes
-necesidad de construir subgrafos dinámicos
-necesidad de resolver activación correctamente
+necesidad de construir subgrafos dinÃ¡micos
+necesidad de resolver activaciÃ³n correctamente
 mayor complejidad conceptual
 Riesgos
-1. Activación incompleta
+1. ActivaciÃ³n incompleta
 
-Si falta un concepto necesario → fallo en ejecución.
+Si falta un concepto necesario â†’ fallo en ejecuciÃ³n.
 
-2. Activación excesiva
+2. ActivaciÃ³n excesiva
 
-Activar conceptos innecesarios → coste de cálculo innecesario.
+Activar conceptos innecesarios â†’ coste de cÃ¡lculo innecesario.
 
-3. Reglas de selección mal definidas
+3. Reglas de selecciÃ³n mal definidas
 
 Pueden activar conjuntos inesperados de conceptos.
 
@@ -11117,42 +11154,43 @@ No objetivos
 
 Este ADR no define:
 
-cómo se calcula cada concepto
-cómo se gestionan segmentos temporales
-cómo se cachean resultados
-cómo se ejecuta en paralelo
-cómo se materializan resultados
-Relación con ADRs previos
-ADR-036 → define tipos de cálculo
-ADR-037 → define sources y operandos
-ADR-038 → define agregación
-ADR-039 → define dependencias
+cÃ³mo se calcula cada concepto
+cÃ³mo se gestionan segmentos temporales
+cÃ³mo se cachean resultados
+cÃ³mo se ejecuta en paralelo
+cÃ³mo se materializan resultados
+RelaciÃ³n con ADRs previos
+ADR-036 â†’ define tipos de cÃ¡lculo
+ADR-037 â†’ define sources y operandos
+ADR-038 â†’ define agregaciÃ³n
+ADR-039 â†’ define dependencias
 
 Este ADR define:
 
-cómo todo lo anterior se convierte en un plan ejecutable
+cÃ³mo todo lo anterior se convierte en un plan ejecutable
 
 Resumen ejecutivo
 
 El sistema se modela como:
 
 un macro-grafo completo de conceptos
-un proceso de activación que determina qué calcular
+un proceso de activaciÃ³n que determina quÃ© calcular
 un subgrafo efectivo reducido
-un plan de cálculo derivado por ordenación topológica
+un plan de cÃ¡lculo derivado por ordenaciÃ³n topolÃ³gica
 
 Este enfoque permite ejecutar el motor de forma declarativa, predecible y extensible.
+
 <!-- END FILE: ADR-040-Macro-grafo-activación-de-conceptos-y-plan-de-cálculo-efectivo.md -->
 
-<a name="file-adr-041-segmentaci-n-temporal--mbito-de-ejecuci-n-y-c-lculo-por-tramos-en-payrollconcept-md"></a>
 
 ---
 
 # FILE: ADR-041-Segmentación-temporal-ámbito-de-ejecución-y-cálculo-por-tramos-en-PayrollConcept.md
+<a name="file-adr-041-segmentaci-n-temporal--mbito-de-ejecuci-n-y-c-lculo-por-tramos-en-payrollconcept-md"></a>
 
 <!-- BEGIN FILE: ADR-041-Segmentación-temporal-ámbito-de-ejecución-y-cálculo-por-tramos-en-PayrollConcept.md -->
 
-# ADR-041 — Segmentación temporal, ámbito de ejecución y cálculo por tramos en `PayrollConcept`
+# ADR-041 â€” SegmentaciÃ³n temporal, Ã¡mbito de ejecuciÃ³n y cÃ¡lculo por tramos en `PayrollConcept`
 
 ## Estado
 Propuesto
@@ -11163,15 +11201,15 @@ Propuesto
 
 Los ADR previos establecen:
 
-- ADR-036 — Tipologías de cálculo de `PayrollConcept`
-- ADR-037 — Resolución de operandos mediante sources
-- ADR-038 — Estrategias de agregación (`FEED_BY_SOURCE`, `SELECT_BY_RULE`)
-- ADR-039 — Modelo de dependencias y grafo de cálculo (DAG)
-- ADR-040 — Macro-grafo, activación y plan efectivo
+- ADR-036 â€” TipologÃ­as de cÃ¡lculo de `PayrollConcept`
+- ADR-037 â€” ResoluciÃ³n de operandos mediante sources
+- ADR-038 â€” Estrategias de agregaciÃ³n (`FEED_BY_SOURCE`, `SELECT_BY_RULE`)
+- ADR-039 â€” Modelo de dependencias y grafo de cÃ¡lculo (DAG)
+- ADR-040 â€” Macro-grafo, activaciÃ³n y plan efectivo
 
-Estos elementos permiten definir qué calcular y en qué orden.
+Estos elementos permiten definir quÃ© calcular y en quÃ© orden.
 
-Sin embargo, en nómina real, durante un mismo período pueden producirse cambios que afectan al cálculo:
+Sin embargo, en nÃ³mina real, durante un mismo perÃ­odo pueden producirse cambios que afectan al cÃ¡lculo:
 
 - jornada laboral  
 - salario  
@@ -11180,18 +11218,18 @@ Sin embargo, en nómina real, durante un mismo período pueden producirse cambio
 - situaciones de alta/baja  
 - otras condiciones relevantes  
 
-Esto implica que el cálculo no puede realizarse como una única ejecución homogénea.
+Esto implica que el cÃ¡lculo no puede realizarse como una Ãºnica ejecuciÃ³n homogÃ©nea.
 
 ---
 
-## Decisión
+## DecisiÃ³n
 
 Se introduce un modelo de:
 
-1. **segmentación temporal del período**
-2. **ejecución del plan de cálculo por segmento**
-3. **clasificación de conceptos por ámbito temporal (`executionScope`)**
-4. **consolidación de resultados a nivel de período**
+1. **segmentaciÃ³n temporal del perÃ­odo**
+2. **ejecuciÃ³n del plan de cÃ¡lculo por segmento**
+3. **clasificaciÃ³n de conceptos por Ã¡mbito temporal (`executionScope`)**
+4. **consolidaciÃ³n de resultados a nivel de perÃ­odo**
 
 ---
 
@@ -11199,7 +11237,7 @@ Se introduce un modelo de:
 
 ### 1.1 `CalculationPeriod`
 
-Representa el período global de la nómina:
+Representa el perÃ­odo global de la nÃ³mina:
 
 - `periodStart`
 - `periodEnd`
@@ -11208,7 +11246,7 @@ Representa el período global de la nómina:
 
 ### 1.2 `CalculationSegment`
 
-Representa un subtramo homogéneo dentro del período:
+Representa un subtramo homogÃ©neo dentro del perÃ­odo:
 
 - `segmentStart`
 - `segmentEnd`
@@ -11219,15 +11257,15 @@ Representa un subtramo homogéneo dentro del período:
 
 Dentro de un segmento:
 
-> Las condiciones relevantes para el cálculo permanecen constantes.
+> Las condiciones relevantes para el cÃ¡lculo permanecen constantes.
 
 ---
 
-## 2. Segmentación
+## 2. SegmentaciÃ³n
 
-### Definición
+### DefiniciÃ³n
 
-El período se divide en:
+El perÃ­odo se divide en:
 
 > un conjunto ordenado de segmentos contiguos, no solapados y exhaustivos
 
@@ -11235,7 +11273,7 @@ El período se divide en:
 
 ### Propiedades
 
-- cubren completamente el período  
+- cubren completamente el perÃ­odo  
 - no se solapan  
 - son deterministas  
 - son reproducibles  
@@ -11244,28 +11282,28 @@ El período se divide en:
 
 ### Origen de los cortes
 
-Los segmentos se generan por cambios en condiciones relevantes del cálculo:
+Los segmentos se generan por cambios en condiciones relevantes del cÃ¡lculo:
 
 - datos del empleado  
 - asignaciones  
 - condiciones contractuales  
-- otros factores que afectan al cálculo  
+- otros factores que afectan al cÃ¡lculo  
 
 ---
 
 ### Regla importante
 
-Un segmento puede estar delimitado por múltiples cambios simultáneos.
+Un segmento puede estar delimitado por mÃºltiples cambios simultÃ¡neos.
 
 #### Consecuencia
 
-No se modela una única “fuente del segmento”.
+No se modela una Ãºnica â€œfuente del segmentoâ€.
 
 ---
 
-## 3. Contexto de ejecución por segmento
+## 3. Contexto de ejecuciÃ³n por segmento
 
-Cada ejecución del cálculo se realiza con un contexto temporal enriquecido:
+Cada ejecuciÃ³n del cÃ¡lculo se realiza con un contexto temporal enriquecido:
 
 - `periodStart`
 - `periodEnd`
@@ -11276,30 +11314,30 @@ Cada ejecución del cálculo se realiza con un contexto temporal enriquecido:
 
 ---
 
-## 4. Relación con el grafo de cálculo
+## 4. RelaciÃ³n con el grafo de cÃ¡lculo
 
 ### Regla fundamental
 
-> La segmentación no modifica la topología del grafo de cálculo.
+> La segmentaciÃ³n no modifica la topologÃ­a del grafo de cÃ¡lculo.
 
 ---
 
-### Implicación
+### ImplicaciÃ³n
 
-- el macro-grafo y el plan efectivo son únicos  
+- el macro-grafo y el plan efectivo son Ãºnicos  
 - se reutilizan para todos los segmentos  
 
 ---
 
-### Ejecución
+### EjecuciÃ³n
 
-El plan de cálculo:
+El plan de cÃ¡lculo:
 
 > se ejecuta una vez por cada segmento con distinto contexto temporal
 
 ---
 
-## 5. Ámbito de ejecución del concepto
+## 5. Ãmbito de ejecuciÃ³n del concepto
 
 Se introduce la propiedad:
 
@@ -11307,9 +11345,9 @@ Se introduce la propiedad:
 
 ---
 
-### Definición
+### DefiniciÃ³n
 
-Define el nivel temporal en el que se evalúa un concepto.
+Define el nivel temporal en el que se evalÃºa un concepto.
 
 ---
 
@@ -11326,15 +11364,15 @@ Define el nivel temporal en el que se evalúa un concepto.
 
 #### Consecuencia
 
-Cambiar el ámbito implica crear un nuevo concepto.
+Cambiar el Ã¡mbito implica crear un nuevo concepto.
 
 ---
 
-### Interpretación
+### InterpretaciÃ³n
 
 #### `SEGMENT`
 
-El concepto se evalúa en cada segmento.
+El concepto se evalÃºa en cada segmento.
 
 Ejemplos:
 
@@ -11346,47 +11384,47 @@ Ejemplos:
 
 #### `PERIOD`
 
-El concepto se evalúa una única vez para todo el período.
+El concepto se evalÃºa una Ãºnica vez para todo el perÃ­odo.
 
 Ejemplos:
 
 - totales  
 - agregados finales  
-- ciertos cálculos acumulados  
+- ciertos cÃ¡lculos acumulados  
 
 ---
 
-## 6. Ejecución segmentada
+## 6. EjecuciÃ³n segmentada
 
 ### Proceso
 
-1. Se construyen los segmentos del período  
-2. Se ejecuta el plan de cálculo para cada segmento (`executionScope = SEGMENT`)  
+1. Se construyen los segmentos del perÃ­odo  
+2. Se ejecuta el plan de cÃ¡lculo para cada segmento (`executionScope = SEGMENT`)  
 3. Se obtienen resultados parciales  
-4. Se consolidan los resultados a nivel de período  
-5. Se evalúan conceptos de `executionScope = PERIOD`
+4. Se consolidan los resultados a nivel de perÃ­odo  
+5. Se evalÃºan conceptos de `executionScope = PERIOD`
 
 ---
 
-## 7. Consolidación
+## 7. ConsolidaciÃ³n
 
-### Definición
+### DefiniciÃ³n
 
-Proceso de agregación de resultados de segmentos.
+Proceso de agregaciÃ³n de resultados de segmentos.
 
 ---
 
 ### Ejemplos
 
 - suma de importes segmentados  
-- construcción de bases  
-- preparación de datos para conceptos de período  
+- construcciÃ³n de bases  
+- preparaciÃ³n de datos para conceptos de perÃ­odo  
 
 ---
 
 ### Nota
 
-La consolidación es un paso previo a la evaluación de conceptos de ámbito `PERIOD`.
+La consolidaciÃ³n es un paso previo a la evaluaciÃ³n de conceptos de Ã¡mbito `PERIOD`.
 
 ---
 
@@ -11394,15 +11432,15 @@ La consolidación es un paso previo a la evaluación de conceptos de ámbito `PE
 
 ### Regla clave
 
-> La segmentación utilizada en un cálculo debe ser determinista, reproducible y auditable.
+> La segmentaciÃ³n utilizada en un cÃ¡lculo debe ser determinista, reproducible y auditable.
 
 ---
 
-### Decisión
+### DecisiÃ³n
 
 Los segmentos forman parte del:
 
-> **snapshot técnico del cálculo de nómina**
+> **snapshot tÃ©cnico del cÃ¡lculo de nÃ³mina**
 
 ---
 
@@ -11410,7 +11448,7 @@ Los segmentos forman parte del:
 
 Es posible:
 
-- reconstruir cómo se calculó la nómina  
+- reconstruir cÃ³mo se calculÃ³ la nÃ³mina  
 - explicar los tramos utilizados  
 - garantizar coherencia en retroactividad  
 
@@ -11420,23 +11458,23 @@ Es posible:
 
 ---
 
-### 9.1 Validación de segmentación
+### 9.1 ValidaciÃ³n de segmentaciÃ³n
 
 Debe garantizar:
 
-- cobertura completa del período  
+- cobertura completa del perÃ­odo  
 - ausencia de solapamientos  
 - orden correcto  
 
 ---
 
-### 9.2 Validación de ejecución
+### 9.2 ValidaciÃ³n de ejecuciÃ³n
 
 Debe garantizar:
 
 - coherencia entre `executionScope` y uso del concepto  
 - disponibilidad de datos necesarios en cada segmento  
-- correcta consolidación  
+- correcta consolidaciÃ³n  
 
 ---
 
@@ -11444,7 +11482,7 @@ Debe garantizar:
 
 ---
 
-### 10.1 Segmentación no determinista
+### 10.1 SegmentaciÃ³n no determinista
 
 Provoca inconsistencias en recalculaciones.
 
@@ -11454,21 +11492,21 @@ Provoca inconsistencias en recalculaciones.
 
 Puede generar:
 
-- doble cálculo  
+- doble cÃ¡lculo  
 - omisiones  
 - incoherencias  
 
 ---
 
-### 10.3 Mala clasificación de conceptos
+### 10.3 Mala clasificaciÃ³n de conceptos
 
-Asignar incorrectamente `SEGMENT` o `PERIOD` rompe la lógica del cálculo.
+Asignar incorrectamente `SEGMENT` o `PERIOD` rompe la lÃ³gica del cÃ¡lculo.
 
 ---
 
-### 10.4 Explicación simplificada de cortes
+### 10.4 ExplicaciÃ³n simplificada de cortes
 
-Asociar un único motivo a un segmento puede ser incorrecto.
+Asociar un Ãºnico motivo a un segmento puede ser incorrecto.
 
 ---
 
@@ -11476,9 +11514,9 @@ Asociar un único motivo a un segmento puede ser incorrecto.
 
 Este ADR no define:
 
-- algoritmo de generación de segmentos  
-- optimización de ejecución  
-- paralelización  
+- algoritmo de generaciÃ³n de segmentos  
+- optimizaciÃ³n de ejecuciÃ³n  
+- paralelizaciÃ³n  
 - caching  
 - persistencia detallada de estructuras internas  
 
@@ -11486,43 +11524,44 @@ Este ADR no define:
 
 ## 12. Insight clave
 
-El cálculo de nómina evoluciona de:
+El cÃ¡lculo de nÃ³mina evoluciona de:
 
-> una ejecución única del grafo
+> una ejecuciÃ³n Ãºnica del grafo
 
 a:
 
-> la ejecución del mismo plan de cálculo sobre múltiples contextos temporales homogéneos, seguida de una consolidación
+> la ejecuciÃ³n del mismo plan de cÃ¡lculo sobre mÃºltiples contextos temporales homogÃ©neos, seguida de una consolidaciÃ³n
 
 ---
 
-## 13. Conclusión
+## 13. ConclusiÃ³n
 
 Se establece que:
 
-- el período se segmenta en tramos homogéneos  
-- el mismo plan de cálculo se ejecuta por segmento  
-- los conceptos se clasifican por ámbito temporal (`executionScope`)  
-- los resultados se consolidan a nivel de período  
-- la segmentación es determinista y trazable  
+- el perÃ­odo se segmenta en tramos homogÃ©neos  
+- el mismo plan de cÃ¡lculo se ejecuta por segmento  
+- los conceptos se clasifican por Ã¡mbito temporal (`executionScope`)  
+- los resultados se consolidan a nivel de perÃ­odo  
+- la segmentaciÃ³n es determinista y trazable  
 
 Este modelo permite:
 
 - soportar cambios intraperiodo  
 - mantener coherencia en retroactividad  
-- preservar un único grafo de cálculo  
+- preservar un Ãºnico grafo de cÃ¡lculo  
 - garantizar trazabilidad completa del resultado  
+
 <!-- END FILE: ADR-041-Segmentación-temporal-ámbito-de-ejecución-y-cálculo-por-tramos-en-PayrollConcept.md -->
 
-<a name="file-adr-042-separaci-n-entre-payrol-y-payroll-engine-md"></a>
 
 ---
 
 # FILE: ADR-042-Separación-entre-payrol-y-payroll_engine.md
+<a name="file-adr-042-separaci-n-entre-payrol-y-payroll-engine-md"></a>
 
 <!-- BEGIN FILE: ADR-042-Separación-entre-payrol-y-payroll_engine.md -->
 
-# ADR-042 — Separación entre `payroll` y `payroll_engine`
+# ADR-042 â€” SeparaciÃ³n entre `payroll` y `payroll_engine`
 
 ## Estado
 Propuesto
@@ -11531,66 +11570,66 @@ Propuesto
 
 ## Contexto
 
-El diseño del motor de nómina de B4RRHH ha evolucionado desde un enfoque potencialmente basado en lógica específica por concepto hacia un modelo configurable basado en:
+El diseÃ±o del motor de nÃ³mina de B4RRHH ha evolucionado desde un enfoque potencialmente basado en lÃ³gica especÃ­fica por concepto hacia un modelo configurable basado en:
 
 - `PayrollObject`
 - `PayrollConcept`
-- tipologías de cálculo
+- tipologÃ­as de cÃ¡lculo
 - sources y operandos
-- estrategias de agregación
+- estrategias de agregaciÃ³n
 - grafo de dependencias
-- segmentación temporal
+- segmentaciÃ³n temporal
 
 En paralelo, el bounded context `payroll` ya existe para modelar:
 
-- nóminas calculadas
-- estados de nómina
-- runs de cálculo
+- nÃ³minas calculadas
+- estados de nÃ³mina
+- runs de cÃ¡lculo
 - claims
 - mensajes
-- snapshots del cálculo
+- snapshots del cÃ¡lculo
 
-A medida que madura el metamodelo del motor, aparece una separación semántica clara entre:
+A medida que madura el metamodelo del motor, aparece una separaciÃ³n semÃ¡ntica clara entre:
 
-1. **la definición de cómo se calcula una nómina**
-2. **la persistencia del resultado de una nómina calculada**
+1. **la definiciÃ³n de cÃ³mo se calcula una nÃ³mina**
+2. **la persistencia del resultado de una nÃ³mina calculada**
 
-Mezclar ambas naturalezas en el mismo schema o subdominio introduce ambigüedad de diseño.
+Mezclar ambas naturalezas en el mismo schema o subdominio introduce ambigÃ¼edad de diseÃ±o.
 
 ---
 
-## Decisión
+## DecisiÃ³n
 
-Se separan explícitamente dos ámbitos:
+Se separan explÃ­citamente dos Ã¡mbitos:
 
 - `payroll`
 - `payroll_engine`
 
 ---
 
-## 1. Ámbito `payroll`
+## 1. Ãmbito `payroll`
 
-`payroll` modela la nómina calculada como resultado de negocio.
+`payroll` modela la nÃ³mina calculada como resultado de negocio.
 
 Incluye, entre otros:
 
 - payroll root
-- líneas calculadas
+- lÃ­neas calculadas
 - estados
 - calculation runs
 - claims
 - mensajes
-- snapshots técnicos del cálculo
-- segmentos utilizados en una ejecución concreta
+- snapshots tÃ©cnicos del cÃ¡lculo
+- segmentos utilizados en una ejecuciÃ³n concreta
 
 ### Naturaleza
-Resultado materializado del cálculo.
+Resultado materializado del cÃ¡lculo.
 
 ---
 
-## 2. Ámbito `payroll_engine`
+## 2. Ãmbito `payroll_engine`
 
-`payroll_engine` modela el metamodelo y la configuración técnico-funcional del motor.
+`payroll_engine` modela el metamodelo y la configuraciÃ³n tÃ©cnico-funcional del motor.
 
 Incluye, entre otros:
 
@@ -11599,18 +11638,18 @@ Incluye, entre otros:
 - feeds entre conceptos
 - tablas
 - constantes
-- tipologías de cálculo
-- scopes de ejecución
-- metadatos de resolución
+- tipologÃ­as de cÃ¡lculo
+- scopes de ejecuciÃ³n
+- metadatos de resoluciÃ³n
 
 ### Naturaleza
-Definición estructural de cómo se calcula una nómina.
+DefiniciÃ³n estructural de cÃ³mo se calcula una nÃ³mina.
 
 ---
 
 ## Regla principal
 
-> La configuración y metamodelo del motor de nómina no deben persistirse en el mismo ámbito semántico que las nóminas calculadas.
+> La configuraciÃ³n y metamodelo del motor de nÃ³mina no deben persistirse en el mismo Ã¡mbito semÃ¡ntico que las nÃ³minas calculadas.
 
 ---
 
@@ -11618,103 +11657,104 @@ Definición estructural de cómo se calcula una nómina.
 
 ### Positivas
 
-- separación clara entre configuración y resultado
+- separaciÃ³n clara entre configuraciÃ³n y resultado
 - mejor trazabilidad
 - mejor capacidad de gobierno del motor
-- menor contaminación semántica del bounded context `payroll`
-- base más limpia para evolución futura
+- menor contaminaciÃ³n semÃ¡ntica del bounded context `payroll`
+- base mÃ¡s limpia para evoluciÃ³n futura
 
 ### Costes
 
-- aparece un nuevo ámbito de diseño
-- exige modelar explícitamente la relación entre runtime del motor y resultado calculado
+- aparece un nuevo Ã¡mbito de diseÃ±o
+- exige modelar explÃ­citamente la relaciÃ³n entre runtime del motor y resultado calculado
 
 ---
 
 ## Regla operativa
 
-Los artefactos persistentes que definan **cómo se calcula** una nómina pertenecen a `payroll_engine`.
+Los artefactos persistentes que definan **cÃ³mo se calcula** una nÃ³mina pertenecen a `payroll_engine`.
 
-Los artefactos persistentes que representen **una nómina ya calculada** pertenecen a `payroll`.
+Los artefactos persistentes que representen **una nÃ³mina ya calculada** pertenecen a `payroll`.
 
 ---
 
 ## No objetivos
 
-Este ADR no define todavía:
+Este ADR no define todavÃ­a:
 
-- estructura física detallada de schemas
+- estructura fÃ­sica detallada de schemas
 - APIs de mantenimiento del motor
 - estrategia de despliegue
-- separación en repositorios o servicios
+- separaciÃ³n en repositorios o servicios
 
 ---
 
 ## Resumen ejecutivo
 
-Se establece una frontera explícita:
+Se establece una frontera explÃ­cita:
 
 - `payroll` = resultado calculado
-- `payroll_engine` = definición del motor
+- `payroll_engine` = definiciÃ³n del motor
 
-Esto evita mezclar metamodelo y cálculo materializado en el mismo dominio y prepara una base más limpia para la implementación.
+Esto evita mezclar metamodelo y cÃ¡lculo materializado en el mismo dominio y prepara una base mÃ¡s limpia para la implementaciÃ³n.
+
 <!-- END FILE: ADR-042-Separación-entre-payrol-y-payroll_engine.md -->
 
-<a name="file-adr-043-agreement-profile-y-activaci-n-de-payroll-basada-en-contexto-md"></a>
 
 ---
 
 # FILE: ADR-043-Agreement-Profile-y-Activación-de-Payroll-basada-en-Contexto.md
+<a name="file-adr-043-agreement-profile-y-activaci-n-de-payroll-basada-en-contexto-md"></a>
 
 <!-- BEGIN FILE: ADR-043-Agreement-Profile-y-Activación-de-Payroll-basada-en-Contexto.md -->
 
-ADR-043 — Agreement Profile y Activación de Payroll basada en Contexto
+ADR-043 â€” Agreement Profile y ActivaciÃ³n de Payroll basada en Contexto
 Estado
 
 Propuesto
 
 Contexto
 
-El sistema B4RRHH actualmente modela el convenio colectivo (AGREEMENT) como una entidad de catálogo dentro de rule_entity, junto con su relación con categorías (AGREEMENT_CATEGORY).
+El sistema B4RRHH actualmente modela el convenio colectivo (AGREEMENT) como una entidad de catÃ¡logo dentro de rule_entity, junto con su relaciÃ³n con categorÃ­as (AGREEMENT_CATEGORY).
 
-Este modelo es suficiente para validaciones básicas, pero insuficiente para:
+Este modelo es suficiente para validaciones bÃ¡sicas, pero insuficiente para:
 
-representar información real de negocio del convenio (código oficial, jornada anual, etc.)
-alimentar lógica derivada (ej. cálculo de jornada del empleado)
-servir como contexto de configuración para el motor de nómina
+representar informaciÃ³n real de negocio del convenio (cÃ³digo oficial, jornada anual, etc.)
+alimentar lÃ³gica derivada (ej. cÃ¡lculo de jornada del empleado)
+servir como contexto de configuraciÃ³n para el motor de nÃ³mina
 
-En paralelo, el motor de nómina (payroll) se está diseñando en torno a un metamodelo de objetos configurables (PayrollObject), donde:
+En paralelo, el motor de nÃ³mina (payroll) se estÃ¡ diseÃ±ando en torno a un metamodelo de objetos configurables (PayrollObject), donde:
 
-los conceptos (PAYROLL_CONCEPT) representan cálculos
+los conceptos (PAYROLL_CONCEPT) representan cÃ¡lculos
 las tablas (TABLE) representan fuentes de datos parametrizadas
 las constantes (CONSTANT) representan valores fijos
 
-Además, se identifica la necesidad de que distintos contextos de negocio (rule system, convenio, empresa, etc.):
+AdemÃ¡s, se identifica la necesidad de que distintos contextos de negocio (rule system, convenio, empresa, etc.):
 
-activen conceptos de nómina aplicables
+activen conceptos de nÃ³mina aplicables
 vinculen fuentes de datos (tablas, constantes)
 
-Finalmente, se detecta una deuda técnica en employee.working_time, donde las horas anuales se encuentran fijadas de forma estática (ej. 2000 horas), cuando en realidad dependen del convenio aplicable.
+Finalmente, se detecta una deuda tÃ©cnica en employee.working_time, donde las horas anuales se encuentran fijadas de forma estÃ¡tica (ej. 2000 horas), cuando en realidad dependen del convenio aplicable.
 
 Problema
 
 Se necesita:
 
 Enriquecer el convenio sin romper el modelo existente basado en rule_entity
-Permitir que el convenio participe en la configuración efectiva del cálculo de nómina
-Introducir un mecanismo genérico y escalable para:
-activar conceptos de nómina
+Permitir que el convenio participe en la configuraciÃ³n efectiva del cÃ¡lculo de nÃ³mina
+Introducir un mecanismo genÃ©rico y escalable para:
+activar conceptos de nÃ³mina
 vincular fuentes de datos (tablas)
-Definir una estructura eficiente para almacenar datos parametrizados de tablas (ej. salario base por categoría)
+Definir una estructura eficiente para almacenar datos parametrizados de tablas (ej. salario base por categorÃ­a)
 Resolver la dependencia entre convenio y jornada laboral del empleado
 Evitar:
-proliferación de tablas específicas por tipo de entidad (agreement_triggers, etc.)
-sobreabstracción prematura del motor de nómina
-Decisión
-1. Mantener AGREEMENT como catálogo base
+proliferaciÃ³n de tablas especÃ­ficas por tipo de entidad (agreement_triggers, etc.)
+sobreabstracciÃ³n prematura del motor de nÃ³mina
+DecisiÃ³n
+1. Mantener AGREEMENT como catÃ¡logo base
 AGREEMENT permanece como rule_entity
 No se modifica su identidad funcional
-El código funcional del convenio será, preferentemente, el código oficial real
+El cÃ³digo funcional del convenio serÃ¡, preferentemente, el cÃ³digo oficial real
 
 Ejemplo:
 
@@ -11736,25 +11776,25 @@ annualHours
 active
 createdAt
 updatedAt
-Propósito
+PropÃ³sito
 Enriquecer el convenio con datos de negocio
-Servir como fuente para lógica derivada (ej. jornada del empleado)
+Servir como fuente para lÃ³gica derivada (ej. jornada del empleado)
 3. Derivar la jornada del empleado desde el convenio
 
 Se establece la regla:
 
 employee.working_time no contiene una constante fija de horas anuales;
-las horas se derivan del agreement_profile vigente en la fecha de aplicación.
+las horas se derivan del agreement_profile vigente en la fecha de aplicaciÃ³n.
 
 Flujo:
 
 Cambio en working_time
-Resolución de convenio/categoría vigente
+ResoluciÃ³n de convenio/categorÃ­a vigente
 Lectura de annualHours desde agreement_profile
-Cálculo y persistencia de valores derivados
-4. Introducir activación de objetos de nómina por contexto
+CÃ¡lculo y persistencia de valores derivados
+4. Introducir activaciÃ³n de objetos de nÃ³mina por contexto
 
-Se crea una tabla genérica:
+Se crea una tabla genÃ©rica:
 
 payroll_object_activation
 
@@ -11765,20 +11805,20 @@ ownerCode
 targetObjectTypeCode
 targetObjectCode
 active
-Propósito
+PropÃ³sito
 
-Permitir que un contexto de negocio active conceptos de nómina.
+Permitir que un contexto de negocio active conceptos de nÃ³mina.
 
-Restricción V1
+RestricciÃ³n V1
 
 Solo se permite:
 
 targetObjectTypeCode = PAYROLL_CONCEPT
 Ejemplo
-AGREEMENT 99002405011982 → PAYROLL_CONCEPT SALARIO_BASE
-5. Introducir binding de objetos de nómina por contexto
+AGREEMENT 99002405011982 â†’ PAYROLL_CONCEPT SALARIO_BASE
+5. Introducir binding de objetos de nÃ³mina por contexto
 
-Se crea una segunda tabla genérica:
+Se crea una segunda tabla genÃ©rica:
 
 payroll_object_binding
 
@@ -11790,28 +11830,28 @@ bindingRoleCode
 boundObjectTypeCode
 boundObjectCode
 active
-Propósito
+PropÃ³sito
 
 Permitir que un contexto vincule fuentes de datos a roles funcionales.
 
 Ejemplo
-AGREEMENT 99002405011982 → BASE_SALARY_TABLE → TABLE SB_RETAIL
+AGREEMENT 99002405011982 â†’ BASE_SALARY_TABLE â†’ TABLE SB_RETAIL
 Nota
 
-bindingRoleCode es obligatorio para distinguir semántica.
+bindingRoleCode es obligatorio para distinguir semÃ¡ntica.
 
-6. Mantener separación semántica: activation vs binding
+6. Mantener separaciÃ³n semÃ¡ntica: activation vs binding
 
-Se decide explícitamente:
+Se decide explÃ­citamente:
 
-activation ≠ binding
-No se utiliza una única tabla genérica para ambos conceptos
+activation â‰  binding
+No se utiliza una Ãºnica tabla genÃ©rica para ambos conceptos
 
 Motivo:
 
-semántica distinta
-validación distinta
-mantenimiento más claro
+semÃ¡ntica distinta
+validaciÃ³n distinta
+mantenimiento mÃ¡s claro
 7. Mantener precedencia fuera de datos (V1)
 
 La precedencia entre contextos:
@@ -11824,19 +11864,19 @@ No se modela en base de datos en V1.
 
 Se define como:
 
-política del motor
-fijada en código
+polÃ­tica del motor
+fijada en cÃ³digo
 validada mediante tests
 8. Modelar TABLE como PayrollObject
 
-Se mantiene la decisión:
+Se mantiene la decisiÃ³n:
 
 TABLE es un PayrollObject
-BK canónica:
+BK canÃ³nica:
 ruleSystemCode + objectTypeCode + objectCode
-9. Introducir estructura común de filas de tabla
+9. Introducir estructura comÃºn de filas de tabla
 
-Se crea una estructura física común:
+Se crea una estructura fÃ­sica comÃºn:
 
 payroll_table_row
 
@@ -11853,12 +11893,12 @@ hourlyValue
 active
 Identidad funcional
 (ruleSystemCode, tableCode, searchCode, startDate)
-Propósito
+PropÃ³sito
 Lookup eficiente por clave + fecha
-Soporte para tablas típicas de nómina:
+Soporte para tablas tÃ­picas de nÃ³mina:
 salario base
 plus convenio
-antigüedad
+antigÃ¼edad
 10. Estrategia de valores
 
 Cada tabla define un valueBasis:
@@ -11872,19 +11912,19 @@ Se establece:
 
 un valor rector
 valores derivados persistidos
-11. Relación convenio → tabla
+11. RelaciÃ³n convenio â†’ tabla
 
 Se define mediante binding, no por estructura interna de la tabla.
 
 Ejemplo:
 
-AGREEMENT → BASE_SALARY_TABLE → TABLE SB_RETAIL
+AGREEMENT â†’ BASE_SALARY_TABLE â†’ TABLE SB_RETAIL
 
 La tabla:
 
 no necesita incluir agreementCode en su clave
 puede reutilizarse o especializarse libremente
-12. Estrategia de evolución
+12. Estrategia de evoluciÃ³n
 
 Se permite que en el futuro existan nuevos tipos de objeto payroll:
 
@@ -11892,34 +11932,34 @@ Ejemplo:
 
 COMPLEX_TABLE
 
-Motivación:
+MotivaciÃ³n:
 
-no forzar todos los casos en un único modelo de tabla
-permitir crecimiento sin romper diseño base
+no forzar todos los casos en un Ãºnico modelo de tabla
+permitir crecimiento sin romper diseÃ±o base
 Consecuencias
 Positivas
-Enriquecimiento del convenio sin romper catálogo existente
-Eliminación de constantes duras (ej. 2000 horas)
-Integración natural convenio ↔ payroll
+Enriquecimiento del convenio sin romper catÃ¡logo existente
+EliminaciÃ³n de constantes duras (ej. 2000 horas)
+IntegraciÃ³n natural convenio â†” payroll
 Modelo escalable basado en contextos
-Evita proliferación de tablas específicas por tipo de entidad
-Separación clara entre:
-activación (qué se calcula)
-binding (de dónde salen los datos)
+Evita proliferaciÃ³n de tablas especÃ­ficas por tipo de entidad
+SeparaciÃ³n clara entre:
+activaciÃ³n (quÃ© se calcula)
+binding (de dÃ³nde salen los datos)
 Lookup de tablas eficiente y uniforme
 Negativas / Riesgos
-Introducción de dos nuevas tablas genéricas (activation y binding)
+IntroducciÃ³n de dos nuevas tablas genÃ©ricas (activation y binding)
 Necesidad de disciplina en bindingRoleCode
 Riesgo de sobreuso de TABLE para casos complejos
-Precedencia no configurable en V1 (requiere cambios de código)
+Precedencia no configurable en V1 (requiere cambios de cÃ³digo)
 No objetivos (V1)
 Modelado completo de versiones de convenio
-Modelado genérico de tablas multiclave complejas
+Modelado genÃ©rico de tablas multiclave complejas
 Engine de reglas declarativas completo
 Precedencia configurable en base de datos
-Activación de objetos distintos de PAYROLL_CONCEPT
-UI avanzada de configuración payroll
-Estrategia de implementación
+ActivaciÃ³n de objetos distintos de PAYROLL_CONCEPT
+UI avanzada de configuraciÃ³n payroll
+Estrategia de implementaciÃ³n
 Crear agreement_profile
 Integrar annualHours en working_time
 Crear payroll_object_activation
@@ -11928,14 +11968,14 @@ Crear TABLE + payroll_table_row para salario base
 Activar SALARIO_BASE desde convenio
 Resolver salario base en payroll usando:
 convenio
-categoría
+categorÃ­a
 tabla vinculada
 fecha
 Nota operativa
 
 Se recomienda iniciar el uso de:
 
-convenios reales (código oficial)
+convenios reales (cÃ³digo oficial)
 datos reales de tablas salariales
 
 Manteniendo datos actuales como:
@@ -11943,30 +11983,31 @@ Manteniendo datos actuales como:
 entorno de test
 fallback
 
-Esto permitirá validar el modelo con casos reales desde el inicio.
+Esto permitirÃ¡ validar el modelo con casos reales desde el inicio.
 
-🧠 Cierre
+ðŸ§  Cierre
 
 La idea central de este ADR es:
 
-El convenio no calcula nómina, pero sí define el contexto que activa qué se calcula y con qué datos.
+El convenio no calcula nÃ³mina, pero sÃ­ define el contexto que activa quÃ© se calcula y con quÃ© datos.
 
 Y el sistema se organiza en torno a tres pilares:
 
 Contexto (agreement, company, etc.)
-Activación (conceptos)
+ActivaciÃ³n (conceptos)
 Binding (fuentes)
+
 <!-- END FILE: ADR-043-Agreement-Profile-y-Activación-de-Payroll-basada-en-Contexto.md -->
 
-<a name="file-adr-044-primer-c-lculo-real-de-salario-base-mediante-conceptos-tipados-y-grafo-m-nimo-md"></a>
 
 ---
 
 # FILE: ADR-044-Primer-cálculo-real-de-salario-base-mediante-conceptos-tipados-y-grafo-mínimo.md
+<a name="file-adr-044-primer-c-lculo-real-de-salario-base-mediante-conceptos-tipados-y-grafo-m-nimo-md"></a>
 
 <!-- BEGIN FILE: ADR-044-Primer-cálculo-real-de-salario-base-mediante-conceptos-tipados-y-grafo-mínimo.md -->
 
-ADR — Primer cálculo real de salario base mediante conceptos tipados y grafo mínimo
+ADR â€” Primer cÃ¡lculo real de salario base mediante conceptos tipados y grafo mÃ­nimo
 Estado
 
 Implementado (ver ADR-045)
@@ -11977,83 +12018,83 @@ En iteraciones recientes se ha construido un slice funcional que permite:
 
 activar conceptos por convenio
 vincular tablas mediante binding
-resolver filas temporales por convenio/categoría/fecha
-integrar conceptos reales en el lanzador de nómina
+resolver filas temporales por convenio/categorÃ­a/fecha
+integrar conceptos reales en el lanzador de nÃ³mina
 
-Ese trabajo ha sido útil para validar:
+Ese trabajo ha sido Ãºtil para validar:
 
 activation
 binding
 payroll_table_row
-resolución temporal
-integración con el launch
+resoluciÃ³n temporal
+integraciÃ³n con el launch
 
-Sin embargo, la implementación actual de conceptos como BASE_SALARY o PLUS_CONVENIO se ha materializado mediante servicios concretos por concepto. Ese enfoque ha servido como spike técnico, pero no representa la arquitectura objetivo del motor de nómina.
+Sin embargo, la implementaciÃ³n actual de conceptos como BASE_SALARY o PLUS_CONVENIO se ha materializado mediante servicios concretos por concepto. Ese enfoque ha servido como spike tÃ©cnico, pero no representa la arquitectura objetivo del motor de nÃ³mina.
 
-El bundle de diseño ya fijaba una línea distinta: los conceptos de nómina deben resolverse por tipología de cálculo y por sources tipados, no por servicios hardcodeados por concepto. En particular, el bundle ya contempla tipologías como DIRECT_AMOUNT, RATE_BY_QUANTITY, PERCENTAGE y AGGREGATE, y además permite que un operando se resuelva a partir de otro CONCEPT. El ejemplo conceptual del salario base ya estaba descrito como una composición de cantidad y precio.
+El bundle de diseÃ±o ya fijaba una lÃ­nea distinta: los conceptos de nÃ³mina deben resolverse por tipologÃ­a de cÃ¡lculo y por sources tipados, no por servicios hardcodeados por concepto. En particular, el bundle ya contempla tipologÃ­as como DIRECT_AMOUNT, RATE_BY_QUANTITY, PERCENTAGE y AGGREGATE, y ademÃ¡s permite que un operando se resuelva a partir de otro CONCEPT. El ejemplo conceptual del salario base ya estaba descrito como una composiciÃ³n de cantidad y precio.
 
-Se necesita, por tanto, una reconducción controlada:
+Se necesita, por tanto, una reconducciÃ³n controlada:
 
 aprovechar las piezas ya validadas
-dejar de codificar conceptos de negocio “a mano”
+dejar de codificar conceptos de negocio â€œa manoâ€
 empezar a ejecutar un mini grafo real
 Problema
 
-Se quiere obtener una primera nómina no fake con un salario base mínimo pero real, disparado desde el convenio y resuelto mediante conceptos configurados en base de datos.
+Se quiere obtener una primera nÃ³mina no fake con un salario base mÃ­nimo pero real, disparado desde el convenio y resuelto mediante conceptos configurados en base de datos.
 
 Ese primer caso debe ser lo bastante simple para ser implementable en pocas iteraciones, pero lo bastante correcto como para validar la arquitectura del motor.
 
-Decisión
-1. Separar explícitamente concepto de negocio y concepto técnico
+DecisiÃ³n
+1. Separar explÃ­citamente concepto de negocio y concepto tÃ©cnico
 
 Se distinguen dos familias de conceptos:
 
 Conceptos de negocio
 
-Son los que representan líneas reales de nómina y pueden persistirse como resultado final.
+Son los que representan lÃ­neas reales de nÃ³mina y pueden persistirse como resultado final.
 
 Ejemplo:
 
 101 - SALARIO_BASE
-Conceptos técnicos
+Conceptos tÃ©cnicos
 
-Son nodos auxiliares de cálculo, reutilizables, y no tienen por qué persistirse como líneas finales de nómina.
+Son nodos auxiliares de cÃ¡lculo, reutilizables, y no tienen por quÃ© persistirse como lÃ­neas finales de nÃ³mina.
 
 Ejemplos:
 
 D01 - DIAS_PRESENCIA
 P01 - PRECIO_DIA_TEORICO
 
-Los conceptos técnicos podrán ser reutilizados por varios conceptos de negocio futuros.
+Los conceptos tÃ©cnicos podrÃ¡n ser reutilizados por varios conceptos de negocio futuros.
 
 2. El salario base piloto se modela como RATE_BY_QUANTITY
 
-El primer concepto real de negocio será:
+El primer concepto real de negocio serÃ¡:
 
 101 - SALARIO_BASE
 
-Su tipología será:
+Su tipologÃ­a serÃ¡:
 
 RATE_BY_QUANTITY
 
-Semántica:
+SemÃ¡ntica:
 
 quantity = CONCEPT(D01)
 rate = CONCEPT(P01)
 
 Resultado:
 
-101 = P01 × D01
+101 = P01 Ã— D01
 
-Esto sigue la línea ya fijada en el bundle para salario base como combinación de cantidad y precio.
+Esto sigue la lÃ­nea ya fijada en el bundle para salario base como combinaciÃ³n de cantidad y precio.
 
-3. D01 - DIAS_PRESENCIA se introduce como concepto técnico temporalmente simplificado
+3. D01 - DIAS_PRESENCIA se introduce como concepto tÃ©cnico temporalmente simplificado
 
 Se define:
 
 D01 - DIAS_PRESENCIA
 
-Tipología inicial:
+TipologÃ­a inicial:
 
 DIRECT_AMOUNT
 
@@ -12061,27 +12102,27 @@ Valor inicial:
 
 30
 
-Esta simplificación es deliberada.
-No se calcularán todavía días reales de presencia ni segmentación.
+Esta simplificaciÃ³n es deliberada.
+No se calcularÃ¡n todavÃ­a dÃ­as reales de presencia ni segmentaciÃ³n.
 
-Objetivo de esta iteración:
+Objetivo de esta iteraciÃ³n:
 
-validar la dependencia técnica
-validar la ejecución por grafo
-no bloquear el avance por la falta de cálculo temporal detallado
+validar la dependencia tÃ©cnica
+validar la ejecuciÃ³n por grafo
+no bloquear el avance por la falta de cÃ¡lculo temporal detallado
 
-En iteraciones futuras, D01 podrá evolucionar para resolverse por segmento o por ventana real de presencia sin cambiar la estructura del concepto 101.
+En iteraciones futuras, D01 podrÃ¡ evolucionar para resolverse por segmento o por ventana real de presencia sin cambiar la estructura del concepto 101.
 
-4. P01 - PRECIO_DIA_TEORICO se introduce como concepto técnico valorizado por tabla binded
+4. P01 - PRECIO_DIA_TEORICO se introduce como concepto tÃ©cnico valorizado por tabla binded
 
 Se define:
 
 P01 - PRECIO_DIA_TEORICO
 
-Tipología inicial:
+TipologÃ­a inicial:
 
 DIRECT_AMOUNT resuelto por source TABLE
-o, equivalentemente, un nodo técnico cuyo valor proviene de lookup a tabla binded
+o, equivalentemente, un nodo tÃ©cnico cuyo valor proviene de lookup a tabla binded
 
 Valor:
 
@@ -12090,53 +12131,53 @@ daily_value de payroll_table_row
 Lookup por:
 
 convenio aplicable
-categoría aplicable
+categorÃ­a aplicable
 fecha efectiva
 
-El binding del convenio apuntará a la tabla salarial correspondiente, y P01 se resolverá leyendo daily_value de la fila vigente.
+El binding del convenio apuntarÃ¡ a la tabla salarial correspondiente, y P01 se resolverÃ¡ leyendo daily_value de la fila vigente.
 
 Esto aprovecha directamente la estructura ya existente en payroll_table_row, que ya contiene daily_value. No se requiere derivar el precio diario a partir del mensual. Eso permite un primer caso limpio y escalable.
 
-5. El convenio dispara el concepto final de negocio, no los nodos técnicos como líneas finales
+5. El convenio dispara el concepto final de negocio, no los nodos tÃ©cnicos como lÃ­neas finales
 
 Para el primer caso:
 
 el convenio activa 101 - SALARIO_BASE
 
-El motor, al resolver 101, podrá descubrir y ejecutar sus dependencias:
+El motor, al resolver 101, podrÃ¡ descubrir y ejecutar sus dependencias:
 
 D01
 P01
 
-Pero el resultado persistido en la nómina será, en esta iteración:
+Pero el resultado persistido en la nÃ³mina serÃ¡, en esta iteraciÃ³n:
 
 101 - SALARIO_BASE
 
-Los conceptos técnicos podrán existir:
+Los conceptos tÃ©cnicos podrÃ¡n existir:
 
-como nodos de ejecución
+como nodos de ejecuciÃ³n
 como trazabilidad futura
-como snapshot si más adelante interesa
+como snapshot si mÃ¡s adelante interesa
 
-Pero no se consideran todavía líneas finales de nómina.
+Pero no se consideran todavÃ­a lÃ­neas finales de nÃ³mina.
 
-6. La ejecución se hará mediante un grafo mínimo, no mediante servicios concretos por concepto de negocio
+6. La ejecuciÃ³n se harÃ¡ mediante un grafo mÃ­nimo, no mediante servicios concretos por concepto de negocio
 
-Se abandona como dirección arquitectónica final la idea de:
+Se abandona como direcciÃ³n arquitectÃ³nica final la idea de:
 
 CalculateBaseSalaryService
 CalculateAgreementPlusService
 etc.
 
-Esos servicios se reinterpretan como spikes o resolvedores transitorios útiles para validar piezas del pipeline.
+Esos servicios se reinterpretan como spikes o resolvedores transitorios Ãºtiles para validar piezas del pipeline.
 
-La dirección correcta pasa a ser:
+La direcciÃ³n correcta pasa a ser:
 
-resolver conceptos por tipología
+resolver conceptos por tipologÃ­a
 resolver operandos por source
 permitir que un concepto dependa de otro CONCEPT
 
-Para la primera iteración no se construirá un motor genérico completo, pero sí un mini dispatcher suficiente para ejecutar:
+Para la primera iteraciÃ³n no se construirÃ¡ un motor genÃ©rico completo, pero sÃ­ un mini dispatcher suficiente para ejecutar:
 
 DIRECT_AMOUNT
 RATE_BY_QUANTITY
@@ -12145,49 +12186,49 @@ y para resolver operandos tipo:
 
 CONCEPT
 TABLE
-7. El lanzador de nómina deberá enchufarse al mini grafo real
+7. El lanzador de nÃ³mina deberÃ¡ enchufarse al mini grafo real
 
-El endpoint de cálculo / lanzador ya existente dejará de inyectar un concepto fake para este caso y pasará a:
+El endpoint de cÃ¡lculo / lanzador ya existente dejarÃ¡ de inyectar un concepto fake para este caso y pasarÃ¡ a:
 
 identificar que el convenio dispara 101 - SALARIO_BASE
 resolver el mini grafo:
 D01
 P01
 101
-persistir 101 como línea final real de nómina
+persistir 101 como lÃ­nea final real de nÃ³mina
 
-El camino fake podrá mantenerse temporalmente como fallback o modo alternativo, pero el caso piloto de salario base debe pasar a ejecutarse ya con grafo mínimo real.
+El camino fake podrÃ¡ mantenerse temporalmente como fallback o modo alternativo, pero el caso piloto de salario base debe pasar a ejecutarse ya con grafo mÃ­nimo real.
 
 Consecuencias
 Positivas
-Se reconduce el diseño hacia el motor real sin tirar piezas útiles.
+Se reconduce el diseÃ±o hacia el motor real sin tirar piezas Ãºtiles.
 Se valida el uso real de:
 trigger por convenio
 binding de tabla
 source CONCEPT
 source TABLE
-tipología RATE_BY_QUANTITY
+tipologÃ­a RATE_BY_QUANTITY
 Se evita seguir creando servicios por concepto como arquitectura final.
 Se prepara una base escalable:
-mañana D01 podrá calcularse por segmento
-mañana P02 podrá depender de P01 y J01
-mañana se podrán introducir coeficientes de jornada sin reescribir 101
+maÃ±ana D01 podrÃ¡ calcularse por segmento
+maÃ±ana P02 podrÃ¡ depender de P01 y J01
+maÃ±ana se podrÃ¡n introducir coeficientes de jornada sin reescribir 101
 Negativas / Costes
-Lo ya implementado como cálculo directo de BASE_SALARY y PLUS_CONVENIO pasa a ser transitorio.
+Lo ya implementado como cÃ¡lculo directo de BASE_SALARY y PLUS_CONVENIO pasa a ser transitorio.
 Hay que introducir un primer wiring real de dependencias entre conceptos.
-El launch tendrá que dejar de pensar en “conceptos hardcodeados” y empezar a ejecutar un mini plan de cálculo.
-No objetivos de esta iteración
+El launch tendrÃ¡ que dejar de pensar en â€œconceptos hardcodeadosâ€ y empezar a ejecutar un mini plan de cÃ¡lculo.
+No objetivos de esta iteraciÃ³n
 
-No se pretende todavía:
+No se pretende todavÃ­a:
 
-calcular días reales de presencia
+calcular dÃ­as reales de presencia
 aplicar coeficiente real de jornada
-introducir segmentación temporal
+introducir segmentaciÃ³n temporal
 modelar dependencias arbitrarias complejas
-persistir todos los conceptos técnicos como líneas de nómina
-construir un motor genérico completo con todas las tipologías posibles
+persistir todos los conceptos tÃ©cnicos como lÃ­neas de nÃ³mina
+construir un motor genÃ©rico completo con todas las tipologÃ­as posibles
 resolver plus convenio dentro de este mismo salto
-Diseño mínimo resultante
+DiseÃ±o mÃ­nimo resultante
 Conceptos iniciales
 101 - SALARIO_BASE
 tipo: RATE_BY_QUANTITY
@@ -12201,8 +12242,8 @@ tipo: DIRECT_AMOUNT / valor resuelto por TABLE
 source: tabla binded por convenio
 campo usado: daily_value
 Resultado final
-línea final persistida: 101 - SALARIO_BASE
-Estrategia de implementación
+lÃ­nea final persistida: 101 - SALARIO_BASE
+Estrategia de implementaciÃ³n
 Paso 1
 
 Sembrar en base de datos:
@@ -12210,12 +12251,12 @@ Sembrar en base de datos:
 101
 D01
 P01
-sus tipologías
+sus tipologÃ­as
 sus relaciones/dependencias
 el binding de tabla para P01
 Paso 2
 
-Crear el wiring mínimo del mini grafo:
+Crear el wiring mÃ­nimo del mini grafo:
 
 resolver 101
 descubrir dependencias
@@ -12224,37 +12265,38 @@ resolver P01
 calcular 101
 Paso 3
 
-Enchufar ese mini cálculo al lanzador de nómina existente
+Enchufar ese mini cÃ¡lculo al lanzador de nÃ³mina existente
 
 Paso 4
 
 Persistir 101 como concepto final real en la tabla de resultados
 
-Nota de transición
+Nota de transiciÃ³n
 
-Los servicios actuales tipo CalculateBaseSalaryService o CalculateAgreementPlusService no se consideran el diseño final del motor. Se mantienen únicamente como apoyo temporal o como material de transición mientras el primer camino real basado en tipologías y dependencias queda operativo.
+Los servicios actuales tipo CalculateBaseSalaryService o CalculateAgreementPlusService no se consideran el diseÃ±o final del motor. Se mantienen Ãºnicamente como apoyo temporal o como material de transiciÃ³n mientras el primer camino real basado en tipologÃ­as y dependencias queda operativo.
 
-Decisión práctica inmediata
+DecisiÃ³n prÃ¡ctica inmediata
 
-La siguiente iteración no se enfocará en añadir más conceptos directos.
-Se enfocará en conseguir que el lanzador calcule un único concepto real final (101 - SALARIO_BASE) mediante:
+La siguiente iteraciÃ³n no se enfocarÃ¡ en aÃ±adir mÃ¡s conceptos directos.
+Se enfocarÃ¡ en conseguir que el lanzador calcule un Ãºnico concepto real final (101 - SALARIO_BASE) mediante:
 
 trigger de convenio
 mini grafo
-conceptos técnicos
-tipologías mínimas
+conceptos tÃ©cnicos
+tipologÃ­as mÃ­nimas
 lookup a tabla binded
+
 <!-- END FILE: ADR-044-Primer-cálculo-real-de-salario-base-mediante-conceptos-tipados-y-grafo-mínimo.md -->
 
-<a name="file-adr-045-ejecucion-elegible-real-basada-en-concept-assignment-y-plan-de-calculo-md"></a>
 
 ---
 
 # FILE: ADR-045-Ejecucion-elegible-real-basada-en-concept_assignment-y-plan-de-calculo.md
+<a name="file-adr-045-ejecucion-elegible-real-basada-en-concept-assignment-y-plan-de-calculo-md"></a>
 
 <!-- BEGIN FILE: ADR-045-Ejecucion-elegible-real-basada-en-concept_assignment-y-plan-de-calculo.md -->
 
-# ADR-045 — Ejecución elegible real basada en `concept_assignment` y plan de cálculo
+# ADR-045 â€” EjecuciÃ³n elegible real basada en `concept_assignment` y plan de cÃ¡lculo
 
 ## Estado
 
@@ -12264,85 +12306,85 @@ Implementado
 
 ## Contexto
 
-ADR-044 estableció la dirección técnica: abandonar servicios hardcodeados por concepto y ejecutar nómina mediante un grafo mínimo de conceptos configurados en base de datos. La primera iteración de ese diseño se implementó con un stub PoC en `CalculatePayrollUnitService.calculateEligibleReal()` que calculaba **únicamente el concepto "101"** mediante una llamada directa a `PayrollConceptGraphCalculator`.
+ADR-044 estableciÃ³ la direcciÃ³n tÃ©cnica: abandonar servicios hardcodeados por concepto y ejecutar nÃ³mina mediante un grafo mÃ­nimo de conceptos configurados en base de datos. La primera iteraciÃ³n de ese diseÃ±o se implementÃ³ con un stub PoC en `CalculatePayrollUnitService.calculateEligibleReal()` que calculaba **Ãºnicamente el concepto "101"** mediante una llamada directa a `PayrollConceptGraphCalculator`.
 
-Ese stub sirvió para validar las piezas del pipeline (convenio, binding, tablas, resolución temporal) pero nunca fue el diseño final. Para avanzar hacia una nómina real había que:
+Ese stub sirviÃ³ para validar las piezas del pipeline (convenio, binding, tablas, resoluciÃ³n temporal) pero nunca fue el diseÃ±o final. Para avanzar hacia una nÃ³mina real habÃ­a que:
 
-1. Determinar qué conceptos aplican a un empleado desde parametrización (no hardcode)
-2. Expandir las dependencias transitivas necesarias para el cálculo
-3. Construir un plan de ejecución en orden topológico
+1. Determinar quÃ© conceptos aplican a un empleado desde parametrizaciÃ³n (no hardcode)
+2. Expandir las dependencias transitivas necesarias para el cÃ¡lculo
+3. Construir un plan de ejecuciÃ³n en orden topolÃ³gico
 4. Ejecutar el plan completo, no solo un concepto
 5. Persistir solo los conceptos con presencia en recibo
 
-En paralelo, se habían diseñado las tablas `payroll_engine.concept_assignment` (elegibilidad por contexto) y el pipeline `BuildEligibleExecutionPlanUseCase` (construcción del plan), pero ninguno estaba enchufado al lanzador.
+En paralelo, se habÃ­an diseÃ±ado las tablas `payroll_engine.concept_assignment` (elegibilidad por contexto) y el pipeline `BuildEligibleExecutionPlanUseCase` (construcciÃ³n del plan), pero ninguno estaba enchufado al lanzador.
 
 ---
 
-## Decisión
+## DecisiÃ³n
 
-### 1. `concept_assignment` como fuente de elegibilidad canónica
+### 1. `concept_assignment` como fuente de elegibilidad canÃ³nica
 
-La tabla `payroll_engine.concept_assignment` es la fuente oficial de qué conceptos aplican a un contexto dado:
+La tabla `payroll_engine.concept_assignment` es la fuente oficial de quÃ© conceptos aplican a un contexto dado:
 
-| Columna | Semántica |
+| Columna | SemÃ¡ntica |
 |---|---|
-| `rule_system_code` | Ámbito del sistema de reglas |
+| `rule_system_code` | Ãmbito del sistema de reglas |
 | `concept_code` | Concepto elegible |
 | `company_code` | Wildcardeable (null = aplica a todas las empresas) |
 | `agreement_code` | Convenio aplicable |
 | `employee_type_code` | Wildcardeable (null = aplica a todos los tipos) |
 | `valid_from` / `valid_to` | Vigencia temporal |
-| `priority` | Resolución de conflictos cuando hay múltiples asignaciones para el mismo concepto |
+| `priority` | ResoluciÃ³n de conflictos cuando hay mÃºltiples asignaciones para el mismo concepto |
 
-La elegibilidad se evalúa mediante `EmployeeAssignmentContext` (ruleSystemCode, companyCode, agreementCode, employeeTypeCode) en la fecha de referencia (fin de periodo).
+La elegibilidad se evalÃºa mediante `EmployeeAssignmentContext` (ruleSystemCode, companyCode, agreementCode, employeeTypeCode) en la fecha de referencia (fin de periodo).
 
-**Divergencia de ADR-043**: ADR-043 proponía `payroll_object_activation` como mecanismo de activación de conceptos por contexto. Esa tabla existe en el modelo pero no fue el camino tomado para la ejecución elegible. `concept_assignment` es el mecanismo real en producción para el motor `payroll_engine`. `payroll_object_activation` queda para futuros casos de uso distintos si los hubiera.
+**Divergencia de ADR-043**: ADR-043 proponÃ­a `payroll_object_activation` como mecanismo de activaciÃ³n de conceptos por contexto. Esa tabla existe en el modelo pero no fue el camino tomado para la ejecuciÃ³n elegible. `concept_assignment` es el mecanismo real en producciÃ³n para el motor `payroll_engine`. `payroll_object_activation` queda para futuros casos de uso distintos si los hubiera.
 
-### 2. Eliminación del stub PoC en `CalculatePayrollUnitService`
+### 2. EliminaciÃ³n del stub PoC en `CalculatePayrollUnitService`
 
 `calculateEligibleReal()` ya no hardcodea el concepto "101". En su lugar:
 
-1. Obtiene el contexto de asignación del empleado desde `PayrollLaunchEligibleInputContext`
+1. Obtiene el contexto de asignaciÃ³n del empleado desde `PayrollLaunchEligibleInputContext`
 2. Llama a `BuildEligibleExecutionPlanUseCase.build(assignmentContext, periodEnd)`
-3. Itera el plan resultante (`EligibleExecutionPlanResult.executionPlan()`) en orden topológico
-4. Aplica la lógica de cálculo según `calculationType` de cada `ConceptExecutionPlanEntry`
-5. Filtra por `payslipOrderCode != null` para decidir qué conceptos se persisten
+3. Itera el plan resultante (`EligibleExecutionPlanResult.executionPlan()`) en orden topolÃ³gico
+4. Aplica la lÃ³gica de cÃ¡lculo segÃºn `calculationType` de cada `ConceptExecutionPlanEntry`
+5. Filtra por `payslipOrderCode != null` para decidir quÃ© conceptos se persisten
 
-### 3. Corrección del grafo de dependencias: edges de operandos
+### 3. CorrecciÃ³n del grafo de dependencias: edges de operandos
 
-`DefaultConceptDependencyGraphService` ahora añade aristas `OPERAND_DEPENDENCY` para conceptos `RATE_BY_QUANTITY` y `PERCENTAGE`. Sin estas aristas, el grafo solo tenía aristas `FEED_DEPENDENCY`, lo que hacía que la ordenación topológica fuera incorrecta para conceptos con operandos de tipo `CONCEPT`.
+`DefaultConceptDependencyGraphService` ahora aÃ±ade aristas `OPERAND_DEPENDENCY` para conceptos `RATE_BY_QUANTITY` y `PERCENTAGE`. Sin estas aristas, el grafo solo tenÃ­a aristas `FEED_DEPENDENCY`, lo que hacÃ­a que la ordenaciÃ³n topolÃ³gica fuera incorrecta para conceptos con operandos de tipo `CONCEPT`.
 
-Regla: un concepto `X` de tipo `RATE_BY_QUANTITY` cuyos operandos son `CONCEPT(D01)` y `CONCEPT(P01)` tiene dependencias `OPERAND_DEPENDENCY` de `X→D01` y `X→P01`. Estas aristas garantizan que D01 y P01 se calculen antes que X.
+Regla: un concepto `X` de tipo `RATE_BY_QUANTITY` cuyos operandos son `CONCEPT(D01)` y `CONCEPT(P01)` tiene dependencias `OPERAND_DEPENDENCY` de `Xâ†’D01` y `Xâ†’P01`. Estas aristas garantizan que D01 y P01 se calculen antes que X.
 
-### 4. Expansión BFS con discovery por operandos
+### 4. ExpansiÃ³n BFS con discovery por operandos
 
-`DefaultEligibleConceptExpansionService` realiza la expansión del conjunto elegible en dos fases:
+`DefaultEligibleConceptExpansionService` realiza la expansiÃ³n del conjunto elegible en dos fases:
 
 - **Feed-based discovery**: descubre conceptos adicionales accesibles por relaciones `FEED_DEPENDENCY`, pero solo incluye conceptos de tipo `PayrollObjectTypeCode.CONCEPT` (no tablas ni constantes).
-- **Operand-based discovery**: para cada concepto con operandos de tipo `CONCEPT`, incluye los conceptos técnicos referenciados como operandos (ej. D01 y P01 para el concepto 101).
+- **Operand-based discovery**: para cada concepto con operandos de tipo `CONCEPT`, incluye los conceptos tÃ©cnicos referenciados como operandos (ej. D01 y P01 para el concepto 101).
 
-Los conceptos descubiertos por expansión (D01, P01) no están en `concept_assignment` y no son "elegibles" en sentido de negocio, pero son necesarios para el cálculo. El resultado distingue `eligibleConcepts` (asignados directamente) de `expandedConcepts` (conjunto completo incluyendo técnicos).
+Los conceptos descubiertos por expansiÃ³n (D01, P01) no estÃ¡n en `concept_assignment` y no son "elegibles" en sentido de negocio, pero son necesarios para el cÃ¡lculo. El resultado distingue `eligibleConcepts` (asignados directamente) de `expandedConcepts` (conjunto completo incluyendo tÃ©cnicos).
 
 ### 5. `payslipOrderCode` como filtro de persistencia
 
-Un concepto calculado se persiste como línea de nómina si y solo si su `payslipOrderCode` no es null. El valor de `payslipOrderCode` determina además el orden de presentación en el recibo.
+Un concepto calculado se persiste como lÃ­nea de nÃ³mina si y solo si su `payslipOrderCode` no es null. El valor de `payslipOrderCode` determina ademÃ¡s el orden de presentaciÃ³n en el recibo.
 
-Los conceptos técnicos (D01, P01) tienen `payslipOrderCode = null` → se calculan pero no se persisten.  
-Los conceptos de negocio (101, 970, 990) tienen `payslipOrderCode` establecido → se persisten y aparecen en el recibo.
+Los conceptos tÃ©cnicos (D01, P01) tienen `payslipOrderCode = null` â†’ se calculan pero no se persisten.  
+Los conceptos de negocio (101, 970, 990) tienen `payslipOrderCode` establecido â†’ se persisten y aparecen en el recibo.
 
 ### 6. Conceptos AGGREGATE 970, 980, 990
 
 Se introducen tres conceptos de tipo `AGGREGATE`:
 
-| Código | Mnemónico | Rol funcional | `payslipOrderCode` |
+| CÃ³digo | MnemÃ³nico | Rol funcional | `payslipOrderCode` |
 |---|---|---|---|
 | 970 | TOTAL_DEVENGOS | `TOTAL_EARNING` | 970 |
 | 980 | TOTAL_DEDUCCIONES | `TOTAL_DEDUCTION` | 980 |
 | 990 | LIQUIDO_A_PAGAR | `NET_PAY` | 990 |
 
-Sus fuentes provienen de relaciones `FEED_DEPENDENCY` desde los conceptos que los alimentan (ej. 101 → 970 y 101 → 990). La ejecución suma los importes de sus fuentes, aplicando inversión de signo si `invertSign = true`.
+Sus fuentes provienen de relaciones `FEED_DEPENDENCY` desde los conceptos que los alimentan (ej. 101 â†’ 970 y 101 â†’ 990). La ejecuciÃ³n suma los importes de sus fuentes, aplicando inversiÃ³n de signo si `invertSign = true`.
 
-El concepto 980 (TOTAL_DEDUCCIONES) no se siembra en `concept_assignment` mientras no haya conceptos de deducción reales, ya que el plan builder lanzaría `MissingAggregateSourcesException` al no encontrar feed sources.
+El concepto 980 (TOTAL_DEDUCCIONES) no se siembra en `concept_assignment` mientras no haya conceptos de deducciÃ³n reales, ya que el plan builder lanzarÃ­a `MissingAggregateSourcesException` al no encontrar feed sources.
 
 ---
 
@@ -12350,41 +12392,42 @@ El concepto 980 (TOTAL_DEDUCCIONES) no se siembra en `concept_assignment` mientr
 
 ### Positivas
 
-- El lanzador de nómina ya no contiene lógica de negocio específica por concepto. La parametrización en base de datos dicta completamente qué se calcula.
-- Añadir un nuevo concepto elegible es solo insertar una fila en `concept_assignment` y definir las dependencias/fuentes correspondientes.
-- La nómina persiste 970 y 990 además de 101, dando una vista real de devengos totales y líquido a pagar.
-- El pipeline completo (elegibilidad → expansión → grafo → plan → ejecución) está cubierto por tests unitarios e integración E2E.
+- El lanzador de nÃ³mina ya no contiene lÃ³gica de negocio especÃ­fica por concepto. La parametrizaciÃ³n en base de datos dicta completamente quÃ© se calcula.
+- AÃ±adir un nuevo concepto elegible es solo insertar una fila en `concept_assignment` y definir las dependencias/fuentes correspondientes.
+- La nÃ³mina persiste 970 y 990 ademÃ¡s de 101, dando una vista real de devengos totales y lÃ­quido a pagar.
+- El pipeline completo (elegibilidad â†’ expansiÃ³n â†’ grafo â†’ plan â†’ ejecuciÃ³n) estÃ¡ cubierto por tests unitarios e integraciÃ³n E2E.
 
 ### Costes / Restricciones
 
-- `concept_assignment` debe estar correctamente sembrado para cada convenio. Si está vacío, no se calcula ningún concepto (sin error implícito: la nómina se persistirá con 0 líneas).
-- Los conceptos AGGREGATE con `concept_assignment` activo pero sin feed sources lanzarán `MissingAggregateSourcesException` en tiempo de construcción del plan.
+- `concept_assignment` debe estar correctamente sembrado para cada convenio. Si estÃ¡ vacÃ­o, no se calcula ningÃºn concepto (sin error implÃ­cito: la nÃ³mina se persistirÃ¡ con 0 lÃ­neas).
+- Los conceptos AGGREGATE con `concept_assignment` activo pero sin feed sources lanzarÃ¡n `MissingAggregateSourcesException` en tiempo de construcciÃ³n del plan.
 - El modo `MINIMAL_REAL` queda retirado (`UnsupportedOperationException`). Solo `ELIGIBLE_REAL` y `FAKE` son modos operativos.
 
 ---
 
-## Relación con ADRs previos
+## RelaciÃ³n con ADRs previos
 
-| ADR | Relación |
+| ADR | RelaciÃ³n |
 |---|---|
-| ADR-036 | Define `CalculationType` — ahora todos los tipos (DIRECT_AMOUNT, RATE_BY_QUANTITY, PERCENTAGE, AGGREGATE) se ejecutan en el mismo dispatcher |
-| ADR-038 | Define las relaciones FEED_DEPENDENCY — ahora usadas en tiempo de ejecución para AGGREGATE |
-| ADR-039 | Define el grafo de dependencias — complementado con aristas OPERAND_DEPENDENCY |
-| ADR-040 | Define el modelo conceptual de macro-grafo + activación + plan — este ADR documenta su implementación real |
-| ADR-043 | Propuso `payroll_object_activation` como mecanismo de activación — desplazado por `concept_assignment` |
-| ADR-044 | Inició la dirección del grafo mínimo real — este ADR completa y generaliza esa dirección |
+| ADR-036 | Define `CalculationType` â€” ahora todos los tipos (DIRECT_AMOUNT, RATE_BY_QUANTITY, PERCENTAGE, AGGREGATE) se ejecutan en el mismo dispatcher |
+| ADR-038 | Define las relaciones FEED_DEPENDENCY â€” ahora usadas en tiempo de ejecuciÃ³n para AGGREGATE |
+| ADR-039 | Define el grafo de dependencias â€” complementado con aristas OPERAND_DEPENDENCY |
+| ADR-040 | Define el modelo conceptual de macro-grafo + activaciÃ³n + plan â€” este ADR documenta su implementaciÃ³n real |
+| ADR-043 | Propuso `payroll_object_activation` como mecanismo de activaciÃ³n â€” desplazado por `concept_assignment` |
+| ADR-044 | IniciÃ³ la direcciÃ³n del grafo mÃ­nimo real â€” este ADR completa y generaliza esa direcciÃ³n |
+
 
 <!-- END FILE: ADR-045-Ejecucion-elegible-real-basada-en-concept_assignment-y-plan-de-calculo.md -->
 
-<a name="file-adr-046-conceptos-t-cnicos-base-de-per-odo-y-presencia-en-n-mina-md"></a>
 
 ---
 
 # FILE: ADR-046-Conceptos-técnicos-base-de-período-y-presencia-en-nómina.md
+<a name="file-adr-046-conceptos-t-cnicos-base-de-per-odo-y-presencia-en-n-mina-md"></a>
 
 <!-- BEGIN FILE: ADR-046-Conceptos-técnicos-base-de-período-y-presencia-en-nómina.md -->
 
-# ADR-046 — Conceptos técnicos base de período y presencia en nómina
+# ADR-046 â€” Conceptos tÃ©cnicos base de perÃ­odo y presencia en nÃ³mina
 
 ## Estado
 
@@ -12392,54 +12435,54 @@ Aceptado.
 
 ## Contexto
 
-El motor de nómina de B4RRHH ya permite calcular conceptos económicos y agregados como:
+El motor de nÃ³mina de B4RRHH ya permite calcular conceptos econÃ³micos y agregados como:
 
 - SALARIO_BASE
 - TOTAL_DEVENGOS
 - TOTAL_DEDUCCIONES
 - NETO
 
-Sin embargo, algunos valores necesarios para calcular correctamente una nómina mensual todavía están implícitos o calculados en duro.
+Sin embargo, algunos valores necesarios para calcular correctamente una nÃ³mina mensual todavÃ­a estÃ¡n implÃ­citos o calculados en duro.
 
 Ejemplos:
 
-- días reales del mes
-- días teóricos de nómina
-- días de presencia del empleado en el período
-- días de presencia por subperíodo o segmento
+- dÃ­as reales del mes
+- dÃ­as teÃ³ricos de nÃ³mina
+- dÃ­as de presencia del empleado en el perÃ­odo
+- dÃ­as de presencia por subperÃ­odo o segmento
 
-Estos valores no son conceptos económicos visibles en el recibo, pero sí son datos fundamentales para explicar y trazar el cálculo.
+Estos valores no son conceptos econÃ³micos visibles en el recibo, pero sÃ­ son datos fundamentales para explicar y trazar el cÃ¡lculo.
 
 ## Problema
 
-Si estos valores permanecen ocultos dentro del cálculo:
+Si estos valores permanecen ocultos dentro del cÃ¡lculo:
 
 - el salario base no es completamente trazable;
 - se dificulta depurar altas, bajas y meses incompletos;
-- se complica evolucionar hacia cálculo por tramos;
-- no queda claro qué cantidad de días ha alimentado cada concepto económico.
+- se complica evolucionar hacia cÃ¡lculo por tramos;
+- no queda claro quÃ© cantidad de dÃ­as ha alimentado cada concepto econÃ³mico.
 
-Además, no todos los conceptos del motor pueden depender de otros conceptos configurados.
+AdemÃ¡s, no todos los conceptos del motor pueden depender de otros conceptos configurados.
 
-En algún punto existen conceptos fundamentales que nacen directamente del contexto de ejecución.
+En algÃºn punto existen conceptos fundamentales que nacen directamente del contexto de ejecuciÃ³n.
 
-## Decisión
+## DecisiÃ³n
 
-Se introducen conceptos técnicos base de nómina con la nomenclatura D01/D02/D03, más cómoda para negocio.
+Se introducen conceptos tÃ©cnicos base de nÃ³mina con la nomenclatura D01/D02/D03, mÃ¡s cÃ³moda para negocio.
 
 Estos conceptos:
 
-- se calculan durante la ejecución mediante clases Java específicas (`CalculationType.JAVA_PROVIDED`);
-- tienen `FunctionalNature.TECHNICAL` para distinguirlos de conceptos económicos;
+- se calculan durante la ejecuciÃ³n mediante clases Java especÃ­ficas (`CalculationType.JAVA_PROVIDED`);
+- tienen `FunctionalNature.TECHNICAL` para distinguirlos de conceptos econÃ³micos;
 - pueden alimentar otros conceptos como operandos del grafo;
-- no se muestran en el recibo de nómina (`payslipOrderCode = null`);
+- no se muestran en el recibo de nÃ³mina (`payslipOrderCode = null`);
 - no representan devengos ni deducciones.
 
-## Conceptos técnicos
+## Conceptos tÃ©cnicos
 
-### D01 — DIAS_DEVENGO
+### D01 â€” DIAS_DEVENGO
 
-Días de devengo mensual del segmento. Valor que se usa como operando QUANTITY de SALARIO_BASE.
+DÃ­as de devengo mensual del segmento. Valor que se usa como operando QUANTITY de SALARIO_BASE.
 
 Regla V1:
 
@@ -12449,16 +12492,16 @@ D01 = min(daysInSegment, 30)
 
 Ejemplos:
 
-- empleado activo todo abril (30 días): 30
-- empleado activo todo marzo (31 días): 30 (topado)
-- alta el 10 de marzo (22 días en segmento): 22
-- baja el 20 de febrero (20 días en segmento): 20
+- empleado activo todo abril (30 dÃ­as): 30
+- empleado activo todo marzo (31 dÃ­as): 30 (topado)
+- alta el 10 de marzo (22 dÃ­as en segmento): 22
+- baja el 20 de febrero (20 dÃ­as en segmento): 20
 
 Sustituye al anterior D01 (DIRECT_AMOUNT, CONSTANT=30 fijo), que no contemplaba meses parciales.
 
-### D02 — DIAS_MES_NOMINA
+### D02 â€” DIAS_MES_NOMINA
 
-Días teóricos del mes de nómina. Denominador convencional para el cálculo mensual.
+DÃ­as teÃ³ricos del mes de nÃ³mina. Denominador convencional para el cÃ¡lculo mensual.
 
 Regla V1:
 
@@ -12466,11 +12509,11 @@ Regla V1:
 D02 = 30 (siempre)
 ```
 
-Febrero, meses de 31 días y cualquier mes se tratan como 30 a efectos de nómina mensual.
+Febrero, meses de 31 dÃ­as y cualquier mes se tratan como 30 a efectos de nÃ³mina mensual.
 
-### D03 — DIAS_MES_REALES
+### D03 â€” DIAS_MES_REALES
 
-Días naturales reales del mes de cálculo.
+DÃ­as naturales reales del mes de cÃ¡lculo.
 
 Regla V1:
 
@@ -12481,26 +12524,26 @@ D03 = periodStart.lengthOfMonth()
 Ejemplos:
 
 - enero: 31
-- febrero: 28 o 29 (año bisiesto)
+- febrero: 28 o 29 (aÃ±o bisiesto)
 - abril: 30
 
-## Relación con SALARIO_BASE
+## RelaciÃ³n con SALARIO_BASE
 
 Para salario base mensual V1:
 
 ```
-SALARIO_BASE = D01 × P01
+SALARIO_BASE = D01 Ã— P01
 ```
 
-Donde `P01` (PRECIO_DIA) se obtiene de tabla de tarifas por categoría de convenio.
+Donde `P01` (PRECIO_DIA) se obtiene de tabla de tarifas por categorÃ­a de convenio.
 
-Con D01 dinámico por segmento, el empleado con alta el 10 de marzo cobra proporcionalmente
-(`22 × P01`) en lugar del mes completo (`30 × P01`).
+Con D01 dinÃ¡mico por segmento, el empleado con alta el 10 de marzo cobra proporcionalmente
+(`22 Ã— P01`) en lugar del mes completo (`30 Ã— P01`).
 
-## Implementación
+## ImplementaciÃ³n
 
 `CalculationType.JAVA_PROVIDED` identifica estos conceptos en el grafo. El `DefaultSegmentExecutionEngine`
-y el `CalculatePayrollUnitService` despachan a la implementación registrada por Spring mediante
+y el `CalculatePayrollUnitService` despachan a la implementaciÃ³n registrada por Spring mediante
 `List<TechnicalConceptCalculator>`.
 
 Calculadores registrados:
@@ -12512,37 +12555,37 @@ Calculadores registrados:
 | D03      | `CalendarDaysConceptCalculator`    |
 
 La interfaz `TechnicalConceptCalculator` recibe un `TechnicalConceptSegmentData` (solo fechas y
-`daysInSegment`) para mantener el contrato estrecho y fácilmente testeable.
+`daysInSegment`) para mantener el contrato estrecho y fÃ¡cilmente testeable.
 
 ## Regla de visibilidad
 
-Los conceptos técnicos base tienen `payslipOrderCode = null`. No se persisten como líneas de recibo.
-Son calculados y disponibles en el estado de ejecución para ser operandos de otros conceptos.
+Los conceptos tÃ©cnicos base tienen `payslipOrderCode = null`. No se persisten como lÃ­neas de recibo.
+Son calculados y disponibles en el estado de ejecuciÃ³n para ser operandos de otros conceptos.
 
-## Regla arquitectónica
+## Regla arquitectÃ³nica
 
 Las clases `TechnicalConceptCalculator` no deben convertirse en un motor paralelo.
 
-Solo pueden calcular conceptos técnicos fundamentales derivados de:
+Solo pueden calcular conceptos tÃ©cnicos fundamentales derivados de:
 
-- período de nómina;
+- perÃ­odo de nÃ³mina;
 - calendario mensual;
 - presencia del empleado;
 - segmentos temporales efectivos.
 
-No deben calcular conceptos económicos como salario base, antigüedad, nocturnidad, IRPF, totales o neto.
+No deben calcular conceptos econÃ³micos como salario base, antigÃ¼edad, nocturnidad, IRPF, totales o neto.
 
-## Segmentación futura
+## SegmentaciÃ³n futura
 
-Cuando exista cálculo por subperíodos, D01 ya está preparado: opera sobre `daysInSegment`
-(el segmento activo), no sobre `daysInPeriod`. D02 y D03 son invariantes del período y
+Cuando exista cÃ¡lculo por subperÃ­odos, D01 ya estÃ¡ preparado: opera sobre `daysInSegment`
+(el segmento activo), no sobre `daysInPeriod`. D02 y D03 son invariantes del perÃ­odo y
 devuelven el mismo valor en todos los segmentos de un mismo mes.
 
 ## Consecuencias positivas
 
-- Mejora la trazabilidad del cálculo de SALARIO_BASE.
+- Mejora la trazabilidad del cÃ¡lculo de SALARIO_BASE.
 - Elimina el hardcode de `D01_FIXED_30`.
-- Prepara el motor para altas, bajas y cambios de situación dentro del mes.
+- Prepara el motor para altas, bajas y cambios de situaciÃ³n dentro del mes.
 - Permite explicar el salario base con meses parciales.
 - Mantiene limpio el recibo.
 - Encaja con el grafo de conceptos sin forzar que todo sea configurable.
@@ -12551,29 +12594,30 @@ devuelven el mismo valor en todos los segmentos de un mismo mes.
 
 **1. Abusar de JAVA_PROVIDED**
 
-No todo helper interno debe convertirse en concepto técnico. Solo deben modelarse
-valores relevantes para explicar el cálculo.
+No todo helper interno debe convertirse en concepto tÃ©cnico. Solo deben modelarse
+valores relevantes para explicar el cÃ¡lculo.
 
 **2. Crear un segundo motor en Java**
 
-Las clases técnicas no deben calcular conceptos económicos.
+Las clases tÃ©cnicas no deben calcular conceptos econÃ³micos.
 
 **3. Naming ambiguo**
 
-Se adopta la nomenclatura D01/D02/D03 por ser más cómoda para negocio y no generar
-confusión entre DIAS_MES_REALES (D03) y DIAS_MES_NOMINA (D02).
+Se adopta la nomenclatura D01/D02/D03 por ser mÃ¡s cÃ³moda para negocio y no generar
+confusiÃ³n entre DIAS_MES_REALES (D03) y DIAS_MES_NOMINA (D02).
+
 
 <!-- END FILE: ADR-046-Conceptos-técnicos-base-de-período-y-presencia-en-nómina.md -->
 
-<a name="file-adr-047-lifecycle-workflow-participant-pattern-md"></a>
 
 ---
 
 # FILE: ADR-047-lifecycle-workflow-participant-pattern.md
+<a name="file-adr-047-lifecycle-workflow-participant-pattern-md"></a>
 
 <!-- BEGIN FILE: ADR-047-lifecycle-workflow-participant-pattern.md -->
 
-# ADR-047 — Lifecycle Workflow Participant Pattern (Hire / Terminate)
+# ADR-047 â€” Lifecycle Workflow Participant Pattern (Hire / Terminate)
 
 ## Estado
 
@@ -12583,52 +12627,52 @@ Propuesto
 
 ## Contexto
 
-ADR-007 y ADR-018 establecieron que los workflows de ciclo de vida (Hire, Terminate, Rehire) se implementan como servicios de orquestación en la capa de aplicación: un único `@Transactional` que coordina múltiples verticales y garantiza coherencia temporal.
+ADR-007 y ADR-018 establecieron que los workflows de ciclo de vida (Hire, Terminate, Rehire) se implementan como servicios de orquestaciÃ³n en la capa de aplicaciÃ³n: un Ãºnico `@Transactional` que coordina mÃºltiples verticales y garantiza coherencia temporal.
 
-Esa decisión sigue siendo correcta. El problema es la **implementación concreta** que ha emergido de ella.
+Esa decisiÃ³n sigue siendo correcta. El problema es la **implementaciÃ³n concreta** que ha emergido de ella.
 
 `HireEmployeeService` actualmente:
 
 - Tiene **10 dependencias inyectadas** en el constructor
-- Ocupa **358 líneas**
-- Ejecuta **8 sub-operaciones** secuenciales dentro del método `hire()`
+- Ocupa **358 lÃ­neas**
+- Ejecuta **8 sub-operaciones** secuenciales dentro del mÃ©todo `hire()`
 - `HireEmployeeExceptionHandler` importa excepciones de **6 verticales distintos**
 
-El patrón real que ha emergido es este:
+El patrÃ³n real que ha emergido es este:
 
 ```
-HireEmployeeService → CreatePresenceUseCase
-                    → CreateContractUseCase
-                    → CreateWorkCenterUseCase
-                    → CreateCostCenterDistributionUseCase
-                    → CreateWorkingTimeUseCase
-                    → CreateLaborClassificationUseCase
-                    → NextEmployeeNumberPort
-                    → WorkCenterCompanyValidator
-                    → EmployeeTypeCatalogValidator
+HireEmployeeService â†’ CreatePresenceUseCase
+                    â†’ CreateContractUseCase
+                    â†’ CreateWorkCenterUseCase
+                    â†’ CreateCostCenterDistributionUseCase
+                    â†’ CreateWorkingTimeUseCase
+                    â†’ CreateLaborClassificationUseCase
+                    â†’ NextEmployeeNumberPort
+                    â†’ WorkCenterCompanyValidator
+                    â†’ EmployeeTypeCatalogValidator
 ```
 
 Cada nuevo vertical que necesita participar en el hire obliga a:
 
-1. Añadir una dependencia al constructor de `HireEmployeeService`
-2. Añadir la llamada dentro del método `hire()`
-3. Añadir un `@ExceptionHandler` en `HireEmployeeExceptionHandler` para las excepciones de ese vertical
+1. AÃ±adir una dependencia al constructor de `HireEmployeeService`
+2. AÃ±adir la llamada dentro del mÃ©todo `hire()`
+3. AÃ±adir un `@ExceptionHandler` en `HireEmployeeExceptionHandler` para las excepciones de ese vertical
 
-Esto viola Open/Closed: el servicio más crítico del sistema cambia con cada feature nueva.
+Esto viola Open/Closed: el servicio mÃ¡s crÃ­tico del sistema cambia con cada feature nueva.
 
-El patrón se reproduce en `TerminateEmployeeService` y `RehireEmployeeService`.
+El patrÃ³n se reproduce en `TerminateEmployeeService` y `RehireEmployeeService`.
 
 ---
 
 ## Problema
 
-El diseño actual acopla el servicio orquestador con cada vertical que participa en el workflow. Añadir un nuevo vertical al hire no es una operación local — requiere modificar el servicio central.
+El diseÃ±o actual acopla el servicio orquestador con cada vertical que participa en el workflow. AÃ±adir un nuevo vertical al hire no es una operaciÃ³n local â€” requiere modificar el servicio central.
 
-Esto no es un problema de complejidad (el hire ES complejo por dominio), sino un problema de **dirección de las dependencias**.
+Esto no es un problema de complejidad (el hire ES complejo por dominio), sino un problema de **direcciÃ³n de las dependencias**.
 
 ---
 
-## Decisión
+## DecisiÃ³n
 
 Se introduce el **Lifecycle Workflow Participant Pattern**:
 
@@ -12644,9 +12688,9 @@ public interface HireParticipant {
 }
 ```
 
-`order()` garantiza la secuencia de ejecución. Los valores de orden son:
+`order()` garantiza la secuencia de ejecuciÃ³n. Los valores de orden son:
 
-| Orden | Participante | Razón |
+| Orden | Participante | RazÃ³n |
 |-------|-------------|-------|
 | 10 | EmployeeCoreParticipant | El employee debe existir antes que todo |
 | 20 | PresenceParticipant | Require employee.id |
@@ -12712,9 +12756,9 @@ public class HireEmployeeService implements HireEmployeeUseCase {
 }
 ```
 
-**Añadir un nuevo vertical al hire = crear un fichero `@Component` que implementa `HireParticipant`. `HireEmployeeService` nunca vuelve a cambiar.**
+**AÃ±adir un nuevo vertical al hire = crear un fichero `@Component` que implementa `HireParticipant`. `HireEmployeeService` nunca vuelve a cambiar.**
 
-### 4. Extracción de `HireEmployeePreConditionValidator`
+### 4. ExtracciÃ³n de `HireEmployeePreConditionValidator`
 
 Las validaciones previas al hire (tipo de empleado, coherencia work center / company) se extraen a un servicio dedicado con sus propios tests unitarios:
 
@@ -12731,7 +12775,7 @@ public class HireEmployeePreConditionValidator {
 
 ### 5. Exception handlers descentralizados
 
-Con el patrón participant, cada vertical puede manejar sus propias excepciones mediante un `@RestControllerAdvice` scoped a `HireEmployeeController`:
+Con el patrÃ³n participant, cada vertical puede manejar sus propias excepciones mediante un `@RestControllerAdvice` scoped a `HireEmployeeController`:
 
 ```java
 // workcenter/infrastructure/web/WorkCenterHireExceptionHandler.java
@@ -12743,9 +12787,9 @@ public class WorkCenterHireExceptionHandler {
 }
 ```
 
-`HireEmployeeExceptionHandler` queda únicamente con las excepciones propias del lifecycle (autonumeración, validaciones transversales).
+`HireEmployeeExceptionHandler` queda Ãºnicamente con las excepciones propias del lifecycle (autonumeraciÃ³n, validaciones transversales).
 
-### 6. El mismo patrón para TERMINATION
+### 6. El mismo patrÃ³n para TERMINATION
 
 ```java
 // employee/lifecycle/application/port/TerminationParticipant.java
@@ -12755,9 +12799,9 @@ public interface TerminationParticipant {
 }
 ```
 
-`TerminationContext` lleva el `Employee` existente, la fecha de terminación, el motivo, y acumula los resultados del cierre de cada vertical (presence.endDate, contract.endDate, etc.).
+`TerminationContext` lleva el `Employee` existente, la fecha de terminaciÃ³n, el motivo, y acumula los resultados del cierre de cada vertical (presence.endDate, contract.endDate, etc.).
 
-El orden en termination es inverso a hire en semántica (cerrar desde fuera hacia dentro):
+El orden en termination es inverso a hire en semÃ¡ntica (cerrar desde fuera hacia dentro):
 
 | Orden | Participante |
 |-------|-------------|
@@ -12766,34 +12810,34 @@ El orden en termination es inverso a hire en semántica (cerrar desde fuera haci
 | 30 | CostCenterTerminationParticipant |
 | 40 | ContractTerminationParticipant |
 | 50 | LaborClassificationTerminationParticipant |
-| 60 | PresenceTerminationParticipant | ← cierra presence al final |
+| 60 | PresenceTerminationParticipant | â† cierra presence al final |
 
-Presence es la última en cerrarse porque es el eje del lifecycle (ADR-018): cerrarla primero implicaría que el empleado está "fuera" mientras aún tiene contratos abiertos.
+Presence es la Ãºltima en cerrarse porque es el eje del lifecycle (ADR-018): cerrarla primero implicarÃ­a que el empleado estÃ¡ "fuera" mientras aÃºn tiene contratos abiertos.
 
 ---
 
 ## Invariantes que NO cambian
 
-- **La transacción sigue siendo única.** Todos los participantes se ejecutan dentro del `@Transactional` del servicio orquestador. Si cualquier participante lanza, Spring hace rollback de todo. El comportamiento transaccional es idéntico al actual.
-- **No se introducen domain events asíncronos.** Los eventos síncronos de Spring (`@EventListener`) son una alternativa válida al participant port, pero añaden indirección sin ventaja real en este contexto. Se descarta.
-- **No se introducen sagas ni consistencia eventual.** El hire necesita devolver el número de matrícula generado en la misma petición HTTP. La atomicidad no es negociable.
-- **El orden sigue siendo explícito y auditable.** `order()` como entero en la interfaz es deliberadamente simple — no hay grafos de dependencias ni resolución dinámica. Si el orden cambia, se ve en el diff.
+- **La transacciÃ³n sigue siendo Ãºnica.** Todos los participantes se ejecutan dentro del `@Transactional` del servicio orquestador. Si cualquier participante lanza, Spring hace rollback de todo. El comportamiento transaccional es idÃ©ntico al actual.
+- **No se introducen domain events asÃ­ncronos.** Los eventos sÃ­ncronos de Spring (`@EventListener`) son una alternativa vÃ¡lida al participant port, pero aÃ±aden indirecciÃ³n sin ventaja real en este contexto. Se descarta.
+- **No se introducen sagas ni consistencia eventual.** El hire necesita devolver el nÃºmero de matrÃ­cula generado en la misma peticiÃ³n HTTP. La atomicidad no es negociable.
+- **El orden sigue siendo explÃ­cito y auditable.** `order()` como entero en la interfaz es deliberadamente simple â€” no hay grafos de dependencias ni resoluciÃ³n dinÃ¡mica. Si el orden cambia, se ve en el diff.
 
 ---
 
 ## Consecuencias positivas
 
-- `HireEmployeeService` y `TerminateEmployeeService` se vuelven estables — no cambian al añadir nuevos verticales
-- Cada vertical es dueño de su lógica de participación en el workflow (cohesión)
-- Los tests de cada participante son unitarios y pequeños
+- `HireEmployeeService` y `TerminateEmployeeService` se vuelven estables â€” no cambian al aÃ±adir nuevos verticales
+- Cada vertical es dueÃ±o de su lÃ³gica de participaciÃ³n en el workflow (cohesiÃ³n)
+- Los tests de cada participante son unitarios y pequeÃ±os
 - `HireEmployeeExceptionHandler` pierde el conocimiento de verticales externos
-- La misma base sirve para Rehire sin duplicar la orquestación
+- La misma base sirve para Rehire sin duplicar la orquestaciÃ³n
 
 ## Consecuencias negativas / riesgos
 
-- El orden de participación es implícito al leer el código del servicio — hay que consultar las implementaciones para ver la secuencia completa. **Mitigación:** documentar el orden en `HireContext` con un comment de referencia.
-- Spring inyecta `List<HireParticipant>` en el orden que descubre los beans, por lo que el `order()` explícito es crítico — un test de contexto debe verificar el orden en cada release.
-- La migración de `HireEmployeeService` al patrón debe hacerse gradualmente (un participante cada vez) para no introducir regresiones.
+- El orden de participaciÃ³n es implÃ­cito al leer el cÃ³digo del servicio â€” hay que consultar las implementaciones para ver la secuencia completa. **MitigaciÃ³n:** documentar el orden en `HireContext` con un comment de referencia.
+- Spring inyecta `List<HireParticipant>` en el orden que descubre los beans, por lo que el `order()` explÃ­cito es crÃ­tico â€” un test de contexto debe verificar el orden en cada release.
+- La migraciÃ³n de `HireEmployeeService` al patrÃ³n debe hacerse gradualmente (un participante cada vez) para no introducir regresiones.
 
 ---
 
@@ -12804,16 +12848,16 @@ Presence es la última en cerrarse porque es el eje del lifecycle (ADR-018): cer
 Descartado:
 
 - 10 dependencias hoy, 15 en 12 meses
-- Cada feature de lifecycle toca el servicio más crítico del sistema
-- No hay punto de estabilización natural
+- Cada feature de lifecycle toca el servicio mÃ¡s crÃ­tico del sistema
+- No hay punto de estabilizaciÃ³n natural
 
-### Domain events asíncronos (ApplicationEventPublisher + @TransactionalEventListener)
+### Domain events asÃ­ncronos (ApplicationEventPublisher + @TransactionalEventListener)
 
 Descartado:
 
-- Añade indirección sin ventaja en un contexto single-service
-- El orden de los handlers es menos explícito
-- El debugging es más complejo
+- AÃ±ade indirecciÃ³n sin ventaja en un contexto single-service
+- El orden de los handlers es menos explÃ­cito
+- El debugging es mÃ¡s complejo
 - Para lograr el mismo orden de operaciones se necesita `@Order` igualmente
 
 ### Saga pattern (compensating transactions)
@@ -12821,21 +12865,21 @@ Descartado:
 Descartado:
 
 - Consistencia eventual no es apropiada para hire
-- El número de matrícula debe estar disponible sincrónicamente
-- Añade infraestructura de saga que no existe ni se necesita
+- El nÃºmero de matrÃ­cula debe estar disponible sincrÃ³nicamente
+- AÃ±ade infraestructura de saga que no existe ni se necesita
 
-### Employee como agregado monolítico
+### Employee como agregado monolÃ­tico
 
 Descartado desde ADR-002 y ADR-007. La arquitectura vertical se mantiene.
 
 ---
 
-## Relación con ADRs anteriores
+## RelaciÃ³n con ADRs anteriores
 
-| ADR | Relación |
+| ADR | RelaciÃ³n |
 |-----|----------|
-| ADR-007 | Este ADR evoluciona la implementación de los workflows definidos allí. Los workflows siguen siendo orquestados y transaccionales. |
-| ADR-018 | La sección "Orquestación interna" de ADR-018 queda reemplazada por este patrón. El modelo de datos, la API y las validaciones no cambian. |
+| ADR-007 | Este ADR evoluciona la implementaciÃ³n de los workflows definidos allÃ­. Los workflows siguen siendo orquestados y transaccionales. |
+| ADR-018 | La secciÃ³n "OrquestaciÃ³n interna" de ADR-018 queda reemplazada por este patrÃ³n. El modelo de datos, la API y las validaciones no cambian. |
 
 ---
 
@@ -12844,111 +12888,112 @@ Descartado desde ADR-002 y ADR-007. La arquitectura vertical se mantiene.
 El Lifecycle Workflow Participant Pattern invierte la dependencia entre el orquestador y los verticales:
 
 - Antes: el servicio conoce cada vertical
-- Después: cada vertical se registra en el servicio
+- DespuÃ©s: cada vertical se registra en el servicio
 
-La transacción, el orden de ejecución y el contrato de API permanecen inalterados. Lo que cambia es que añadir un nuevo vertical al hire o al terminate se convierte en una operación local (crear un fichero), no en una modificación del servicio central.
+La transacciÃ³n, el orden de ejecuciÃ³n y el contrato de API permanecen inalterados. Lo que cambia es que aÃ±adir un nuevo vertical al hire o al terminate se convierte en una operaciÃ³n local (crear un fichero), no en una modificaciÃ³n del servicio central.
+
 
 <!-- END FILE: ADR-047-lifecycle-workflow-participant-pattern.md -->
 
-<a name="file-adr-048-modelo-de-cotizacion-ss-e-irpf-md"></a>
 
 ---
 
 # FILE: ADR-048-modelo-de-cotizacion-ss-e-irpf.md
+<a name="file-adr-048-modelo-de-cotizacion-ss-e-irpf-md"></a>
 
 <!-- BEGIN FILE: ADR-048-modelo-de-cotizacion-ss-e-irpf.md -->
 
-# ADR-048 — Modelo de cotización de Seguridad Social e IRPF
+# ADR-048 â€” Modelo de cotizaciÃ³n de Seguridad Social e IRPF
 
 ## Estado
 
-Aceptado. **Documenta una implementación ya existente**, no propone una nueva.
+Aceptado. **Documenta una implementaciÃ³n ya existente**, no propone una nueva.
 
-El grafo de cotización se construyó entre V77 y V91 sin ADR que lo respaldara. Este
-documento reconstruye la decisión tal como está en el código a 25 de agosto de 2026 y separa
-explícitamente lo que es decisión firme de lo que es provisional. Escribirlo tarde tiene un
-coste: partes de este ADR describen elecciones que se tomaron sobre la marcha y que quizá no
-se habrían tomado igual con la discusión delante. Se señalan como tales.
+El grafo de cotizaciÃ³n se construyÃ³ entre V77 y V91 sin ADR que lo respaldara. Este
+documento reconstruye la decisiÃ³n tal como estÃ¡ en el cÃ³digo a 25 de agosto de 2026 y separa
+explÃ­citamente lo que es decisiÃ³n firme de lo que es provisional. Escribirlo tarde tiene un
+coste: partes de este ADR describen elecciones que se tomaron sobre la marcha y que quizÃ¡ no
+se habrÃ­an tomado igual con la discusiÃ³n delante. Se seÃ±alan como tales.
 
 ---
 
 ## Contexto
 
-Los ADR-033 a ADR-046 fijan el metamodelo del motor: `PayrollObject` como raíz,
-`PayrollConcept` con tipología de cálculo, operandos resueltos por source, agregación por
-feed, grafo acíclico, plan topológico y segmentación temporal.
+Los ADR-033 a ADR-046 fijan el metamodelo del motor: `PayrollObject` como raÃ­z,
+`PayrollConcept` con tipologÃ­a de cÃ¡lculo, operandos resueltos por source, agregaciÃ³n por
+feed, grafo acÃ­clico, plan topolÃ³gico y segmentaciÃ³n temporal.
 
-Sobre esa base había que calcular lo que convierte un devengo en una nómina de verdad: la
-cotización a la Seguridad Social y la retención de IRPF. Eso obligó a resolver cuatro cosas
-que el metamodelo no cubría:
+Sobre esa base habÃ­a que calcular lo que convierte un devengo en una nÃ³mina de verdad: la
+cotizaciÃ³n a la Seguridad Social y la retenciÃ³n de IRPF. Eso obligÃ³ a resolver cuatro cosas
+que el metamodelo no cubrÃ­a:
 
-1. **Topes.** La base de cotización no es el devengo: es el devengo recortado entre un tope
-   máximo y un tope mínimo que dependen del grupo de cotización del empleado.
+1. **Topes.** La base de cotizaciÃ³n no es el devengo: es el devengo recortado entre un tope
+   mÃ¡ximo y un tope mÃ­nimo que dependen del grupo de cotizaciÃ³n del empleado.
 2. **Coste de empresa.** Hay conceptos que se calculan y se muestran pero no descuentan del
-   líquido.
-3. **Valores que no salen de otro concepto.** Un tipo de cotización o un tope no se calcula:
+   lÃ­quido.
+3. **Valores que no salen de otro concepto.** Un tipo de cotizaciÃ³n o un tope no se calcula:
    se consulta.
-4. **Prorrateo de los topes cuando el mes está partido en segmentos.**
+4. **Prorrateo de los topes cuando el mes estÃ¡ partido en segmentos.**
 
 ---
 
-## Decisión
+## DecisiÃ³n
 
-**La cotización se modela dentro del mismo grafo de conceptos que el resto de la nómina.**
-No hay motor paralelo, ni servicio de cotización, ni lógica de negocio fuera del grafo. Un
-tope es un nodo; un tipo es un nodo; la base de cotización es un concepto con su código.
+**La cotizaciÃ³n se modela dentro del mismo grafo de conceptos que el resto de la nÃ³mina.**
+No hay motor paralelo, ni servicio de cotizaciÃ³n, ni lÃ³gica de negocio fuera del grafo. Un
+tope es un nodo; un tipo es un nodo; la base de cotizaciÃ³n es un concepto con su cÃ³digo.
 
-De ahí se derivan las cuatro decisiones concretas de este ADR.
+De ahÃ­ se derivan las cuatro decisiones concretas de este ADR.
 
-### 1. Los topes se aplican con dos tipologías nuevas: `LEAST` y `GREATEST`
+### 1. Los topes se aplican con dos tipologÃ­as nuevas: `LEAST` y `GREATEST`
 
-ADR-036 declaró cuatro tipologías canónicas y avisó de que no se crearían más por cada caso
-de negocio. Aquí se añaden dos, y la justificación es la que el propio ADR-036 exige: no
+ADR-036 declarÃ³ cuatro tipologÃ­as canÃ³nicas y avisÃ³ de que no se crearÃ­an mÃ¡s por cada caso
+de negocio. AquÃ­ se aÃ±aden dos, y la justificaciÃ³n es la que el propio ADR-036 exige: no
 describen un caso de negocio, describen **operadores** que faltaban.
 
 ```
-B_CC_MAX = LEAST(B01, P_TOPE_MAX)          ← el devengo, recortado por arriba
-B_CC     = GREATEST(B_CC_MAX, P_TOPE_MIN)  ← y después levantado por abajo
+B_CC_MAX = LEAST(B01, P_TOPE_MAX)          â† el devengo, recortado por arriba
+B_CC     = GREATEST(B_CC_MAX, P_TOPE_MIN)  â† y despuÃ©s levantado por abajo
 ```
 
-Cada una toma dos operandos con roles nuevos, `LEFT` y `RIGHT`, añadidos a `OperandRole`.
+Cada una toma dos operandos con roles nuevos, `LEFT` y `RIGHT`, aÃ±adidos a `OperandRole`.
 
-**El orden importa y es deliberado**: primero el techo, después el suelo. La consecuencia
-funcional es que un empleado cuya base queda por debajo del mínimo de su grupo cotiza por el
-mínimo aunque haya devengado menos.
+**El orden importa y es deliberado**: primero el techo, despuÃ©s el suelo. La consecuencia
+funcional es que un empleado cuya base queda por debajo del mÃ­nimo de su grupo cotiza por el
+mÃ­nimo aunque haya devengado menos.
 
-### 2. La base de cotización es un concepto, no un campo calculado
+### 2. La base de cotizaciÃ³n es un concepto, no un campo calculado
 
 ```
-B01   BASE_COTIZABLE   AGGREGATE   alimentado hoy únicamente por 101
+B01   BASE_COTIZABLE   AGGREGATE   alimentado hoy Ãºnicamente por 101
 B_CC  BASE_COTIZACION_COTIZ        la base ya recortada, que usan todos los tipos
 ```
 
-Todos los conceptos de cotización —de trabajador y de empresa— cuelgan de `B_CC`, nunca de
-`B01`. V88 reescribió el operando `BASE` del concepto 700 justamente para eso.
+Todos los conceptos de cotizaciÃ³n â€”de trabajador y de empresaâ€” cuelgan de `B_CC`, nunca de
+`B01`. V88 reescribiÃ³ el operando `BASE` del concepto 700 justamente para eso.
 
 Que la base sea un nodo del grafo y no un valor interno es lo que permite explicar una
-nómina: se puede preguntar cuánto valía la base y por qué.
+nÃ³mina: se puede preguntar cuÃ¡nto valÃ­a la base y por quÃ©.
 
 ### 3. El coste de empresa se calcula, se muestra y no descuenta
 
-Los conceptos 720–724 tienen `functionalNature = INFORMATIONAL` y **no tienen relación de
+Los conceptos 720â€“724 tienen `functionalNature = INFORMATIONAL` y **no tienen relaciÃ³n de
 feed hacia 980**. Se calculan sobre la misma `B_CC`, aparecen en el recibo con su
-`payslipOrderCode`, y no tocan el líquido.
+`payslipOrderCode`, y no tocan el lÃ­quido.
 
-Es la aplicación directa de la regla de ADR-036: la naturaleza funcional es presentación y
-semántica; quien decide si un importe resta es la relación de feed, no el tipo de cálculo.
+Es la aplicaciÃ³n directa de la regla de ADR-036: la naturaleza funcional es presentaciÃ³n y
+semÃ¡ntica; quien decide si un importe resta es la relaciÃ³n de feed, no el tipo de cÃ¡lculo.
 
 ### 4. Los valores que se consultan entran como nodos `ENGINE_PROVIDED`
 
 `ENGINE_PROVIDED` (renombrado desde `JAVA_PROVIDED` en V89) identifica conceptos cuyo valor
 lo produce una clase Java que implementa `TechnicalConceptCalculator`, registrada por Spring
-en `TechnicalConceptCalculatorRegistry` bajo su código de concepto.
+en `TechnicalConceptCalculatorRegistry` bajo su cÃ³digo de concepto.
 
-Se mantiene la regla de ADR-046: **estas clases no pueden calcular conceptos económicos.**
-Solo resuelven valores que se consultan o se derivan del contexto de ejecución — tipos,
-topes, días, coeficientes. La frontera es la que separa «consultar un dato» de «calcular una
-nómina».
+Se mantiene la regla de ADR-046: **estas clases no pueden calcular conceptos econÃ³micos.**
+Solo resuelven valores que se consultan o se derivan del contexto de ejecuciÃ³n â€” tipos,
+topes, dÃ­as, coeficientes. La frontera es la que separa Â«consultar un datoÂ» de Â«calcular una
+nÃ³minaÂ».
 
 ---
 
@@ -12956,53 +13001,53 @@ nómina».
 
 ```
                       101 SALARIO_BASE
-                        │        │
-                        │        └──────────────► 970 TOTAL_DEVENGOS ──┐
-                        ▼                                              │
-                  B01 BASE_COTIZABLE                                   │
-                        │                                              │
-        P_TOPE_MAX ──►  LEAST  ──► B_CC_MAX                            │
-                                      │                                │
-        P_TOPE_MIN ──► GREATEST ──►  B_CC                              │
-                                      │                                ▼
-      ┌───────────────────────────────┼────────────────────┐      990 LIQUIDO
-      │            trabajador         │      empresa       │           ▲
-      ▼                               ▼                    ▼           │
-  700 CC 4,70 %                720 CC 23,60 %                          │
-  703 DESEMPLEO 1,55 %         721 DESEMPLEO 7,05 %                    │
-  701 FP 0,10 %                722 FP 0,60 %          (INFORMATIONAL,  │
-  702 MEI 0,11 %               723 FOGASA 0,20 %       sin feed a 980) │
-  800 IRPF 15,00 %             724 MEI 0,58 %                          │
-      │                                                                │
-      └──────────────► 980 TOTAL_DEDUCCIONES ──────────(invert_sign)───┘
+                        â”‚        â”‚
+                        â”‚        â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–º 970 TOTAL_DEVENGOS â”€â”€â”
+                        â–¼                                              â”‚
+                  B01 BASE_COTIZABLE                                   â”‚
+                        â”‚                                              â”‚
+        P_TOPE_MAX â”€â”€â–º  LEAST  â”€â”€â–º B_CC_MAX                            â”‚
+                                      â”‚                                â”‚
+        P_TOPE_MIN â”€â”€â–º GREATEST â”€â”€â–º  B_CC                              â”‚
+                                      â”‚                                â–¼
+      â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¼â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”      990 LIQUIDO
+      â”‚            trabajador         â”‚      empresa       â”‚           â–²
+      â–¼                               â–¼                    â–¼           â”‚
+  700 CC 4,70 %                720 CC 23,60 %                          â”‚
+  703 DESEMPLEO 1,55 %         721 DESEMPLEO 7,05 %                    â”‚
+  701 FP 0,10 %                722 FP 0,60 %          (INFORMATIONAL,  â”‚
+  702 MEI 0,11 %               723 FOGASA 0,20 %       sin feed a 980) â”‚
+  800 IRPF 15,00 %             724 MEI 0,58 %                          â”‚
+      â”‚                                                                â”‚
+      â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–º 980 TOTAL_DEDUCCIONES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€(invert_sign)â”€â”€â”€â”˜
 ```
 
 ### Conceptos
 
-| Código | Mnemónico | Tipo | Naturaleza | Fórmula | Recibo |
+| CÃ³digo | MnemÃ³nico | Tipo | Naturaleza | FÃ³rmula | Recibo |
 |---|---|---|---|---|---|
-| `B01` | BASE_COTIZABLE | AGGREGATE | BASE | ← 101 | no |
+| `B01` | BASE_COTIZABLE | AGGREGATE | BASE | â† 101 | no |
 | `B_CC_MAX` | BASE_COTIZACION_MAX | LEAST | BASE | min(B01, P_TOPE_MAX) | no |
 | `B_CC` | BASE_COTIZACION_COTIZ | GREATEST | BASE | max(B_CC_MAX, P_TOPE_MIN) | no |
-| `700` | CC_TRABAJADOR | PERCENTAGE | DEDUCTION | B_CC × 4,70 % | 700 |
-| `703` | DESEMPLEO_TRABAJADOR | PERCENTAGE | DEDUCTION | B_CC × 1,55 % | 703 |
-| `701` | FP_TRABAJADOR | PERCENTAGE | DEDUCTION | B_CC × 0,10 % | 701 |
-| `702` | MEI_TRABAJADOR | PERCENTAGE | DEDUCTION | B_CC × 0,11 % | 702 |
-| `800` | RETENCION_IRPF | PERCENTAGE | DEDUCTION | B01 × 15,00 % | 800 |
-| `720` | SS_CC_EMPRESARIO | PERCENTAGE | INFORMATIONAL | B_CC × 23,60 % | 720 |
-| `721` | SS_DESEMPLEO_EMPRESARIO | PERCENTAGE | INFORMATIONAL | B_CC × 7,05 % | 721 |
-| `722` | SS_FP_EMPRESARIO | PERCENTAGE | INFORMATIONAL | B_CC × 0,60 % | 722 |
-| `723` | SS_FOGASA_EMPRESARIO | PERCENTAGE | INFORMATIONAL | B_CC × 0,20 % | 723 |
-| `724` | SS_MEI_EMPRESARIO | PERCENTAGE | INFORMATIONAL | B_CC × 0,58 % | 724 |
+| `700` | CC_TRABAJADOR | PERCENTAGE | DEDUCTION | B_CC Ã— 4,70 % | 700 |
+| `703` | DESEMPLEO_TRABAJADOR | PERCENTAGE | DEDUCTION | B_CC Ã— 1,55 % | 703 |
+| `701` | FP_TRABAJADOR | PERCENTAGE | DEDUCTION | B_CC Ã— 0,10 % | 701 |
+| `702` | MEI_TRABAJADOR | PERCENTAGE | DEDUCTION | B_CC Ã— 0,11 % | 702 |
+| `800` | RETENCION_IRPF | PERCENTAGE | DEDUCTION | B01 Ã— 15,00 % | 800 |
+| `720` | SS_CC_EMPRESARIO | PERCENTAGE | INFORMATIONAL | B_CC Ã— 23,60 % | 720 |
+| `721` | SS_DESEMPLEO_EMPRESARIO | PERCENTAGE | INFORMATIONAL | B_CC Ã— 7,05 % | 721 |
+| `722` | SS_FP_EMPRESARIO | PERCENTAGE | INFORMATIONAL | B_CC Ã— 0,60 % | 722 |
+| `723` | SS_FOGASA_EMPRESARIO | PERCENTAGE | INFORMATIONAL | B_CC Ã— 0,20 % | 723 |
+| `724` | SS_MEI_EMPRESARIO | PERCENTAGE | INFORMATIONAL | B_CC Ã— 0,58 % | 724 |
 
 Los nodos `P_*` (`P_TOPE_MAX`, `P_TOPE_MIN`, `P_SS_CC`, `P_SS_DESEMPLEO`, `P_FP_TRAB`,
 `P_MEI_TRAB`, `P_IRPF`, `P_SS_CC_EMP`, `P_SS_DESEMPLEO_EMP`, `P_SS_FP_EMP`,
 `P_SS_FOGASA_EMP`, `P_SS_MEI_EMP`) son todos `ENGINE_PROVIDED` con naturaleza `TECHNICAL` y
-sin línea de recibo.
+sin lÃ­nea de recibo.
 
-> **Nota**: el concepto 800 (IRPF) toma como base `B01`, no `B_CC`. Es correcto —la base de
-> retención no es la de cotización— pero conviene tenerlo presente: hoy coinciden porque
-> ambas se alimentan solo del salario base, y dejarán de coincidir en cuanto B01 crezca.
+> **Nota**: el concepto 800 (IRPF) toma como base `B01`, no `B_CC`. Es correcto â€”la base de
+> retenciÃ³n no es la de cotizaciÃ³nâ€” pero conviene tenerlo presente: hoy coinciden porque
+> ambas se alimentan solo del salario base, y dejarÃ¡n de coincidir en cuanto B01 crezca.
 
 ---
 
@@ -13014,16 +13059,16 @@ Los topes viven en `payroll_engine.ss_cotizacion_topes`, con vigencia por fecha:
 (rule_system_code, grupo_code, period_type, base_min, base_max, valid_from, valid_to)
 ```
 
-Sembrada con los valores TGSS de 2025: grupos 01–07 en `MENSUAL`, grupos 08–11 en `DIARIO`,
-tope máximo único de 4.909,50 €/mes y 163,65 €/día.
+Sembrada con los valores TGSS de 2025: grupos 01â€“07 en `MENSUAL`, grupos 08â€“11 en `DIARIO`,
+tope mÃ¡ximo Ãºnico de 4.909,50 â‚¬/mes y 163,65 â‚¬/dÃ­a.
 
-**El grupo de cotización y el tipo de nómina del empleado salen de
-`rulesystem.agreement_category_profile`** (V85, sembrada en V87), que asocia cada categoría
+**El grupo de cotizaciÃ³n y el tipo de nÃ³mina del empleado salen de
+`rulesystem.agreement_category_profile`** (V85, sembrada en V87), que asocia cada categorÃ­a
 del convenio a su grupo y a `MENSUAL` o `DIARIO`. La cadena completa es:
 
 ```
-empleado → labor_classification → categoría de convenio → agreement_category_profile
-        → (grupo de cotización, tipo de nómina) → ss_cotizacion_topes
+empleado â†’ labor_classification â†’ categorÃ­a de convenio â†’ agreement_category_profile
+        â†’ (grupo de cotizaciÃ³n, tipo de nÃ³mina) â†’ ss_cotizacion_topes
 ```
 
 ### Prorrateo por segmento
@@ -13032,17 +13077,17 @@ empleado → labor_classification → categoría de convenio → agreement_categ
 devuelven la parte que corresponde al segmento.
 
 ```
-MENSUAL:  tope × díasDelSegmento / díasDelPeríodo
-DIARIO:   tope × díasDelSegmento
+MENSUAL:  tope Ã— dÃ­asDelSegmento / dÃ­asDelPerÃ­odo
+DIARIO:   tope Ã— dÃ­asDelSegmento
 ```
 
 Y por eso V90 les puso `result_composition_mode = ACCUMULATE`: los trozos de todos los
 segmentos se suman y el resultado consolidado es el que recortan `B_CC_MAX` y `B_CC`.
 
-Es la decisión menos evidente de todo el modelo y merece quedar escrita: **los topes son lo
-único que se calcula por segmento y se acumula, mientras que todos los conceptos de
-cotización tienen `executionScope = PERIOD`.** Si alguien cambia el ámbito de un concepto de
-cotización a `SEGMENT` sin entender esto, el recorte deja de cuadrar.
+Es la decisiÃ³n menos evidente de todo el modelo y merece quedar escrita: **los topes son lo
+Ãºnico que se calcula por segmento y se acumula, mientras que todos los conceptos de
+cotizaciÃ³n tienen `executionScope = PERIOD`.** Si alguien cambia el Ã¡mbito de un concepto de
+cotizaciÃ³n a `SEGMENT` sin entender esto, el recorte deja de cuadrar.
 
 ---
 
@@ -13050,49 +13095,49 @@ cotización a `SEGMENT` sin entender esto, el recorte deja de cuadrar.
 
 ### Firme
 
-- La cotización vive en el grafo. No hay motor paralelo.
+- La cotizaciÃ³n vive en el grafo. No hay motor paralelo.
 - Los topes se aplican con operadores del grafo (`LEAST`/`GREATEST`), no con condicionales en
   Java.
 - El coste de empresa es informativo y no alimenta 980.
-- La base de cotización es un concepto con identidad propia.
-- El grupo de cotización se deriva de la categoría del convenio, no se informa a mano.
+- La base de cotizaciÃ³n es un concepto con identidad propia.
+- El grupo de cotizaciÃ³n se deriva de la categorÃ­a del convenio, no se informa a mano.
 
-### Provisional — y conscientemente
+### Provisional â€” y conscientemente
 
-1. **Los tipos están escritos en Java.** `payroll_engine.ss_cotizacion_tipos` existe, está
-   creada y sembrada con los tipos de 2025 por contingencia… y **no la lee nadie**. Los diez
-   tipos son constantes en sus respectivas clases `*RateCalculator`. Es la deuda más grave de
-   este modelo: cuando la TGSS cambie los tipos habrá que tocar código y desplegar, teniendo
+1. **Los tipos estÃ¡n escritos en Java.** `payroll_engine.ss_cotizacion_tipos` existe, estÃ¡
+   creada y sembrada con los tipos de 2025 por contingenciaâ€¦ y **no la lee nadie**. Los diez
+   tipos son constantes en sus respectivas clases `*RateCalculator`. Es la deuda mÃ¡s grave de
+   este modelo: cuando la TGSS cambie los tipos habrÃ¡ que tocar cÃ³digo y desplegar, teniendo
    la tabla al lado.
 2. **El IRPF es un 15 % fijo.** `IrpfWithholdingRateCalculator` lo dice en su javadoc: es un
-   marcador de posición. El tipo real depende de los datos fiscales del empleado y se
-   regulariza. La vertical `employee.tax_information` ya existe (V95); no está conectada.
-3. **`P_SS` (6,35 % todo en uno) quedó muerto** al partirse el 700 en V91. El concepto y su
-   `SsContributionRateCalculator` siguen en el árbol sin que nadie los referencie.
+   marcador de posiciÃ³n. El tipo real depende de los datos fiscales del empleado y se
+   regulariza. La vertical `employee.tax_information` ya existe (V95); no estÃ¡ conectada.
+3. **`P_SS` (6,35 % todo en uno) quedÃ³ muerto** al partirse el 700 en V91. El concepto y su
+   `SsContributionRateCalculator` siguen en el Ã¡rbol sin que nadie los referencie.
 4. **No hay accidentes de trabajo (725).** Requiere la tarifa por CNAE de cada empresa; queda
-   aplazado explícitamente desde V88.
+   aplazado explÃ­citamente desde V88.
 5. **`B01` solo se alimenta del salario base.** Falta la prorrata de pagas extra y cualquier
-   otro devengo cotizable. Mientras eso siga así, la base de cotización de esta nómina no es
+   otro devengo cotizable. Mientras eso siga asÃ­, la base de cotizaciÃ³n de esta nÃ³mina no es
    la real.
-6. **Todo está sembrado para un único convenio** (99002405011982) y un único rule system.
+6. **Todo estÃ¡ sembrado para un Ãºnico convenio** (99002405011982) y un Ãºnico rule system.
 
 ---
 
 ## Invariantes
 
-- Ningún concepto de cotización toma su base de `B01`: todos cuelgan de `B_CC`. La excepción
-  documentada es 800 (IRPF), cuya base es otra por definición.
+- NingÃºn concepto de cotizaciÃ³n toma su base de `B01`: todos cuelgan de `B_CC`. La excepciÃ³n
+  documentada es 800 (IRPF), cuya base es otra por definiciÃ³n.
 - Los conceptos de empresa nunca alimentan 980.
-- `P_TOPE_MAX` y `P_TOPE_MIN` deben mantener `ACCUMULATE`; el resto de la cotización, `PERIOD`.
-- Un tipo nuevo de cotización se añade como concepto `ENGINE_PROVIDED` + concepto
-  `PERCENTAGE` + relación de feed, nunca como rama dentro de un calculador existente.
-- Las clases `TechnicalConceptCalculator` no calculan conceptos económicos.
+- `P_TOPE_MAX` y `P_TOPE_MIN` deben mantener `ACCUMULATE`; el resto de la cotizaciÃ³n, `PERIOD`.
+- Un tipo nuevo de cotizaciÃ³n se aÃ±ade como concepto `ENGINE_PROVIDED` + concepto
+  `PERCENTAGE` + relaciÃ³n de feed, nunca como rama dentro de un calculador existente.
+- Las clases `TechnicalConceptCalculator` no calculan conceptos econÃ³micos.
 
 ---
 
 ## Deuda que este ADR deja abierta
 
-| # | Deuda | Dónde |
+| # | Deuda | DÃ³nde |
 |---|---|---|
 | 1 | `ss_cotizacion_tipos` no la lee nadie; los tipos son constantes Java | los 10 `*RateCalculator` |
 | 2 | IRPF fijo al 15 %, con `employee.tax_information` ya disponible | `IrpfWithholdingRateCalculator` |
@@ -13102,69 +13147,70 @@ cotización a `SEGMENT` sin entender esto, el recorte deja de cuadrar.
 
 ---
 
-## Relación con ADR anteriores
+## RelaciÃ³n con ADR anteriores
 
-| ADR | Relación |
+| ADR | RelaciÃ³n |
 |---|---|
-| ADR-036 | Amplía las tipologías canónicas de cuatro a seis con `LEAST` y `GREATEST`, por el criterio que el propio ADR-036 fija: son operadores, no casos de negocio |
-| ADR-038 | La separación trabajador/empresa se resuelve con `FEED_BY_SOURCE`: quien alimenta 980 descuenta, quien no, informa |
-| ADR-041 | El prorrateo de topes por segmento con consolidación `ACCUMULATE` es la aplicación concreta de la segmentación temporal |
+| ADR-036 | AmplÃ­a las tipologÃ­as canÃ³nicas de cuatro a seis con `LEAST` y `GREATEST`, por el criterio que el propio ADR-036 fija: son operadores, no casos de negocio |
+| ADR-038 | La separaciÃ³n trabajador/empresa se resuelve con `FEED_BY_SOURCE`: quien alimenta 980 descuenta, quien no, informa |
+| ADR-041 | El prorrateo de topes por segmento con consolidaciÃ³n `ACCUMULATE` es la aplicaciÃ³n concreta de la segmentaciÃ³n temporal |
 | ADR-045 | La elegibilidad de todos estos conceptos se resuelve por `concept_assignment` |
-| ADR-046 | `ENGINE_PROVIDED` es el `JAVA_PROVIDED` de ese ADR, renombrado en V89; la regla de que estas clases no calculan conceptos económicos se mantiene intacta |
+| ADR-046 | `ENGINE_PROVIDED` es el `JAVA_PROVIDED` de ese ADR, renombrado en V89; la regla de que estas clases no calculan conceptos econÃ³micos se mantiene intacta |
+
 
 <!-- END FILE: ADR-048-modelo-de-cotizacion-ss-e-irpf.md -->
 
-<a name="file-adr-049-arquitectura-de-informacion-del-frontend-md"></a>
 
 ---
 
 # FILE: ADR-049-arquitectura-de-informacion-del-frontend.md
+<a name="file-adr-049-arquitectura-de-informacion-del-frontend-md"></a>
 
 <!-- BEGIN FILE: ADR-049-arquitectura-de-informacion-del-frontend.md -->
 
-# ADR-049 — Arquitectura de información del frontend
+# ADR-049 â€” Arquitectura de informaciÃ³n del frontend
 
 ## Estado
 Aceptado
 
 ## Contexto
 
-La aplicación creció por verticales, y la navegación creció con ella. El resultado, medido sobre
-el árbol actual:
+La aplicaciÃ³n creciÃ³ por verticales, y la navegaciÃ³n creciÃ³ con ella. El resultado, medido sobre
+el Ã¡rbol actual:
 
 - `shared/ui` contiene un sistema de maestro-detalle completo y documentado, y lo usan solo
-  `company` (791 líneas de html/scss) y `work-center` (596). `employee` son **7.530 líneas en 256
-  ficheros** y no usa casi nada de él. El sistema se validó en la periferia y nunca llegó al centro.
-- El menú calca los bounded contexts del backend, no la jornada de nadie.
-- «Catálogos» es una entrada de menú que nombra un **mecanismo de almacenamiento**, no un concepto
-  del negocio. ADR-012 ya observó que exponer el metamodelo por una pantalla de catálogos «ha hecho
-  visible una tensión de diseño» y que hay `rule_entity_type` nombrados desde la vertical donde el
-  concepto apareció primero. No es casualidad: una pantalla organizada por mecanismo obliga a
+  `company` (791 lÃ­neas de html/scss) y `work-center` (596). `employee` son **7.530 lÃ­neas en 256
+  ficheros** y no usa casi nada de Ã©l. El sistema se validÃ³ en la periferia y nunca llegÃ³ al centro.
+- El menÃº calca los bounded contexts del backend, no la jornada de nadie.
+- Â«CatÃ¡logosÂ» es una entrada de menÃº que nombra un **mecanismo de almacenamiento**, no un concepto
+  del negocio. ADR-012 ya observÃ³ que exponer el metamodelo por una pantalla de catÃ¡logos Â«ha hecho
+  visible una tensiÃ³n de diseÃ±oÂ» y que hay `rule_entity_type` nombrados desde la vertical donde el
+  concepto apareciÃ³ primero. No es casualidad: una pantalla organizada por mecanismo obliga a
   nombrar cada concepto por su mecanismo.
-- `rule_system`, que ADR-003 define como el contexto regulatorio, aparece como la última entrada del
-  menú bajo «Configuración», en inglés.
+- `rule_system`, que ADR-003 define como el contexto regulatorio, aparece como la Ãºltima entrada del
+  menÃº bajo Â«ConfiguraciÃ³nÂ», en inglÃ©s.
 
-## Decisión
+## DecisiÃ³n
 
 ### 1. Cuatro grupos
 
 | Grupo | Contenido | Criterio |
 |---|---|---|
 | Empleados | El directorio y la ficha | El core |
-| Organización | Empresas, centros de trabajo, centros de coste | Lo decide la empresa |
-| Sociedad | Convenios, reglamentación | Viene impuesto de fuera |
-| Nóminas | Ejecuciones y sus recibos | El trabajo batch |
+| OrganizaciÃ³n | Empresas, centros de trabajo, centros de coste | Lo decide la empresa |
+| Sociedad | Convenios, reglamentaciÃ³n | Viene impuesto de fuera |
+| NÃ³minas | Ejecuciones y sus recibos | El trabajo batch |
 
-La separación Organización / Sociedad no es cosmética: distingue lo que la empresa decide de lo que
-le imponen, y eso cambia lo que la interfaz debe permitir. En Organización se edita; en Sociedad se
+La separaciÃ³n OrganizaciÃ³n / Sociedad no es cosmÃ©tica: distingue lo que la empresa decide de lo que
+le imponen, y eso cambia lo que la interfaz debe permitir. En OrganizaciÃ³n se edita; en Sociedad se
 consultan datos con vigencia que no se pueden cambiar.
 
-**Test de colocación de cualquier entidad: ¿quién manda sobre este dato, nosotros o el BOE?**
+**Test de colocaciÃ³n de cualquier entidad: Â¿quiÃ©n manda sobre este dato, nosotros o el BOE?**
 
-### 2. El sistema de reglas es ámbito, no destino
+### 2. El sistema de reglas es Ã¡mbito, no destino
 
-`rule_system` sale de la lista de navegación y pasa al cromo, junto a la marca, visible siempre.
-Casi todo lo que se muestra está dentro de uno —catálogos, convenios, la ficha, la nómina—, igual
+`rule_system` sale de la lista de navegaciÃ³n y pasa al cromo, junto a la marca, visible siempre.
+Casi todo lo que se muestra estÃ¡ dentro de uno â€”catÃ¡logos, convenios, la ficha, la nÃ³minaâ€”, igual
 que el ejercicio en un programa de contabilidad. Con un solo sistema activo se muestra igualmente.
 
 Administrar sistemas de reglas sigue existiendo como tarea, pero es otra cosa y va en otro sitio.
@@ -13172,233 +13218,251 @@ Administrar sistemas de reglas sigue existiendo como tarea, pero es otra cosa y 
 ### 3. Los maestros se colocan por significado, no por mecanismo
 
 Que algo se guarde como `rule_entity` y otra cosa tenga agregado propio es un hecho del esquema,
-invisible para quien usa la aplicación. Quien busca *tipos de contrato* y quien busca *centros de
-trabajo* están haciendo lo mismo: decidir qué se le puede poner a un empleado.
+invisible para quien usa la aplicaciÃ³n. Quien busca *tipos de contrato* y quien busca *centros de
+trabajo* estÃ¡n haciendo lo mismo: decidir quÃ© se le puede poner a un empleado.
 
-- **Se mantiene** la pantalla genérica dirigida por metadatos. Es la ganancia del metamodelo.
-- **Desaparece** «Catálogos» como grupo de menú. Cada maestro se lista bajo Organización o bajo
-  Sociedad según el test anterior, servido por el mismo componente genérico.
-- Como un maestro nuevo aparece **declarando**, sin tocar código, **el menú de esa sección debe
-  generarse** desde los `rule_entity_type`. Si añadir un maestro obliga a editar el menú a mano, se
-  pierde la propiedad que hacía valioso el metamodelo. Esto exige metadatos de agrupación y
+- **Se mantiene** la pantalla genÃ©rica dirigida por metadatos. Es la ganancia del metamodelo.
+- **Desaparece** Â«CatÃ¡logosÂ» como grupo de menÃº. Cada maestro se lista bajo OrganizaciÃ³n o bajo
+  Sociedad segÃºn el test anterior, servido por el mismo componente genÃ©rico.
+- Como un maestro nuevo aparece **declarando**, sin tocar cÃ³digo, **el menÃº de esa secciÃ³n debe
+  generarse** desde los `rule_entity_type`. Si aÃ±adir un maestro obliga a editar el menÃº a mano, se
+  pierde la propiedad que hacÃ­a valioso el metamodelo. Esto exige metadatos de agrupaciÃ³n y
   visibilidad en `rule_entity_type` (b4rrhh/backend#15) y es el mismo campo que ADR-012 necesita
-  para pagar su deuda semántica.
+  para pagar su deuda semÃ¡ntica.
 
-### 4. El modelo de página es directorio + página completa
+### 4. El modelo de pÃ¡gina es directorio + pÃ¡gina completa
 
-Se descarta el maestro-detalle permanente como patrón general. La ficha del empleado no cabe en un
-panel de detalle: el área laboral ya necesita todo el ancho para sus tablas de periodos, y un panel
-fijo cuesta unos 350 px en la pantalla que más ancho necesita.
+Se descarta el maestro-detalle permanente como patrÃ³n general. La ficha del empleado no cabe en un
+panel de detalle: el Ã¡rea laboral ya necesita todo el ancho para sus tablas de periodos, y un panel
+fijo cuesta unos 350 px en la pantalla que mÃ¡s ancho necesita.
 
-`company` y `work-center` se mudan al modelo de la ficha, no al revés. Las piezas de maestro-detalle
+`company` y `work-center` se mudan al modelo de la ficha, no al revÃ©s. Las piezas de maestro-detalle
 de `shared/ui` quedan superadas y **no deben usarse en pantallas nuevas**.
 
-### 5. La selección múltiple es una cola de trabajo
+### 5. La selecciÃ³n mÃºltiple es una cola de trabajo
 
-Lo que hace falta no es ver la lista todo el rato: es no perder la selección. Se resuelve en el raíl
-de la ficha, que muestra la cola con los nombres cuando se llega desde una selección, y solo la
+Lo que hace falta no es ver la lista todo el rato: es no perder la selecciÃ³n. Se resuelve en el raÃ­l
+de la ficha, que muestra la cola con los nombres cuando se llega desde una selecciÃ³n, y solo la
 identidad cuando se llega a uno solo. Coste de ancho: cero cuando no hay cola.
 
-**La cola no escala a cientos, y no debe fingir que sí.** Revisar cien fichas de una en una es la
-herramienta equivocada: eso se responde añadiendo la columna al directorio y ordenando por ella.
+**La cola no escala a cientos, y no debe fingir que sÃ­.** Revisar cien fichas de una en una es la
+herramienta equivocada: eso se responde aÃ±adiendo la columna al directorio y ordenando por ella.
 
 ## Consecuencias
 
-- El directorio necesita un modelo de lectura más rico del que hay
+- El directorio necesita un modelo de lectura mÃ¡s rico del que hay
   (`EmployeeDirectoryItemResponse` hoy solo devuelve claves, `displayName`, `status` y
   `workCenterCode`). La fase 4 tiene una mitad de backend.
-- El reparto fino de maestros entre Organización y Sociedad **no sale limpio**: hay tipos con
-  opciones de las dos clases. Cuando un tipo no caiga claramente de un lado, es señal de que ese
+- El reparto fino de maestros entre OrganizaciÃ³n y Sociedad **no sale limpio**: hay tipos con
+  opciones de las dos clases. Cuando un tipo no caiga claramente de un lado, es seÃ±al de que ese
   tipo son dos.
-- ADR-004 sigue abierto. Esta decisión no depende de la forma de la business key.
+- ADR-004 sigue abierto. Esta decisiÃ³n no depende de la forma de la business key.
 
 ## Fuera de alcance
 
-La pantalla de inicio (bandeja de trabajo frente a panel de métricas) sigue sin decidir.
+La pantalla de inicio (bandeja de trabajo frente a panel de mÃ©tricas) sigue sin decidir.
+
 
 <!-- END FILE: ADR-049-arquitectura-de-informacion-del-frontend.md -->
 
-<a name="file-adr-050-esqueleto-de-pagina-md"></a>
 
 ---
 
 # FILE: ADR-050-esqueleto-de-pagina.md
+<a name="file-adr-050-esqueleto-de-pagina-md"></a>
 
 <!-- BEGIN FILE: ADR-050-esqueleto-de-pagina.md -->
 
-# ADR-050 — Esqueleto de página
+# ADR-050 â€” Esqueleto de pÃ¡gina
 
 ## Estado
 Aceptado
 
 ## Contexto
 
-Cada pantalla se inventa su disposición. La prueba más limpia es el panel «Historial» de la ficha
-del empleado: aparece en las tres áreas —resumen, personales, laborales— en **tres posiciones
+Cada pantalla se inventa su disposiciÃ³n. La prueba mÃ¡s limpia es el panel Â«HistorialÂ» de la ficha
+del empleado: aparece en las tres Ã¡reas â€”resumen, personales, laboralesâ€” en **tres posiciones
 distintas, con tres anchos distintos**, sin alinearse con nada de lo que tiene debajo. Si un
-componente no sabe dónde va, es que no hay ningún sitio donde deba ir.
+componente no sabe dÃ³nde va, es que no hay ningÃºn sitio donde deba ir.
 
-De ahí sale todo lo demás:
+De ahÃ­ sale todo lo demÃ¡s:
 
-- El área laboral es una página de dos columnas donde la izquierda tiene una caja y **600 px de nada**.
-- El área personal deja el 85 % de la pantalla en blanco.
-- El directorio ocupa poco más de la mitad del ancho disponible y desperdicia el resto.
-- Las acciones de página («Calcular nómina», «Acciones») viven **dentro de una card**, en el sitio de
+- El Ã¡rea laboral es una pÃ¡gina de dos columnas donde la izquierda tiene una caja y **600 px de nada**.
+- El Ã¡rea personal deja el 85 % de la pantalla en blanco.
+- El directorio ocupa poco mÃ¡s de la mitad del ancho disponible y desperdicia el resto.
+- Las acciones de pÃ¡gina (Â«Calcular nÃ³minaÂ», Â«AccionesÂ») viven **dentro de una card**, en el sitio de
   un dato.
-- El raíl de identidad se colapsa a iconos en un área y va con etiquetas en las otras dos, de forma
+- El raÃ­l de identidad se colapsa a iconos en un Ã¡rea y va con etiquetas en las otras dos, de forma
   que en la pantalla de resumen **desaparece el nombre del empleado**.
 
-Ninguno de estos es un fallo de estilo. Son síntomas de que no hay un plano.
+Ninguno de estos es un fallo de estilo. Son sÃ­ntomas de que no hay un plano.
 
-## Decisión
+## DecisiÃ³n
 
-Existe **un único esqueleto de página** al que las pantallas se acogen, con cuatro huecos nombrados:
+Existe **un Ãºnico esqueleto de pÃ¡gina** al que las pantallas se acogen, con cuatro huecos nombrados:
 
-| Hueco | Qué lleva | Notas |
+| Hueco | QuÃ© lleva | Notas |
 |---|---|---|
-| `identidad` | Quién o qué se está mirando, y las acciones de página | Franja superior, ancho completo |
-| `raíl` | Índice de la página y, si la hay, la cola de trabajo | Izquierda, plegable como una unidad |
+| `identidad` | QuiÃ©n o quÃ© se estÃ¡ mirando, y las acciones de pÃ¡gina | Franja superior, ancho completo |
+| `raÃ­l` | Ãndice de la pÃ¡gina y, si la hay, la cola de trabajo | Izquierda, plegable como una unidad |
 | `principal` | El contenido | Gobierna las columnas |
-| `contextual` | Paneles secundarios: historial, ayuda, auditoría | Derecha, **plegado por defecto** |
+| `contextual` | Paneles secundarios: historial, ayuda, auditorÃ­a | Derecha, **plegado por defecto** |
 
 ### Reglas
 
-1. **Las acciones de página van en `identidad`**, nunca dentro de una card del contenido.
-2. **`contextual` está plegado por defecto** y se despliega a petición. Su estado se recuerda.
-3. **El raíl se pliega entero**, no por partes. Índice y cola viven o desaparecen juntos.
-4. **El menú principal se pliega a iconos**, y su estado se recuerda. Es la única navegación que
+1. **Las acciones de pÃ¡gina van en `identidad`**, nunca dentro de una card del contenido.
+2. **`contextual` estÃ¡ plegado por defecto** y se despliega a peticiÃ³n. Su estado se recuerda.
+3. **El raÃ­l se pliega entero**, no por partes. Ãndice y cola viven o desaparecen juntos.
+4. **El menÃº principal se pliega a iconos**, y su estado se recuerda. Es la Ãºnica navegaciÃ³n que
    admite plegarse a iconos, porque son pocos destinos usados a diario y se reconocen por la forma.
-   **El índice del raíl no se pliega a iconos**: es un sumario que se lee de reojo, sus conceptos son
-   vecinos entre sí —centro de trabajo y centro de coste, convenio y reglamentación— y obligar a
-   pasar el ratón por cada uno lo convierte en una adivinanza. Se aprieta con tipografía, no con
+   **El Ã­ndice del raÃ­l no se pliega a iconos**: es un sumario que se lee de reojo, sus conceptos son
+   vecinos entre sÃ­ â€”centro de trabajo y centro de coste, convenio y reglamentaciÃ³nâ€” y obligar a
+   pasar el ratÃ³n por cada uno lo convierte en una adivinanza. Se aprieta con tipografÃ­a, no con
    iconos.
-5. **El índice informa, no solo navega**: lleva el recuento de cada sección y marca en gris las
-   vacías. Lo excepcional se ve porque lo normal calla.
+5. **El Ã­ndice informa, no solo navega**: lleva el recuento de cada secciÃ³n y marca en gris las
+   vacÃ­as. Lo excepcional se ve porque lo normal calla.
 6. **La identidad no cambia entre secciones de la misma entidad.** Nunca puede desaparecer el nombre
-   de lo que se está mirando.
+   de lo que se estÃ¡ mirando.
 
 ### El ancho
 
-Ancho completo no es la respuesta automática: una tabla de 2.500 px es ilegible porque el ojo pierde
+Ancho completo no es la respuesta automÃ¡tica: una tabla de 2.500 px es ilegible porque el ojo pierde
 la fila. **La medida de lectura manda sobre el ancho disponible**, y donde sobre espacio se usa para
 poner cosas al lado, no para estirar. El esqueleto decide esto una vez, no cada pantalla.
 
 ## Consecuencias
 
 - Migrar una pantalla al esqueleto **no debe obligar a reescribir su contenido**. Si obliga, el
-  esqueleto está mal y hay que revisar este ADR. Esa restricción permite desplegar el esqueleto antes
-  de rediseñar nada.
+  esqueleto estÃ¡ mal y hay que revisar este ADR. Esa restricciÃ³n permite desplegar el esqueleto antes
+  de rediseÃ±ar nada.
 - Las clases de contenedor propias de cada feature dejan de tener sentido. Ver ADR-051.
 - Los huecos se dimensionan una vez, en el esqueleto. Ninguna pantalla ajusta anchos por su cuenta.
 
 ## Fuera de alcance
 
-Qué aspecto tiene cada bloque dentro de `principal`. Eso es ADR-051.
+QuÃ© aspecto tiene cada bloque dentro de `principal`. Eso es ADR-051.
+
 
 <!-- END FILE: ADR-050-esqueleto-de-pagina.md -->
 
-<a name="file-adr-051-el-contenedor-deriva-del-modo-de-mantenimiento-md"></a>
 
 ---
 
 # FILE: ADR-051-el-contenedor-deriva-del-modo-de-mantenimiento.md
+<a name="file-adr-051-el-contenedor-deriva-del-modo-de-mantenimiento-md"></a>
 
 <!-- BEGIN FILE: ADR-051-el-contenedor-deriva-del-modo-de-mantenimiento.md -->
 
-# ADR-051 — El contenedor deriva del modo de mantenimiento
+# ADR-051 â€” El contenedor deriva del modo de mantenimiento
 
 ## Estado
 Aceptado
 
 ## Contexto
 
-Hoy el contenedor de una sección lo elige quien escribe la pantalla. El resultado, en una sola
-pantalla —el área laboral de la ficha— es que **la presencia es una card y el contrato, la jornada y
+Hoy el contenedor de una secciÃ³n lo elige quien escribe la pantalla. El resultado, en una sola
+pantalla â€”el Ã¡rea laboral de la fichaâ€” es que **la presencia es una card y el contrato, la jornada y
 el convenio no lo son**, siendo los cuatro del mismo rango y las cuatro secciones temporales. Ninguna
-de las dos elecciones codifica nada: no se puede deducir por qué una tiene caja y las otras no.
+de las dos elecciones codifica nada: no se puede deducir por quÃ© una tiene caja y las otras no.
 
 Por debajo hay **19 ficheros `.scss`** que declaran cada uno su propia caja: `.presence-card`,
 `.labor-section`, `.work-center-section`, `.work-center-detail-panel`, `.cost-center-section`,
 `.dnf-card`, `.journey-presence-card`, `.header-box`, `.identity-panel`, `.list-panel`,
 `.employee-timeline-panel`, `.tax-information-section`, `.working-time-section`,
-`.labor-classification-section`, `.rehire-section`, `.panel`, `.section-card` y algunas más.
+`.labor-classification-section`, `.rehire-section`, `.panel`, `.section-card` y algunas mÃ¡s.
 
-Ninguna se escribió de mala fe: cada una es alguien resolviendo el mismo problema otra vez.
+Ninguna se escribiÃ³ de mala fe: cada una es alguien resolviendo el mismo problema otra vez.
 
-Además, la presencia —que en el dominio gobierna sobre las demás verticales, hasta el punto de que
-el flujo de cese la cierra la primera (ADR-047)— es visualmente lo menos importante de su pantalla.
+AdemÃ¡s, la presencia â€”que en el dominio gobierna sobre las demÃ¡s verticales, hasta el punto de que
+el flujo de cese la cierra la primera (ADR-047)â€” es visualmente lo menos importante de su pantalla.
 
-## Decisión
+## DecisiÃ³n
 
-**El modo de mantenimiento de una sección determina su contenedor, su cabecera y su acción.** El
+**El modo de mantenimiento de una secciÃ³n determina su contenedor, su cabecera y su acciÃ³n.** El
 vocabulario ya existe en ADR-010 y ADR-016: `SLOT`, `TEMPORAL_APPEND_CLOSE`, `WORKFLOW`, `READONLY`.
 
-Consecuencia directa: **dos secciones con el mismo modo se ven iguales**. Al verla, ya se sabe qué se
+Consecuencia directa: **dos secciones con el mismo modo se ven iguales**. Al verla, ya se sabe quÃ© se
 puede hacer con ella, antes de leer su contenido. Hoy eso no es posible.
 
 ### Reglas
 
 1. **Un modo, un tratamiento.** Presencia, contrato, jornada y convenio son todas
-   `TEMPORAL_APPEND_CLOSE` y comparten caja, cabecera y acción. Lo único que distingue a la presencia
-   es una marca de que **gobierna** sobre las demás.
-2. **Los contenedores viven en `shared/ui`.** Una feature no declara cajas. Se pondrá un candado en
-   el pipeline cuando la primera sección esté migrada.
-3. **Nada de contenedor dentro de contenedor.** El caso actual —tres cards, cada una con una caja
-   gris dentro para decir que no hay datos— es el ejemplo a no repetir. El estado vacío es contenido
-   de la sección, no otra sección.
-4. **El código nunca va solo.** `420` se muestra como «Indefinido a tiempo parcial» con el código
-   debajo, en gris y en monoespaciada. Quien conoce el catálogo sigue leyendo el número; quien no,
+   `TEMPORAL_APPEND_CLOSE` y comparten caja, cabecera y acciÃ³n. Lo Ãºnico que distingue a la presencia
+   es una marca de que **gobierna** sobre las demÃ¡s.
+2. **Los contenedores viven en `shared/ui`.** Una feature no declara cajas. Se pondrÃ¡ un candado en
+   el pipeline cuando la primera secciÃ³n estÃ© migrada.
+3. **Nada de contenedor dentro de contenedor.** El caso actual â€”tres cards, cada una con una caja
+   gris dentro para decir que no hay datosâ€” es el ejemplo a no repetir. El estado vacÃ­o es contenido
+   de la secciÃ³n, no otra secciÃ³n.
+4. **El cÃ³digo nunca va solo.** `420` se muestra como Â«Indefinido a tiempo parcialÂ» con el cÃ³digo
+   debajo, en gris y en monoespaciada. Quien conoce el catÃ¡logo sigue leyendo el nÃºmero; quien no,
    entiende la fila. Requiere el binding de literales de ADR-015.
 5. **Las fechas en formato local**, con `formatDisplayDate`. Las tablas de periodos las muestran hoy
    en ISO pese a que ese trabajo se hizo.
 
 ### Corolario: la ficha del empleado
 
-La ficha tiene **dos naturalezas, no cinco áreas hermanas**:
+La ficha tiene **dos naturalezas, no cinco Ã¡reas hermanas**:
 
-- **La relación laboral**: presencia, contrato, jornada, convenio, centro de trabajo, centro de
-  coste. Todo son vigencias y **se solapan entre sí**. Se presenta como un eje temporal con sus
-  carriles debajo, en una sola página.
+- **La relaciÃ³n laboral**: presencia, contrato, jornada, convenio, centro de trabajo, centro de
+  coste. Todo son vigencias y **se solapan entre sÃ­**. Se presenta como un eje temporal con sus
+  carriles debajo, en una sola pÃ¡gina.
 - **La persona**: contactos, identificadores, foto. Sin eje temporal, o con otro.
 
-Partir la primera en pestañas hermanas esconde justo lo que hay que ver, porque **los solapes ocurren
-entre las pestañas**. Desaparece el área «Resumen»: el resumen *es* la línea de tiempo.
+Partir la primera en pestaÃ±as hermanas esconde justo lo que hay que ver, porque **los solapes ocurren
+entre las pestaÃ±as**. Desaparece el Ã¡rea Â«ResumenÂ»: el resumen *es* la lÃ­nea de tiempo.
+
+### Nota (frontend#25): de dÃ³nde viene la jerarquÃ­a
+
+Â«Un modo, un tratamientoÂ» produce pÃ¡ginas uniformes cuando la entrada es uniforme: las seis
+secciones de la relaciÃ³n laboral comparten modo, luego se ven iguales, y una pÃ¡gina donde todo se
+ve igual no tiene jerarquÃ­a. La regla se mantiene. La jerarquÃ­a viene de otros dos sitios:
+
+- **De dentro de la secciÃ³n**: lo vigente manda sobre lo cerrado. La fila en vigor se ve siempre y
+  pesa; las cerradas retroceden y se pliegan por defecto.
+- **De la pÃ¡gina**: primero el estado actual, despuÃ©s la historia. La relaciÃ³n abre con una tira
+  Â«HoyÂ» â€”una fila por vigencia con su valor de hoyâ€” y las tablas van debajo como historia.
+
+Corolarios: una marca de modo que llevan todas las secciones de una pÃ¡gina no informa de nada y se
+quita (queda la de la que **gobierna**, que solo lleva una); la caja se reserva para lo que tiene
+otro modo, y entre secciones del mismo modo basta separaciÃ³n y regla.
 
 ## Consecuencias
 
-- Añadir una vertical temporal deja de ser una decisión de diseño: hereda el tratamiento de su modo.
-- Las 19 clases propias se van borrando a medida que se migra cada sección. Nada de big bang: cada
-  sección migrada borra la suya.
-- Si una sección necesita un tratamiento que su modo no da, o el modo está mal asignado o falta un
-  modo. En ningún caso se resuelve con una clase nueva en la feature.
+- AÃ±adir una vertical temporal deja de ser una decisiÃ³n de diseÃ±o: hereda el tratamiento de su modo.
+- Las 19 clases propias se van borrando a medida que se migra cada secciÃ³n. Nada de big bang: cada
+  secciÃ³n migrada borra la suya.
+- Si una secciÃ³n necesita un tratamiento que su modo no da, o el modo estÃ¡ mal asignado o falta un
+  modo. En ningÃºn caso se resuelve con una clase nueva en la feature.
 
 ## Fuera de alcance
 
-La escala del eje temporal —cómo se representa una relación de veinte años con un cambio de dos
-semanas— sigue sin resolver, y es el riesgo conocido de la implementación.
+La escala del eje temporal â€”cÃ³mo se representa una relaciÃ³n de veinte aÃ±os con un cambio de dos
+semanasâ€” sigue sin resolver, y es el riesgo conocido de la implementaciÃ³n.
+
 
 <!-- END FILE: ADR-051-el-contenedor-deriva-del-modo-de-mantenimiento.md -->
 
-<a name="file-adr-28-payroll-calculation-launch-semantics-md"></a>
 
 ---
 
 # FILE: ADR-28-payroll-calculation-launch-semantics.md
+<a name="file-adr-28-payroll-calculation-launch-semantics-md"></a>
 
 <!-- BEGIN FILE: ADR-28-payroll-calculation-launch-semantics.md -->
 
-# ADR — Payroll Calculation Launch Semantics
+# ADR â€” Payroll Calculation Launch Semantics
 
 ## Estado
 Propuesto
 
 ## Contexto
 
-B4RRHH organiza el código por vertical/subdominio y exige APIs públicas basadas en business keys, nunca en IDs técnicos. Además, cuando una operación no encaja como CRUD plano, el proyecto favorece modelarla como una acción de negocio o workflow explícito. fileciteturn4file10 fileciteturn4file12 fileciteturn4file8
+B4RRHH organiza el cÃ³digo por vertical/subdominio y exige APIs pÃºblicas basadas en business keys, nunca en IDs tÃ©cnicos. AdemÃ¡s, cuando una operaciÃ³n no encaja como CRUD plano, el proyecto favorece modelarla como una acciÃ³n de negocio o workflow explÃ­cito. îˆ€fileciteîˆ‚turn4file10îˆ îˆ€fileciteîˆ‚turn4file12îˆ îˆ€fileciteîˆ‚turn4file8îˆ
 
 En el bounded context `payroll` ya se ha decidido que:
 
-- la raíz funcional es `payroll.payroll`;
+- la raÃ­z funcional es `payroll.payroll`;
 - su identidad funcional es:
   - `ruleSystemCode`
   - `employeeTypeCode`
@@ -13406,65 +13470,65 @@ En el bounded context `payroll` ya se ha decidido que:
   - `payrollPeriodCode`
   - `payrollTypeCode`
   - `presenceNumber`;
-- la nómina es un resultado materializado, no editable, regenerable por cálculo;
+- la nÃ³mina es un resultado materializado, no editable, regenerable por cÃ¡lculo;
 - las hijas cuelgan con `ON DELETE CASCADE`;
-- solo `NOT_VALID` es estado recalcable entre las nóminas ya existentes. fileciteturn4file1 fileciteturn4file6
+- solo `NOT_VALID` es estado recalcable entre las nÃ³minas ya existentes. îˆ€fileciteîˆ‚turn4file1îˆ îˆ€fileciteîˆ‚turn4file6îˆ
 
-También se ha fijado que `employee.presence` es un recurso funcional identificado por business key ampliada `ruleSystemCode + employeeTypeCode + employeeNumber + presenceNumber`, y que las acciones de negocio compuestas deben vivir como workflows por encima de los recursos canónicos. fileciteturn4file14 fileciteturn4file16 fileciteturn4file8
+TambiÃ©n se ha fijado que `employee.presence` es un recurso funcional identificado por business key ampliada `ruleSystemCode + employeeTypeCode + employeeNumber + presenceNumber`, y que las acciones de negocio compuestas deben vivir como workflows por encima de los recursos canÃ³nicos. îˆ€fileciteîˆ‚turn4file14îˆ îˆ€fileciteîˆ‚turn4file16îˆ îˆ€fileciteîˆ‚turn4file8îˆ
 
-Al empezar a hablar de cálculo de nómina aparece una tensión natural:
+Al empezar a hablar de cÃ¡lculo de nÃ³mina aparece una tensiÃ³n natural:
 
 - una cosa es el **modelo de datos del resultado** (`payroll.payroll`);
-- otra cosa distinta es el **lanzamiento del cálculo**.
+- otra cosa distinta es el **lanzamiento del cÃ¡lculo**.
 
-Si ambas cosas se mezclan demasiado pronto, el diseño queda borroso y se dificulta la evolución futura del motor de reglas.
+Si ambas cosas se mezclan demasiado pronto, el diseÃ±o queda borroso y se dificulta la evoluciÃ³n futura del motor de reglas.
 
 ## Problema
 
-Se necesita definir qué significa técnicamente “lanzar nómina” sin entrar todavía en el motor real de reglas de cálculo.
+Se necesita definir quÃ© significa tÃ©cnicamente â€œlanzar nÃ³minaâ€ sin entrar todavÃ­a en el motor real de reglas de cÃ¡lculo.
 
 El sistema debe poder:
 
-- recibir un período y un tipo de nómina;
-- resolver una población objetivo;
-- expandir esa población a unidades reales de cálculo;
-- decidir cuáles son elegibles;
-- delegar el cálculo efectivo a otro caso de uso especializado;
-- devolver un resumen de ejecución.
+- recibir un perÃ­odo y un tipo de nÃ³mina;
+- resolver una poblaciÃ³n objetivo;
+- expandir esa poblaciÃ³n a unidades reales de cÃ¡lculo;
+- decidir cuÃ¡les son elegibles;
+- delegar el cÃ¡lculo efectivo a otro caso de uso especializado;
+- devolver un resumen de ejecuciÃ³n.
 
-Además, el launch no debe recalcular indiscriminadamente:
+AdemÃ¡s, el launch no debe recalcular indiscriminadamente:
 
-- una nómina existente en `CALCULATED` no debe tocarse;
-- una nómina existente en `EXPLICIT_VALIDATED` no debe tocarse;
-- una nómina `DEFINITIVE` jamás debe tocarse;
-- una unidad sin nómina previa sí debe calcularse;
-- una unidad con nómina previa en `NOT_VALID` sí debe recalcularse.
+- una nÃ³mina existente en `CALCULATED` no debe tocarse;
+- una nÃ³mina existente en `EXPLICIT_VALIDATED` no debe tocarse;
+- una nÃ³mina `DEFINITIVE` jamÃ¡s debe tocarse;
+- una unidad sin nÃ³mina previa sÃ­ debe calcularse;
+- una unidad con nÃ³mina previa en `NOT_VALID` sÃ­ debe recalcularse.
 
-## Decisión
+## DecisiÃ³n
 
-Se introduce la semántica de **Payroll Calculation Launch** como workflow de aplicación dentro del bounded context `payroll`.
+Se introduce la semÃ¡ntica de **Payroll Calculation Launch** como workflow de aplicaciÃ³n dentro del bounded context `payroll`.
 
 El launch:
 
-- **no es** la raíz funcional del dominio;
+- **no es** la raÃ­z funcional del dominio;
 - **no es** un CRUD;
-- **no es** todavía un recurso persistente canónico tipo `payroll_run`;
-- **no implementa** por sí mismo el motor de cálculo;
-- **resuelve y orquesta** qué unidades deben intentarse calcular.
+- **no es** todavÃ­a un recurso persistente canÃ³nico tipo `payroll_run`;
+- **no implementa** por sÃ­ mismo el motor de cÃ¡lculo;
+- **resuelve y orquesta** quÃ© unidades deben intentarse calcular.
 
 ### Regla principal
 
-`launch` resuelve la lista de unidades de cálculo elegibles y delega el cálculo efectivo a un caso de uso/endpoint especializado de cálculo.
+`launch` resuelve la lista de unidades de cÃ¡lculo elegibles y delega el cÃ¡lculo efectivo a un caso de uso/endpoint especializado de cÃ¡lculo.
 
-## Definición funcional
+## DefiniciÃ³n funcional
 
-Lanzar nómina significa:
+Lanzar nÃ³mina significa:
 
-> ejecutar un workflow que, para un `ruleSystemCode`, `payrollPeriodCode`, `payrollTypeCode` y una población objetivo determinada, resuelve las unidades de cálculo candidato, considera elegibles las que no tienen nómina previa o la tienen en `NOT_VALID`, delega el cálculo efectivo a un componente especializado y devuelve un resumen de ejecución.
+> ejecutar un workflow que, para un `ruleSystemCode`, `payrollPeriodCode`, `payrollTypeCode` y una poblaciÃ³n objetivo determinada, resuelve las unidades de cÃ¡lculo candidato, considera elegibles las que no tienen nÃ³mina previa o la tienen en `NOT_VALID`, delega el cÃ¡lculo efectivo a un componente especializado y devuelve un resumen de ejecuciÃ³n.
 
-## Unidad funcional de cálculo
+## Unidad funcional de cÃ¡lculo
 
-La unidad mínima de cálculo es:
+La unidad mÃ­nima de cÃ¡lculo es:
 
 - `ruleSystemCode`
 - `employeeTypeCode`
@@ -13473,32 +13537,32 @@ La unidad mínima de cálculo es:
 - `payrollTypeCode`
 - `presenceNumber`
 
-Justificación:
+JustificaciÃ³n:
 
-- `payroll.payroll` ya está anclada a una presencia concreta; fileciteturn4file1
-- `presence` tiene identidad pública propia dentro del empleado; fileciteturn4file14 fileciteturn4file16
-- dos presencias distintas en el mismo mes representan nóminas independientes.
+- `payroll.payroll` ya estÃ¡ anclada a una presencia concreta; îˆ€fileciteîˆ‚turn4file1îˆ
+- `presence` tiene identidad pÃºblica propia dentro del empleado; îˆ€fileciteîˆ‚turn4file14îˆ îˆ€fileciteîˆ‚turn4file16îˆ
+- dos presencias distintas en el mismo mes representan nÃ³minas independientes.
 
-El launch trabaja con una colección de estas unidades, no con “empleados enteros” de forma opaca.
+El launch trabaja con una colecciÃ³n de estas unidades, no con â€œempleados enterosâ€ de forma opaca.
 
-## Población objetivo vs población elegible
+## PoblaciÃ³n objetivo vs poblaciÃ³n elegible
 
 Se distinguen dos conceptos:
 
-### 1. Población objetivo
+### 1. PoblaciÃ³n objetivo
 
-Es el conjunto de empleados o ámbitos sobre los que el usuario desea lanzar el cálculo.
+Es el conjunto de empleados o Ã¡mbitos sobre los que el usuario desea lanzar el cÃ¡lculo.
 
 Ejemplos posibles:
 
 - un empleado;
-- una lista explícita de empleados;
+- una lista explÃ­cita de empleados;
 - todos los empleados de un `ruleSystemCode`;
-- futuros filtros más ricos.
+- futuros filtros mÃ¡s ricos.
 
-### 2. Población elegible
+### 2. PoblaciÃ³n elegible
 
-Es el conjunto de unidades de cálculo que realmente pueden entrar al cálculo efectivo.
+Es el conjunto de unidades de cÃ¡lculo que realmente pueden entrar al cÃ¡lculo efectivo.
 
 Una unidad es elegible si:
 
@@ -13515,23 +13579,23 @@ Una unidad no es elegible si existe y su estado es:
 
 El launch debe:
 
-1. recibir el contexto de ejecución;
-2. resolver la población objetivo;
-3. expandirla a unidades de cálculo candidatas;
+1. recibir el contexto de ejecuciÃ³n;
+2. resolver la poblaciÃ³n objetivo;
+3. expandirla a unidades de cÃ¡lculo candidatas;
 4. comprobar existencia y estado de `payroll.payroll`;
 5. construir la lista final de unidades elegibles;
-6. delegar el cálculo efectivo;
-7. consolidar un resumen de ejecución.
+6. delegar el cÃ¡lculo efectivo;
+7. consolidar un resumen de ejecuciÃ³n.
 
 El launch no debe:
 
-- generar directamente conceptos de nómina;
+- generar directamente conceptos de nÃ³mina;
 - decidir reglas salariales;
 - prorratear;
 - aplicar retroactividad real;
-- convertirse en el motor de cálculo.
+- convertirse en el motor de cÃ¡lculo.
 
-## Contexto mínimo de ejecución
+## Contexto mÃ­nimo de ejecuciÃ³n
 
 El launch debe trabajar al menos con:
 
@@ -13542,33 +13606,33 @@ El launch debe trabajar al menos con:
 - `calculationEngineVersion`
 - `targetSelection`
 
-Los dos campos de engine son obligatorios por coherencia con el modelo raíz ya adoptado para `payroll.payroll`. fileciteturn4file1
+Los dos campos de engine son obligatorios por coherencia con el modelo raÃ­z ya adoptado para `payroll.payroll`. îˆ€fileciteîˆ‚turn4file1îˆ
 
 ## targetSelection
 
-`targetSelection` representa la población objetivo.
+`targetSelection` representa la poblaciÃ³n objetivo.
 
-No se fija todavía un único shape contractual cerrado, pero el modelo debe permitir al menos:
+No se fija todavÃ­a un Ãºnico shape contractual cerrado, pero el modelo debe permitir al menos:
 
-- cálculo de un empleado concreto;
-- cálculo de una lista explícita;
-- cálculo masivo por ámbito.
+- cÃ¡lculo de un empleado concreto;
+- cÃ¡lculo de una lista explÃ­cita;
+- cÃ¡lculo masivo por Ã¡mbito.
 
-El diseño exacto del payload se cerrará en OpenAPI posterior.
+El diseÃ±o exacto del payload se cerrarÃ¡ en OpenAPI posterior.
 
-## Delegación al cálculo efectivo
+## DelegaciÃ³n al cÃ¡lculo efectivo
 
-El launch no implementa el cálculo. Delegará en un caso de uso/endpoint especializado, en adelante `calculate`.
+El launch no implementa el cÃ¡lculo. DelegarÃ¡ en un caso de uso/endpoint especializado, en adelante `calculate`.
 
-Esta separación permite:
+Esta separaciÃ³n permite:
 
 - probar el flujo completo antes de tener motor real;
-- evolucionar el componente de cálculo sin rediseñar el launch;
-- distinguir claramente entre orquestación y cálculo.
+- evolucionar el componente de cÃ¡lculo sin rediseÃ±ar el launch;
+- distinguir claramente entre orquestaciÃ³n y cÃ¡lculo.
 
 ## Resultado del launch
 
-El launch debe devolver un resumen explícito de ejecución.
+El launch debe devolver un resumen explÃ­cito de ejecuciÃ³n.
 
 Campos esperables del resumen:
 
@@ -13577,29 +13641,29 @@ Campos esperables del resumen:
 - total de unidades no elegibles por estado;
 - total de unidades calculadas con resultado `CALCULATED`;
 - total de unidades calculadas con resultado `NOT_VALID`;
-- total de errores técnicos;
+- total de errores tÃ©cnicos;
 - detalle opcional por unidad.
 
-No se decide todavía persistir este resumen como recurso canónico.
+No se decide todavÃ­a persistir este resumen como recurso canÃ³nico.
 
-## Qué se rechaza explícitamente
+## QuÃ© se rechaza explÃ­citamente
 
 Se rechaza en esta fase:
 
 - modelar `launch` como CRUD;
-- mezclar launch y cálculo efectivo en la misma semántica;
-- recalcular cualquier nómina encontrada dentro de la población objetivo;
+- mezclar launch y cÃ¡lculo efectivo en la misma semÃ¡ntica;
+- recalcular cualquier nÃ³mina encontrada dentro de la poblaciÃ³n objetivo;
 - introducir ya un `payroll_run` como centro del dominio;
-- abrir todavía un repositorio/microservicio separado sólo para el cálculo.
+- abrir todavÃ­a un repositorio/microservicio separado sÃ³lo para el cÃ¡lculo.
 
-## Relación con el workflow de estados
+## RelaciÃ³n con el workflow de estados
 
-Este ADR no sustituye al ADR de estados de nómina.
+Este ADR no sustituye al ADR de estados de nÃ³mina.
 
-Se complementa con él:
+Se complementa con Ã©l:
 
-- `NOT_VALID` sigue siendo el estado que autoriza la sustitución de una nómina existente; fileciteturn4file0
-- además, una unidad sin nómina previa es también elegible para cálculo.
+- `NOT_VALID` sigue siendo el estado que autoriza la sustituciÃ³n de una nÃ³mina existente; îˆ€fileciteîˆ‚turn4file0îˆ
+- ademÃ¡s, una unidad sin nÃ³mina previa es tambiÃ©n elegible para cÃ¡lculo.
 
 ## API conceptual inicial
 
@@ -13607,7 +13671,7 @@ A falta de OpenAPI definitivo, se recomienda un endpoint de negocio del estilo:
 
 - `POST /payroll/calculations/launch`
 
-El nombre debe seguir semántica de negocio, no nomenclatura técnica vaga. El proyecto prioriza nombres orientados a negocio y paths por business keys cuando aplica. fileciteturn4file12
+El nombre debe seguir semÃ¡ntica de negocio, no nomenclatura tÃ©cnica vaga. El proyecto prioriza nombres orientados a negocio y paths por business keys cuando aplica. îˆ€fileciteîˆ‚turn4file12îˆ
 
 ## Consecuencias
 
@@ -13615,27 +13679,28 @@ El nombre debe seguir semántica de negocio, no nomenclatura técnica vaga. El p
 
 - separa claramente modelo y proceso;
 - permite probar el flujo completo sin motor real;
-- protege de recálculos accidentales;
-- deja abierta evolución futura del motor;
-- encaja con el patrón del proyecto de workflows explícitos. fileciteturn4file8
+- protege de recÃ¡lculos accidentales;
+- deja abierta evoluciÃ³n futura del motor;
+- encaja con el patrÃ³n del proyecto de workflows explÃ­citos. îˆ€fileciteîˆ‚turn4file8îˆ
 
 ### Costes
 
 - introduce un caso de uso adicional;
-- exige resolver correctamente la expansión de población a presencias;
-- obliga a diseñar un resumen de ejecución útil.
+- exige resolver correctamente la expansiÃ³n de poblaciÃ³n a presencias;
+- obliga a diseÃ±ar un resumen de ejecuciÃ³n Ãºtil.
 
 ## Resumen
 
-En B4RRHH, `launch` no calcula la nómina por sí mismo.
+En B4RRHH, `launch` no calcula la nÃ³mina por sÃ­ mismo.
 
 `launch` es el workflow que:
 
-- resuelve la población objetivo;
-- expande a unidades reales de cálculo;
-- considera elegibles las unidades sin nómina previa o con nómina `NOT_VALID`;
-- delega el cálculo efectivo;
-- devuelve un resumen explícito del proceso.
+- resuelve la poblaciÃ³n objetivo;
+- expande a unidades reales de cÃ¡lculo;
+- considera elegibles las unidades sin nÃ³mina previa o con nÃ³mina `NOT_VALID`;
+- delega el cÃ¡lculo efectivo;
+- devuelve un resumen explÃ­cito del proceso.
+
 
 <!-- END FILE: ADR-28-payroll-calculation-launch-semantics.md -->
 
