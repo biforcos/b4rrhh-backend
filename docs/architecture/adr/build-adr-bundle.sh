@@ -22,8 +22,9 @@ find . -maxdepth 1 -type f -name "*.md" \
   ! -name "$OUT_FILE" \
   | sort \
   | while read -r file; do
+      base="$(basename "$file")"
       anchor=$(echo "$base" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g')
-      echo "- $base" >> "$TMP_FILE"
+      echo "- [$base](#file-$anchor)" >> "$TMP_FILE"
     done
 
 {
@@ -38,9 +39,10 @@ find . -maxdepth 1 -type f -name "*.md" \
   | sort \
   | while read -r file; do
       base="$(basename "$file")"
+      anchor=$(echo "$base" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g')
 
       {
-        echo "<a name=\"file-$anchor\"></a>" >> "$TMP_FILE"
+        echo "<a name=\"file-$anchor\"></a>"
         echo
         echo "---"
         echo
