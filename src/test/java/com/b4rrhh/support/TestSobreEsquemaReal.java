@@ -9,9 +9,6 @@ import com.b4rrhh.employee.working_time.infrastructure.persistence.EmployeeAgree
 import com.b4rrhh.employee.working_time.infrastructure.persistence.EmployeeWorkingTimeLookupAdapter;
 import com.b4rrhh.employee.working_time.infrastructure.persistence.WorkingTimePersistenceAdapter;
 import com.b4rrhh.employee.working_time.infrastructure.persistence.WorkingTimePresenceConsistencyAdapter;
-import com.b4rrhh.payroll.basesalary.infrastructure.persistence.EmployeeAgreementCategoryLookupAdapter;
-import com.b4rrhh.payroll.basesalary.infrastructure.persistence.EmployeeByBusinessKeyLookupAdapter;
-import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollObjectActivationLookupAdapter;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollObjectBindingLookupAdapter;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollTableRowLookupAdapter;
 import com.b4rrhh.payroll_engine.concept.infrastructure.persistence.PayrollConceptPersistenceAdapter;
@@ -71,12 +68,9 @@ import java.lang.annotation.Target;
         DefaultWorkingTimePresenceConsistencyValidator.class,
         WorkingTimePresenceConsistencyAdapter.class,
         StandardWorkingTimeDerivationPolicy.class,
-        // payroll: salario base y plus convenio
+        // payroll: binding de objetos y tablas
         PayrollObjectBindingLookupAdapter.class,
         PayrollTableRowLookupAdapter.class,
-        PayrollObjectActivationLookupAdapter.class,
-        EmployeeAgreementCategoryLookupAdapter.class,
-        EmployeeByBusinessKeyLookupAdapter.class,
         // payroll_engine
         PayrollConceptPersistenceAdapter.class,
         ConceptAssignmentPersistenceAdapter.class,

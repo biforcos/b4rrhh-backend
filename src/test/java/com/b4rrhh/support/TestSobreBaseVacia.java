@@ -6,7 +6,6 @@ import com.b4rrhh.employee.journey.infrastructure.persistence.JourneyCostCenterR
 import com.b4rrhh.employee.journey.infrastructure.persistence.JourneyLaborClassificationReadAdapter;
 import com.b4rrhh.employee.journey.infrastructure.persistence.JourneyPresenceReadAdapter;
 import com.b4rrhh.employee.journey.infrastructure.persistence.JourneyWorkCenterReadAdapter;
-import com.b4rrhh.payroll.basesalary.infrastructure.persistence.EmployeeAgreementCategoryLookupAdapter;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollObjectBindingLookupAdapter;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollTableRowLookupAdapter;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -54,8 +53,7 @@ import java.lang.annotation.Target;
         EmployeeJourneyLookupAdapter.class,
         // payroll: lookups del salario base
         PayrollObjectBindingLookupAdapter.class,
-        PayrollTableRowLookupAdapter.class,
-        EmployeeAgreementCategoryLookupAdapter.class
+        PayrollTableRowLookupAdapter.class
 })
 public @interface TestSobreBaseVacia {
 }

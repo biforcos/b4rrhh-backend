@@ -20,7 +20,7 @@ public class PayrollScenarioFixtures {
 
     /**
      * Seeds the full concept graph: rule_system, 15 concepts + 1 TABLE object,
-     * operands, feed relations, concept assignments, activations, binding,
+     * operands, feed relations, concept assignments, binding,
      * table row, and the agreement_category_profile.
      */
     public void seedConceptGraph(String ruleSystemCode) {
@@ -121,13 +121,6 @@ public class PayrollScenarioFixtures {
         jdbc.update(aSql, ruleSystemCode, "980", null, AGREEMENT_CODE, null, 980);
         jdbc.update(aSql, ruleSystemCode, "990", null, AGREEMENT_CODE, null, 990);
 
-        for (String cc : new String[]{"101","700","703","800"}) {
-            jdbc.update(
-                    "insert into payroll.payroll_object_activation" +
-                    " (rule_system_code, owner_type_code, owner_code, target_object_type_code, target_object_code, active)" +
-                    " values (?, ?, ?, ?, ?, ?)",
-                    ruleSystemCode, "AGREEMENT", AGREEMENT_CODE, "PAYROLL_CONCEPT", cc, true);
-        }
         jdbc.update(
                 "insert into payroll.payroll_object_binding" +
                 " (rule_system_code, owner_type_code, owner_code, binding_role_code, bound_object_type_code, bound_object_code, active)" +
