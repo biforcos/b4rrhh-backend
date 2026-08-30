@@ -1,5 +1,13 @@
 package com.b4rrhh.support;
 
+import com.b4rrhh.employee.address.infrastructure.persistence.AddressRuleEntityUsageParticipant;
+import com.b4rrhh.employee.contact.infrastructure.persistence.ContactRuleEntityUsageParticipant;
+import com.b4rrhh.employee.contract.infrastructure.persistence.ContractRuleEntityUsageParticipant;
+import com.b4rrhh.employee.cost_center.infrastructure.persistence.CostCenterRuleEntityUsageParticipant;
+import com.b4rrhh.employee.identifier.infrastructure.persistence.IdentifierRuleEntityUsageParticipant;
+import com.b4rrhh.employee.labor_classification.infrastructure.persistence.LaborClassificationRuleEntityUsageParticipant;
+import com.b4rrhh.employee.presence.infrastructure.persistence.PresenceRuleEntityUsageParticipant;
+import com.b4rrhh.employee.workcenter.infrastructure.persistence.WorkCenterRuleEntityUsageParticipant;
 import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeBusinessKeyLookupSupport;
 import com.b4rrhh.employee.working_time.application.service.DefaultWorkingTimePresenceConsistencyValidator;
 import com.b4rrhh.employee.working_time.application.service.StandardWorkingTimeDerivationPolicy;
@@ -90,7 +98,16 @@ import java.lang.annotation.Target;
         GetRuleEntityTranslationCoverageService.class,
         // rulesystem: borrado de codigos (backend#26)
         DeleteRuleEntityService.class,
-        RuleEntityUsageCheckAdapter.class
+        RuleEntityUsageCheckAdapter.class,
+        // employee: donde cada vertical guarda codigos de catalogo (backend#28)
+        AddressRuleEntityUsageParticipant.class,
+        ContactRuleEntityUsageParticipant.class,
+        ContractRuleEntityUsageParticipant.class,
+        CostCenterRuleEntityUsageParticipant.class,
+        IdentifierRuleEntityUsageParticipant.class,
+        LaborClassificationRuleEntityUsageParticipant.class,
+        PresenceRuleEntityUsageParticipant.class,
+        WorkCenterRuleEntityUsageParticipant.class
 })
 public @interface TestSobreEsquemaReal {
 }
