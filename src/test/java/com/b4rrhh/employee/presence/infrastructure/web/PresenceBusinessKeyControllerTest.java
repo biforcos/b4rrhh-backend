@@ -6,9 +6,10 @@ import com.b4rrhh.employee.presence.application.usecase.CreatePresenceCommand;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceUseCase;
 import com.b4rrhh.employee.presence.application.usecase.GetPresenceByBusinessKeyUseCase;
 import com.b4rrhh.employee.presence.application.usecase.ListEmployeePresencesUseCase;
-import com.b4rrhh.employee.presence.application.port.PresenceCatalogReadPort;
 import com.b4rrhh.employee.presence.domain.model.Presence;
 import com.b4rrhh.employee.presence.infrastructure.web.assembler.PresenceResponseAssembler;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import com.b4rrhh.employee.presence.infrastructure.web.dto.ClosePresenceRequest;
 import com.b4rrhh.employee.presence.infrastructure.web.dto.CreatePresenceRequest;
 import com.b4rrhh.employee.presence.infrastructure.web.dto.PresenceResponse;
@@ -45,7 +46,7 @@ class PresenceBusinessKeyControllerTest {
     @Mock
     private ListEmployeePresencesUseCase listEmployeePresencesUseCase;
     @Mock
-    private PresenceCatalogReadPort presenceCatalogReadPort;
+    private RuleEntityLabelResolver ruleEntityLabelResolver;
 
     private PresenceBusinessKeyController controller;
 
@@ -56,7 +57,7 @@ class PresenceBusinessKeyControllerTest {
                 closePresenceUseCase,
                 getPresenceByBusinessKeyUseCase,
                 listEmployeePresencesUseCase,
-                new PresenceResponseAssembler(presenceCatalogReadPort)
+                new PresenceResponseAssembler(ruleEntityLabelResolver)
         );
     }
 
@@ -70,15 +71,13 @@ class PresenceBusinessKeyControllerTest {
                 null
         );
 
-        when(presenceCatalogReadPort.findCompanyName("ESP", "AC01"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "COMPANY", "AC01", null))
                 .thenReturn(Optional.of("Empresa Activa"));
-        when(presenceCatalogReadPort.findEntryReasonName("ESP", "ENT01"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "EMPLOYEE_PRESENCE_ENTRY_REASON", "ENT01", null))
             .thenReturn(Optional.of("Alta inicial"));
-        when(presenceCatalogReadPort.findExitReasonName("ESP", null))
-            .thenReturn(Optional.empty());
         when(createPresenceUseCase.create(any(CreatePresenceCommand.class))).thenReturn(activePresence());
 
-        ResponseEntity<PresenceResponse> response = controller.create("ESP", "INTERNAL", "EMP001", request);
+        ResponseEntity<PresenceResponse> response = controller.create("ESP", "INTERNAL", "EMP001", request, ResponseLanguage.base());
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -97,16 +96,14 @@ class PresenceBusinessKeyControllerTest {
 
     @Test
     void listsPresencesUsingEmployeeBusinessKey() {
-        when(presenceCatalogReadPort.findCompanyName("ESP", "AC01"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "COMPANY", "AC01", null))
                 .thenReturn(Optional.empty());
-        when(presenceCatalogReadPort.findEntryReasonName("ESP", "ENT01"))
-            .thenReturn(Optional.empty());
-        when(presenceCatalogReadPort.findExitReasonName("ESP", null))
+        when(ruleEntityLabelResolver.resolveName("ESP", "EMPLOYEE_PRESENCE_ENTRY_REASON", "ENT01", null))
             .thenReturn(Optional.empty());
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(activePresence()));
 
-        ResponseEntity<List<PresenceResponse>> response = controller.list("ESP", "INTERNAL", "EMP001");
+        ResponseEntity<List<PresenceResponse>> response = controller.list("ESP", "INTERNAL", "EMP001", ResponseLanguage.base());
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -123,7 +120,7 @@ class PresenceBusinessKeyControllerTest {
         when(getPresenceByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001", 1))
                 .thenReturn(Optional.of(activePresence()));
 
-        ResponseEntity<PresenceResponse> response = controller.getByBusinessKey("ESP", "INTERNAL", "EMP001", 1);
+        ResponseEntity<PresenceResponse> response = controller.getByBusinessKey("ESP", "INTERNAL", "EMP001", 1, ResponseLanguage.base());
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -135,7 +132,7 @@ class PresenceBusinessKeyControllerTest {
         ClosePresenceRequest request = new ClosePresenceRequest(LocalDate.of(2026, 2, 1), "EXT01");
         when(closePresenceUseCase.close(any(ClosePresenceCommand.class))).thenReturn(closedPresence());
 
-        ResponseEntity<PresenceResponse> response = controller.close("ESP", "INTERNAL", "EMP001", 1, request);
+        ResponseEntity<PresenceResponse> response = controller.close("ESP", "INTERNAL", "EMP001", 1, request, ResponseLanguage.base());
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());

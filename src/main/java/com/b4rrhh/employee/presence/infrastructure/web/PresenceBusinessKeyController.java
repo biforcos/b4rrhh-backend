@@ -11,6 +11,7 @@ import com.b4rrhh.employee.presence.infrastructure.web.assembler.PresenceRespons
 import com.b4rrhh.employee.presence.infrastructure.web.dto.ClosePresenceRequest;
 import com.b4rrhh.employee.presence.infrastructure.web.dto.CreatePresenceRequest;
 import com.b4rrhh.employee.presence.infrastructure.web.dto.PresenceResponse;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -51,7 +52,8 @@ public class PresenceBusinessKeyController {
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
-            @RequestBody CreatePresenceRequest request
+            @RequestBody CreatePresenceRequest request,
+            ResponseLanguage language
     ) {
         Presence created = createPresenceUseCase.create(
                 new CreatePresenceCommand(
@@ -67,19 +69,20 @@ public class PresenceBusinessKeyController {
         );
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(presenceResponseAssembler.toResponse(ruleSystemCode, created));
+                .body(presenceResponseAssembler.toResponse(ruleSystemCode, created, language));
     }
 
     @GetMapping
     public ResponseEntity<List<PresenceResponse>> list(
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
-            @PathVariable String employeeNumber
+            @PathVariable String employeeNumber,
+            ResponseLanguage language
     ) {
         List<PresenceResponse> response = listEmployeePresencesUseCase
                 .listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber)
                 .stream()
-                .map(presence -> presenceResponseAssembler.toResponse(ruleSystemCode, presence))
+                .map(presence -> presenceResponseAssembler.toResponse(ruleSystemCode, presence, language))
                 .toList();
 
         return ResponseEntity.ok(response);
@@ -90,7 +93,8 @@ public class PresenceBusinessKeyController {
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
-            @PathVariable Integer presenceNumber
+            @PathVariable Integer presenceNumber,
+            ResponseLanguage language
     ) {
         return getPresenceByBusinessKeyUseCase.getByBusinessKey(
                 ruleSystemCode,
@@ -98,7 +102,7 @@ public class PresenceBusinessKeyController {
                 employeeNumber,
                 presenceNumber
         )
-                .map(presence -> ResponseEntity.ok(presenceResponseAssembler.toResponse(ruleSystemCode, presence)))
+                .map(presence -> ResponseEntity.ok(presenceResponseAssembler.toResponse(ruleSystemCode, presence, language)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -108,7 +112,8 @@ public class PresenceBusinessKeyController {
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
             @PathVariable Integer presenceNumber,
-            @RequestBody ClosePresenceRequest request
+            @RequestBody ClosePresenceRequest request,
+            ResponseLanguage language
     ) {
         Presence closed = closePresenceUseCase.close(
                 new ClosePresenceCommand(
@@ -121,6 +126,6 @@ public class PresenceBusinessKeyController {
                 )
         );
 
-        return ResponseEntity.ok(presenceResponseAssembler.toResponse(ruleSystemCode, closed));
+        return ResponseEntity.ok(presenceResponseAssembler.toResponse(ruleSystemCode, closed, language));
     }
 }

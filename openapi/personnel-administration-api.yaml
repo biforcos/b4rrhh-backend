@@ -525,6 +525,7 @@ paths:
       tags:
         - Employee Presence
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -568,6 +569,7 @@ paths:
       tags:
         - Employee Presence
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -605,6 +607,7 @@ paths:
       tags:
         - Employee Presence
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -646,6 +649,7 @@ paths:
       tags:
         - Employee Presence
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -5809,6 +5813,19 @@ paths:
           description: Row not found
 
 components:
+  parameters:
+    AcceptLanguage:
+      in: header
+      name: Accept-Language
+      required: false
+      description: >-
+        Language of the catalog labels in the response (ADR-052). Short BCP 47 tag such as
+        `es-ES`, `fr-FR` or `en`; the heaviest language of the header is used. Codes never
+        change. A label without a translation for that language, a missing header or an
+        unrecognised one all fall back to the base literal, silently.
+      schema:
+        type: string
+        example: es-ES
   schemas:
     PayrollLaunchTargetSelectionType:
       type: string
