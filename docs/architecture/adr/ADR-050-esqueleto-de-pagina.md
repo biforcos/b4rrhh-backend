@@ -50,8 +50,15 @@ Existe **un único esqueleto de página** al que las pantallas se acogen, con cu
    vecinos entre sí —centro de trabajo y centro de coste, convenio y reglamentación— y obligar a
    pasar el ratón por cada uno lo convierte en una adivinanza. Se aprieta con tipografía, no con
    iconos.
-5. **El índice informa, no solo navega**: lleva el recuento de cada sección y marca en gris las
-   vacías. Lo excepcional se ve porque lo normal calla.
+5. **El índice informa, no solo navega**: lleva el recuento de cada sección y marca las vacías.
+   Pero no todas igual: **en gris cuando el vacío es normal, en ocre de aviso cuando el vacío es un
+   dato que debería estar**. Una lista de identificadores vacía es una lista vacía; un empleado sin
+   centro de coste es una anomalía que alguien tiene que arreglar. Gris dice «no hay nada que ver»,
+   ocre dice «falta algo», y son dos mensajes distintos que hasta ahora se escribían con el mismo
+   color. Cuál de los dos le toca a cada sección **lo decide el dominio y lo declara la sección**;
+   la pantalla no lo adivina del recuento.
+
+   Lo excepcional se ve porque lo normal calla.
 
    Esa regla es sobre **repetición**, y por tanto vale en listas, no en fichas. En el directorio,
    250 insignias «Activo» idénticas son ruido: no distinguen a nadie y tapan las tres que dicen
