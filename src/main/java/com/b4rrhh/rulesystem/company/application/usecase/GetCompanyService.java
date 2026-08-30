@@ -9,6 +9,7 @@ import com.b4rrhh.rulesystem.companyprofile.domain.exception.CompanyProfileCompa
 import com.b4rrhh.rulesystem.companyprofile.domain.exception.CompanyProfileCompanyNotFoundException;
 import com.b4rrhh.rulesystem.companyprofile.domain.model.CompanyProfile;
 import com.b4rrhh.rulesystem.companyprofile.domain.port.CompanyProfileRepository;
+import com.b4rrhh.rulesystem.domain.exception.RequiredExtensionMissingException;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,7 +41,7 @@ public class GetCompanyService implements GetCompanyUseCase {
 
         CompanyProfile companyProfile = companyProfileRepository
             .findByCompanyRuleEntityId(companyEntity.getId())
-            .orElseGet(() -> fallbackProfile(companyEntity));
+            .orElseThrow(() -> new RequiredExtensionMissingException(companyEntity.getId(), "rulesystem.company_profile"));
 
         return toCompany(companyEntity, companyProfile);
     }
@@ -74,16 +75,4 @@ public class GetCompanyService implements GetCompanyUseCase {
         );
     }
 
-    private CompanyProfile fallbackProfile(RuleEntity companyEntity) {
-        return new CompanyProfile(
-                companyEntity.getName(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-        );
-    }
 }

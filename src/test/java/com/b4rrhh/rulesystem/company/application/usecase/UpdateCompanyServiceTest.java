@@ -6,6 +6,7 @@ import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileCo
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileInputNormalizer;
 import com.b4rrhh.rulesystem.companyprofile.domain.model.CompanyProfile;
 import com.b4rrhh.rulesystem.companyprofile.domain.port.CompanyProfileRepository;
+import com.b4rrhh.rulesystem.domain.exception.RequiredExtensionMissingException;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +22,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -77,8 +79,11 @@ class UpdateCompanyServiceTest {
         assertEquals("Acme Spain SA", result.legalName());
     }
 
+    // backend#34: antes este caso creaba el perfil de un fallback fabricado al vuelo; ahora
+    // una empresa sin perfil es una inconsistencia de datos y el update falla sin escribir.
+    // Si esto vuelve a guardar algo, se ha reintroducido el fallback.
     @Test
-    void updateCreatesProfileWhenMissing() {
+    void updateFailsWhenProfileMissing() {
         RuleEntity company = ruleEntity();
         when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COMPANY", "ACME", LocalDate.now()))
                 .thenReturn(Optional.of(company));
@@ -86,10 +91,8 @@ class UpdateCompanyServiceTest {
                 .thenReturn(Optional.of(ruleEntity(99L, "ESP", "COUNTRY", "ESP", "Spain", true)));
         when(ruleEntityRepository.save(any(RuleEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(companyProfileRepository.findByCompanyRuleEntityId(10L)).thenReturn(Optional.empty());
-        when(companyProfileRepository.save(any(Long.class), any(CompanyProfile.class)))
-                .thenAnswer(invocation -> invocation.getArgument(1));
 
-        var result = service.update(new UpdateCompanyCommand(
+        assertThrows(RequiredExtensionMissingException.class, () -> service.update(new UpdateCompanyCommand(
                 "ESP",
                 "ACME",
                 "Acme Renamed",
@@ -101,11 +104,9 @@ class UpdateCompanyServiceTest {
                 "28013",
                 "MD",
                 "ESP"
-        ));
+        )));
 
-        assertEquals("Acme Renamed", result.name());
-        assertEquals("Acme Spain SA", result.legalName());
-        verify(companyProfileRepository).save(any(Long.class), any(CompanyProfile.class));
+        verify(companyProfileRepository, never()).save(any(Long.class), any(CompanyProfile.class));
     }
 
     @Test

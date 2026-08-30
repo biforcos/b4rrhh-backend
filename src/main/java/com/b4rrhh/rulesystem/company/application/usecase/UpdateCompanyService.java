@@ -10,6 +10,7 @@ import com.b4rrhh.rulesystem.companyprofile.domain.exception.CompanyProfileCompa
 import com.b4rrhh.rulesystem.companyprofile.domain.exception.CompanyProfileCompanyNotFoundException;
 import com.b4rrhh.rulesystem.companyprofile.domain.model.CompanyProfile;
 import com.b4rrhh.rulesystem.companyprofile.domain.port.CompanyProfileRepository;
+import com.b4rrhh.rulesystem.domain.exception.RequiredExtensionMissingException;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import org.springframework.stereotype.Service;
@@ -58,7 +59,7 @@ public class UpdateCompanyService implements UpdateCompanyUseCase {
 
         CompanyProfile existingProfile = companyProfileRepository
                 .findByCompanyRuleEntityId(savedCompanyEntity.getId())
-            .orElseGet(() -> fallbackProfile(savedCompanyEntity));
+                .orElseThrow(() -> new RequiredExtensionMissingException(savedCompanyEntity.getId(), "rulesystem.company_profile"));
 
         CompanyProfile updatedProfile = existingProfile.update(
                 command.legalName(),
@@ -101,19 +102,6 @@ public class UpdateCompanyService implements UpdateCompanyUseCase {
                 companyProfile.getPostalCode(),
                 companyProfile.getRegionCode(),
                 companyProfile.getCountryCode()
-        );
-    }
-
-    private CompanyProfile fallbackProfile(RuleEntity companyEntity) {
-        return new CompanyProfile(
-                companyEntity.getName(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
         );
     }
 

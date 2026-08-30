@@ -4,6 +4,7 @@ import com.b4rrhh.rulesystem.company.domain.model.Company;
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileInputNormalizer;
 import com.b4rrhh.rulesystem.companyprofile.domain.model.CompanyProfile;
 import com.b4rrhh.rulesystem.companyprofile.domain.port.CompanyProfileRepository;
+import com.b4rrhh.rulesystem.domain.exception.RequiredExtensionMissingException;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import org.springframework.stereotype.Service;
@@ -53,7 +54,8 @@ public class ListCompaniesService implements ListCompaniesUseCase {
     private Company toCompany(RuleEntity companyEntity) {
         Optional<CompanyProfile> profile = companyProfileRepository.findByCompanyRuleEntityId(companyEntity.getId());
 
-        String legalName = profile.map(CompanyProfile::getLegalName).orElse(companyEntity.getName());
+        String legalName = profile.map(CompanyProfile::getLegalName)
+                .orElseThrow(() -> new RequiredExtensionMissingException(companyEntity.getId(), "rulesystem.company_profile"));
         String taxIdentifier = profile.map(CompanyProfile::getTaxIdentifier).orElse(null);
         String street = profile.map(CompanyProfile::getStreet).orElse(null);
         String city = profile.map(CompanyProfile::getCity).orElse(null);

@@ -6,6 +6,7 @@ import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileCo
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileInputNormalizer;
 import com.b4rrhh.rulesystem.companyprofile.domain.model.CompanyProfile;
 import com.b4rrhh.rulesystem.companyprofile.domain.port.CompanyProfileRepository;
+import com.b4rrhh.rulesystem.domain.exception.RequiredExtensionMissingException;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,19 +59,17 @@ class GetCompanyServiceTest {
         assertEquals("Acme Spain SA", result.legalName());
     }
 
-        @Test
-        void getFallsBackToCompanyDataWhenProfileMissing() {
-                RuleEntity company = ruleEntity();
-                when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COMPANY", "ACME", LocalDate.now()))
-                                .thenReturn(Optional.of(company));
-                when(companyProfileRepository.findByCompanyRuleEntityId(10L)).thenReturn(Optional.empty());
+    // backend#34: antes este caso fabricaba un perfil de aire; ahora es una inconsistencia
+    // de datos y falla. Si esto vuelve a responder, se ha reintroducido el fallback.
+    @Test
+    void getFailsWhenProfileMissing() {
+        RuleEntity company = ruleEntity();
+        when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COMPANY", "ACME", LocalDate.now()))
+                .thenReturn(Optional.of(company));
+        when(companyProfileRepository.findByCompanyRuleEntityId(10L)).thenReturn(Optional.empty());
 
-                var result = service.get(new GetCompanyQuery("esp", "acme"));
-
-                assertEquals("Acme SA", result.legalName());
-                assertEquals(null, result.taxIdentifier());
-                assertEquals(null, result.street());
-        }
+        assertThrows(RequiredExtensionMissingException.class, () -> service.get(new GetCompanyQuery("esp", "acme")));
+    }
 
     @Test
     void getMapsResolverNotFoundToCompanyNotFound() {
