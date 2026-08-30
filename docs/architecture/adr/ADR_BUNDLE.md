@@ -1,7 +1,7 @@
 # ADR Bundle
 
 > Fichero generado automáticamente. No editar a mano.
-> Fecha de generación: 2026-08-29 20:50:56
+> Fecha de generación: 2026-08-30 08:02:41
 
 ---
 
@@ -13289,6 +13289,17 @@ Existe **un único esqueleto de página** al que las pantallas se acogen, con cu
    ficha de un registro el estado se dice siempre**, aunque sea el estado de todos.
 6. **La identidad no cambia entre secciones de la misma entidad.** Nunca puede desaparecer el nombre
    de lo que se está mirando.
+7. **Todo hueco que recuerde su estado tiene que enseñar la salida desde ese estado.** El plegado se
+   guarda en `localStorage`, así que un control que solo se ve estando desplegado no deja al usuario
+   sin el panel: lo deja sin el panel **para siempre**, también al recargar, también en la sesión
+   siguiente y en cualquier otra ficha del mismo tipo. El botón de plegar y el de desplegar son el
+   mismo botón y tiene que verse en los dos estados.
+
+   Esto no es hipotético. El raíl plegado llevaba `overflow: hidden` y se recortaba su propio botón,
+   que va `absolute` sobre la costura. Quien lo plegó una vez dejó de ver el índice, la cola de
+   trabajo y buena parte del rediseño, y no tenía forma de saber que seguían ahí: la pantalla no
+   parecía rota, parecía que no se había hecho nada. Un estado recordado sin salida visible no es un
+   defecto de un control, es una pantalla que miente sobre lo que existe.
 
 ### El ancho
 
