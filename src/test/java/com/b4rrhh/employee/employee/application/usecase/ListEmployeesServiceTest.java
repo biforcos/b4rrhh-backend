@@ -1,6 +1,7 @@
 package com.b4rrhh.employee.employee.application.usecase;
 
 import com.b4rrhh.employee.employee.domain.model.EmployeeDirectoryItem;
+import com.b4rrhh.employee.employee.domain.model.EmployeeDirectoryPage;
 import com.b4rrhh.employee.employee.domain.port.EmployeeDirectoryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,7 @@ class ListEmployeesServiceTest {
 
     @Test
     void normalizesFiltersAndAppliesDefaultPagination() {
-        List<EmployeeDirectoryItem> expected = List.of(
+        List<EmployeeDirectoryItem> expectedItems = List.of(
                 new EmployeeDirectoryItem(
                         "ESP",
                         "INTERNAL",
@@ -40,16 +41,19 @@ class ListEmployeesServiceTest {
                         "MADRID"
                 )
         );
+        // El total viaja tal cual desde el repositorio: el servicio no lo recalcula (backend#18).
+        EmployeeDirectoryPage expected = new EmployeeDirectoryPage(expectedItems, 0, 50, 250);
 
         when(employeeDirectoryRepository.findDirectoryByFilters("JUAN", "ESP", "INTERNAL", "ACTIVE", 0, 50))
                 .thenReturn(expected);
 
-        List<EmployeeDirectoryItem> result = service.list(
+        EmployeeDirectoryPage result = service.list(
                 new ListEmployeesQuery(" juan ", " esp ", " internal ", " active ", null, null)
         );
 
-        assertEquals(1, result.size());
-        assertEquals("ESP", result.get(0).getRuleSystemCode());
+        assertEquals(1, result.items().size());
+        assertEquals("ESP", result.items().get(0).getRuleSystemCode());
+        assertEquals(250, result.total());
         verify(employeeDirectoryRepository).findDirectoryByFilters("JUAN", "ESP", "INTERNAL", "ACTIVE", 0, 50);
     }
 

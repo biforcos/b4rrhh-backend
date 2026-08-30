@@ -1,12 +1,11 @@
 package com.b4rrhh.employee.employee.domain.port;
 
-import com.b4rrhh.employee.employee.domain.model.EmployeeDirectoryItem;
-
-import java.util.List;
+import com.b4rrhh.employee.employee.domain.model.EmployeeDirectoryPage;
 
 public interface EmployeeDirectoryRepository {
 
-    List<EmployeeDirectoryItem> findDirectoryByFilters(
+    /** La página pedida y el total de los que cumplen los mismos filtros. */
+    EmployeeDirectoryPage findDirectoryByFilters(
             String q,
             String ruleSystemCode,
             String employeeTypeCode,

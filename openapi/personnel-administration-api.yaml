@@ -110,13 +110,11 @@ paths:
           description: Zero-based page index. Defaults to 0.
       responses:
         "200":
-          description: Employee directory list
+          description: One page of the employee directory, with the total that matches the filters
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/EmployeeDirectoryItemResponse"
+                $ref: "#/components/schemas/EmployeeDirectoryPageResponse"
         "400":
           description: Invalid query parameters
     post:
@@ -6827,6 +6825,38 @@ components:
         displayName:
           type: string
           description: Computed display name based on the rule system's configured format.
+
+    EmployeeDirectoryPageResponse:
+      type: object
+      description: >-
+        One page of the directory. `total` counts every employee that matches the same filters,
+        not the rows on the page: it is what tells "nobody by that name" apart from "nobody else
+        on this page".
+      required:
+        - items
+        - page
+        - size
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmployeeDirectoryItemResponse"
+        page:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Zero-based index of this page.
+        size:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Page size that was applied (the default when none was requested).
+        total:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Employees matching the filters, across all pages.
 
     EmployeeDirectoryItemResponse:
       type: object

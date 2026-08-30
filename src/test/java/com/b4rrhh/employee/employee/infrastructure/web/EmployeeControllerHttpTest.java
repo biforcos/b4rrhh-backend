@@ -5,6 +5,7 @@ import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeUseCase;
 import com.b4rrhh.employee.employee.application.usecase.ListEmployeesQuery;
 import com.b4rrhh.employee.employee.application.usecase.ListEmployeesUseCase;
 import com.b4rrhh.employee.employee.domain.model.EmployeeDirectoryItem;
+import com.b4rrhh.employee.employee.domain.model.EmployeeDirectoryPage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,18 +46,19 @@ class EmployeeControllerHttpTest {
     }
 
     @Test
-    void listMapsQueryParamsToUseCaseAndReturnsLightDirectoryItems() throws Exception {
+    void listMapsQueryParamsToUseCaseAndReturnsOnePageWithTotal() throws Exception {
+        List<EmployeeDirectoryItem> items = List.of(
+                new EmployeeDirectoryItem(
+                        "ESP",
+                        "INTERNAL",
+                        "EMP001",
+                        "Lidia Morales",
+                        "ACTIVE",
+                        "MADRID_HQ"
+                )
+        );
         when(listEmployeesUseCase.list(any(ListEmployeesQuery.class)))
-                .thenReturn(List.of(
-                        new EmployeeDirectoryItem(
-                                "ESP",
-                                "INTERNAL",
-                                "EMP001",
-                                "Lidia Morales",
-                                "ACTIVE",
-                                "MADRID_HQ"
-                        )
-                ));
+                .thenReturn(new EmployeeDirectoryPage(items, 1, 2, 7));
 
         mockMvc.perform(get("/employees")
                         .queryParam("q", "lidia")
@@ -66,13 +68,18 @@ class EmployeeControllerHttpTest {
                         .queryParam("size", "2")
                         .queryParam("page", "1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].ruleSystemCode").value("ESP"))
-                .andExpect(jsonPath("$[0].employeeTypeCode").value("INTERNAL"))
-                .andExpect(jsonPath("$[0].employeeNumber").value("EMP001"))
-                .andExpect(jsonPath("$[0].displayName").value("Lidia Morales"))
-                .andExpect(jsonPath("$[0].status").value("ACTIVE"))
-                .andExpect(jsonPath("$[0].workCenterCode").value("MADRID_HQ"))
-                .andExpect(jsonPath("$[0].id").doesNotExist());
+                // La página se envuelve: items + page + size + total (backend#18, opción A).
+                .andExpect(jsonPath("$.page").value(1))
+                .andExpect(jsonPath("$.size").value(2))
+                .andExpect(jsonPath("$.total").value(7))
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.items[0].ruleSystemCode").value("ESP"))
+                .andExpect(jsonPath("$.items[0].employeeTypeCode").value("INTERNAL"))
+                .andExpect(jsonPath("$.items[0].employeeNumber").value("EMP001"))
+                .andExpect(jsonPath("$.items[0].displayName").value("Lidia Morales"))
+                .andExpect(jsonPath("$.items[0].status").value("ACTIVE"))
+                .andExpect(jsonPath("$.items[0].workCenterCode").value("MADRID_HQ"))
+                .andExpect(jsonPath("$.items[0].id").doesNotExist());
 
         ArgumentCaptor<ListEmployeesQuery> captor = ArgumentCaptor.forClass(ListEmployeesQuery.class);
         verify(listEmployeesUseCase).list(captor.capture());

@@ -6,9 +6,11 @@ import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeUseCase;
 import com.b4rrhh.employee.employee.application.usecase.ListEmployeesQuery;
 import com.b4rrhh.employee.employee.application.usecase.ListEmployeesUseCase;
 import com.b4rrhh.employee.employee.domain.model.EmployeeDirectoryItem;
+import com.b4rrhh.employee.employee.domain.model.EmployeeDirectoryPage;
 import com.b4rrhh.employee.employee.domain.model.Employee;
 import com.b4rrhh.employee.employee.infrastructure.web.dto.CreateEmployeeRequest;
 import com.b4rrhh.employee.employee.infrastructure.web.dto.EmployeeDirectoryItemResponse;
+import com.b4rrhh.employee.employee.infrastructure.web.dto.EmployeeDirectoryPageResponse;
 import com.b4rrhh.employee.employee.infrastructure.web.dto.EmployeeResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,7 +41,7 @@ public class EmployeeController {
     }
 
     @GetMapping
-    public ResponseEntity<List<EmployeeDirectoryItemResponse>> listEmployees(
+    public ResponseEntity<EmployeeDirectoryPageResponse> listEmployees(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String ruleSystemCode,
             @RequestParam(required = false) String employeeTypeCode,
@@ -47,13 +49,16 @@ public class EmployeeController {
             @RequestParam(required = false) Integer size,
             @RequestParam(required = false) Integer page
     ) {
-        List<EmployeeDirectoryItemResponse> response = listEmployeesUseCase
-                .list(new ListEmployeesQuery(q, ruleSystemCode, employeeTypeCode, status, page, size))
-                .stream()
+        EmployeeDirectoryPage found = listEmployeesUseCase
+                .list(new ListEmployeesQuery(q, ruleSystemCode, employeeTypeCode, status, page, size));
+
+        List<EmployeeDirectoryItemResponse> items = found.items().stream()
                 .map(this::toDirectoryResponse)
                 .toList();
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                new EmployeeDirectoryPageResponse(items, found.page(), found.size(), found.total())
+        );
     }
 
     @PostMapping

@@ -1,6 +1,7 @@
 package com.b4rrhh.employee.employee.infrastructure.persistence;
 
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -46,7 +47,7 @@ public interface SpringDataEmployeeRepository extends JpaRepository<EmployeeEnti
         @Param("employeeNumber") String employeeNumber
     );
 
-    @Query("""
+    @Query(value = """
             select new com.b4rrhh.employee.employee.infrastructure.persistence.EmployeeDirectoryProjection(
                 e.ruleSystemCode,
                 e.employeeTypeCode,
@@ -92,8 +93,33 @@ public interface SpringDataEmployeeRepository extends JpaRepository<EmployeeEnti
                                         ) like concat('%', cast(:q as string), '%')
               )
             order by e.ruleSystemCode, e.employeeTypeCode, e.employeeNumber
+            """,
+            // El conteo lleva los mismos filtros que la página, y nada más: ni la proyección ni la
+            // subconsulta del centro de trabajo, que el conteo derivado arrastraría (backend#18).
+            countQuery = """
+            select count(e)
+            from EmployeeEntity e
+            where (:ruleSystemCode is null or e.ruleSystemCode = :ruleSystemCode)
+              and (:employeeTypeCode is null or e.employeeTypeCode = :employeeTypeCode)
+              and (:status is null or e.status = :status)
+              and (
+                    :q is null
+                    or upper(e.employeeNumber) like concat('%', cast(:q as string), '%')
+                    or upper(e.ruleSystemCode) like concat('%', cast(:q as string), '%')
+                    or upper(e.employeeTypeCode) like concat('%', cast(:q as string), '%')
+                    or upper(e.firstName) like concat('%', cast(:q as string), '%')
+                    or upper(e.lastName1) like concat('%', cast(:q as string), '%')
+                    or upper(coalesce(e.lastName2, '')) like concat('%', cast(:q as string), '%')
+                    or upper(coalesce(e.preferredName, '')) like concat('%', cast(:q as string), '%')
+                    or upper(
+                        concat(
+                            concat(concat(e.firstName, ' '), e.lastName1),
+                            concat(' ', coalesce(e.lastName2, ''))
+                        )
+                    ) like concat('%', cast(:q as string), '%')
+              )
             """)
-    List<EmployeeDirectoryProjection> findDirectoryByFilters(
+    Page<EmployeeDirectoryProjection> findDirectoryByFilters(
                         @Param("q") String q,
             @Param("ruleSystemCode") String ruleSystemCode,
             @Param("employeeTypeCode") String employeeTypeCode,

@@ -1,10 +1,8 @@
 package com.b4rrhh.employee.employee.application.usecase;
 
-import com.b4rrhh.employee.employee.domain.model.EmployeeDirectoryItem;
+import com.b4rrhh.employee.employee.domain.model.EmployeeDirectoryPage;
 import com.b4rrhh.employee.employee.domain.port.EmployeeDirectoryRepository;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 public class ListEmployeesService implements ListEmployeesUseCase {
@@ -20,7 +18,7 @@ public class ListEmployeesService implements ListEmployeesUseCase {
     }
 
     @Override
-    public List<EmployeeDirectoryItem> list(ListEmployeesQuery query) {
+    public EmployeeDirectoryPage list(ListEmployeesQuery query) {
         String normalizedQueryText = normalizeOptionalText(query.q());
         String normalizedRuleSystemCode = normalizeOptionalCode(query.ruleSystemCode());
         String normalizedEmployeeTypeCode = normalizeOptionalCode(query.employeeTypeCode());

@@ -2,12 +2,13 @@ package com.b4rrhh.employee.employee.infrastructure.persistence;
 
 import com.b4rrhh.employee.employee.application.DisplayNameComputationService;
 import com.b4rrhh.employee.employee.domain.model.EmployeeDirectoryItem;
+import com.b4rrhh.employee.employee.domain.model.EmployeeDirectoryPage;
 import com.b4rrhh.employee.employee.domain.port.EmployeeDirectoryRepository;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @Component
 public class EmployeeDirectoryPersistenceAdapter implements EmployeeDirectoryRepository {
@@ -24,7 +25,7 @@ public class EmployeeDirectoryPersistenceAdapter implements EmployeeDirectoryRep
     }
 
     @Override
-    public List<EmployeeDirectoryItem> findDirectoryByFilters(
+    public EmployeeDirectoryPage findDirectoryByFilters(
             String q,
             String ruleSystemCode,
             String employeeTypeCode,
@@ -32,18 +33,20 @@ public class EmployeeDirectoryPersistenceAdapter implements EmployeeDirectoryRep
             int page,
             int size
     ) {
-        return springDataEmployeeRepository
-                .findDirectoryByFilters(
-                        q,
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        status,
-                        LocalDate.now(),
-                        PageRequest.of(page, size)
-                )
-                .stream()
-                .map(this::toDomain)
-                .toList();
+        Page<EmployeeDirectoryProjection> found = springDataEmployeeRepository.findDirectoryByFilters(
+                q,
+                ruleSystemCode,
+                employeeTypeCode,
+                status,
+                LocalDate.now(),
+                PageRequest.of(page, size)
+        );
+        return new EmployeeDirectoryPage(
+                found.getContent().stream().map(this::toDomain).toList(),
+                page,
+                size,
+                found.getTotalElements()
+        );
     }
 
     private EmployeeDirectoryItem toDomain(EmployeeDirectoryProjection projection) {
