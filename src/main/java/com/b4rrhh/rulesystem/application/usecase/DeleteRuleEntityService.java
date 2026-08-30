@@ -3,11 +3,13 @@ package com.b4rrhh.rulesystem.application.usecase;
 import com.b4rrhh.rulesystem.application.port.RuleEntityUsageCheckPort;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityInUseException;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityNotFoundException;
+import com.b4rrhh.rulesystem.domain.model.RuleEntityReference;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 public class DeleteRuleEntityService implements DeleteRuleEntityUseCase {
@@ -44,16 +46,17 @@ public class DeleteRuleEntityService implements DeleteRuleEntityUseCase {
                         startDate
                 ));
 
-        boolean used = ruleEntityUsageCheckPort.isRuleEntityUsed(
+        List<RuleEntityReference> references = ruleEntityUsageCheckPort.findReferences(
                 normalizedRuleSystemCode,
                 normalizedRuleEntityTypeCode,
                 normalizedCode
         );
-        if (used) {
+        if (!references.isEmpty()) {
             throw new RuleEntityInUseException(
                     normalizedRuleSystemCode,
                     normalizedRuleEntityTypeCode,
-                    normalizedCode
+                    normalizedCode,
+                    references
             );
         }
 

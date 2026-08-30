@@ -10,6 +10,7 @@ import com.b4rrhh.rulesystem.application.usecase.GetRuleEntityByBusinessKeyQuery
 import com.b4rrhh.rulesystem.application.usecase.GetRuleEntityByBusinessKeyUseCase;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityAlreadyClosedException;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityInUseException;
+import com.b4rrhh.rulesystem.domain.model.RuleEntityReference;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityInvalidDateRangeException;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityNotFoundException;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityOverlapException;
@@ -24,6 +25,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -234,13 +236,15 @@ class RuleEntityBusinessKeyControllerHttpTest {
 
     @Test
     void deleteReturns409WhenRuleEntityIsUsed() throws Exception {
-        doThrow(new RuleEntityInUseException("ESP", "COMPANY", "ES01"))
+        doThrow(new RuleEntityInUseException("ESP", "COMPANY", "ES01",
+                List.of(new RuleEntityReference("presences", 412))))
                 .when(deleteRuleEntityUseCase)
                 .delete(any(DeleteRuleEntityCommand.class));
 
         mockMvc.perform(delete("/rule-entities/ESP/COMPANY/ES01/1900-01-01"))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").exists());
+                .andExpect(jsonPath("$.message").value(
+                        "Rule entity is in use: ESP/COMPANY/ES01 is referenced by 412 presences"));
     }
 
         @Test
