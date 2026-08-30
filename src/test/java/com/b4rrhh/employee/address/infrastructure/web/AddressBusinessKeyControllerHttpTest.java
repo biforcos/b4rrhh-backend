@@ -7,7 +7,8 @@ import com.b4rrhh.employee.address.application.usecase.GetAddressByBusinessKeyUs
 import com.b4rrhh.employee.address.application.usecase.ListEmployeeAddressesUseCase;
 import com.b4rrhh.employee.address.application.usecase.UpdateAddressCommand;
 import com.b4rrhh.employee.address.application.usecase.UpdateAddressUseCase;
-import com.b4rrhh.employee.address.application.port.AddressCatalogReadPort;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguageArgumentResolver;
 import com.b4rrhh.employee.address.domain.exception.AddressCatalogValueInvalidException;
 import com.b4rrhh.employee.address.domain.exception.AddressEmployeeNotFoundException;
 import com.b4rrhh.employee.address.domain.exception.AddressNotFoundException;
@@ -20,15 +21,18 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -48,7 +52,7 @@ class AddressBusinessKeyControllerHttpTest {
     @Mock
     private UpdateAddressUseCase updateAddressUseCase;
         @Mock
-        private AddressCatalogReadPort addressCatalogReadPort;
+        private RuleEntityLabelResolver ruleEntityLabelResolver;
 
     private MockMvc mockMvc;
 
@@ -60,17 +64,18 @@ class AddressBusinessKeyControllerHttpTest {
                 getAddressByBusinessKeyUseCase,
                 listEmployeeAddressesUseCase,
                 updateAddressUseCase,
-                new AddressResponseAssembler(addressCatalogReadPort)
+                new AddressResponseAssembler(ruleEntityLabelResolver)
         );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new AddressExceptionHandler())
+                .setCustomArgumentResolvers(new ResponseLanguageArgumentResolver())
                 .build();
     }
 
     @Test
     void putReturns200WhenUpdateSucceeds() throws Exception {
-        when(addressCatalogReadPort.findAddressTypeName("ESP", "HOME"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "EMPLOYEE_ADDRESS_TYPE", "HOME", null))
                 .thenReturn(Optional.of("Domicilio"));
         when(updateAddressUseCase.update(any(UpdateAddressCommand.class))).thenReturn(updatedAddress());
 
@@ -121,7 +126,7 @@ class AddressBusinessKeyControllerHttpTest {
 
     @Test
     void putReturnsCodeWithNullLabelWhenCatalogNameIsMissing() throws Exception {
-        when(addressCatalogReadPort.findAddressTypeName("ESP", "HOME"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "EMPLOYEE_ADDRESS_TYPE", "HOME", null))
                 .thenReturn(Optional.empty());
         when(updateAddressUseCase.update(any(UpdateAddressCommand.class))).thenReturn(updatedAddress());
 
@@ -206,5 +211,19 @@ class AddressBusinessKeyControllerHttpTest {
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );
+    }
+
+    // ADR-052 §4 (backend#24): el idioma entra por Accept-Language y llega al resolutor desde el ensamblador.
+    @Test
+    void listServesTheAddressTypeInTheLanguageOfTheAcceptLanguageHeader() throws Exception {
+        when(listEmployeeAddressesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of(updatedAddress()));
+        when(ruleEntityLabelResolver.resolveName("ESP", "EMPLOYEE_ADDRESS_TYPE", "HOME", "es-ES"))
+                .thenReturn(Optional.of("Domicilio"));
+
+        mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/addresses")
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "es-ES,es;q=0.9"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].addressTypeName").value("Domicilio"));
     }
 }

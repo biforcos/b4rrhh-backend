@@ -17,12 +17,14 @@ public class CostCenterCatalogReadAdapter implements CostCenterCatalogReadPort {
     }
 
     @Override
-    public Optional<String> findCostCenterName(String ruleSystemCode, String costCenterCode, String languageCode) {
+    // Se resuelve dentro de un caso de uso, no en la capa web, asi que no hay idioma que
+    // pasar: literal base hasta que backend#27 decida donde vive esta resolucion.
+    public Optional<String> findCostCenterName(String ruleSystemCode, String costCenterCode) {
         return ruleEntityLabelResolver.resolveName(
                 ruleSystemCode,
                 CostCenterRuleEntityTypeCodes.COST_CENTER,
                 costCenterCode,
-                languageCode
+                null
         );
     }
 }

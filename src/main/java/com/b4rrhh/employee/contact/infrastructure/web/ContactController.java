@@ -13,6 +13,7 @@ import com.b4rrhh.employee.contact.infrastructure.web.assembler.ContactResponseA
 import com.b4rrhh.employee.contact.infrastructure.web.dto.ContactResponse;
 import com.b4rrhh.employee.contact.infrastructure.web.dto.CreateContactRequest;
 import com.b4rrhh.employee.contact.infrastructure.web.dto.UpdateContactRequest;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -58,7 +59,8 @@ public class ContactController {
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
-            @RequestBody CreateContactRequest request
+            @RequestBody CreateContactRequest request,
+            ResponseLanguage language
     ) {
         Contact created = createContactUseCase.create(
                 new CreateContactCommand(
@@ -70,19 +72,20 @@ public class ContactController {
                 )
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(contactResponseAssembler.toResponse(ruleSystemCode, created));
+        return ResponseEntity.status(HttpStatus.CREATED).body(contactResponseAssembler.toResponse(ruleSystemCode, created, language));
     }
 
     @GetMapping
     public ResponseEntity<List<ContactResponse>> list(
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
-            @PathVariable String employeeNumber
+            @PathVariable String employeeNumber,
+            ResponseLanguage language
     ) {
         List<ContactResponse> response = listEmployeeContactsUseCase
                 .listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber)
                 .stream()
-                .map(contact -> contactResponseAssembler.toResponse(ruleSystemCode, contact))
+                .map(contact -> contactResponseAssembler.toResponse(ruleSystemCode, contact, language))
                 .toList();
 
         return ResponseEntity.ok(response);
@@ -93,7 +96,8 @@ public class ContactController {
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
-            @PathVariable String contactTypeCode
+            @PathVariable String contactTypeCode,
+            ResponseLanguage language
     ) {
         return getContactByBusinessKeyUseCase.getByBusinessKey(
                         ruleSystemCode,
@@ -101,7 +105,7 @@ public class ContactController {
                         employeeNumber,
                         contactTypeCode
                 )
-                .map(contact -> ResponseEntity.ok(contactResponseAssembler.toResponse(ruleSystemCode, contact)))
+                .map(contact -> ResponseEntity.ok(contactResponseAssembler.toResponse(ruleSystemCode, contact, language)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -111,7 +115,8 @@ public class ContactController {
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
             @PathVariable String contactTypeCode,
-            @RequestBody UpdateContactRequest request
+            @RequestBody UpdateContactRequest request,
+            ResponseLanguage language
     ) {
         Contact updated = updateContactUseCase.update(
                 new UpdateContactCommand(
@@ -123,7 +128,7 @@ public class ContactController {
                 )
         );
 
-        return ResponseEntity.ok(contactResponseAssembler.toResponse(ruleSystemCode, updated));
+        return ResponseEntity.ok(contactResponseAssembler.toResponse(ruleSystemCode, updated, language));
     }
 
     @DeleteMapping("/{contactTypeCode}")

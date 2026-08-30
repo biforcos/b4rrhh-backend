@@ -14,6 +14,7 @@ import com.b4rrhh.employee.address.infrastructure.web.dto.AddressResponse;
 import com.b4rrhh.employee.address.infrastructure.web.dto.CloseAddressRequest;
 import com.b4rrhh.employee.address.infrastructure.web.dto.CreateAddressRequest;
 import com.b4rrhh.employee.address.infrastructure.web.dto.UpdateAddressRequest;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -58,7 +59,8 @@ public class AddressBusinessKeyController {
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
-            @RequestBody CreateAddressRequest request
+            @RequestBody CreateAddressRequest request,
+            ResponseLanguage language
     ) {
         Address created = createAddressUseCase.create(
                 new CreateAddressCommand(
@@ -76,19 +78,20 @@ public class AddressBusinessKeyController {
                 )
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(addressResponseAssembler.toResponse(ruleSystemCode, created));
+        return ResponseEntity.status(HttpStatus.CREATED).body(addressResponseAssembler.toResponse(ruleSystemCode, created, language));
     }
 
     @GetMapping
     public ResponseEntity<List<AddressResponse>> list(
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
-            @PathVariable String employeeNumber
+            @PathVariable String employeeNumber,
+            ResponseLanguage language
     ) {
         List<AddressResponse> response = listEmployeeAddressesUseCase
                 .listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber)
                 .stream()
-                .map(address -> addressResponseAssembler.toResponse(ruleSystemCode, address))
+                .map(address -> addressResponseAssembler.toResponse(ruleSystemCode, address, language))
                 .toList();
 
         return ResponseEntity.ok(response);
@@ -99,7 +102,8 @@ public class AddressBusinessKeyController {
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
-            @PathVariable Integer addressNumber
+            @PathVariable Integer addressNumber,
+            ResponseLanguage language
     ) {
         return getAddressByBusinessKeyUseCase.getByBusinessKey(
                         ruleSystemCode,
@@ -107,7 +111,7 @@ public class AddressBusinessKeyController {
                         employeeNumber,
                         addressNumber
                 )
-                .map(address -> ResponseEntity.ok(addressResponseAssembler.toResponse(ruleSystemCode, address)))
+                .map(address -> ResponseEntity.ok(addressResponseAssembler.toResponse(ruleSystemCode, address, language)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -117,7 +121,8 @@ public class AddressBusinessKeyController {
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
             @PathVariable Integer addressNumber,
-            @RequestBody UpdateAddressRequest request
+            @RequestBody UpdateAddressRequest request,
+            ResponseLanguage language
     ) {
         Address updated = updateAddressUseCase.update(
                 new UpdateAddressCommand(
@@ -133,7 +138,7 @@ public class AddressBusinessKeyController {
                 )
         );
 
-        return ResponseEntity.ok(addressResponseAssembler.toResponse(ruleSystemCode, updated));
+        return ResponseEntity.ok(addressResponseAssembler.toResponse(ruleSystemCode, updated, language));
     }
 
     @PostMapping("/{addressNumber}/close")
@@ -142,7 +147,8 @@ public class AddressBusinessKeyController {
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
             @PathVariable Integer addressNumber,
-            @RequestBody CloseAddressRequest request
+            @RequestBody CloseAddressRequest request,
+            ResponseLanguage language
     ) {
         Address closed = closeAddressUseCase.close(
                 new CloseAddressCommand(
@@ -154,6 +160,6 @@ public class AddressBusinessKeyController {
                 )
         );
 
-        return ResponseEntity.ok(addressResponseAssembler.toResponse(ruleSystemCode, closed));
+        return ResponseEntity.ok(addressResponseAssembler.toResponse(ruleSystemCode, closed, language));
     }
 }

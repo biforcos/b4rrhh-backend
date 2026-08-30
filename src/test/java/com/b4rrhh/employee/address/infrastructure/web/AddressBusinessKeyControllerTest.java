@@ -8,7 +8,8 @@ import com.b4rrhh.employee.address.application.usecase.GetAddressByBusinessKeyUs
 import com.b4rrhh.employee.address.application.usecase.ListEmployeeAddressesUseCase;
 import com.b4rrhh.employee.address.application.usecase.UpdateAddressCommand;
 import com.b4rrhh.employee.address.application.usecase.UpdateAddressUseCase;
-import com.b4rrhh.employee.address.application.port.AddressCatalogReadPort;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import com.b4rrhh.employee.address.domain.model.Address;
 import com.b4rrhh.employee.address.infrastructure.web.assembler.AddressResponseAssembler;
 import com.b4rrhh.employee.address.infrastructure.web.dto.AddressResponse;
@@ -50,7 +51,7 @@ class AddressBusinessKeyControllerTest {
     @Mock
     private UpdateAddressUseCase updateAddressUseCase;
     @Mock
-    private AddressCatalogReadPort addressCatalogReadPort;
+    private RuleEntityLabelResolver ruleEntityLabelResolver;
 
     private AddressBusinessKeyController controller;
 
@@ -62,7 +63,7 @@ class AddressBusinessKeyControllerTest {
                 getAddressByBusinessKeyUseCase,
                 listEmployeeAddressesUseCase,
                 updateAddressUseCase,
-                new AddressResponseAssembler(addressCatalogReadPort)
+                new AddressResponseAssembler(ruleEntityLabelResolver)
         );
     }
 
@@ -79,10 +80,10 @@ class AddressBusinessKeyControllerTest {
                 null
         );
 
-        when(addressCatalogReadPort.findAddressTypeName("ESP", "HOME")).thenReturn(Optional.of("Domicilio"));
+        when(ruleEntityLabelResolver.resolveName("ESP", "EMPLOYEE_ADDRESS_TYPE", "HOME", null)).thenReturn(Optional.of("Domicilio"));
         when(createAddressUseCase.create(any(CreateAddressCommand.class))).thenReturn(activeAddress());
 
-        ResponseEntity<AddressResponse> response = controller.create("ESP", "INTERNAL", "EMP001", request);
+        ResponseEntity<AddressResponse> response = controller.create("ESP", "INTERNAL", "EMP001", request, ResponseLanguage.base());
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -102,7 +103,7 @@ class AddressBusinessKeyControllerTest {
         when(listEmployeeAddressesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(activeAddress()));
 
-        ResponseEntity<List<AddressResponse>> response = controller.list("ESP", "INTERNAL", "EMP001");
+        ResponseEntity<List<AddressResponse>> response = controller.list("ESP", "INTERNAL", "EMP001", ResponseLanguage.base());
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -115,7 +116,7 @@ class AddressBusinessKeyControllerTest {
         when(getAddressByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001", 1))
                 .thenReturn(Optional.of(activeAddress()));
 
-        ResponseEntity<AddressResponse> response = controller.getByBusinessKey("ESP", "INTERNAL", "EMP001", 1);
+        ResponseEntity<AddressResponse> response = controller.getByBusinessKey("ESP", "INTERNAL", "EMP001", 1, ResponseLanguage.base());
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -127,7 +128,7 @@ class AddressBusinessKeyControllerTest {
         CloseAddressRequest request = new CloseAddressRequest(LocalDate.of(2026, 2, 1));
         when(closeAddressUseCase.close(any(CloseAddressCommand.class))).thenReturn(closedAddress());
 
-        ResponseEntity<AddressResponse> response = controller.close("ESP", "INTERNAL", "EMP001", 1, request);
+        ResponseEntity<AddressResponse> response = controller.close("ESP", "INTERNAL", "EMP001", 1, request, ResponseLanguage.base());
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -151,10 +152,10 @@ class AddressBusinessKeyControllerTest {
                 "MD"
         );
 
-        when(addressCatalogReadPort.findAddressTypeName("ESP", "HOME")).thenReturn(Optional.empty());
+        when(ruleEntityLabelResolver.resolveName("ESP", "EMPLOYEE_ADDRESS_TYPE", "HOME", null)).thenReturn(Optional.empty());
         when(updateAddressUseCase.update(any(UpdateAddressCommand.class))).thenReturn(updatedAddress());
 
-        ResponseEntity<AddressResponse> response = controller.update("ESP", "INTERNAL", "EMP001", 1, request);
+        ResponseEntity<AddressResponse> response = controller.update("ESP", "INTERNAL", "EMP001", 1, request, ResponseLanguage.base());
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());

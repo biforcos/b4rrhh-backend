@@ -1,8 +1,10 @@
 package com.b4rrhh.employee.workcenter.infrastructure.web.assembler;
 
-import com.b4rrhh.employee.workcenter.application.port.WorkCenterCatalogReadPort;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
+import com.b4rrhh.employee.workcenter.domain.port.WorkCenterCompanyLookupPort;
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.WorkCenterResponse;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -20,20 +22,22 @@ import static org.mockito.Mockito.when;
 class WorkCenterResponseAssemblerTest {
 
     @Mock
-    private WorkCenterCatalogReadPort workCenterCatalogReadPort;
+    private RuleEntityLabelResolver ruleEntityLabelResolver;
+    @Mock
+    private WorkCenterCompanyLookupPort workCenterCompanyLookupPort;
 
     @Test
-    void toResponseEnrichesLabelWhenPresent() {
-        WorkCenterResponseAssembler assembler = new WorkCenterResponseAssembler(workCenterCatalogReadPort);
+    void toResponseEnrichesLabelsInTheLanguageOfTheResponse() {
+        WorkCenterResponseAssembler assembler = new WorkCenterResponseAssembler(ruleEntityLabelResolver, workCenterCompanyLookupPort);
         WorkCenter workCenter = workCenter(1, "MADRID_HQ", LocalDate.of(2026, 1, 10), null);
-        when(workCenterCatalogReadPort.findWorkCenterName("ESP", "MADRID_HQ"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "WORK_CENTER", "MADRID_HQ", "es-ES"))
                 .thenReturn(Optional.of("Oficina central"));
-        when(workCenterCatalogReadPort.findWorkCenterCompanyCode("ESP", "MADRID_HQ", LocalDate.of(2026, 1, 10)))
-            .thenReturn(Optional.of("COMP"));
-        when(workCenterCatalogReadPort.findCompanyName("ESP", "COMP"))
-            .thenReturn(Optional.of("Compañía principal"));
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_HQ", LocalDate.of(2026, 1, 10)))
+                .thenReturn(Optional.of("COMP"));
+        when(ruleEntityLabelResolver.resolveName("ESP", "COMPANY", "COMP", "es-ES"))
+                .thenReturn(Optional.of("Compañía principal"));
 
-        WorkCenterResponse response = assembler.toResponse("ESP", workCenter);
+        WorkCenterResponse response = assembler.toResponse("ESP", workCenter, new ResponseLanguage("es-ES"));
 
         assertEquals(1, response.workCenterAssignmentNumber());
         assertEquals("MADRID_HQ", response.workCenterCode());
@@ -44,14 +48,14 @@ class WorkCenterResponseAssemblerTest {
 
     @Test
     void toResponseKeepsCodeAndUsesNullWhenLabelMissing() {
-        WorkCenterResponseAssembler assembler = new WorkCenterResponseAssembler(workCenterCatalogReadPort);
+        WorkCenterResponseAssembler assembler = new WorkCenterResponseAssembler(ruleEntityLabelResolver, workCenterCompanyLookupPort);
         WorkCenter workCenter = workCenter(1, "MADRID_HQ", LocalDate.of(2026, 1, 10), null);
-        when(workCenterCatalogReadPort.findWorkCenterName("ESP", "MADRID_HQ"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "WORK_CENTER", "MADRID_HQ", null))
                 .thenReturn(Optional.empty());
-        when(workCenterCatalogReadPort.findWorkCenterCompanyCode("ESP", "MADRID_HQ", LocalDate.of(2026, 1, 10)))
-            .thenReturn(Optional.empty());
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_HQ", LocalDate.of(2026, 1, 10)))
+                .thenReturn(Optional.empty());
 
-        WorkCenterResponse response = assembler.toResponse("ESP", workCenter);
+        WorkCenterResponse response = assembler.toResponse("ESP", workCenter, ResponseLanguage.base());
 
         assertEquals("MADRID_HQ", response.workCenterCode());
         assertNull(response.workCenterName());
@@ -59,12 +63,7 @@ class WorkCenterResponseAssemblerTest {
         assertNull(response.companyName());
     }
 
-    private WorkCenter workCenter(
-            int assignmentNumber,
-            String workCenterCode,
-            LocalDate startDate,
-            LocalDate endDate
-    ) {
+    private WorkCenter workCenter(int assignmentNumber, String workCenterCode, LocalDate startDate, LocalDate endDate) {
         return new WorkCenter(
                 1L,
                 10L,

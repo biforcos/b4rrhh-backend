@@ -1,8 +1,9 @@
 package com.b4rrhh.employee.address.infrastructure.web.assembler;
 
-import com.b4rrhh.employee.address.application.port.AddressCatalogReadPort;
 import com.b4rrhh.employee.address.domain.model.Address;
 import com.b4rrhh.employee.address.infrastructure.web.dto.AddressResponse;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -20,16 +21,16 @@ import static org.mockito.Mockito.when;
 class AddressResponseAssemblerTest {
 
     @Mock
-    private AddressCatalogReadPort addressCatalogReadPort;
+    private RuleEntityLabelResolver ruleEntityLabelResolver;
 
     @Test
-    void toResponseEnrichesLabelWhenPresent() {
-        AddressResponseAssembler assembler = new AddressResponseAssembler(addressCatalogReadPort);
+    void toResponseEnrichesLabelInTheLanguageOfTheResponse() {
+        AddressResponseAssembler assembler = new AddressResponseAssembler(ruleEntityLabelResolver);
         Address address = address(1, "HOME");
-        when(addressCatalogReadPort.findAddressTypeName("ESP", "HOME"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "EMPLOYEE_ADDRESS_TYPE", "HOME", "es-ES"))
                 .thenReturn(Optional.of("Domicilio"));
 
-        AddressResponse response = assembler.toResponse("ESP", address);
+        AddressResponse response = assembler.toResponse("ESP", address, new ResponseLanguage("es-ES"));
 
         assertEquals(1, response.addressNumber());
         assertEquals("HOME", response.addressTypeCode());
@@ -38,12 +39,12 @@ class AddressResponseAssemblerTest {
 
     @Test
     void toResponseKeepsCodeAndUsesNullWhenLabelMissing() {
-        AddressResponseAssembler assembler = new AddressResponseAssembler(addressCatalogReadPort);
+        AddressResponseAssembler assembler = new AddressResponseAssembler(ruleEntityLabelResolver);
         Address address = address(1, "HOME");
-        when(addressCatalogReadPort.findAddressTypeName("ESP", "HOME"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "EMPLOYEE_ADDRESS_TYPE", "HOME", null))
                 .thenReturn(Optional.empty());
 
-        AddressResponse response = assembler.toResponse("ESP", address);
+        AddressResponse response = assembler.toResponse("ESP", address, ResponseLanguage.base());
 
         assertEquals("HOME", response.addressTypeCode());
         assertNull(response.addressTypeName());

@@ -2,7 +2,9 @@ package com.b4rrhh.employee.workcenter.infrastructure.web;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.b4rrhh.employee.workcenter.application.port.WorkCenterCatalogReadPort;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguageArgumentResolver;
+import com.b4rrhh.employee.workcenter.domain.port.WorkCenterCompanyLookupPort;
 import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterCommand;
@@ -32,6 +34,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -45,6 +48,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -78,14 +82,16 @@ class WorkCenterControllerHttpTest {
         @Mock
         private UpdateWorkCenterUseCase updateWorkCenterUseCase;
         @Mock
-        private WorkCenterCatalogReadPort workCenterCatalogReadPort;
+        private RuleEntityLabelResolver ruleEntityLabelResolver;
+    @Mock
+    private WorkCenterCompanyLookupPort workCenterCompanyLookupPort;
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         WorkCenterResponseAssembler workCenterResponseAssembler =
-                new WorkCenterResponseAssembler(workCenterCatalogReadPort);
+                new WorkCenterResponseAssembler(ruleEntityLabelResolver, workCenterCompanyLookupPort);
 
         WorkCenterController controller = new WorkCenterController(
                 createWorkCenterUseCase,
@@ -98,15 +104,16 @@ class WorkCenterControllerHttpTest {
                 workCenterResponseAssembler
         );
 
-        lenient().when(workCenterCatalogReadPort.findWorkCenterName(anyString(), anyString()))
+        lenient().when(ruleEntityLabelResolver.resolveName(anyString(), eq("WORK_CENTER"), anyString(), any()))
                 .thenReturn(Optional.empty());
-        lenient().when(workCenterCatalogReadPort.findWorkCenterCompanyCode(anyString(), anyString(), any(LocalDate.class)))
+        lenient().when(workCenterCompanyLookupPort.findCompanyCode(anyString(), anyString(), any(LocalDate.class)))
                 .thenReturn(Optional.empty());
-        lenient().when(workCenterCatalogReadPort.findCompanyName(anyString(), anyString()))
+        lenient().when(ruleEntityLabelResolver.resolveName(anyString(), eq("COMPANY"), anyString(), any()))
                 .thenReturn(Optional.empty());
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new WorkCenterExceptionHandler())
+                .setCustomArgumentResolvers(new ResponseLanguageArgumentResolver())
                 .build();
     }
 
@@ -423,11 +430,11 @@ class WorkCenterControllerHttpTest {
     void getReturnsWorkCenterWithResolvedLabel() throws Exception {
         when(getWorkCenterByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001", 1))
                 .thenReturn(Optional.of(workCenter(1, "MADRID_HQ", LocalDate.of(2026, 1, 10), null)));
-        when(workCenterCatalogReadPort.findWorkCenterName("ESP", "MADRID_HQ"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "WORK_CENTER", "MADRID_HQ", null))
                 .thenReturn(Optional.of("Oficina central"));
-        when(workCenterCatalogReadPort.findWorkCenterCompanyCode("ESP", "MADRID_HQ", LocalDate.of(2026, 1, 10)))
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_HQ", LocalDate.of(2026, 1, 10)))
                 .thenReturn(Optional.of("COMP"));
-        when(workCenterCatalogReadPort.findCompanyName("ESP", "COMP"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "COMPANY", "COMP", null))
                 .thenReturn(Optional.of("Compañía principal"));
 
         mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/work-centers/1"))
@@ -443,7 +450,7 @@ class WorkCenterControllerHttpTest {
     void listReturnsWorkCenterWithNullLabelWhenCatalogEntryIsMissing() throws Exception {
         when(listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(workCenter(1, "MADRID_HQ", LocalDate.of(2026, 1, 10), null)));
-        when(workCenterCatalogReadPort.findWorkCenterName("ESP", "MADRID_HQ"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "WORK_CENTER", "MADRID_HQ", null))
                 .thenReturn(Optional.empty());
 
         MvcResult result = mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/work-centers"))
@@ -473,5 +480,24 @@ class WorkCenterControllerHttpTest {
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );
+    }
+
+    // ADR-052 §4 (backend#24): el idioma entra por Accept-Language y llega al resolutor desde el ensamblador.
+    @Test
+    void listServesWorkCenterAndCompanyInTheLanguageOfTheAcceptLanguageHeader() throws Exception {
+        when(listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of(workCenter(1, "MADRID_HQ", LocalDate.of(2026, 1, 10), null)));
+        when(ruleEntityLabelResolver.resolveName("ESP", "WORK_CENTER", "MADRID_HQ", "es-ES"))
+                .thenReturn(Optional.of("Oficina central"));
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_HQ", LocalDate.of(2026, 1, 10)))
+                .thenReturn(Optional.of("COMP"));
+        when(ruleEntityLabelResolver.resolveName("ESP", "COMPANY", "COMP", "es-ES"))
+                .thenReturn(Optional.of("Compañía principal"));
+
+        mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/work-centers")
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "es-ES"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].workCenterName").value("Oficina central"))
+                .andExpect(jsonPath("$[0].companyName").value("Compañía principal"));
     }
 }

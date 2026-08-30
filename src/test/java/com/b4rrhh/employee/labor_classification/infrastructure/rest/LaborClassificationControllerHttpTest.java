@@ -3,7 +3,9 @@ package com.b4rrhh.employee.labor_classification.infrastructure.rest;
 import com.b4rrhh.employee.labor_classification.application.command.CloseLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.command.CreateLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.command.ReplaceLaborClassificationFromDateCommand;
-import com.b4rrhh.employee.labor_classification.application.port.LaborClassificationCatalogReadPort;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguageArgumentResolver;
+import com.b4rrhh.rulesystem.agreementcategoryprofile.domain.port.AgreementCategoryProfileRepository;
 import com.b4rrhh.employee.labor_classification.application.usecase.CloseLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.GetLaborClassificationByBusinessKeyUseCase;
@@ -22,6 +24,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -32,6 +35,7 @@ import java.util.Optional;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
@@ -58,14 +62,16 @@ class LaborClassificationControllerHttpTest {
                 @Mock
                 private ReplaceLaborClassificationFromDateUseCase replaceLaborClassificationFromDateUseCase;
                 @Mock
-                private LaborClassificationCatalogReadPort laborClassificationCatalogReadPort;
+                private RuleEntityLabelResolver ruleEntityLabelResolver;
+    @Mock
+    private AgreementCategoryProfileRepository agreementCategoryProfileRepository;
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         LaborClassificationResponseAssembler laborClassificationResponseAssembler =
-                new LaborClassificationResponseAssembler(laborClassificationCatalogReadPort);
+                new LaborClassificationResponseAssembler(ruleEntityLabelResolver, agreementCategoryProfileRepository);
 
         LaborClassificationController controller = new LaborClassificationController(
                 createLaborClassificationUseCase,
@@ -79,11 +85,12 @@ class LaborClassificationControllerHttpTest {
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new LaborClassificationExceptionHandler())
+                .setCustomArgumentResolvers(new ResponseLanguageArgumentResolver())
                 .build();
 
-        lenient().when(laborClassificationCatalogReadPort.findAgreementName(anyString(), anyString()))
+        lenient().when(ruleEntityLabelResolver.resolveName(anyString(), eq("AGREEMENT"), anyString(), any()))
                 .thenReturn(Optional.empty());
-        lenient().when(laborClassificationCatalogReadPort.findAgreementCategoryName(anyString(), anyString()))
+        lenient().when(ruleEntityLabelResolver.resolveName(anyString(), eq("AGREEMENT_CATEGORY"), anyString(), any()))
                 .thenReturn(Optional.empty());
     }
 
@@ -91,9 +98,9 @@ class LaborClassificationControllerHttpTest {
     void createMapsPathAndBodyToCommandAndHidesTechnicalIds() throws Exception {
         LaborClassification created = laborClassification("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null);
         when(createLaborClassificationUseCase.create(any(CreateLaborClassificationCommand.class))).thenReturn(created);
-        when(laborClassificationCatalogReadPort.findAgreementName("ESP", "AGR_OFFICE"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "AGREEMENT", "AGR_OFFICE", null))
                 .thenReturn(Optional.of("Office Agreement"));
-        when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_ADMIN"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "AGREEMENT_CATEGORY", "CAT_ADMIN", null))
                 .thenReturn(Optional.of("Administrative Category"));
 
         mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/labor-classifications")
@@ -131,9 +138,9 @@ class LaborClassificationControllerHttpTest {
                 LocalDate.of(2026, 1, 31)
         );
         when(closeLaborClassificationUseCase.close(any(CloseLaborClassificationCommand.class))).thenReturn(closed);
-        when(laborClassificationCatalogReadPort.findAgreementName("ESP", "AGR_OFFICE"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "AGREEMENT", "AGR_OFFICE", null))
                 .thenReturn(Optional.of("Office Agreement"));
-        when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_ADMIN"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "AGREEMENT_CATEGORY", "CAT_ADMIN", null))
                 .thenReturn(Optional.of("Administrative Category"));
 
         mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/labor-classifications/2026-01-01/close")
@@ -161,9 +168,9 @@ class LaborClassificationControllerHttpTest {
         LaborClassification replaced = laborClassification("AGR_TECH", "CAT_TECH_1", LocalDate.of(2026, 3, 1), null);
         when(replaceLaborClassificationFromDateUseCase.replaceFromDate(any(ReplaceLaborClassificationFromDateCommand.class)))
                 .thenReturn(replaced);
-        when(laborClassificationCatalogReadPort.findAgreementName("ESP", "AGR_TECH"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "AGREEMENT", "AGR_TECH", null))
                 .thenReturn(Optional.of("Technical Agreement"));
-        when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_TECH_1"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "AGREEMENT_CATEGORY", "CAT_TECH_1", null))
                 .thenReturn(Optional.empty());
 
         mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/labor-classifications/replace-from-date")
@@ -199,9 +206,9 @@ class LaborClassificationControllerHttpTest {
     void updateReturnsEnrichedLabels() throws Exception {
         LaborClassification updated = laborClassification("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null);
         when(updateLaborClassificationUseCase.update(any())).thenReturn(updated);
-        when(laborClassificationCatalogReadPort.findAgreementName("ESP", "AGR_OFFICE"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "AGREEMENT", "AGR_OFFICE", null))
                 .thenReturn(Optional.of("Office Agreement"));
-        when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_ADMIN"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "AGREEMENT_CATEGORY", "CAT_ADMIN", null))
                 .thenReturn(Optional.of("Administrative Category"));
 
         mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/labor-classifications/2026-01-01")
@@ -250,9 +257,9 @@ class LaborClassificationControllerHttpTest {
         LaborClassification laborClassification = laborClassification("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null);
         when(listEmployeeLaborClassificationsUseCase.listByEmployeeBusinessKey(any()))
                 .thenReturn(List.of(laborClassification));
-        when(laborClassificationCatalogReadPort.findAgreementName("ESP", "AGR_OFFICE"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "AGREEMENT", "AGR_OFFICE", null))
                 .thenReturn(Optional.of("Office Agreement"));
-        when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_ADMIN"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "AGREEMENT_CATEGORY", "CAT_ADMIN", null))
                 .thenReturn(Optional.of("Administrative Category"));
 
         mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/labor-classifications"))
@@ -270,9 +277,9 @@ class LaborClassificationControllerHttpTest {
         LaborClassification laborClassification = laborClassification("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null);
         when(getLaborClassificationByBusinessKeyUseCase.getByBusinessKey(any()))
                 .thenReturn(laborClassification);
-        when(laborClassificationCatalogReadPort.findAgreementName("ESP", "AGR_OFFICE"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "AGREEMENT", "AGR_OFFICE", null))
                 .thenReturn(Optional.of("Office Agreement"));
-        when(laborClassificationCatalogReadPort.findAgreementCategoryName("ESP", "CAT_ADMIN"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "AGREEMENT_CATEGORY", "CAT_ADMIN", null))
                 .thenReturn(Optional.empty());
 
         mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/labor-classifications/2026-01-01"))
@@ -362,5 +369,22 @@ class LaborClassificationControllerHttpTest {
                 startDate,
                 endDate
         );
+    }
+
+    // ADR-052 §4 (backend#24): el idioma entra por Accept-Language y llega al resolutor desde el ensamblador.
+    @Test
+    void listServesAgreementAndCategoryInTheLanguageOfTheAcceptLanguageHeader() throws Exception {
+        when(listEmployeeLaborClassificationsUseCase.listByEmployeeBusinessKey(any()))
+                .thenReturn(List.of(laborClassification("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null)));
+        when(ruleEntityLabelResolver.resolveName("ESP", "AGREEMENT", "AGR_OFFICE", "es-ES"))
+                .thenReturn(Optional.of("Convenio de oficinas"));
+        when(ruleEntityLabelResolver.resolveName("ESP", "AGREEMENT_CATEGORY", "CAT_ADMIN", "es-ES"))
+                .thenReturn(Optional.of("Categoría administrativa"));
+
+        mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/labor-classifications")
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "es-ES"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].agreementName").value("Convenio de oficinas"))
+                .andExpect(jsonPath("$[0].agreementCategoryName").value("Categoría administrativa"));
     }
 }

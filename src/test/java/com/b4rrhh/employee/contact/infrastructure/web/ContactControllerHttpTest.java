@@ -7,7 +7,8 @@ import com.b4rrhh.employee.contact.application.usecase.GetContactByBusinessKeyUs
 import com.b4rrhh.employee.contact.application.usecase.ListEmployeeContactsUseCase;
 import com.b4rrhh.employee.contact.application.usecase.UpdateContactCommand;
 import com.b4rrhh.employee.contact.application.usecase.UpdateContactUseCase;
-import com.b4rrhh.employee.contact.application.port.ContactCatalogReadPort;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguageArgumentResolver;
 import com.b4rrhh.employee.contact.domain.exception.ContactAlreadyExistsException;
 import com.b4rrhh.employee.contact.domain.exception.ContactNotFoundException;
 import com.b4rrhh.employee.contact.domain.model.Contact;
@@ -19,11 +20,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,6 +34,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -51,7 +55,7 @@ class ContactControllerHttpTest {
     @Mock
     private DeleteContactUseCase deleteContactUseCase;
         @Mock
-        private ContactCatalogReadPort contactCatalogReadPort;
+        private RuleEntityLabelResolver ruleEntityLabelResolver;
 
     private MockMvc mockMvc;
 
@@ -63,17 +67,18 @@ class ContactControllerHttpTest {
                 getContactByBusinessKeyUseCase,
                 listEmployeeContactsUseCase,
                 deleteContactUseCase,
-                new ContactResponseAssembler(contactCatalogReadPort)
+                new ContactResponseAssembler(ruleEntityLabelResolver)
         );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new ContactExceptionHandler())
+                .setCustomArgumentResolvers(new ResponseLanguageArgumentResolver())
                 .build();
     }
 
     @Test
     void createMapsPathAndBodyToCommand() throws Exception {
-        when(contactCatalogReadPort.findContactTypeName("ESP", "EMAIL"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "CONTACT_TYPE", "EMAIL", null))
                 .thenReturn(Optional.of("Correo electronico"));
         when(createContactUseCase.create(any(CreateContactCommand.class)))
                 .thenReturn(contact(10L, "EMAIL", "john.doe@example.com"));
@@ -102,7 +107,7 @@ class ContactControllerHttpTest {
 
     @Test
     void updateMapsPathAndBodyToCommand() throws Exception {
-        when(contactCatalogReadPort.findContactTypeName("ESP", "EMAIL"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "CONTACT_TYPE", "EMAIL", null))
                 .thenReturn(Optional.empty());
         when(updateContactUseCase.update(any(UpdateContactCommand.class)))
                 .thenReturn(contact(10L, "EMAIL", "updated@example.com"));
@@ -180,5 +185,19 @@ class ContactControllerHttpTest {
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );
+    }
+
+    // ADR-052 §4 (backend#24): el idioma entra por Accept-Language y llega al resolutor desde el ensamblador.
+    @Test
+    void listServesTheContactTypeInTheLanguageOfTheAcceptLanguageHeader() throws Exception {
+        when(listEmployeeContactsUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of(contact(10L, "EMAIL", "john.doe@example.com")));
+        when(ruleEntityLabelResolver.resolveName("ESP", "CONTACT_TYPE", "EMAIL", "es-ES"))
+                .thenReturn(Optional.of("Correo electrónico"));
+
+        mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/contacts")
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "es-ES"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].contactTypeName").value("Correo electrónico"));
     }
 }

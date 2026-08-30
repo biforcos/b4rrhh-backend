@@ -1,8 +1,10 @@
 package com.b4rrhh.employee.identifier.infrastructure.web.assembler;
 
-import com.b4rrhh.employee.identifier.application.port.IdentifierCatalogReadPort;
+import com.b4rrhh.employee.identifier.application.usecase.IdentifierRuleEntityTypeCodes;
 import com.b4rrhh.employee.identifier.domain.model.Identifier;
 import com.b4rrhh.employee.identifier.infrastructure.web.dto.IdentifierResponse;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -10,15 +12,16 @@ import java.util.List;
 @Component
 public class IdentifierResponseAssembler {
 
-    private final IdentifierCatalogReadPort identifierCatalogReadPort;
+    private final RuleEntityLabelResolver ruleEntityLabelResolver;
 
-    public IdentifierResponseAssembler(IdentifierCatalogReadPort identifierCatalogReadPort) {
-        this.identifierCatalogReadPort = identifierCatalogReadPort;
+    public IdentifierResponseAssembler(RuleEntityLabelResolver ruleEntityLabelResolver) {
+        this.ruleEntityLabelResolver = ruleEntityLabelResolver;
     }
 
-    public IdentifierResponse toResponse(String ruleSystemCode, Identifier identifier) {
-        String identifierTypeName = identifierCatalogReadPort
-                .findIdentifierTypeName(ruleSystemCode, identifier.getIdentifierTypeCode())
+    public IdentifierResponse toResponse(String ruleSystemCode, Identifier identifier, ResponseLanguage language) {
+        String identifierTypeName = ruleEntityLabelResolver
+                .resolveName(ruleSystemCode, IdentifierRuleEntityTypeCodes.EMPLOYEE_IDENTIFIER_TYPE,
+                        identifier.getIdentifierTypeCode(), language.code())
                 .orElse(null);
 
         return new IdentifierResponse(
@@ -31,9 +34,9 @@ public class IdentifierResponseAssembler {
         );
     }
 
-    public List<IdentifierResponse> toResponseList(String ruleSystemCode, List<Identifier> identifiers) {
+    public List<IdentifierResponse> toResponseList(String ruleSystemCode, List<Identifier> identifiers, ResponseLanguage language) {
         return identifiers.stream()
-                .map(identifier -> toResponse(ruleSystemCode, identifier))
+                .map(identifier -> toResponse(ruleSystemCode, identifier, language))
                 .toList();
     }
 }

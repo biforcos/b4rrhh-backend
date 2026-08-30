@@ -17,12 +17,14 @@ public class WorkCenterContactCatalogReadAdapter implements WorkCenterContactCat
     }
 
     @Override
-    public Optional<String> findContactTypeName(String ruleSystemCode, String contactTypeCode, String languageCode) {
+    // Se resuelve dentro de un caso de uso, no en la capa web, asi que no hay idioma que
+    // pasar: literal base hasta que backend#27 decida donde vive esta resolucion.
+    public Optional<String> findContactTypeName(String ruleSystemCode, String contactTypeCode) {
         return ruleEntityLabelResolver.resolveName(
                 ruleSystemCode,
                 WorkCenterRuleEntityTypeCodes.CONTACT_TYPE,
                 contactTypeCode,
-                languageCode
+                null
         );
     }
 }

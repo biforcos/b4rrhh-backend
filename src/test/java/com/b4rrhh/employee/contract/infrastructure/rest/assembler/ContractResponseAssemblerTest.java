@@ -1,8 +1,9 @@
 package com.b4rrhh.employee.contract.infrastructure.rest.assembler;
 
-import com.b4rrhh.employee.contract.application.port.ContractCatalogReadPort;
 import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.contract.infrastructure.rest.dto.ContractResponse;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -19,18 +20,18 @@ import static org.mockito.Mockito.when;
 class ContractResponseAssemblerTest {
 
     @Mock
-    private ContractCatalogReadPort contractCatalogReadPort;
+    private RuleEntityLabelResolver ruleEntityLabelResolver;
 
     @Test
-    void toResponseEnrichesContractTypeAndSubtypeNamesWhenPresent() {
-        ContractResponseAssembler assembler = new ContractResponseAssembler(contractCatalogReadPort);
+    void toResponseEnrichesContractTypeAndSubtypeNamesInTheLanguageOfTheResponse() {
+        ContractResponseAssembler assembler = new ContractResponseAssembler(ruleEntityLabelResolver);
         Contract contract = contract("IND", "FT1");
-        when(contractCatalogReadPort.findContractTypeName("ESP", "IND"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "CONTRACT", "IND", "es-ES"))
                 .thenReturn(Optional.of("Indefinido"));
-        when(contractCatalogReadPort.findContractSubtypeName("ESP", "FT1"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "CONTRACT_SUBTYPE", "FT1", "es-ES"))
                 .thenReturn(Optional.of("Tiempo completo"));
 
-        ContractResponse response = assembler.toResponse("ESP", contract);
+        ContractResponse response = assembler.toResponse("ESP", contract, new ResponseLanguage("es-ES"));
 
         assertEquals("IND", response.contractCode());
         assertEquals("Indefinido", response.contractTypeName());
@@ -40,14 +41,14 @@ class ContractResponseAssemblerTest {
 
     @Test
     void toResponseKeepsCodesAndUsesNullWhenLabelsAreMissing() {
-        ContractResponseAssembler assembler = new ContractResponseAssembler(contractCatalogReadPort);
+        ContractResponseAssembler assembler = new ContractResponseAssembler(ruleEntityLabelResolver);
         Contract contract = contract("TMP", "PT1");
-        when(contractCatalogReadPort.findContractTypeName("ESP", "TMP"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "CONTRACT", "TMP", null))
                 .thenReturn(Optional.empty());
-        when(contractCatalogReadPort.findContractSubtypeName("ESP", "PT1"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "CONTRACT_SUBTYPE", "PT1", null))
                 .thenReturn(Optional.empty());
 
-        ContractResponse response = assembler.toResponse("ESP", contract);
+        ContractResponse response = assembler.toResponse("ESP", contract, ResponseLanguage.base());
 
         assertEquals("TMP", response.contractCode());
         assertNull(response.contractTypeName());
@@ -57,11 +58,11 @@ class ContractResponseAssemblerTest {
 
     private Contract contract(String contractCode, String contractSubtypeCode) {
         return new Contract(
-                                10L,
+                10L,
                 contractCode,
                 contractSubtypeCode,
                 LocalDate.of(2026, 1, 10),
-                                null
+                null
         );
     }
 }

@@ -13,6 +13,7 @@ import com.b4rrhh.employee.identifier.infrastructure.web.dto.CreateIdentifierReq
 import com.b4rrhh.employee.identifier.infrastructure.web.dto.IdentifierResponse;
 import com.b4rrhh.employee.identifier.infrastructure.web.dto.UpdateIdentifierRequest;
 import com.b4rrhh.employee.identifier.infrastructure.web.assembler.IdentifierResponseAssembler;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -58,7 +59,8 @@ public class IdentifierController {
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
-            @RequestBody CreateIdentifierRequest request
+            @RequestBody CreateIdentifierRequest request,
+            ResponseLanguage language
     ) {
         Identifier created = createIdentifierUseCase.create(
                 new CreateIdentifierCommand(
@@ -74,19 +76,20 @@ public class IdentifierController {
         );
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(identifierResponseAssembler.toResponse(ruleSystemCode, created));
+                .body(identifierResponseAssembler.toResponse(ruleSystemCode, created, language));
     }
 
     @GetMapping
     public ResponseEntity<List<IdentifierResponse>> list(
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
-            @PathVariable String employeeNumber
+            @PathVariable String employeeNumber,
+            ResponseLanguage language
     ) {
         List<IdentifierResponse> response = listEmployeeIdentifiersUseCase
                 .listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber)
                 .stream()
-                .map(identifier -> identifierResponseAssembler.toResponse(ruleSystemCode, identifier))
+                .map(identifier -> identifierResponseAssembler.toResponse(ruleSystemCode, identifier, language))
                 .toList();
 
         return ResponseEntity.ok(response);
@@ -97,7 +100,8 @@ public class IdentifierController {
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
-            @PathVariable String identifierTypeCode
+            @PathVariable String identifierTypeCode,
+            ResponseLanguage language
     ) {
         return getIdentifierByBusinessKeyUseCase.getByBusinessKey(
                         ruleSystemCode,
@@ -105,7 +109,7 @@ public class IdentifierController {
                         employeeNumber,
                         identifierTypeCode
                 )
-                .map(identifier -> ResponseEntity.ok(identifierResponseAssembler.toResponse(ruleSystemCode, identifier)))
+                .map(identifier -> ResponseEntity.ok(identifierResponseAssembler.toResponse(ruleSystemCode, identifier, language)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -115,7 +119,8 @@ public class IdentifierController {
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
             @PathVariable String identifierTypeCode,
-            @RequestBody UpdateIdentifierRequest request
+            @RequestBody UpdateIdentifierRequest request,
+            ResponseLanguage language
     ) {
         Identifier updated = updateIdentifierUseCase.update(
                 new UpdateIdentifierCommand(
@@ -130,7 +135,7 @@ public class IdentifierController {
                 )
         );
 
-        return ResponseEntity.ok(identifierResponseAssembler.toResponse(ruleSystemCode, updated));
+        return ResponseEntity.ok(identifierResponseAssembler.toResponse(ruleSystemCode, updated, language));
     }
 
     @DeleteMapping("/{identifierTypeCode}")

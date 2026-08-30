@@ -1,30 +1,45 @@
 package com.b4rrhh.employee.labor_classification.infrastructure.rest.assembler;
 
-import com.b4rrhh.employee.labor_classification.application.port.LaborClassificationCatalogReadPort;
+import com.b4rrhh.employee.labor_classification.application.usecase.LaborClassificationRuleEntityTypeCodes;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.LaborClassificationResponse;
+import com.b4rrhh.rulesystem.agreementcategoryprofile.domain.port.AgreementCategoryProfileRepository;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 
 @Component
 public class LaborClassificationResponseAssembler {
 
-    private final LaborClassificationCatalogReadPort laborClassificationCatalogReadPort;
+    private final RuleEntityLabelResolver ruleEntityLabelResolver;
+    private final AgreementCategoryProfileRepository agreementCategoryProfileRepository;
 
-    public LaborClassificationResponseAssembler(LaborClassificationCatalogReadPort laborClassificationCatalogReadPort) {
-        this.laborClassificationCatalogReadPort = laborClassificationCatalogReadPort;
+    public LaborClassificationResponseAssembler(
+            RuleEntityLabelResolver ruleEntityLabelResolver,
+            AgreementCategoryProfileRepository agreementCategoryProfileRepository
+    ) {
+        this.ruleEntityLabelResolver = ruleEntityLabelResolver;
+        this.agreementCategoryProfileRepository = agreementCategoryProfileRepository;
     }
 
-    public LaborClassificationResponse toResponse(String ruleSystemCode, LaborClassification laborClassification) {
-        String agreementName = laborClassificationCatalogReadPort
-                .findAgreementName(ruleSystemCode, laborClassification.getAgreementCode())
+    public LaborClassificationResponse toResponse(
+            String ruleSystemCode,
+            LaborClassification laborClassification,
+            ResponseLanguage language
+    ) {
+        String agreementName = ruleEntityLabelResolver
+                .resolveName(ruleSystemCode, LaborClassificationRuleEntityTypeCodes.AGREEMENT,
+                        laborClassification.getAgreementCode(), language.code())
                 .orElse(null);
-        String agreementCategoryName = laborClassificationCatalogReadPort
-                .findAgreementCategoryName(ruleSystemCode, laborClassification.getAgreementCategoryCode())
+        String agreementCategoryName = ruleEntityLabelResolver
+                .resolveName(ruleSystemCode, LaborClassificationRuleEntityTypeCodes.AGREEMENT_CATEGORY,
+                        laborClassification.getAgreementCategoryCode(), language.code())
                 .orElse(null);
-        String grupoCotizacionCode = laborClassificationCatalogReadPort
-                .findGrupoCotizacionCode(ruleSystemCode, laborClassification.getAgreementCategoryCode())
+        String grupoCotizacionCode = findGrupoCotizacionCode(ruleSystemCode, laborClassification.getAgreementCategoryCode())
                 .orElse(null);
 
         return new LaborClassificationResponse(
@@ -40,10 +55,23 @@ public class LaborClassificationResponseAssembler {
 
     public List<LaborClassificationResponse> toResponseList(
             String ruleSystemCode,
-            List<LaborClassification> laborClassifications
+            List<LaborClassification> laborClassifications,
+            ResponseLanguage language
     ) {
         return laborClassifications.stream()
-                .map(laborClassification -> toResponse(ruleSystemCode, laborClassification))
+                .map(laborClassification -> toResponse(ruleSystemCode, laborClassification, language))
                 .toList();
+    }
+
+    // El grupo de cotizacion no es un literal: es un dato del perfil de la categoria. Misma
+    // normalizacion que hacia el adaptador que vivia aqui antes.
+    private Optional<String> findGrupoCotizacionCode(String ruleSystemCode, String agreementCategoryCode) {
+        if (agreementCategoryCode == null || agreementCategoryCode.trim().isEmpty()) {
+            return Optional.empty();
+        }
+        return agreementCategoryProfileRepository.findGrupoCotizacionCodeByCategoryCode(
+                ruleSystemCode.trim().toUpperCase(Locale.ROOT),
+                agreementCategoryCode.trim().toUpperCase(Locale.ROOT)
+        );
     }
 }

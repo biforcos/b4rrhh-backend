@@ -20,6 +20,7 @@ import com.b4rrhh.employee.contract.infrastructure.rest.dto.ContractResponse;
 import com.b4rrhh.employee.contract.infrastructure.rest.dto.ReplaceContractFromDateRequest;
 import com.b4rrhh.employee.contract.infrastructure.rest.dto.UpdateContractRequest;
 import org.springframework.format.annotation.DateTimeFormat;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -68,7 +69,8 @@ public class ContractController {
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
-            @RequestBody CreateContractRequest request
+            @RequestBody CreateContractRequest request,
+            ResponseLanguage language
     ) {
         Contract created = createContractUseCase.create(
                 new CreateContractCommand(
@@ -82,14 +84,15 @@ public class ContractController {
                 )
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(ruleSystemCode, created));
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(ruleSystemCode, created, language));
     }
 
     @GetMapping
     public ResponseEntity<List<ContractResponse>> list(
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
-            @PathVariable String employeeNumber
+            @PathVariable String employeeNumber,
+            ResponseLanguage language
     ) {
         List<ContractResponse> response = listEmployeeContractsUseCase
                 .listByEmployeeBusinessKey(new ListEmployeeContractsCommand(
@@ -98,7 +101,7 @@ public class ContractController {
                         employeeNumber
                 ))
                 .stream()
-                .map(contract -> toResponse(ruleSystemCode, contract))
+                .map(contract -> toResponse(ruleSystemCode, contract, language))
                 .toList();
 
         return ResponseEntity.ok(response);
@@ -109,7 +112,8 @@ public class ContractController {
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
-            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            ResponseLanguage language
     ) {
         Contract contract = getContractByBusinessKeyUseCase.getByBusinessKey(
                 new GetContractByBusinessKeyCommand(
@@ -120,7 +124,7 @@ public class ContractController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(ruleSystemCode, contract));
+        return ResponseEntity.ok(toResponse(ruleSystemCode, contract, language));
     }
 
     @PutMapping("/{startDate}")
@@ -129,7 +133,8 @@ public class ContractController {
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestBody UpdateContractRequest request
+            @RequestBody UpdateContractRequest request,
+            ResponseLanguage language
     ) {
         Contract updated = updateContractUseCase.update(
                 new UpdateContractCommand(
@@ -143,7 +148,7 @@ public class ContractController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(ruleSystemCode, updated));
+        return ResponseEntity.ok(toResponse(ruleSystemCode, updated, language));
     }
 
     @PostMapping("/{startDate}/close")
@@ -152,7 +157,8 @@ public class ContractController {
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestBody CloseContractRequest request
+            @RequestBody CloseContractRequest request,
+            ResponseLanguage language
     ) {
         Contract closed = closeContractUseCase.close(
                 new CloseContractCommand(
@@ -164,7 +170,7 @@ public class ContractController {
                 )
         );
 
-        return ResponseEntity.ok(toResponse(ruleSystemCode, closed));
+        return ResponseEntity.ok(toResponse(ruleSystemCode, closed, language));
     }
 
     @PostMapping("/replace-from-date")
@@ -172,7 +178,8 @@ public class ContractController {
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
-            @RequestBody ReplaceContractFromDateRequest request
+            @RequestBody ReplaceContractFromDateRequest request,
+            ResponseLanguage language
     ) {
         Contract replaced = replaceContractFromDateUseCase.replaceFromDate(
                 new ReplaceContractFromDateCommand(
@@ -185,10 +192,10 @@ public class ContractController {
                 )
         );
 
-                return ResponseEntity.ok(toResponse(ruleSystemCode, replaced));
+                return ResponseEntity.ok(toResponse(ruleSystemCode, replaced, language));
     }
 
-        private ContractResponse toResponse(String ruleSystemCode, Contract contract) {
-                return contractResponseAssembler.toResponse(ruleSystemCode, contract);
+        private ContractResponse toResponse(String ruleSystemCode, Contract contract, ResponseLanguage language) {
+                return contractResponseAssembler.toResponse(ruleSystemCode, contract, language);
     }
 }

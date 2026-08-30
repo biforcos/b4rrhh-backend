@@ -1,8 +1,9 @@
 package com.b4rrhh.employee.contact.infrastructure.web.assembler;
 
-import com.b4rrhh.employee.contact.application.port.ContactCatalogReadPort;
 import com.b4rrhh.employee.contact.domain.model.Contact;
 import com.b4rrhh.employee.contact.infrastructure.web.dto.ContactResponse;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -19,16 +20,16 @@ import static org.mockito.Mockito.when;
 class ContactResponseAssemblerTest {
 
     @Mock
-    private ContactCatalogReadPort contactCatalogReadPort;
+    private RuleEntityLabelResolver ruleEntityLabelResolver;
 
     @Test
-    void toResponseEnrichesLabelWhenPresent() {
-        ContactResponseAssembler assembler = new ContactResponseAssembler(contactCatalogReadPort);
+    void toResponseEnrichesLabelInTheLanguageOfTheResponse() {
+        ContactResponseAssembler assembler = new ContactResponseAssembler(ruleEntityLabelResolver);
         Contact contact = contact(10L, "EMAIL", "john.doe@example.com");
-        when(contactCatalogReadPort.findContactTypeName("ESP", "EMAIL"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "CONTACT_TYPE", "EMAIL", "es-ES"))
                 .thenReturn(Optional.of("Correo electronico"));
 
-        ContactResponse response = assembler.toResponse("ESP", contact);
+        ContactResponse response = assembler.toResponse("ESP", contact, new ResponseLanguage("es-ES"));
 
         assertEquals("EMAIL", response.contactTypeCode());
         assertEquals("Correo electronico", response.contactTypeName());
@@ -37,12 +38,12 @@ class ContactResponseAssemblerTest {
 
     @Test
     void toResponseKeepsCodeAndUsesNullWhenLabelMissing() {
-        ContactResponseAssembler assembler = new ContactResponseAssembler(contactCatalogReadPort);
+        ContactResponseAssembler assembler = new ContactResponseAssembler(ruleEntityLabelResolver);
         Contact contact = contact(10L, "EMAIL", "john.doe@example.com");
-        when(contactCatalogReadPort.findContactTypeName("ESP", "EMAIL"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "CONTACT_TYPE", "EMAIL", null))
                 .thenReturn(Optional.empty());
 
-        ContactResponse response = assembler.toResponse("ESP", contact);
+        ContactResponse response = assembler.toResponse("ESP", contact, ResponseLanguage.base());
 
         assertEquals("EMAIL", response.contactTypeCode());
         assertNull(response.contactTypeName());

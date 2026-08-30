@@ -19,6 +19,7 @@ import com.b4rrhh.employee.workcenter.infrastructure.web.dto.CreateWorkCenterReq
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.ReplaceWorkCenterFromDateRequest;
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.UpdateWorkCenterRequest;
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.WorkCenterResponse;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -70,7 +71,8 @@ public class WorkCenterController {
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
-            @RequestBody CreateWorkCenterRequest request
+            @RequestBody CreateWorkCenterRequest request,
+            ResponseLanguage language
     ) {
         WorkCenter created = createWorkCenterUseCase.create(
                 new CreateWorkCenterCommand(
@@ -84,7 +86,7 @@ public class WorkCenterController {
         );
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(workCenterResponseAssembler.toResponse(ruleSystemCode, created));
+                .body(workCenterResponseAssembler.toResponse(ruleSystemCode, created, language));
     }
 
     @PostMapping("/replace-from-date")
@@ -92,7 +94,8 @@ public class WorkCenterController {
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
-            @RequestBody ReplaceWorkCenterFromDateRequest request
+            @RequestBody ReplaceWorkCenterFromDateRequest request,
+            ResponseLanguage language
     ) {
         WorkCenter replaced = replaceWorkCenterFromDateUseCase.replaceFromDate(
                 new ReplaceWorkCenterFromDateCommand(
@@ -104,19 +107,20 @@ public class WorkCenterController {
                 )
         );
 
-        return ResponseEntity.ok(workCenterResponseAssembler.toResponse(ruleSystemCode, replaced));
+        return ResponseEntity.ok(workCenterResponseAssembler.toResponse(ruleSystemCode, replaced, language));
     }
 
     @GetMapping
     public ResponseEntity<List<WorkCenterResponse>> list(
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
-            @PathVariable String employeeNumber
+            @PathVariable String employeeNumber,
+            ResponseLanguage language
     ) {
         List<WorkCenterResponse> response = workCenterResponseAssembler.toResponseList(
                 ruleSystemCode,
                 listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber)
-        );
+        , language);
 
         return ResponseEntity.ok(response);
     }
@@ -126,7 +130,8 @@ public class WorkCenterController {
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
-            @PathVariable Integer workCenterAssignmentNumber
+            @PathVariable Integer workCenterAssignmentNumber,
+            ResponseLanguage language
     ) {
         return getWorkCenterByBusinessKeyUseCase.getByBusinessKey(
                         ruleSystemCode,
@@ -134,7 +139,7 @@ public class WorkCenterController {
                         employeeNumber,
                         workCenterAssignmentNumber
                 )
-                .map(workCenter -> ResponseEntity.ok(workCenterResponseAssembler.toResponse(ruleSystemCode, workCenter)))
+                .map(workCenter -> ResponseEntity.ok(workCenterResponseAssembler.toResponse(ruleSystemCode, workCenter, language)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -144,7 +149,8 @@ public class WorkCenterController {
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
             @PathVariable Integer workCenterAssignmentNumber,
-            @RequestBody UpdateWorkCenterRequest request
+            @RequestBody UpdateWorkCenterRequest request,
+            ResponseLanguage language
     ) {
         WorkCenter updated = updateWorkCenterUseCase.update(
                 new UpdateWorkCenterCommand(
@@ -158,7 +164,7 @@ public class WorkCenterController {
                 )
         );
 
-        return ResponseEntity.ok(workCenterResponseAssembler.toResponse(ruleSystemCode, updated));
+        return ResponseEntity.ok(workCenterResponseAssembler.toResponse(ruleSystemCode, updated, language));
     }
 
     @PostMapping("/{workCenterAssignmentNumber}/close")
@@ -167,7 +173,8 @@ public class WorkCenterController {
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
             @PathVariable Integer workCenterAssignmentNumber,
-            @RequestBody CloseWorkCenterRequest request
+            @RequestBody CloseWorkCenterRequest request,
+            ResponseLanguage language
     ) {
         WorkCenter closed = closeWorkCenterUseCase.close(
                 new CloseWorkCenterCommand(
@@ -179,7 +186,7 @@ public class WorkCenterController {
                 )
         );
 
-        return ResponseEntity.ok(workCenterResponseAssembler.toResponse(ruleSystemCode, closed));
+        return ResponseEntity.ok(workCenterResponseAssembler.toResponse(ruleSystemCode, closed, language));
     }
 
     @DeleteMapping("/{workCenterAssignmentNumber}")

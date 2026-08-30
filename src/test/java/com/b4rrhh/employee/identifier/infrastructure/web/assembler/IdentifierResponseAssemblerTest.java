@@ -1,8 +1,9 @@
 package com.b4rrhh.employee.identifier.infrastructure.web.assembler;
 
-import com.b4rrhh.employee.identifier.application.port.IdentifierCatalogReadPort;
 import com.b4rrhh.employee.identifier.domain.model.Identifier;
 import com.b4rrhh.employee.identifier.infrastructure.web.dto.IdentifierResponse;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -19,16 +20,16 @@ import static org.mockito.Mockito.when;
 class IdentifierResponseAssemblerTest {
 
     @Mock
-    private IdentifierCatalogReadPort identifierCatalogReadPort;
+    private RuleEntityLabelResolver ruleEntityLabelResolver;
 
     @Test
-    void toResponseEnrichesLabelWhenPresent() {
-        IdentifierResponseAssembler assembler = new IdentifierResponseAssembler(identifierCatalogReadPort);
+    void toResponseEnrichesLabelInTheLanguageOfTheResponse() {
+        IdentifierResponseAssembler assembler = new IdentifierResponseAssembler(ruleEntityLabelResolver);
         Identifier identifier = identifier(10L, "NATIONAL_ID", "12345678A", true);
-        when(identifierCatalogReadPort.findIdentifierTypeName("ESP", "NATIONAL_ID"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "EMPLOYEE_IDENTIFIER_TYPE", "NATIONAL_ID", "es-ES"))
                 .thenReturn(Optional.of("Documento nacional"));
 
-        IdentifierResponse response = assembler.toResponse("ESP", identifier);
+        IdentifierResponse response = assembler.toResponse("ESP", identifier, new ResponseLanguage("es-ES"));
 
         assertEquals("NATIONAL_ID", response.identifierTypeCode());
         assertEquals("Documento nacional", response.identifierTypeName());
@@ -37,12 +38,12 @@ class IdentifierResponseAssemblerTest {
 
     @Test
     void toResponseKeepsCodeAndUsesNullWhenLabelMissing() {
-        IdentifierResponseAssembler assembler = new IdentifierResponseAssembler(identifierCatalogReadPort);
+        IdentifierResponseAssembler assembler = new IdentifierResponseAssembler(ruleEntityLabelResolver);
         Identifier identifier = identifier(10L, "NATIONAL_ID", "12345678A", true);
-        when(identifierCatalogReadPort.findIdentifierTypeName("ESP", "NATIONAL_ID"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "EMPLOYEE_IDENTIFIER_TYPE", "NATIONAL_ID", null))
                 .thenReturn(Optional.empty());
 
-        IdentifierResponse response = assembler.toResponse("ESP", identifier);
+        IdentifierResponse response = assembler.toResponse("ESP", identifier, ResponseLanguage.base());
 
         assertEquals("NATIONAL_ID", response.identifierTypeCode());
         assertNull(response.identifierTypeName());

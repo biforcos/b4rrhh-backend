@@ -701,6 +701,7 @@ paths:
       tags:
         - Employee Address
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -744,6 +745,7 @@ paths:
       tags:
         - Employee Address
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -781,6 +783,7 @@ paths:
       tags:
         - Employee Address
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -825,6 +828,7 @@ paths:
         This operation does not create a new occurrence and does not mutate
         occurrence identity fields.
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -876,6 +880,7 @@ paths:
       tags:
         - Employee Address
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -927,6 +932,7 @@ paths:
       tags:
         - Employee Work Center
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -973,6 +979,7 @@ paths:
       tags:
         - Employee Work Center
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -1015,6 +1022,7 @@ paths:
         starts at effectiveDate. If no assignment covers effectiveDate, a new assignment is created
         directly when the temporal context is valid.
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -1064,6 +1072,7 @@ paths:
       tags:
         - Employee Work Center
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -1107,6 +1116,7 @@ paths:
         This operation corrects assignment content and dates for the same occurrence
         identified by business keys and does not represent a workflow transition.
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -1207,6 +1217,7 @@ paths:
       tags:
         - Employee Work Center
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -1719,6 +1730,7 @@ paths:
       tags:
         - Employee Contract
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -1764,6 +1776,7 @@ paths:
       tags:
         - Employee Contract
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -1801,6 +1814,7 @@ paths:
       tags:
         - Employee Contract
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -1848,6 +1862,7 @@ paths:
       tags:
         - Employee Contract
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -1887,6 +1902,7 @@ paths:
       tags:
         - Employee Contract
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -1940,6 +1956,7 @@ paths:
       tags:
         - Employee Contract
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -1993,6 +2010,7 @@ paths:
       tags:
         - Employee Labor Classification
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -2038,6 +2056,7 @@ paths:
       tags:
         - Employee Labor Classification
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -2075,6 +2094,7 @@ paths:
       tags:
         - Employee Labor Classification
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -2122,6 +2142,7 @@ paths:
       tags:
         - Employee Labor Classification
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -2161,6 +2182,7 @@ paths:
       tags:
         - Employee Labor Classification
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -2214,6 +2236,7 @@ paths:
       tags:
         - Employee Labor Classification
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -2267,6 +2290,7 @@ paths:
       tags:
         - Employee Identifier
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -2310,6 +2334,7 @@ paths:
       tags:
         - Employee Identifier
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -2347,6 +2372,7 @@ paths:
       tags:
         - Employee Identifier
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -2386,6 +2412,7 @@ paths:
       tags:
         - Employee Identifier
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -2472,6 +2499,7 @@ paths:
       tags:
         - Employee Contact
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -2515,6 +2543,7 @@ paths:
       tags:
         - Employee Contact
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -2552,6 +2581,7 @@ paths:
       tags:
         - Employee Contact
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -2591,6 +2621,7 @@ paths:
       tags:
         - Employee Contact
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true

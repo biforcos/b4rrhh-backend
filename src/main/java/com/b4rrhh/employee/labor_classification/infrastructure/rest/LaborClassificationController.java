@@ -20,6 +20,7 @@ import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.LaborCla
 import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.ReplaceLaborClassificationFromDateRequest;
 import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.UpdateLaborClassificationRequest;
 import org.springframework.format.annotation.DateTimeFormat;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -68,7 +69,8 @@ public class LaborClassificationController {
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
-            @RequestBody CreateLaborClassificationRequest request
+            @RequestBody CreateLaborClassificationRequest request,
+            ResponseLanguage language
     ) {
         LaborClassification created = createLaborClassificationUseCase.create(
                 new CreateLaborClassificationCommand(
@@ -83,14 +85,15 @@ public class LaborClassificationController {
         );
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(laborClassificationResponseAssembler.toResponse(ruleSystemCode, created));
+                .body(laborClassificationResponseAssembler.toResponse(ruleSystemCode, created, language));
     }
 
     @GetMapping
     public ResponseEntity<List<LaborClassificationResponse>> list(
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
-            @PathVariable String employeeNumber
+            @PathVariable String employeeNumber,
+            ResponseLanguage language
     ) {
         List<LaborClassificationResponse> response = laborClassificationResponseAssembler.toResponseList(
                 ruleSystemCode,
@@ -99,7 +102,7 @@ public class LaborClassificationController {
                         employeeTypeCode,
                         employeeNumber
                 ))
-        );
+        , language);
 
         return ResponseEntity.ok(response);
     }
@@ -109,7 +112,8 @@ public class LaborClassificationController {
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
-            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            ResponseLanguage language
     ) {
         LaborClassification laborClassification = getLaborClassificationByBusinessKeyUseCase.getByBusinessKey(
                 new GetLaborClassificationByBusinessKeyCommand(
@@ -120,7 +124,7 @@ public class LaborClassificationController {
                 )
         );
 
-        return ResponseEntity.ok(laborClassificationResponseAssembler.toResponse(ruleSystemCode, laborClassification));
+        return ResponseEntity.ok(laborClassificationResponseAssembler.toResponse(ruleSystemCode, laborClassification, language));
     }
 
     @PutMapping("/{startDate}")
@@ -129,7 +133,8 @@ public class LaborClassificationController {
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestBody UpdateLaborClassificationRequest request
+            @RequestBody UpdateLaborClassificationRequest request,
+            ResponseLanguage language
     ) {
         LaborClassification updated = updateLaborClassificationUseCase.update(
                 new UpdateLaborClassificationCommand(
@@ -143,7 +148,7 @@ public class LaborClassificationController {
                 )
         );
 
-        return ResponseEntity.ok(laborClassificationResponseAssembler.toResponse(ruleSystemCode, updated));
+        return ResponseEntity.ok(laborClassificationResponseAssembler.toResponse(ruleSystemCode, updated, language));
     }
 
     @PostMapping("/{startDate}/close")
@@ -152,7 +157,8 @@ public class LaborClassificationController {
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestBody CloseLaborClassificationRequest request
+            @RequestBody CloseLaborClassificationRequest request,
+            ResponseLanguage language
     ) {
         LaborClassification closed = closeLaborClassificationUseCase.close(
                 new CloseLaborClassificationCommand(
@@ -164,7 +170,7 @@ public class LaborClassificationController {
                 )
         );
 
-        return ResponseEntity.ok(laborClassificationResponseAssembler.toResponse(ruleSystemCode, closed));
+        return ResponseEntity.ok(laborClassificationResponseAssembler.toResponse(ruleSystemCode, closed, language));
     }
 
     @PostMapping("/replace-from-date")
@@ -172,7 +178,8 @@ public class LaborClassificationController {
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber,
-            @RequestBody ReplaceLaborClassificationFromDateRequest request
+            @RequestBody ReplaceLaborClassificationFromDateRequest request,
+            ResponseLanguage language
     ) {
         LaborClassification replaced = replaceLaborClassificationFromDateUseCase.replaceFromDate(
                 new ReplaceLaborClassificationFromDateCommand(
@@ -185,6 +192,6 @@ public class LaborClassificationController {
                 )
         );
 
-        return ResponseEntity.ok(laborClassificationResponseAssembler.toResponse(ruleSystemCode, replaced));
+        return ResponseEntity.ok(laborClassificationResponseAssembler.toResponse(ruleSystemCode, replaced, language));
     }
 }

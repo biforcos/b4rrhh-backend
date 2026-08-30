@@ -7,7 +7,8 @@ import com.b4rrhh.employee.identifier.application.usecase.GetIdentifierByBusines
 import com.b4rrhh.employee.identifier.application.usecase.ListEmployeeIdentifiersUseCase;
 import com.b4rrhh.employee.identifier.application.usecase.UpdateIdentifierCommand;
 import com.b4rrhh.employee.identifier.application.usecase.UpdateIdentifierUseCase;
-import com.b4rrhh.employee.identifier.application.port.IdentifierCatalogReadPort;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguageArgumentResolver;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierAlreadyExistsException;
 import com.b4rrhh.employee.identifier.domain.exception.IdentifierNotFoundException;
 import com.b4rrhh.employee.identifier.domain.model.Identifier;
@@ -19,11 +20,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,6 +34,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -51,7 +55,7 @@ class IdentifierControllerHttpTest {
     @Mock
     private DeleteIdentifierUseCase deleteIdentifierUseCase;
         @Mock
-        private IdentifierCatalogReadPort identifierCatalogReadPort;
+        private RuleEntityLabelResolver ruleEntityLabelResolver;
 
     private MockMvc mockMvc;
 
@@ -63,17 +67,18 @@ class IdentifierControllerHttpTest {
                 getIdentifierByBusinessKeyUseCase,
                 listEmployeeIdentifiersUseCase,
                 deleteIdentifierUseCase,
-                new IdentifierResponseAssembler(identifierCatalogReadPort)
+                new IdentifierResponseAssembler(ruleEntityLabelResolver)
         );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new IdentifierExceptionHandler())
+                .setCustomArgumentResolvers(new ResponseLanguageArgumentResolver())
                 .build();
     }
 
     @Test
     void createMapsPathAndBodyToCommand() throws Exception {
-        when(identifierCatalogReadPort.findIdentifierTypeName("ESP", "NATIONAL_ID"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "EMPLOYEE_IDENTIFIER_TYPE", "NATIONAL_ID", null))
                 .thenReturn(Optional.of("Documento nacional"));
         when(createIdentifierUseCase.create(any(CreateIdentifierCommand.class)))
                 .thenReturn(identifier(10L, "NATIONAL_ID", "12345678A", true));
@@ -104,7 +109,7 @@ class IdentifierControllerHttpTest {
 
     @Test
     void updateMapsPathAndBodyToCommand() throws Exception {
-        when(identifierCatalogReadPort.findIdentifierTypeName("ESP", "NATIONAL_ID"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "EMPLOYEE_IDENTIFIER_TYPE", "NATIONAL_ID", null))
                 .thenReturn(Optional.empty());
         when(updateIdentifierUseCase.update(any(UpdateIdentifierCommand.class)))
                 .thenReturn(identifier(10L, "NATIONAL_ID", "87654321Z", true));
@@ -187,5 +192,19 @@ class IdentifierControllerHttpTest {
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );
+    }
+
+    // ADR-052 §4 (backend#24): el idioma entra por Accept-Language y llega al resolutor desde el ensamblador.
+    @Test
+    void listServesTheIdentifierTypeInTheLanguageOfTheAcceptLanguageHeader() throws Exception {
+        when(listEmployeeIdentifiersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of(identifier(10L, "NATIONAL_ID", "12345678A", true)));
+        when(ruleEntityLabelResolver.resolveName("ESP", "EMPLOYEE_IDENTIFIER_TYPE", "NATIONAL_ID", "es-ES"))
+                .thenReturn(Optional.of("DNI"));
+
+        mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/identifiers")
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "es-ES"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].identifierTypeName").value("DNI"));
     }
 }

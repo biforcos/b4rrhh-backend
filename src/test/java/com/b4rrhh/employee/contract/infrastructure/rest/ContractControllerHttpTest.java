@@ -12,7 +12,8 @@ import com.b4rrhh.employee.contract.application.usecase.GetContractByBusinessKey
 import com.b4rrhh.employee.contract.application.usecase.ListEmployeeContractsUseCase;
 import com.b4rrhh.employee.contract.application.usecase.ReplaceContractFromDateUseCase;
 import com.b4rrhh.employee.contract.application.usecase.UpdateContractUseCase;
-import com.b4rrhh.employee.contract.application.port.ContractCatalogReadPort;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguageArgumentResolver;
 import com.b4rrhh.employee.contract.domain.exception.ContractInvalidException;
 import com.b4rrhh.employee.contract.domain.exception.ContractNotFoundException;
 import com.b4rrhh.employee.contract.domain.exception.ContractOverlapException;
@@ -26,6 +27,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -36,6 +38,7 @@ import java.util.Optional;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
@@ -62,7 +65,7 @@ class ContractControllerHttpTest {
         @Mock
         private ReplaceContractFromDateUseCase replaceContractFromDateUseCase;
         @Mock
-        private ContractCatalogReadPort contractCatalogReadPort;
+        private RuleEntityLabelResolver ruleEntityLabelResolver;
 
     private MockMvc mockMvc;
 
@@ -75,24 +78,25 @@ class ContractControllerHttpTest {
                 updateContractUseCase,
                 closeContractUseCase,
                 replaceContractFromDateUseCase,
-                new ContractResponseAssembler(contractCatalogReadPort)
+                new ContractResponseAssembler(ruleEntityLabelResolver)
         );
 
-        lenient().when(contractCatalogReadPort.findContractTypeName(anyString(), anyString()))
+        lenient().when(ruleEntityLabelResolver.resolveName(anyString(), eq("CONTRACT"), anyString(), any()))
                 .thenReturn(Optional.empty());
-        lenient().when(contractCatalogReadPort.findContractSubtypeName(anyString(), anyString()))
+        lenient().when(ruleEntityLabelResolver.resolveName(anyString(), eq("CONTRACT_SUBTYPE"), anyString(), any()))
                 .thenReturn(Optional.empty());
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new ContractExceptionHandler())
+                .setCustomArgumentResolvers(new ResponseLanguageArgumentResolver())
                 .build();
     }
 
     @Test
     void createMapsPathAndBodyToCommandAndHidesTechnicalIds() throws Exception {
-        when(contractCatalogReadPort.findContractTypeName("ESP", "IND"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "CONTRACT", "IND", null))
                 .thenReturn(Optional.of("Indefinido"));
-        when(contractCatalogReadPort.findContractSubtypeName("ESP", "FT1"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "CONTRACT_SUBTYPE", "FT1", null))
                 .thenReturn(Optional.of("Tiempo completo"));
         when(createContractUseCase.create(any(CreateContractCommand.class)))
                 .thenReturn(contract("IND", "FT1", LocalDate.of(2026, 1, 1), null));
@@ -125,13 +129,13 @@ class ContractControllerHttpTest {
 
     @Test
     void listMapsPathToCommandAndReturns200() throws Exception {
-        when(contractCatalogReadPort.findContractTypeName("ESP", "IND"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "CONTRACT", "IND", null))
                 .thenReturn(Optional.of("Indefinido"));
-        when(contractCatalogReadPort.findContractSubtypeName("ESP", "FT1"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "CONTRACT_SUBTYPE", "FT1", null))
                 .thenReturn(Optional.empty());
-        when(contractCatalogReadPort.findContractTypeName("ESP", "TMP"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "CONTRACT", "TMP", null))
                 .thenReturn(Optional.empty());
-        when(contractCatalogReadPort.findContractSubtypeName("ESP", "PT1"))
+        when(ruleEntityLabelResolver.resolveName("ESP", "CONTRACT_SUBTYPE", "PT1", null))
                 .thenReturn(Optional.of("Parcial"));
         when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
                 .thenReturn(List.of(
@@ -397,5 +401,22 @@ class ContractControllerHttpTest {
                 startDate,
                 endDate
         );
+    }
+
+    // ADR-052 §4 (backend#24): el idioma entra por Accept-Language y llega al resolutor desde el ensamblador.
+    @Test
+    void listServesContractAndSubtypeInTheLanguageOfTheAcceptLanguageHeader() throws Exception {
+        when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
+                .thenReturn(List.of(contract("IND", "FT1", LocalDate.of(2026, 1, 10), null)));
+        when(ruleEntityLabelResolver.resolveName("ESP", "CONTRACT", "IND", "es-ES"))
+                .thenReturn(Optional.of("Indefinido"));
+        when(ruleEntityLabelResolver.resolveName("ESP", "CONTRACT_SUBTYPE", "FT1", "es-ES"))
+                .thenReturn(Optional.of("Tiempo completo"));
+
+        mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/contracts")
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "es-ES"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].contractTypeName").value("Indefinido"))
+                .andExpect(jsonPath("$[0].contractSubtypeName").value("Tiempo completo"));
     }
 }
