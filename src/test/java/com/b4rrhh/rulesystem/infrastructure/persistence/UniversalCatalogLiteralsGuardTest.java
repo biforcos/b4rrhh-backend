@@ -80,6 +80,44 @@ class UniversalCatalogLiteralsGuardTest {
                 .contains("PRT: name=\"Hiring\"");
     }
 
+    // backend#25: la guardia de arriba ve la divergencia pero no la ausencia. Para un tipo
+    // universal, faltar en una reglamentación activa rompe la universalidad igual que decir
+    // otra cosa: si HIRING es lo mismo en todas partes, no puede estar sólo en una. Hoy la
+    // universalidad sale del cross join de las semillas —no del modelo— y desaparece con la
+    // primera fila insertada a mano.
+    @Test
+    void universalCodesExistInEveryActiveRuleSystem() {
+        List<Absence> absences = findAbsences();
+
+        assertThat(absences)
+                .withFailMessage(() -> describeAbsences(absences))
+                .isEmpty();
+    }
+
+    // La prueba de la guardia: se borra un código de una sola reglamentación —dentro de la
+    // transacción del test, que se deshace sola— y el mensaje tiene que decir en cuáles está
+    // y en cuál falta, no sólo que falta en alguna.
+    @Test
+    void reportsWhereTheCodeIsAndWhereItIsMissingWhenItDisappearsFromOneRuleSystem() {
+        int deleted = jdbcTemplate.update("""
+                delete from rulesystem.rule_entity
+                 where rule_system_code = 'PRT'
+                   and rule_entity_type_code = 'EMPLOYEE_PRESENCE_ENTRY_REASON'
+                   and code = 'HIRING'
+                """);
+        assertThat(deleted).as("HIRING/PRT viene en la semilla").isEqualTo(1);
+
+        List<Absence> absences = findAbsences();
+
+        assertThat(absences).hasSize(1);
+        String message = describeAbsences(absences);
+        assertThat(message)
+                .contains("EMPLOYEE_PRESENCE_ENTRY_REASON")
+                .contains("HIRING")
+                .contains("está en: ESP, FRA")
+                .contains("falta en: PRT");
+    }
+
     /** Un código universal cuyas filas no dicen lo mismo en todas las reglamentaciones. */
     private record Divergence(String typeCode, String code, List<Literal> literals) {
     }
@@ -130,5 +168,56 @@ class UniversalCatalogLiteralsGuardTest {
                         .collect(Collectors.joining("\n")))
                 .collect(Collectors.joining("\n",
                         "Literales universales divergentes (ADR-052, backend#22):\n", ""));
+    }
+
+    /** Un código universal que no existe en todas las reglamentaciones activas. */
+    private record Absence(String typeCode, String code, List<String> presentIn, List<String> missingIn) {
+    }
+
+    private List<Absence> findAbsences() {
+        List<String> activeRuleSystems = jdbcTemplate.queryForList(
+                "select code from rulesystem.rule_system where active order by code", String.class);
+
+        String placeholders = UNIVERSAL_TYPE_CODES.stream().map(code -> "?").collect(Collectors.joining(", "));
+        Object[] params = new Object[UNIVERSAL_TYPE_CODES.size() + 1];
+        UNIVERSAL_TYPE_CODES.toArray(params);
+        params[UNIVERSAL_TYPE_CODES.size()] = activeRuleSystems.size();
+
+        return jdbcTemplate.query("""
+                select rule_entity_type_code, code
+                  from rulesystem.rule_entity
+                 where rule_entity_type_code in (%s)
+                   and rule_system_code in (select code from rulesystem.rule_system where active)
+                 group by rule_entity_type_code, code
+                having count(distinct rule_system_code) <> ?
+                 order by rule_entity_type_code, code
+                """.formatted(placeholders),
+                        (rs, i) -> new Absence(rs.getString(1), rs.getString(2), List.of(), List.of()),
+                        params)
+                .stream()
+                .map(absence -> {
+                    List<String> presentIn = jdbcTemplate.queryForList("""
+                            select distinct rule_system_code
+                              from rulesystem.rule_entity
+                             where rule_entity_type_code = ?
+                               and code = ?
+                             order by rule_system_code
+                            """, String.class, absence.typeCode(), absence.code());
+                    List<String> missingIn = activeRuleSystems.stream()
+                            .filter(ruleSystem -> !presentIn.contains(ruleSystem))
+                            .toList();
+                    return new Absence(absence.typeCode(), absence.code(), presentIn, missingIn);
+                })
+                .toList();
+    }
+
+    private static String describeAbsences(List<Absence> absences) {
+        return absences.stream()
+                .map(absence -> absence.typeCode() + "/" + absence.code()
+                        + " no está en todas las reglamentaciones activas — está en: "
+                        + String.join(", ", absence.presentIn())
+                        + " — falta en: " + String.join(", ", absence.missingIn()))
+                .collect(Collectors.joining("\n",
+                        "Códigos universales ausentes de alguna reglamentación activa (ADR-052, backend#25):\n", ""));
     }
 }
