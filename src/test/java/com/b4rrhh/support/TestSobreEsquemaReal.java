@@ -1,6 +1,9 @@
 package com.b4rrhh.support;
 
+import com.b4rrhh.employee.absence.infrastructure.persistence.AbsenceRuleEntityUsageParticipant;
 import com.b4rrhh.employee.address.infrastructure.persistence.AddressRuleEntityUsageParticipant;
+import com.b4rrhh.employee.employee.infrastructure.persistence.EmployeeRuleEntityUsageParticipant;
+import com.b4rrhh.employee.payroll_input.infrastructure.persistence.PayrollInputRuleEntityUsageParticipant;
 import com.b4rrhh.employee.contact.infrastructure.persistence.ContactRuleEntityUsageParticipant;
 import com.b4rrhh.employee.contract.infrastructure.persistence.ContractRuleEntityUsageParticipant;
 import com.b4rrhh.employee.cost_center.infrastructure.persistence.CostCenterRuleEntityUsageParticipant;
@@ -107,7 +110,10 @@ import java.lang.annotation.Target;
         IdentifierRuleEntityUsageParticipant.class,
         LaborClassificationRuleEntityUsageParticipant.class,
         PresenceRuleEntityUsageParticipant.class,
-        WorkCenterRuleEntityUsageParticipant.class
+        WorkCenterRuleEntityUsageParticipant.class,
+        AbsenceRuleEntityUsageParticipant.class,
+        EmployeeRuleEntityUsageParticipant.class,
+        PayrollInputRuleEntityUsageParticipant.class
 })
 public @interface TestSobreEsquemaReal {
 }

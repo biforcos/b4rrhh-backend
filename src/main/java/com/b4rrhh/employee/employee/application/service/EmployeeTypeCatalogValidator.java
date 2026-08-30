@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.employee.application.service;
 
+import com.b4rrhh.employee.employee.application.usecase.EmployeeRuleEntityTypeCodes;
 import com.b4rrhh.employee.employee.domain.exception.EmployeeTypeInvalidException;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
@@ -22,7 +23,7 @@ public class EmployeeTypeCatalogValidator {
             LocalDate referenceDate
     ) {
         RuleEntity ruleEntity = ruleEntityRepository
-                .findByBusinessKey(ruleSystemCode, "EMPLOYEE_TYPE", employeeTypeCode)
+                .findByBusinessKey(ruleSystemCode, EmployeeRuleEntityTypeCodes.EMPLOYEE_TYPE, employeeTypeCode)
                 .orElseThrow(() -> new EmployeeTypeInvalidException(employeeTypeCode));
 
         if (!ruleEntity.isActive() || !isDateApplicable(ruleEntity, referenceDate)) {

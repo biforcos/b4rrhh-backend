@@ -88,7 +88,10 @@ class RuleEntityUsageParticipantsIntegrationTest {
                         values (?, 1, 'BRANCH_EAST', date '2026-01-01')"""),
                 Arguments.of("cost-centers", "COST_CENTER", "CC_ADMIN", """
                         insert into employee.cost_center (employee_id, cost_center_code, allocation_percentage, start_date)
-                        values (?, 'CC_ADMIN', 100, date '2026-01-01')""")
+                        values (?, 'CC_ADMIN', 100, date '2026-01-01')"""),
+                Arguments.of("absences", "EMPLOYEE_ABSENCE_TYPE", "FORCE_MAJEURE", """
+                        insert into employee.employee_absence (employee_id, absence_type_code, start_date, created_at, updated_at)
+                        values (?, 'FORCE_MAJEURE', date '2026-01-01', now(), now())""")
         );
     }
 
@@ -106,6 +109,41 @@ class RuleEntityUsageParticipantsIntegrationTest {
         assertThat(participant.countReferences("ESP", typeCode, code)).isEqualTo(before + 1);
         assertThat(participant.countReferences("FRA", typeCode, code)).as("otra reglamentación").isZero();
         assertThat(participant.countReferences("ESP", "SOME_OTHER_TYPE", code)).as("otro tipo").isZero();
+    }
+
+    // backend#29: las dos tablas que llevan su propio rule_system_code, sin pasar por employee_id.
+    @Test
+    void theEmployeeTypeIsReferencedByEveryEmployeeOfThatType() {
+        RuleEntityUsageParticipant employees = participant("employees");
+        long before = employees.countReferences("ESP", "EMPLOYEE_TYPE", "INTERNAL");
+
+        DatosDePrueba.empleado(jdbcTemplate);
+
+        assertThat(employees.countReferences("ESP", "EMPLOYEE_TYPE", "INTERNAL")).isEqualTo(before + 1);
+        assertThat(employees.countReferences("FRA", "EMPLOYEE_TYPE", "INTERNAL")).as("otra reglamentación").isZero();
+    }
+
+    @Test
+    void thePayrollInputReferencesTheEmployeeTypeButNotTheConcept() {
+        RuleEntityUsageParticipant payrollInputs = participant("payroll-inputs");
+        long before = payrollInputs.countReferences("ESP", "EMPLOYEE_TYPE", "INTERNAL");
+        jdbcTemplate.update("""
+                insert into employee.employee_payroll_input
+                    (rule_system_code, employee_type_code, employee_number, concept_code, period, quantity)
+                values ('ESP', 'INTERNAL', 'T00000001', 'TST_CONCEPT', 202601, 1)
+                """);
+
+        assertThat(payrollInputs.countReferences("ESP", "EMPLOYEE_TYPE", "INTERNAL")).isEqualTo(before + 1);
+        assertThat(payrollInputs.countReferences("FRA", "EMPLOYEE_TYPE", "INTERNAL")).as("otra reglamentación").isZero();
+        assertThat(usageCheckPort.findReferences("ESP", "SOME_TYPE", "TST_CONCEPT"))
+                .as("concept_code es del motor de nómina, no catálogo").isEmpty();
+    }
+
+    private RuleEntityUsageParticipant participant(String resource) {
+        return participants.stream()
+                .filter(candidate -> candidate.resource().equals(resource))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("no participant declares " + resource));
     }
 
     @Test

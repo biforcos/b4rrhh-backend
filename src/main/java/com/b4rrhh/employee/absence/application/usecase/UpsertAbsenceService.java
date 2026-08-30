@@ -52,7 +52,7 @@ public class UpsertAbsenceService implements UpsertAbsenceUseCase {
         Integer endTime         = command.endTime();
 
         // 1. Validate absence type catalog
-        ruleEntityRepository.findByBusinessKey(ruleSystemCode, "EMPLOYEE_ABSENCE_TYPE", absenceTypeCode)
+        ruleEntityRepository.findByBusinessKey(ruleSystemCode, AbsenceRuleEntityTypeCodes.EMPLOYEE_ABSENCE_TYPE, absenceTypeCode)
                 .orElseThrow(() -> new AbsenceCatalogValueInvalidException("absenceTypeCode", absenceTypeCode));
 
         // 2. Validate employee exists and is ACTIVE
