@@ -15,7 +15,9 @@ import com.b4rrhh.payroll_engine.concept.infrastructure.persistence.PayrollConce
 import com.b4rrhh.payroll_engine.eligibility.infrastructure.persistence.ConceptAssignmentPersistenceAdapter;
 import com.b4rrhh.payroll_engine.table.infrastructure.persistence.PayrollTableRowManagementAdapter;
 import com.b4rrhh.rulesystem.agreementprofile.infrastructure.persistence.AgreementCatalogLookupAdapter;
+import com.b4rrhh.rulesystem.application.usecase.DeleteRuleEntityService;
 import com.b4rrhh.rulesystem.infrastructure.persistence.RuleEntityPersistenceAdapter;
+import com.b4rrhh.rulesystem.infrastructure.persistence.RuleEntityUsageCheckAdapter;
 import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
 import com.b4rrhh.rulesystem.translation.application.usecase.GetRuleEntityTranslationCoverageService;
 import com.b4rrhh.rulesystem.translation.infrastructure.persistence.RuleEntityTranslationCoverageReadAdapter;
@@ -85,7 +87,10 @@ import java.lang.annotation.Target;
         RuleEntityTranslationPersistenceAdapter.class,
         RuleEntityLabelResolver.class,
         RuleEntityTranslationCoverageReadAdapter.class,
-        GetRuleEntityTranslationCoverageService.class
+        GetRuleEntityTranslationCoverageService.class,
+        // rulesystem: borrado de codigos (backend#26)
+        DeleteRuleEntityService.class,
+        RuleEntityUsageCheckAdapter.class
 })
 public @interface TestSobreEsquemaReal {
 }
