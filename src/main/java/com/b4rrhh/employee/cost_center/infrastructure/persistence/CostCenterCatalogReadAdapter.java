@@ -2,7 +2,7 @@ package com.b4rrhh.employee.cost_center.infrastructure.persistence;
 
 import com.b4rrhh.employee.cost_center.application.port.CostCenterCatalogReadPort;
 import com.b4rrhh.employee.cost_center.application.usecase.CostCenterRuleEntityTypeCodes;
-import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -10,16 +10,19 @@ import java.util.Optional;
 @Component
 public class CostCenterCatalogReadAdapter implements CostCenterCatalogReadPort {
 
-    private final RuleEntityRepository ruleEntityRepository;
+    private final RuleEntityLabelResolver ruleEntityLabelResolver;
 
-    public CostCenterCatalogReadAdapter(RuleEntityRepository ruleEntityRepository) {
-        this.ruleEntityRepository = ruleEntityRepository;
+    public CostCenterCatalogReadAdapter(RuleEntityLabelResolver ruleEntityLabelResolver) {
+        this.ruleEntityLabelResolver = ruleEntityLabelResolver;
     }
 
     @Override
-    public Optional<String> findCostCenterName(String ruleSystemCode, String costCenterCode) {
-        return ruleEntityRepository
-                .findByBusinessKey(ruleSystemCode, CostCenterRuleEntityTypeCodes.COST_CENTER, costCenterCode)
-                .map(entity -> entity.getName());
+    public Optional<String> findCostCenterName(String ruleSystemCode, String costCenterCode, String languageCode) {
+        return ruleEntityLabelResolver.resolveName(
+                ruleSystemCode,
+                CostCenterRuleEntityTypeCodes.COST_CENTER,
+                costCenterCode,
+                languageCode
+        );
     }
 }

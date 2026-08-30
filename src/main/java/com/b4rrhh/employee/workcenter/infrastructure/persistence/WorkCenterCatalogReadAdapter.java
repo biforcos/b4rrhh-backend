@@ -3,7 +3,7 @@ package com.b4rrhh.employee.workcenter.infrastructure.persistence;
 import com.b4rrhh.employee.workcenter.application.port.WorkCenterCatalogReadPort;
 import com.b4rrhh.employee.workcenter.application.usecase.WorkCenterRuleEntityTypeCodes;
 import com.b4rrhh.employee.workcenter.domain.port.WorkCenterCompanyLookupPort;
-import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -12,30 +12,28 @@ import java.util.Optional;
 @Component
 public class WorkCenterCatalogReadAdapter implements WorkCenterCatalogReadPort {
 
-    private final RuleEntityRepository ruleEntityRepository;
+    private final RuleEntityLabelResolver ruleEntityLabelResolver;
     private final WorkCenterCompanyLookupPort workCenterCompanyLookupPort;
 
     public WorkCenterCatalogReadAdapter(
-            RuleEntityRepository ruleEntityRepository,
+            RuleEntityLabelResolver ruleEntityLabelResolver,
             WorkCenterCompanyLookupPort workCenterCompanyLookupPort
     ) {
-        this.ruleEntityRepository = ruleEntityRepository;
+        this.ruleEntityLabelResolver = ruleEntityLabelResolver;
         this.workCenterCompanyLookupPort = workCenterCompanyLookupPort;
     }
 
     @Override
-    public Optional<String> findWorkCenterName(String ruleSystemCode, String workCenterCode) {
+    public Optional<String> findWorkCenterName(String ruleSystemCode, String workCenterCode, String languageCode) {
         String normalizedRuleSystemCode = normalizeRequiredUppercase("ruleSystemCode", ruleSystemCode);
         String normalizedWorkCenterCode = normalizeRequiredUppercase("workCenterCode", workCenterCode);
 
-        return ruleEntityRepository
-                .findByBusinessKey(
-                        normalizedRuleSystemCode,
-                        WorkCenterRuleEntityTypeCodes.WORK_CENTER,
-                        normalizedWorkCenterCode
-                )
-                .map(entity -> entity.getName() == null ? null : entity.getName().trim())
-                .filter(name -> name != null && !name.isEmpty());
+        return ruleEntityLabelResolver.resolveName(
+                normalizedRuleSystemCode,
+                WorkCenterRuleEntityTypeCodes.WORK_CENTER,
+                normalizedWorkCenterCode,
+                languageCode
+        );
     }
 
     @Override
@@ -51,18 +49,16 @@ public class WorkCenterCatalogReadAdapter implements WorkCenterCatalogReadPort {
     }
 
     @Override
-    public Optional<String> findCompanyName(String ruleSystemCode, String companyCode) {
+    public Optional<String> findCompanyName(String ruleSystemCode, String companyCode, String languageCode) {
         String normalizedRuleSystemCode = normalizeRequiredUppercase("ruleSystemCode", ruleSystemCode);
         String normalizedCompanyCode = normalizeRequiredUppercase("companyCode", companyCode);
 
-        return ruleEntityRepository
-                .findByBusinessKey(
-                        normalizedRuleSystemCode,
-                        WorkCenterRuleEntityTypeCodes.COMPANY,
-                        normalizedCompanyCode
-                )
-                .map(entity -> entity.getName() == null ? null : entity.getName().trim())
-                .filter(name -> name != null && !name.isEmpty());
+        return ruleEntityLabelResolver.resolveName(
+                normalizedRuleSystemCode,
+                WorkCenterRuleEntityTypeCodes.COMPANY,
+                normalizedCompanyCode,
+                languageCode
+        );
     }
 
     private String normalizeRequiredUppercase(String fieldName, String value) {
