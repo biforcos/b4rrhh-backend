@@ -19,8 +19,8 @@ public interface SpringDataRuleEntityRepository extends JpaRepository<RuleEntity
         where re.ruleSystemCode = :ruleSystemCode
           and re.ruleEntityTypeCode = :ruleEntityTypeCode
           and re.active = true
-          and (:referenceDate is null or re.startDate <= :referenceDate)
-          and (:referenceDate is null or :referenceDate <= coalesce(re.endDate, :maxDate))
+          and (cast(:referenceDate as date) is null or re.startDate <= :referenceDate)
+          and (cast(:referenceDate as date) is null or :referenceDate <= coalesce(re.endDate, :maxDate))
           and (
               :qLike is null
               or lower(re.code) like :qLike

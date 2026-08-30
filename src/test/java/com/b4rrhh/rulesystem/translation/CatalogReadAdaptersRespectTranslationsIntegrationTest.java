@@ -106,13 +106,10 @@ class CatalogReadAdaptersRespectTranslationsIntegrationTest {
                 springDataRuleEntityRepository, springDataRuleEntityTranslationRepository);
         insertTranslation("EMPLOYEE_PRESENCE_ENTRY_REASON", "HIRING", "es-ES", "Contratación");
 
-        // referenceDate va a null a proposito: con una fecha informada, el JPQL preexistente
-        // findDirectCatalogOptions falla en Postgres ("could not determine data type of
-        // parameter $3"). Es un bug anterior a este cambio, anotado en backend#24; aqui no se toca.
         List<DirectCatalogOption> translated = adapter.findDirectOptions(
-                "ESP", "EMPLOYEE_PRESENCE_ENTRY_REASON", null, null, "es-ES");
+                "ESP", "EMPLOYEE_PRESENCE_ENTRY_REASON", LocalDate.of(2026, 1, 1), null, "es-ES");
         List<DirectCatalogOption> base = adapter.findDirectOptions(
-                "ESP", "EMPLOYEE_PRESENCE_ENTRY_REASON", null, null);
+                "ESP", "EMPLOYEE_PRESENCE_ENTRY_REASON", LocalDate.of(2026, 1, 1), null);
 
         assertThat(translated).filteredOn(option -> option.code().equals("HIRING"))
                 .extracting(DirectCatalogOption::name).containsExactly("Contratación");
