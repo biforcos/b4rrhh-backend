@@ -153,7 +153,38 @@ traducido» de «está traducido y da la casualidad de que suena inglés», y lo
 nunca. Por eso hay un **informe de cobertura** que dice qué tipos y qué idiomas están sin traducir. El
 hueco se ve donde importa —cuando alguien va a traducir— y no en cada respuesta.
 
-### 6. Los niveles de alcance: todavía no, y con guardia mientras tanto
+### 6. Los códigos se crean desde la aplicación, así que el alta tiene que decir en qué idioma se escribe
+
+`rule_entity` no es sólo semilla: hay pantallas de mantenimiento que crean y corrigen códigos
+(`CreateRuleEntityService`, `CorrectRuleEntityService`). Quien da de alta un código escribe un
+literal, y **hoy nada dice en qué idioma debe escribirlo**.
+
+Ese es el riesgo más serio de todo este ADR, y es peor que el de lectura: alguien que trabaja con la
+aplicación en español, dando de alta un motivo de baja nuevo, escribirá «Excedencia voluntaria» en el
+literal base. No hace nada mal —nadie le ha dicho otra cosa— y sin embargo acaba de meter español en
+la columna que este ADR define como inglés neutro. **La premisa se pudre desde dentro, de código en
+código y en silencio**, y no hay pantalla donde eso se vea.
+
+Por eso el formulario de alta **deriva de la clase del tipo**, igual que en ADR-051 el contenedor
+deriva del modo de mantenimiento:
+
+| Clase del tipo | Qué pide el formulario |
+|---|---|
+| Vocabulario del dominio | El literal base **etiquetado como inglés**, y a continuación las traducciones de los idiomas activos |
+| Cita reglamentaria | El literal **en el idioma de la norma**, dicho explícitamente, y ningún campo de traducción |
+| Nombre propio | El nombre, sin más |
+
+Tres consecuencias que conviene fijar aquí:
+
+- **La pantalla de mantenimiento enseña y edita el literal base, no una traducción.** Se corrige lo
+  que está guardado; si no, nadie sabría nunca qué hay realmente en la fila.
+- **Las traducciones se editan en la misma pantalla que el código**, no en una pantalla de traductor
+  aparte. Un código recién creado sin su traducción es un hueco que se abre en el momento del alta y
+  que luego nadie recuerda cerrar; el informe de cobertura lo listará, pero es mejor no crearlo.
+- **El idioma de la interfaz no decide el idioma del literal base.** Son cosas distintas y el
+  formulario tiene que dejarlo claro, porque la intuición del usuario dice lo contrario.
+
+### 7. Los niveles de alcance: todavía no, y con guardia mientras tanto
 
 La solución de fondo a la duplicación es que un catálogo pueda **no colgar de ninguna
 reglamentación**: `rule_entity.rule_system_code` nullable, donde `null` significa «vale para todas», y
