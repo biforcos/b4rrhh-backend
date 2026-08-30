@@ -15,6 +15,9 @@ import com.b4rrhh.payroll_engine.concept.infrastructure.persistence.PayrollConce
 import com.b4rrhh.payroll_engine.eligibility.infrastructure.persistence.ConceptAssignmentPersistenceAdapter;
 import com.b4rrhh.payroll_engine.table.infrastructure.persistence.PayrollTableRowManagementAdapter;
 import com.b4rrhh.rulesystem.agreementprofile.infrastructure.persistence.AgreementCatalogLookupAdapter;
+import com.b4rrhh.rulesystem.infrastructure.persistence.RuleEntityPersistenceAdapter;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.rulesystem.translation.infrastructure.persistence.RuleEntityTranslationPersistenceAdapter;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
@@ -74,7 +77,11 @@ import java.lang.annotation.Target;
         // payroll_engine
         PayrollConceptPersistenceAdapter.class,
         ConceptAssignmentPersistenceAdapter.class,
-        PayrollTableRowManagementAdapter.class
+        PayrollTableRowManagementAdapter.class,
+        // rulesystem: traducciones de rule_entity (ADR-052)
+        RuleEntityPersistenceAdapter.class,
+        RuleEntityTranslationPersistenceAdapter.class,
+        RuleEntityLabelResolver.class
 })
 public @interface TestSobreEsquemaReal {
 }
