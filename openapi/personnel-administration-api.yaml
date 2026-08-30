@@ -2759,6 +2759,41 @@ paths:
         "404":
           description: Rule entity type not found
 
+  /rule-entity-translations/coverage:
+    get:
+      operationId: getRuleEntityTranslationCoverage
+      summary: Translation coverage of rule entity labels for one language
+      description: >-
+        Administration report (ADR-052). For every rule entity type, how many codes have a
+        translation in the given language, how many do not, and which ones are missing.
+        Responses never mark which labels are translated; this report is where the gaps show.
+      tags:
+        - Rule Entity Translations
+      parameters:
+        - in: query
+          name: languageCode
+          required: true
+          description: Short BCP 47 tag (es-ES, fr-FR, en).
+          schema:
+            type: string
+            maxLength: 5
+            example: es-ES
+      responses:
+        "200":
+          description: Coverage report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuleEntityTranslationCoverageResponse"
+        "400":
+          description: languageCode is not a short BCP 47 tag
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuleEntityTranslationErrorResponse"
+        "403":
+          description: Requires the ADMIN role
+
   /rule-entities:
     post:
       operationId: createRuleEntity
@@ -5827,6 +5862,71 @@ components:
         type: string
         example: es-ES
   schemas:
+    RuleEntityTranslationCoverageResponse:
+      type: object
+      required:
+        - languageCode
+        - types
+      properties:
+        languageCode:
+          type: string
+          example: es-ES
+        types:
+          type: array
+          items:
+            $ref: "#/components/schemas/RuleEntityTypeTranslationCoverage"
+
+    RuleEntityTypeTranslationCoverage:
+      type: object
+      required:
+        - ruleEntityTypeCode
+        - total
+        - translated
+        - missing
+        - missingCodes
+      properties:
+        ruleEntityTypeCode:
+          type: string
+        total:
+          type: integer
+          format: int64
+        translated:
+          type: integer
+          format: int64
+        missing:
+          type: integer
+          format: int64
+        missingCodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/RuleEntityMissingTranslation"
+
+    RuleEntityMissingTranslation:
+      type: object
+      required:
+        - ruleSystemCode
+        - code
+        - name
+      properties:
+        ruleSystemCode:
+          type: string
+        code:
+          type: string
+        name:
+          type: string
+          description: The base literal that is being served meanwhile.
+
+    RuleEntityTranslationErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
     PayrollLaunchTargetSelectionType:
       type: string
       enum:

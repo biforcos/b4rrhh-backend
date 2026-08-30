@@ -1,6 +1,10 @@
 package com.b4rrhh.rulesystem.translation;
 
 import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.rulesystem.translation.application.usecase.GetRuleEntityTranslationCoverageUseCase;
+import com.b4rrhh.rulesystem.translation.application.usecase.RuleEntityTranslationCoverage;
+import com.b4rrhh.rulesystem.translation.application.usecase.RuleEntityTranslationCoverage.MissingCode;
+import com.b4rrhh.rulesystem.translation.application.usecase.RuleEntityTranslationCoverage.TypeCoverage;
 import com.b4rrhh.support.TestSobreEsquemaReal;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -33,6 +37,9 @@ class RuleEntityTranslationFlywayIntegrationTest {
 
     @Autowired
     private RuleEntityLabelResolver resolver;
+
+    @Autowired
+    private GetRuleEntityTranslationCoverageUseCase coverageUseCase;
 
     @Test
     void withAnEmptyTranslationTableEveryCodeResolvesToItsBaseLiteralWhateverTheLanguage() {
@@ -85,6 +92,36 @@ class RuleEntityTranslationFlywayIntegrationTest {
     void theSchemaRejectsALanguageCodeThatIsNotShortBcp47(String badLanguage) {
         assertThatThrownBy(() -> insertTranslation("ESP", ENTRY_REASON, "HIRING", badLanguage, "Contratación"))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void theCoverageReportMatchesWhatIsSeeded() {
+        insertTranslation("ESP", ENTRY_REASON, "HIRING", "es-ES", "Contratación");
+        insertTranslation("FRA", ENTRY_REASON, "HIRING", "es-ES", "Contratación");
+        Long entryReasons = jdbcTemplate.queryForObject(
+                "select count(*) from rulesystem.rule_entity where rule_entity_type_code = ?", Long.class, ENTRY_REASON);
+        Integer types = jdbcTemplate.queryForObject(
+                "select count(distinct rule_entity_type_code) from rulesystem.rule_entity", Integer.class);
+
+        RuleEntityTranslationCoverage coverage = coverageUseCase.getCoverage("es-ES");
+
+        assertThat(coverage.types()).hasSize(types);
+        TypeCoverage entryReasonCoverage = coverage.types().stream()
+                .filter(type -> type.ruleEntityTypeCode().equals(ENTRY_REASON))
+                .findFirst()
+                .orElseThrow();
+        assertThat(entryReasonCoverage.total()).isEqualTo(entryReasons);
+        assertThat(entryReasonCoverage.translated()).isEqualTo(2);
+        assertThat(entryReasonCoverage.missing()).isEqualTo(entryReasons - 2);
+        assertThat(entryReasonCoverage.missingCodes())
+                .hasSize((int) (entryReasons - 2))
+                .contains(new MissingCode("PRT", "HIRING", "Hiring"))
+                .doesNotContain(new MissingCode("ESP", "HIRING", "Hiring"), new MissingCode("FRA", "HIRING", "Hiring"));
+
+        // Todo lo demás sigue sin traducir, y el informe lo dice
+        coverage.types().stream()
+                .filter(type -> !type.ruleEntityTypeCode().equals(ENTRY_REASON))
+                .forEach(type -> assertThat(type.translated()).as(type.ruleEntityTypeCode()).isZero());
     }
 
     private void insertTranslation(String ruleSystemCode, String typeCode, String code, String language, String name) {
