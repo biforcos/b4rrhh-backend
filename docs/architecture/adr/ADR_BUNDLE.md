@@ -1,7 +1,7 @@
 # ADR Bundle
 
 > Fichero generado automáticamente. No editar a mano.
-> Fecha de generación: 2026-08-30 08:13:08
+> Fecha de generación: 2026-08-30 08:44:52
 
 ---
 
@@ -13266,11 +13266,12 @@ Existe **un único esqueleto de página** al que las pantallas se acogen, con cu
 1. **Las acciones de página van en `identidad`**, nunca dentro de una card del contenido.
 2. **`contextual` se pliega por defecto solo cuando no cabe.** El estado inicial lo decide el ancho
    disponible: si desplegarlo deja a `principal` por encima de la medida de lectura, se abre; si la
-   deja por debajo, se pliega. Medido en la ficha del empleado en una pantalla de 1920 px: con el
-   contextual abierto `principal` mide 1617 px frente a una medida de 1400 px —217 px de holgura— y
-   con el contextual cerrado quedan unos 800 px de papel muerto a la derecha. «Plegado siempre» era
-   una regla escrita antes de medir; el ancho es un dato, no una preferencia. El estado que elija el
-   usuario se recuerda y manda sobre el inicial.
+   deja por debajo, se pliega. Medido en la ficha del empleado, pantalla de 2560 px: con el
+   contextual cerrado la caja de contenido de `principal` mide 1980 px contra una medida de
+   1400 px, o sea **580 px de papel muerto**; con el contextual abierto mide 1569 px, todavía
+   169 px por encima de la medida. Abrirlo no aprieta el contenido: ocupa sitio que sobraba.
+   «Plegado siempre» era una regla escrita antes de medir; el ancho es un dato, no una preferencia.
+   El estado que elija el usuario se recuerda y manda sobre el inicial.
 3. **El raíl se pliega entero**, no por partes. Índice y cola viven o desaparecen juntos.
 4. **El menú principal se pliega a iconos**, y su estado se recuerda. Es la única navegación que
    admite plegarse a iconos, porque son pocos destinos usados a diario y se reconocen por la forma.
