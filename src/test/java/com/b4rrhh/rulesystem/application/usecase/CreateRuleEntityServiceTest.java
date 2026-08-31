@@ -1,6 +1,8 @@
 package com.b4rrhh.rulesystem.application.usecase;
 
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
+import com.b4rrhh.rulesystem.domain.model.LiteralClass;
+import com.b4rrhh.rulesystem.domain.model.MaintenanceMode;
 import com.b4rrhh.rulesystem.domain.model.RuleEntityType;
 import com.b4rrhh.rulesystem.domain.model.RuleSystem;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
@@ -121,6 +123,8 @@ class CreateRuleEntityServiceTest {
     }
 
     private RuleEntityType ruleEntityType() {
-        return new RuleEntityType(1L, "COMPANY", "Company", true, null, null);
+        return new RuleEntityType(1L, "COMPANY", "Company",
+                LiteralClass.PROPER_NOUN, MaintenanceMode.MAINTAINED, "ORGANIZATION",
+                true, null, null);
     }
 }

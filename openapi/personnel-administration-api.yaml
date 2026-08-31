@@ -8794,6 +8794,9 @@ components:
       required:
         - code
         - name
+        - literalClass
+        - maintenanceMode
+        - groupCode
       properties:
         code:
           type: string
@@ -8801,6 +8804,15 @@ components:
         name:
           type: string
           maxLength: 100
+        literalClass:
+          type: string
+          enum: [DOMAIN_VOCABULARY, REGULATORY_CITATION, PROPER_NOUN]
+        maintenanceMode:
+          type: string
+          enum: [MAINTAINED, REFERENCE, CLOSED]
+        groupCode:
+          type: string
+          maxLength: 30
     RuleEntityTypeResponse:
       type: object
       required:

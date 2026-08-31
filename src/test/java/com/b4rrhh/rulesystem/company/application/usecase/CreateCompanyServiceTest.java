@@ -7,6 +7,8 @@ import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileIn
 import com.b4rrhh.rulesystem.companyprofile.domain.model.CompanyProfile;
 import com.b4rrhh.rulesystem.companyprofile.domain.port.CompanyProfileRepository;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
+import com.b4rrhh.rulesystem.domain.model.LiteralClass;
+import com.b4rrhh.rulesystem.domain.model.MaintenanceMode;
 import com.b4rrhh.rulesystem.domain.model.RuleEntityType;
 import com.b4rrhh.rulesystem.domain.model.RuleSystem;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
@@ -69,6 +71,9 @@ class CreateCompanyServiceTest {
                 1L,
                 "COMPANY",
                 "Company",
+                LiteralClass.PROPER_NOUN,
+                MaintenanceMode.MAINTAINED,
+                "ORGANIZATION",
                 true,
                 LocalDateTime.now(),
                 LocalDateTime.now()
@@ -121,6 +126,9 @@ class CreateCompanyServiceTest {
                 1L,
                 "COMPANY",
                 "Company",
+                LiteralClass.PROPER_NOUN,
+                MaintenanceMode.MAINTAINED,
+                "ORGANIZATION",
                 true,
                 LocalDateTime.now(),
                 LocalDateTime.now()

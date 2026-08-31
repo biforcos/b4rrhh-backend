@@ -1,5 +1,7 @@
 package com.b4rrhh.rulesystem.application.usecase;
 
+import com.b4rrhh.rulesystem.domain.model.LiteralClass;
+import com.b4rrhh.rulesystem.domain.model.MaintenanceMode;
 import com.b4rrhh.rulesystem.domain.model.RuleEntityType;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityTypeRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,7 +30,9 @@ class GetRuleEntityTypeByCodeServiceTest {
 
     @Test
     void returnsTypeWhenFound() {
-        RuleEntityType type = new RuleEntityType(1L, "COMPANY", "Company", true, null, null);
+        RuleEntityType type = new RuleEntityType(1L, "COMPANY", "Company",
+                LiteralClass.PROPER_NOUN, MaintenanceMode.MAINTAINED, "ORGANIZATION",
+                true, null, null);
         when(ruleEntityTypeRepository.findByCode("COMPANY")).thenReturn(Optional.of(type));
 
         Optional<RuleEntityType> result = service.getByCode("COMPANY");

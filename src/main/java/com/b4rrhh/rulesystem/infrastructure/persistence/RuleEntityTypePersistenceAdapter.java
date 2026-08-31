@@ -38,6 +38,9 @@ public class RuleEntityTypePersistenceAdapter implements RuleEntityTypeRepositor
                 entity.getId(),
                 entity.getCode(),
                 entity.getName(),
+                entity.getLiteralClass(),
+                entity.getMaintenanceMode(),
+                entity.getGroupCode(),
                 entity.isActive(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
@@ -49,6 +52,9 @@ public class RuleEntityTypePersistenceAdapter implements RuleEntityTypeRepositor
         entity.setId(ruleEntityType.getId());
         entity.setCode(ruleEntityType.getCode());
         entity.setName(ruleEntityType.getName());
+        entity.setLiteralClass(ruleEntityType.getLiteralClass());
+        entity.setMaintenanceMode(ruleEntityType.getMaintenanceMode());
+        entity.setGroupCode(ruleEntityType.getGroupCode());
         entity.setActive(ruleEntityType.isActive());
         return entity;
     }

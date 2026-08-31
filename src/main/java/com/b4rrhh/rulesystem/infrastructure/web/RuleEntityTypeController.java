@@ -4,6 +4,8 @@ import com.b4rrhh.rulesystem.application.usecase.CreateRuleEntityTypeCommand;
 import com.b4rrhh.rulesystem.application.usecase.CreateRuleEntityTypeUseCase;
 import com.b4rrhh.rulesystem.application.usecase.GetRuleEntityTypeByCodeUseCase;
 import com.b4rrhh.rulesystem.application.usecase.ListRuleEntityTypesUseCase;
+import com.b4rrhh.rulesystem.domain.model.LiteralClass;
+import com.b4rrhh.rulesystem.domain.model.MaintenanceMode;
 import com.b4rrhh.rulesystem.domain.model.RuleEntityType;
 import com.b4rrhh.rulesystem.infrastructure.web.dto.CreateRuleEntityTypeRequest;
 import com.b4rrhh.rulesystem.infrastructure.web.dto.RuleEntityTypeResponse;
@@ -41,7 +43,10 @@ public class RuleEntityTypeController {
         RuleEntityType created = createRuleEntityTypeUseCase.create(
                 new CreateRuleEntityTypeCommand(
                         request.code(),
-                        request.name()
+                        request.name(),
+                        parse(LiteralClass.class, request.literalClass()),
+                        parse(MaintenanceMode.class, request.maintenanceMode()),
+                        request.groupCode()
                 )
         );
 
@@ -63,6 +68,11 @@ public class RuleEntityTypeController {
                 .toList();
 
         return ResponseEntity.ok(response);
+    }
+
+    /** Nulo se queda nulo: el caso de uso es quien rechaza la decisión ausente (ADR-054 §6). */
+    private static <E extends Enum<E>> E parse(Class<E> type, String value) {
+        return value == null || value.isBlank() ? null : Enum.valueOf(type, value.trim().toUpperCase());
     }
 
     private RuleEntityTypeResponse toResponse(RuleEntityType ruleEntityType) {

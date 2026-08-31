@@ -1,6 +1,8 @@
 package com.b4rrhh.rulesystem.workcenter.application.usecase;
 
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
+import com.b4rrhh.rulesystem.domain.model.LiteralClass;
+import com.b4rrhh.rulesystem.domain.model.MaintenanceMode;
 import com.b4rrhh.rulesystem.domain.model.RuleEntityType;
 import com.b4rrhh.rulesystem.domain.model.RuleSystem;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
@@ -122,7 +124,9 @@ class CreateWorkCenterServiceTest {
     }
 
     private RuleEntityType ruleEntityType(String code) {
-        return new RuleEntityType(1L, code, code, true, LocalDateTime.now(), LocalDateTime.now());
+        return new RuleEntityType(1L, code, code,
+                LiteralClass.PROPER_NOUN, MaintenanceMode.MAINTAINED, "ORGANIZATION",
+                true, LocalDateTime.now(), LocalDateTime.now());
     }
 
     private RuleEntity ruleEntity(

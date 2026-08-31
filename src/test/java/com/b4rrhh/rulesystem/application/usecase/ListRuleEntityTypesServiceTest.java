@@ -1,5 +1,7 @@
 package com.b4rrhh.rulesystem.application.usecase;
 
+import com.b4rrhh.rulesystem.domain.model.LiteralClass;
+import com.b4rrhh.rulesystem.domain.model.MaintenanceMode;
 import com.b4rrhh.rulesystem.domain.model.RuleEntityType;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityTypeRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,8 +30,12 @@ class ListRuleEntityTypesServiceTest {
     @Test
     void returnsAllRuleEntityTypes() {
         List<RuleEntityType> types = List.of(
-                new RuleEntityType(1L, "COMPANY", "Company", true, null, null),
-                new RuleEntityType(2L, "WORK_CENTER", "Work Center", true, null, null)
+                new RuleEntityType(1L, "COMPANY", "Company",
+                        LiteralClass.PROPER_NOUN, MaintenanceMode.MAINTAINED, "ORGANIZATION",
+                        true, null, null),
+                new RuleEntityType(2L, "WORK_CENTER", "Work Center",
+                        LiteralClass.PROPER_NOUN, MaintenanceMode.MAINTAINED, "ORGANIZATION",
+                        true, null, null)
         );
         when(ruleEntityTypeRepository.findAll()).thenReturn(types);
 

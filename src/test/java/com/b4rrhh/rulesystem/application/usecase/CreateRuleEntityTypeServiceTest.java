@@ -1,5 +1,7 @@
 package com.b4rrhh.rulesystem.application.usecase;
 
+import com.b4rrhh.rulesystem.domain.model.LiteralClass;
+import com.b4rrhh.rulesystem.domain.model.MaintenanceMode;
 import com.b4rrhh.rulesystem.domain.model.RuleEntityType;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityTypeRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,10 +33,14 @@ class CreateRuleEntityTypeServiceTest {
         when(ruleEntityTypeRepository.findByCode("COMPANY")).thenReturn(Optional.empty());
         when(ruleEntityTypeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        RuleEntityType result = service.create(new CreateRuleEntityTypeCommand("COMPANY", "Company"));
+        RuleEntityType result = service.create(new CreateRuleEntityTypeCommand(
+                "COMPANY", "Company", LiteralClass.PROPER_NOUN, MaintenanceMode.MAINTAINED, "ORGANIZATION"));
 
         assertEquals("COMPANY", result.getCode());
         assertEquals("Company", result.getName());
+        assertEquals(LiteralClass.PROPER_NOUN, result.getLiteralClass());
+        assertEquals(MaintenanceMode.MAINTAINED, result.getMaintenanceMode());
+        assertEquals("ORGANIZATION", result.getGroupCode());
         assertTrue(result.isActive());
         verify(ruleEntityTypeRepository).save(any());
     }
@@ -44,19 +50,37 @@ class CreateRuleEntityTypeServiceTest {
         when(ruleEntityTypeRepository.findByCode("COMPANY")).thenReturn(Optional.empty());
         when(ruleEntityTypeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        RuleEntityType result = service.create(new CreateRuleEntityTypeCommand(" company ", "  Company  "));
+        RuleEntityType result = service.create(new CreateRuleEntityTypeCommand(
+                " company ", "  Company  ", LiteralClass.PROPER_NOUN, MaintenanceMode.MAINTAINED, " organization "));
 
         assertEquals("COMPANY", result.getCode());
         assertEquals("Company", result.getName());
+        assertEquals("ORGANIZATION", result.getGroupCode());
     }
 
     @Test
     void failsWhenTypeWithSameCodeAlreadyExists() {
         when(ruleEntityTypeRepository.findByCode("COMPANY"))
-                .thenReturn(Optional.of(new RuleEntityType(1L, "COMPANY", "Company", true, null, null)));
+                .thenReturn(Optional.of(new RuleEntityType(
+                        1L, "COMPANY", "Company",
+                        LiteralClass.PROPER_NOUN, MaintenanceMode.MAINTAINED, "ORGANIZATION",
+                        true, null, null)));
 
         assertThrows(IllegalArgumentException.class, () ->
-                service.create(new CreateRuleEntityTypeCommand("COMPANY", "Company")));
+                service.create(new CreateRuleEntityTypeCommand(
+                        "COMPANY", "Company",
+                        LiteralClass.PROPER_NOUN, MaintenanceMode.MAINTAINED, "ORGANIZATION")));
+
+        verify(ruleEntityTypeRepository, never()).save(any());
+    }
+
+    // ADR-054 §6: añadir un tipo cuesta tres decisiones; sin una de ellas no se guarda nada.
+    @Test
+    void failsWhenAClassificationDecisionIsMissing() {
+        assertThrows(IllegalArgumentException.class, () ->
+                service.create(new CreateRuleEntityTypeCommand(
+                        "COMPANY", "Company",
+                        null, MaintenanceMode.MAINTAINED, "ORGANIZATION")));
 
         verify(ruleEntityTypeRepository, never()).save(any());
     }
