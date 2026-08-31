@@ -3,9 +3,11 @@ package com.b4rrhh.rulesystem.infrastructure.web;
 import com.b4rrhh.rulesystem.application.usecase.CreateRuleEntityTypeCommand;
 import com.b4rrhh.rulesystem.application.usecase.CreateRuleEntityTypeUseCase;
 import com.b4rrhh.rulesystem.application.usecase.GetRuleEntityTypeByCodeUseCase;
+import com.b4rrhh.rulesystem.application.usecase.ListRuleEntityExtensionsUseCase;
 import com.b4rrhh.rulesystem.application.usecase.ListRuleEntityTypeGroupsUseCase;
 import com.b4rrhh.rulesystem.application.usecase.ListRuleEntityTypesUseCase;
 import com.b4rrhh.rulesystem.domain.model.LiteralClass;
+import com.b4rrhh.rulesystem.domain.model.RuleEntityExtension;
 import com.b4rrhh.rulesystem.domain.model.MaintenanceMode;
 import com.b4rrhh.rulesystem.domain.model.RuleEntityType;
 import com.b4rrhh.rulesystem.domain.model.RuleEntityTypeGroup;
@@ -31,6 +33,7 @@ public class RuleEntityTypeController {
     private final GetRuleEntityTypeByCodeUseCase getRuleEntityTypeByCodeUseCase;
     private final ListRuleEntityTypesUseCase listRuleEntityTypesUseCase;
     private final ListRuleEntityTypeGroupsUseCase listRuleEntityTypeGroupsUseCase;
+    private final ListRuleEntityExtensionsUseCase listRuleEntityExtensionsUseCase;
     private final RuleEntityTypeResponseAssembler assembler;
 
     public RuleEntityTypeController(
@@ -38,12 +41,14 @@ public class RuleEntityTypeController {
             GetRuleEntityTypeByCodeUseCase getRuleEntityTypeByCodeUseCase,
             ListRuleEntityTypesUseCase listRuleEntityTypesUseCase,
             ListRuleEntityTypeGroupsUseCase listRuleEntityTypeGroupsUseCase,
+            ListRuleEntityExtensionsUseCase listRuleEntityExtensionsUseCase,
             RuleEntityTypeResponseAssembler assembler
     ) {
         this.createRuleEntityTypeUseCase = createRuleEntityTypeUseCase;
         this.getRuleEntityTypeByCodeUseCase = getRuleEntityTypeByCodeUseCase;
         this.listRuleEntityTypesUseCase = listRuleEntityTypesUseCase;
         this.listRuleEntityTypeGroupsUseCase = listRuleEntityTypeGroupsUseCase;
+        this.listRuleEntityExtensionsUseCase = listRuleEntityExtensionsUseCase;
         this.assembler = assembler;
     }
 
@@ -73,7 +78,8 @@ public class RuleEntityTypeController {
     public ResponseEntity<List<RuleEntityTypeResponse>> list() {
         List<RuleEntityTypeResponse> response = assembler.toResponseList(
                 listRuleEntityTypesUseCase.listAll(),
-                listRuleEntityTypeGroupsUseCase.listAll()
+                listRuleEntityTypeGroupsUseCase.listAll(),
+                listRuleEntityExtensionsUseCase.listAll()
         );
 
         return ResponseEntity.ok(response);
@@ -91,6 +97,10 @@ public class RuleEntityTypeController {
                 .orElseThrow(() -> new IllegalStateException(
                         "El grupo " + ruleEntityType.getGroupCode() + " no está sembrado"));
 
-        return assembler.toResponse(ruleEntityType, group);
+        List<RuleEntityExtension> extensions = listRuleEntityExtensionsUseCase.listAll().stream()
+                .filter(extension -> extension.ruleEntityTypeCode().equals(ruleEntityType.getCode()))
+                .toList();
+
+        return assembler.toResponse(ruleEntityType, group, extensions);
     }
 }

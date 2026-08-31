@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -39,5 +40,27 @@ class RuleEntityTypeMetadataEndToEndTest {
                 // y un nombre propio que se mantiene
                 .andExpect(jsonPath("$[?(@.code == 'COMPANY')].literalClass").value("PROPER_NOUN"))
                 .andExpect(jsonPath("$[?(@.code == 'COMPANY')].maintenanceMode").value("MAINTAINED"));
+    }
+
+    /**
+     * ADR-053 §7 (frontend#33): las extensiones declaradas viajan con cada tipo, que es de
+     * donde el menú deriva quién tiene pantalla propia. Lo afirmado es el seed de la V106.
+     */
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void theDeclaredExtensionsTravelWithEachType() throws Exception {
+        mockMvc.perform(get("/rule-entity-types"))
+                .andExpect(status().isOk())
+                // COMPANY declara su perfil obligatorio 1:1
+                .andExpect(jsonPath("$[?(@.code == 'COMPANY')].extensions[*].extensionCode").value("PROFILE"))
+                .andExpect(jsonPath("$[?(@.code == 'COMPANY')].extensions[?(@.extensionCode == 'PROFILE')].required").value(true))
+                .andExpect(jsonPath("$[?(@.code == 'COMPANY')].extensions[?(@.extensionCode == 'PROFILE')].cardinality").value("1:1"))
+                // WORK_CENTER tiene perfil y contactos
+                .andExpect(jsonPath("$[?(@.code == 'WORK_CENTER')].extensions[*].extensionCode")
+                        .value(containsInAnyOrder("CONTACTS", "PROFILE")))
+                // un tipo que es sólo código y literal viaja con la lista vacía: «solo raíz»
+                .andExpect(jsonPath("$[?(@.code == 'CONTACT_TYPE')].extensions[*]").isEmpty())
+                // y COST_CENTER, la pregunta que abrió frontend#33: el modelo no le declara nada
+                .andExpect(jsonPath("$[?(@.code == 'COST_CENTER')].extensions[*]").isEmpty());
     }
 }

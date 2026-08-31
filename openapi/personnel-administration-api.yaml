@@ -8822,6 +8822,7 @@ components:
         - literalClass
         - maintenanceMode
         - group
+        - extensions
       properties:
         code:
           type: string
@@ -8837,6 +8838,13 @@ components:
           enum: [MAINTAINED, REFERENCE, CLOSED]
         group:
           $ref: "#/components/schemas/RuleEntityTypeGroupResponse"
+        extensions:
+          type: array
+          description: >-
+            Extensions declared for this type in the metamodel (ADR-053). Empty means
+            root-only; the menu derives from this who gets its own screen (ADR-053 s7).
+          items:
+            $ref: "#/components/schemas/RuleEntityTypeExtensionResponse"
     RuleEntityTypeGroupResponse:
       type: object
       required:
@@ -8850,6 +8858,20 @@ components:
           type: string
         displayOrder:
           type: integer
+    RuleEntityTypeExtensionResponse:
+      type: object
+      required:
+        - extensionCode
+        - cardinality
+        - required
+      properties:
+        extensionCode:
+          type: string
+        cardinality:
+          type: string
+          enum: ["1:1", "1:N"]
+        required:
+          type: boolean
     CreateRuleEntityRequest:
       type: object
       required:
