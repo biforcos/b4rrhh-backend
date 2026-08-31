@@ -8,6 +8,12 @@ import com.b4rrhh.employee.contact.infrastructure.persistence.ContactRuleEntityU
 import com.b4rrhh.employee.contract.infrastructure.persistence.ContractRuleEntityUsageParticipant;
 import com.b4rrhh.employee.cost_center.infrastructure.persistence.CostCenterRuleEntityUsageParticipant;
 import com.b4rrhh.employee.identifier.infrastructure.persistence.IdentifierRuleEntityUsageParticipant;
+import com.b4rrhh.employee.journey.infrastructure.persistence.EmployeeJourneyLookupAdapter;
+import com.b4rrhh.employee.journey.infrastructure.persistence.JourneyContractReadAdapter;
+import com.b4rrhh.employee.journey.infrastructure.persistence.JourneyCostCenterReadAdapter;
+import com.b4rrhh.employee.journey.infrastructure.persistence.JourneyLaborClassificationReadAdapter;
+import com.b4rrhh.employee.journey.infrastructure.persistence.JourneyPresenceReadAdapter;
+import com.b4rrhh.employee.journey.infrastructure.persistence.JourneyWorkCenterReadAdapter;
 import com.b4rrhh.employee.labor_classification.infrastructure.persistence.LaborClassificationRuleEntityUsageParticipant;
 import com.b4rrhh.employee.presence.infrastructure.persistence.PresenceRuleEntityUsageParticipant;
 import com.b4rrhh.employee.workcenter.infrastructure.persistence.WorkCenterRuleEntityUsageParticipant;
@@ -86,6 +92,13 @@ import java.lang.annotation.Target;
         DefaultWorkingTimePresenceConsistencyValidator.class,
         WorkingTimePresenceConsistencyAdapter.class,
         StandardWorkingTimeDerivationPolicy.class,
+        // journey: lectura de las cinco pistas del historial (backend#1)
+        JourneyPresenceReadAdapter.class,
+        JourneyContractReadAdapter.class,
+        JourneyLaborClassificationReadAdapter.class,
+        JourneyWorkCenterReadAdapter.class,
+        JourneyCostCenterReadAdapter.class,
+        EmployeeJourneyLookupAdapter.class,
         // payroll: binding de objetos y tablas
         PayrollObjectBindingLookupAdapter.class,
         PayrollTableRowLookupAdapter.class,
