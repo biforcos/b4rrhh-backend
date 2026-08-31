@@ -85,9 +85,11 @@ Tres valores:
 - **Se mantiene.** El usuario da de alta y edita.
 - **Referencia.** Sólo lectura para el usuario, pero una fila nueva es sólo un dato más. Si mañana
   aparece Andorra en el catálogo de países, no se rompe nada.
-- **Cerrado.** Sólo lectura **y** una fila nueva exige tocar código, porque cada valor lleva lógica
-  aparejada. `EMPLOYEE_TYPE` es el caso: sembrar un tipo de empleado nuevo sin el comportamiento que
-  lo acompaña es un error, no un dato.
+- **Cerrado.** Sólo lectura **y** una fila nueva exige que alguien le dé significado, porque cada
+  valor lleva comportamiento aparejado. `EMPLOYEE_TYPE` es el caso: `employee_type_code` es una de
+  las cuatro dimensiones de ámbito de `concept_assignment` (V58), de modo que un tipo de empleado
+  nuevo puede cambiar qué conceptos de nómina se le aplican a alguien. Sembrar uno sin decidir eso no
+  es añadir un dato: es dejar una pregunta abierta dentro del motor.
 
 La diferencia entre los dos últimos es la que un booleano borra, y es la que tiene consecuencias.
 
@@ -132,13 +134,18 @@ Con lo cual la mayor parte del trabajo no la hace ningún test:
 
 1. **Clausura del grupo** — la clave ajena. La impone Postgres.
 2. **Completitud** — los tres `not null` sin defecto. La impone Postgres.
-3. **Los códigos de un tipo `cerrado` existen en el código.** Ésta sí es un test: para cada tipo
-   marcado como cerrado, cada código sembrado tiene que aparecer como constante en Java. Si alguien
-   mete una fila en una migración sin la lógica que la acompaña, el build se cae. Es la primera vez
-   que un metadato editorial se deja comprobar de verdad, y es lo que justifica que el valor exista
-   en vez de ser un matiz de documentación.
-4. **La sonda** — añadir un tipo sin clasificar en la transacción del test y ver que falla, con el
-   nombre del tipo en el mensaje.
+3. **La sonda** — añadir un tipo sin clasificar en la transacción del test y ver que falla, con el
+   código del tipo en el mensaje.
+
+**Y ninguna guardia de comportamiento para el modo `cerrado`.** La primera redacción de este ADR decía
+que los códigos de un tipo cerrado tenían que existir como constante en Java, y que eso era lo que
+justificaba el valor. Es falso, y se vio al ir a implementarlo: el comportamiento que cuelga de un
+tipo de empleado no vive en constantes, vive en **datos** —las filas de ámbito de
+`concept_assignment`—. La guardia estaba mirando el artefacto equivocado.
+
+Se retira sin sustituto. Los tres modos son igual de editoriales y el criterio de arriba los cubre a
+los tres por igual. El valor `cerrado` se justifica porque es la distinción que tiene consecuencias
+—una fila nueva abre una pregunta en el motor de nómina—, no porque fuera comprobable.
 
 ### 8. Lo que se deriva
 
