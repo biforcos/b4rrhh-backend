@@ -1,7 +1,38 @@
 ADR — Racionalización de naming y alcance semántico de rule_entity_type en B4RRHH
 Estado
 
-Propuesto
+Aceptado — con la clasificación de la decisión 2 sustituida por el ADR-054 (backend#15, backend#37).
+
+## Cierre (2026-08-31)
+
+Este ADR llevaba en «Propuesto» desde que se escribió. Se cierra ahora porque sus dos mitades ya
+tienen respuesta, y no la misma.
+
+**Lo que se adoptó tal cual.** Las reglas de nombrado —1, y 4 a 6— están vigentes y ya se han
+aplicado: la regla 1 («un tipo nombra el concepto funcional real, no el primer sitio donde se usó»)
+es literalmente lo que ejecutaron la V35, que migró `EMPLOYEE_PRESENCE_COMPANY` a `COMPANY` y borró
+el tipo viejo, y la V37, que hizo lo propio con `EMPLOYEE_CONTACT_TYPE` → `CONTACT_TYPE`. La
+estrategia incremental que este ADR pedía —nada de *big bang*— se respetó: dos renombrados, cada uno
+con su migración y su motivo.
+
+Esa misma regla es la que hizo que el ADR-054 §1 **rechazara** añadir un nombre de interfaz al tipo:
+si un tipo está mal nombrado se renombra, no se le pone una etiqueta encima que tape el problema.
+
+**Lo que quedó sustituido.** La decisión 2 proponía clasificar los tipos por alcance semántico en tres
+familias —*domain reusable*, *employee-specific*, *lifecycle-specific*—. Esa clasificación **nunca se
+implementó y no se va a implementar**: describe de dónde viene un concepto, que es una guía para quien
+elige un nombre, no un dato del que nadie deriva nada.
+
+El ADR-054 clasifica los tipos por **tres ejes distintos, cada uno con su consumidor**: la clase del
+literal (traducibilidad, universalidad, forma del alta), el modo de mantenimiento (qué acción ofrece
+la pantalla) y el grupo (dónde vive en el menú). El criterio que decidió la diferencia es el del
+ADR-053 §5: entra lo que alguien consume y una guardia puede vigilar. `A / B / C` no lo consumía
+nadie.
+
+Lo que sí sobrevive de la decisión 2 es su *regla práctica* —no poner prefijo de vertical porque el
+primer consumidor pertenezca a esa vertical—, que es parte de las reglas de nombrado y sigue viva en
+el checklist del final.
+
 
 Contexto
 
