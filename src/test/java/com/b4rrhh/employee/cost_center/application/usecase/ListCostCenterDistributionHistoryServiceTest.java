@@ -1,6 +1,5 @@
 package com.b4rrhh.employee.cost_center.application.usecase;
 
-import com.b4rrhh.employee.cost_center.application.port.CostCenterCatalogReadPort;
 import com.b4rrhh.employee.cost_center.application.port.EmployeeCostCenterContext;
 import com.b4rrhh.employee.cost_center.application.port.EmployeeCostCenterLookupPort;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterEmployeeNotFoundException;
@@ -36,8 +35,6 @@ class ListCostCenterDistributionHistoryServiceTest {
     private CostCenterRepository costCenterRepository;
     @Mock
     private EmployeeCostCenterLookupPort employeeCostCenterLookupPort;
-    @Mock
-    private CostCenterCatalogReadPort costCenterCatalogReadPort;
 
     private ListCostCenterDistributionHistoryService service;
 
@@ -46,14 +43,13 @@ class ListCostCenterDistributionHistoryServiceTest {
         service = new ListCostCenterDistributionHistoryService(
                 costCenterRepository,
                 employeeCostCenterLookupPort,
-                costCenterCatalogReadPort,
                 new CostCenterDistributionWindowGrouper()
         );
     }
 
-    // Test 12: history groups rows by window, enriches with names
+    // Test 12: history groups rows by window
     @Test
-    void groupsAllocationsIntoWindowsAndEnriches() {
+    void groupsAllocationsIntoWindows() {
         givenEmployeeFound();
 
         LocalDate start1 = LocalDate.of(2026, 1, 1);
@@ -72,12 +68,6 @@ class ListCostCenterDistributionHistoryServiceTest {
 
         when(costCenterRepository.findByEmployeeIdOrderByStartDate(EMPLOYEE_ID))
                 .thenReturn(List.of(w1Line, w2LineA, w2LineB));
-        when(costCenterCatalogReadPort.findCostCenterName(RSC, "CC_A"))
-                .thenReturn(Optional.of("Centro A"));
-        when(costCenterCatalogReadPort.findCostCenterName(RSC, "CC_B"))
-                .thenReturn(Optional.of("Centro B"));
-        when(costCenterCatalogReadPort.findCostCenterName(RSC, "CC_C"))
-                .thenReturn(Optional.empty());
 
         CostCenterDistributionReadModel.History result = service.listHistory(query());
 
@@ -89,7 +79,7 @@ class ListCostCenterDistributionHistoryServiceTest {
         assertEquals(start1, window1.startDate());
         assertEquals(end1, window1.endDate());
         assertEquals(1, window1.items().size());
-        assertEquals("Centro A", window1.items().get(0).costCenterName());
+        assertEquals("CC_A", window1.items().get(0).costCenterCode());
 
         CostCenterDistributionReadModel.Window window2 = result.windows().get(1);
         assertEquals(start2, window2.startDate());
@@ -99,11 +89,11 @@ class ListCostCenterDistributionHistoryServiceTest {
 
         CostCenterDistributionReadModel.Item itemB = window2.items().stream()
                 .filter(i -> "CC_B".equals(i.costCenterCode())).findFirst().orElseThrow();
-        assertEquals("Centro B", itemB.costCenterName());
+        assertEquals(new BigDecimal("60"), itemB.allocationPercentage());
 
         CostCenterDistributionReadModel.Item itemC = window2.items().stream()
                 .filter(i -> "CC_C".equals(i.costCenterCode())).findFirst().orElseThrow();
-        assertNull(itemC.costCenterName());
+        assertEquals(new BigDecimal("40"), itemC.allocationPercentage());
     }
 
     @Test

@@ -1,6 +1,5 @@
 package com.b4rrhh.employee.cost_center.application.usecase;
 
-import com.b4rrhh.employee.cost_center.application.port.CostCenterCatalogReadPort;
 import com.b4rrhh.employee.cost_center.application.port.EmployeeCostCenterContext;
 import com.b4rrhh.employee.cost_center.application.port.EmployeeCostCenterLookupPort;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterEmployeeNotFoundException;
@@ -37,8 +36,6 @@ class GetCurrentCostCenterDistributionServiceTest {
     private CostCenterRepository costCenterRepository;
     @Mock
     private EmployeeCostCenterLookupPort employeeCostCenterLookupPort;
-    @Mock
-    private CostCenterCatalogReadPort costCenterCatalogReadPort;
 
     private GetCurrentCostCenterDistributionService service;
 
@@ -46,14 +43,13 @@ class GetCurrentCostCenterDistributionServiceTest {
     void setUp() {
         service = new GetCurrentCostCenterDistributionService(
                 costCenterRepository,
-                employeeCostCenterLookupPort,
-                costCenterCatalogReadPort
+                employeeCostCenterLookupPort
         );
     }
 
-    // Test 11: current distribution returns grouped enriched response
+    // Test 11: current distribution returns grouped response
     @Test
-    void returnsCurrentDistributionWithEnrichedCostCenterNames() {
+    void returnsCurrentDistributionGroupedByWindow() {
         givenEmployeeFound();
         CostCenterAllocation lineA = new CostCenterAllocation(
                 EMPLOYEE_ID, "CC_A", new BigDecimal("60"), WINDOW_START, null
@@ -63,10 +59,6 @@ class GetCurrentCostCenterDistributionServiceTest {
         );
         when(costCenterRepository.findActiveAtDate(any(), any()))
                 .thenReturn(List.of(lineA, lineB));
-        when(costCenterCatalogReadPort.findCostCenterName(RSC, "CC_A"))
-                .thenReturn(Optional.of("Centro A"));
-        when(costCenterCatalogReadPort.findCostCenterName(RSC, "CC_B"))
-                .thenReturn(Optional.of("Centro B"));
 
         CostCenterDistributionReadModel.CurrentDistribution result = service.getCurrent(query());
 
@@ -84,11 +76,11 @@ class GetCurrentCostCenterDistributionServiceTest {
 
         CostCenterDistributionReadModel.Item itemA = window.items().stream()
                 .filter(i -> "CC_A".equals(i.costCenterCode())).findFirst().orElseThrow();
-        assertEquals("Centro A", itemA.costCenterName());
+        assertEquals(new BigDecimal("60"), itemA.allocationPercentage());
 
         CostCenterDistributionReadModel.Item itemB = window.items().stream()
                 .filter(i -> "CC_B".equals(i.costCenterCode())).findFirst().orElseThrow();
-        assertEquals("Centro B", itemB.costCenterName());
+        assertEquals(new BigDecimal("40"), itemB.allocationPercentage());
     }
 
     @Test
@@ -100,21 +92,6 @@ class GetCurrentCostCenterDistributionServiceTest {
 
         assertNotNull(result);
         assertNull(result.currentDistribution());
-    }
-
-    @Test
-    void enrichesWithNullNameWhenCatalogReturnsEmpty() {
-        givenEmployeeFound();
-        CostCenterAllocation line = new CostCenterAllocation(
-                EMPLOYEE_ID, "CC_UNKNOWN", new BigDecimal("100"), WINDOW_START, null
-        );
-        when(costCenterRepository.findActiveAtDate(any(), any())).thenReturn(List.of(line));
-        when(costCenterCatalogReadPort.findCostCenterName(RSC, "CC_UNKNOWN"))
-                .thenReturn(Optional.empty());
-
-        CostCenterDistributionReadModel.CurrentDistribution result = service.getCurrent(query());
-
-        assertNull(result.currentDistribution().items().get(0).costCenterName());
     }
 
     @Test

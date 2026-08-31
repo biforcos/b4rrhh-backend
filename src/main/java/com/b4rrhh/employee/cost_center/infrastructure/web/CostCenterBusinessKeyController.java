@@ -13,14 +13,14 @@ import com.b4rrhh.employee.cost_center.application.usecase.ListCostCenterDistrib
 import com.b4rrhh.employee.cost_center.application.usecase.ReplaceCostCenterDistributionFromDateCommand;
 import com.b4rrhh.employee.cost_center.application.usecase.ReplaceCostCenterDistributionFromDateUseCase;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow;
+import com.b4rrhh.employee.cost_center.infrastructure.web.assembler.CostCenterResponseAssembler;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CloseCostCenterDistributionRequest;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterCurrentDistributionResponse;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionHistoryResponse;
-import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionItemResponse;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionWindowResponse;
-import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterEmployeeKeyResponse;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CreateCostCenterDistributionRequest;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.ReplaceCostCenterDistributionFromDateRequest;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,19 +43,22 @@ public class CostCenterBusinessKeyController {
     private final ListCostCenterDistributionHistoryUseCase listCostCenterDistributionHistoryUseCase;
     private final ReplaceCostCenterDistributionFromDateUseCase replaceCostCenterDistributionFromDateUseCase;
     private final CloseCostCenterDistributionUseCase closeCostCenterDistributionUseCase;
+    private final CostCenterResponseAssembler costCenterResponseAssembler;
 
     public CostCenterBusinessKeyController(
             CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase,
             GetCurrentCostCenterDistributionUseCase getCurrentCostCenterDistributionUseCase,
             ListCostCenterDistributionHistoryUseCase listCostCenterDistributionHistoryUseCase,
             ReplaceCostCenterDistributionFromDateUseCase replaceCostCenterDistributionFromDateUseCase,
-            CloseCostCenterDistributionUseCase closeCostCenterDistributionUseCase
+            CloseCostCenterDistributionUseCase closeCostCenterDistributionUseCase,
+            CostCenterResponseAssembler costCenterResponseAssembler
     ) {
         this.createCostCenterDistributionUseCase = createCostCenterDistributionUseCase;
         this.getCurrentCostCenterDistributionUseCase = getCurrentCostCenterDistributionUseCase;
         this.listCostCenterDistributionHistoryUseCase = listCostCenterDistributionHistoryUseCase;
         this.replaceCostCenterDistributionFromDateUseCase = replaceCostCenterDistributionFromDateUseCase;
         this.closeCostCenterDistributionUseCase = closeCostCenterDistributionUseCase;
+        this.costCenterResponseAssembler = costCenterResponseAssembler;
     }
 
     @PostMapping("/distributions")
@@ -77,33 +80,35 @@ public class CostCenterBusinessKeyController {
                 )
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(toWindowResponse(created));
+        return ResponseEntity.status(HttpStatus.CREATED).body(costCenterResponseAssembler.toWindowResponse(created));
     }
 
     @GetMapping
     public ResponseEntity<CostCenterDistributionHistoryResponse> listHistory(
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
-            @PathVariable String employeeNumber
+            @PathVariable String employeeNumber,
+            ResponseLanguage language
     ) {
         CostCenterDistributionReadModel.History history = listCostCenterDistributionHistoryUseCase.listHistory(
                 new ListCostCenterDistributionHistoryQuery(ruleSystemCode, employeeTypeCode, employeeNumber)
         );
 
-        return ResponseEntity.ok(toHistoryResponse(history));
+        return ResponseEntity.ok(costCenterResponseAssembler.toHistoryResponse(history, language));
     }
 
     @GetMapping("/current")
     public ResponseEntity<CostCenterCurrentDistributionResponse> getCurrent(
             @PathVariable String ruleSystemCode,
             @PathVariable String employeeTypeCode,
-            @PathVariable String employeeNumber
+            @PathVariable String employeeNumber,
+            ResponseLanguage language
     ) {
         CostCenterDistributionReadModel.CurrentDistribution current = getCurrentCostCenterDistributionUseCase.getCurrent(
                 new GetCurrentCostCenterDistributionQuery(ruleSystemCode, employeeTypeCode, employeeNumber)
         );
 
-        return ResponseEntity.ok(toCurrentResponse(current));
+        return ResponseEntity.ok(costCenterResponseAssembler.toCurrentResponse(current, language));
     }
 
     @PostMapping("/replace-from-date")
@@ -125,7 +130,7 @@ public class CostCenterBusinessKeyController {
                 )
         );
 
-        return ResponseEntity.ok(toWindowResponse(replaced));
+        return ResponseEntity.ok(costCenterResponseAssembler.toWindowResponse(replaced));
     }
 
     @PostMapping("/distributions/{startDate}/close")
@@ -146,7 +151,7 @@ public class CostCenterBusinessKeyController {
                 )
         );
 
-        return ResponseEntity.ok(toWindowResponse(closed));
+        return ResponseEntity.ok(costCenterResponseAssembler.toWindowResponse(closed));
     }
 
     // ---- mapping helpers ----
@@ -162,65 +167,4 @@ public class CostCenterBusinessKeyController {
                 .toList();
     }
 
-    private CostCenterDistributionWindowResponse toWindowResponse(CostCenterDistributionWindow window) {
-        List<CostCenterDistributionItemResponse> items = window.getItems().stream()
-                .map(item -> new CostCenterDistributionItemResponse(
-                        item.getCostCenterCode(),
-                        null, // no enrichment at command response level
-                        item.getAllocationPercentage()
-                ))
-                .toList();
-
-        return new CostCenterDistributionWindowResponse(
-                window.getStartDate(),
-                window.getEndDate(),
-                window.getTotalAllocationPercentage(),
-                items
-        );
-    }
-
-    private CostCenterCurrentDistributionResponse toCurrentResponse(
-            CostCenterDistributionReadModel.CurrentDistribution model
-    ) {
-        CostCenterEmployeeKeyResponse employeeKey = new CostCenterEmployeeKeyResponse(
-                model.ruleSystemCode(), model.employeeTypeCode(), model.employeeNumber()
-        );
-
-        CostCenterDistributionWindowResponse window = null;
-        if (model.currentDistribution() != null) {
-            window = toReadModelWindowResponse(model.currentDistribution());
-        }
-
-        return new CostCenterCurrentDistributionResponse(employeeKey, window);
-    }
-
-    private CostCenterDistributionHistoryResponse toHistoryResponse(
-            CostCenterDistributionReadModel.History model
-    ) {
-        CostCenterEmployeeKeyResponse employeeKey = new CostCenterEmployeeKeyResponse(
-                model.ruleSystemCode(), model.employeeTypeCode(), model.employeeNumber()
-        );
-
-        List<CostCenterDistributionWindowResponse> windows = model.windows().stream()
-                .map(this::toReadModelWindowResponse)
-                .toList();
-
-        return new CostCenterDistributionHistoryResponse(employeeKey, windows);
-    }
-
-    private CostCenterDistributionWindowResponse toReadModelWindowResponse(
-            CostCenterDistributionReadModel.Window window
-    ) {
-        List<CostCenterDistributionItemResponse> items = window.items().stream()
-                .map(item -> new CostCenterDistributionItemResponse(
-                        item.costCenterCode(),
-                        item.costCenterName(),
-                        item.allocationPercentage()
-                ))
-                .toList();
-
-        return new CostCenterDistributionWindowResponse(
-                window.startDate(), window.endDate(), window.totalAllocationPercentage(), items
-        );
-    }
 }

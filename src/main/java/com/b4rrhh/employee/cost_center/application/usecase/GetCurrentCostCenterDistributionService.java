@@ -1,6 +1,5 @@
 package com.b4rrhh.employee.cost_center.application.usecase;
 
-import com.b4rrhh.employee.cost_center.application.port.CostCenterCatalogReadPort;
 import com.b4rrhh.employee.cost_center.application.port.EmployeeCostCenterContext;
 import com.b4rrhh.employee.cost_center.application.port.EmployeeCostCenterLookupPort;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterEmployeeNotFoundException;
@@ -17,16 +16,13 @@ public class GetCurrentCostCenterDistributionService implements GetCurrentCostCe
 
     private final CostCenterRepository costCenterRepository;
     private final EmployeeCostCenterLookupPort employeeCostCenterLookupPort;
-    private final CostCenterCatalogReadPort costCenterCatalogReadPort;
 
     public GetCurrentCostCenterDistributionService(
             CostCenterRepository costCenterRepository,
-            EmployeeCostCenterLookupPort employeeCostCenterLookupPort,
-            CostCenterCatalogReadPort costCenterCatalogReadPort
+            EmployeeCostCenterLookupPort employeeCostCenterLookupPort
     ) {
         this.costCenterRepository = costCenterRepository;
         this.employeeCostCenterLookupPort = employeeCostCenterLookupPort;
-        this.costCenterCatalogReadPort = costCenterCatalogReadPort;
     }
 
     @Override
@@ -47,7 +43,7 @@ public class GetCurrentCostCenterDistributionService implements GetCurrentCostCe
 
         CostCenterDistributionReadModel.Window currentWindow = null;
         if (!activeLines.isEmpty()) {
-            currentWindow = buildWindow(ruleSystemCode, activeLines);
+            currentWindow = buildWindow(activeLines);
         }
 
         return new CostCenterDistributionReadModel.CurrentDistribution(
@@ -55,19 +51,11 @@ public class GetCurrentCostCenterDistributionService implements GetCurrentCostCe
         );
     }
 
-    private CostCenterDistributionReadModel.Window buildWindow(
-            String ruleSystemCode,
-            List<CostCenterAllocation> lines
-    ) {
+    private CostCenterDistributionReadModel.Window buildWindow(List<CostCenterAllocation> lines) {
         List<CostCenterDistributionReadModel.Item> items = lines.stream()
-                .map(line -> {
-                    String name = costCenterCatalogReadPort
-                            .findCostCenterName(ruleSystemCode, line.getCostCenterCode())
-                            .orElse(null);
-                    return new CostCenterDistributionReadModel.Item(
-                            line.getCostCenterCode(), name, line.getAllocationPercentage()
-                    );
-                })
+                .map(line -> new CostCenterDistributionReadModel.Item(
+                        line.getCostCenterCode(), line.getAllocationPercentage()
+                ))
                 .toList();
 
         BigDecimal total = lines.stream()

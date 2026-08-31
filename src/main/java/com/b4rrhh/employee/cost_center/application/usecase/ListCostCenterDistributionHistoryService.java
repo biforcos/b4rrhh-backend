@@ -1,6 +1,5 @@
 package com.b4rrhh.employee.cost_center.application.usecase;
 
-import com.b4rrhh.employee.cost_center.application.port.CostCenterCatalogReadPort;
 import com.b4rrhh.employee.cost_center.application.port.EmployeeCostCenterContext;
 import com.b4rrhh.employee.cost_center.application.port.EmployeeCostCenterLookupPort;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterEmployeeNotFoundException;
@@ -19,18 +18,15 @@ public class ListCostCenterDistributionHistoryService implements ListCostCenterD
 
     private final CostCenterRepository costCenterRepository;
     private final EmployeeCostCenterLookupPort employeeCostCenterLookupPort;
-    private final CostCenterCatalogReadPort costCenterCatalogReadPort;
     private final CostCenterDistributionWindowGrouper windowGrouper;
 
     public ListCostCenterDistributionHistoryService(
             CostCenterRepository costCenterRepository,
             EmployeeCostCenterLookupPort employeeCostCenterLookupPort,
-            CostCenterCatalogReadPort costCenterCatalogReadPort,
             CostCenterDistributionWindowGrouper windowGrouper
     ) {
         this.costCenterRepository = costCenterRepository;
         this.employeeCostCenterLookupPort = employeeCostCenterLookupPort;
-        this.costCenterCatalogReadPort = costCenterCatalogReadPort;
         this.windowGrouper = windowGrouper;
     }
 
@@ -53,7 +49,7 @@ public class ListCostCenterDistributionHistoryService implements ListCostCenterD
         CostCenterDistributionHistory history = windowGrouper.group(allAllocations);
 
         List<CostCenterDistributionReadModel.Window> windows = history.getWindows().stream()
-                .map(window -> toReadModelWindow(ruleSystemCode, window))
+                .map(this::toReadModelWindow)
                 .toList();
 
         return new CostCenterDistributionReadModel.History(
@@ -61,19 +57,11 @@ public class ListCostCenterDistributionHistoryService implements ListCostCenterD
         );
     }
 
-    private CostCenterDistributionReadModel.Window toReadModelWindow(
-            String ruleSystemCode,
-            CostCenterDistributionWindow window
-    ) {
+    private CostCenterDistributionReadModel.Window toReadModelWindow(CostCenterDistributionWindow window) {
         List<CostCenterDistributionReadModel.Item> items = window.getItems().stream()
-                .map(line -> {
-                    String name = costCenterCatalogReadPort
-                            .findCostCenterName(ruleSystemCode, line.getCostCenterCode())
-                            .orElse(null);
-                    return new CostCenterDistributionReadModel.Item(
-                            line.getCostCenterCode(), name, line.getAllocationPercentage()
-                    );
-                })
+                .map(line -> new CostCenterDistributionReadModel.Item(
+                        line.getCostCenterCode(), line.getAllocationPercentage()
+                ))
                 .toList();
 
         BigDecimal total = window.getTotalAllocationPercentage();

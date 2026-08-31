@@ -5,14 +5,14 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Enriched read model for a distribution window, used as output from use cases.
- * Includes costCenterName looked up from the catalog.
+ * Read model for a distribution window, used as output from use cases: codes and figures
+ * only. The cost center name is presentation and gets resolved in the web layer
+ * (ADR-052 §4; backend#27).
  */
 public class CostCenterDistributionReadModel {
 
     public record Item(
             String costCenterCode,
-            String costCenterName,
             BigDecimal allocationPercentage
     ) {
     }
