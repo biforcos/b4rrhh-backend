@@ -1,7 +1,6 @@
 package com.b4rrhh.rulesystem.workcenter.application.usecase;
 
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
-import com.b4rrhh.rulesystem.workcenter.application.port.WorkCenterContactCatalogReadPort;
 import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterCatalogValidator;
 import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterInputNormalizer;
 import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterResolver;
@@ -20,20 +19,17 @@ public class CreateWorkCenterContactService implements CreateWorkCenterContactUs
     private final WorkCenterInputNormalizer inputNormalizer;
     private final WorkCenterCatalogValidator catalogValidator;
     private final WorkCenterContactRepository workCenterContactRepository;
-    private final WorkCenterContactCatalogReadPort workCenterContactCatalogReadPort;
 
     public CreateWorkCenterContactService(
             WorkCenterResolver workCenterResolver,
             WorkCenterInputNormalizer inputNormalizer,
             WorkCenterCatalogValidator catalogValidator,
-            WorkCenterContactRepository workCenterContactRepository,
-            WorkCenterContactCatalogReadPort workCenterContactCatalogReadPort
+            WorkCenterContactRepository workCenterContactRepository
     ) {
         this.workCenterResolver = workCenterResolver;
         this.inputNormalizer = inputNormalizer;
         this.catalogValidator = catalogValidator;
         this.workCenterContactRepository = workCenterContactRepository;
-        this.workCenterContactCatalogReadPort = workCenterContactCatalogReadPort;
     }
 
     @Override
@@ -54,14 +50,9 @@ public class CreateWorkCenterContactService implements CreateWorkCenterContactUs
                 throw new WorkCenterContactAlreadyExistsException(ruleSystemCode, workCenterCode, contactNumber);
             });
 
-        WorkCenterContact savedContact = workCenterContactRepository.save(
+        return workCenterContactRepository.save(
                 workCenterEntity.getId(),
-                new WorkCenterContact(contactNumber, contactTypeCode, null, contactValue)
-        );
-
-        return savedContact.withContactTypeName(
-                workCenterContactCatalogReadPort.findContactTypeName(ruleSystemCode, savedContact.getContactTypeCode())
-                        .orElse(null)
+                new WorkCenterContact(contactNumber, contactTypeCode, contactValue)
         );
     }
 }

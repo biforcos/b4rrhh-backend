@@ -26,6 +26,8 @@ import com.b4rrhh.rulesystem.workcenter.domain.model.WorkCenterProfile;
 import com.b4rrhh.rulesystem.workcenter.infrastructure.web.assembler.WorkCenterResponseAssembler;
 import com.b4rrhh.rulesystem.workcenter.infrastructure.web.mapper.WorkCenterCommandMapper;
 import com.b4rrhh.rulesystem.workcenter.infrastructure.web.mapper.WorkCenterContactCommandMapper;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguageArgumentResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,6 +40,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -72,12 +75,14 @@ class WorkCenterControllerHttpTest {
     private GetWorkCenterContactUseCase getWorkCenterContactUseCase;
     @Mock
     private ListWorkCenterContactsUseCase listWorkCenterContactsUseCase;
+    @Mock
+    private RuleEntityLabelResolver ruleEntityLabelResolver;
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        WorkCenterResponseAssembler assembler = new WorkCenterResponseAssembler();
+        WorkCenterResponseAssembler assembler = new WorkCenterResponseAssembler(ruleEntityLabelResolver);
 
         mockMvc = MockMvcBuilders.standaloneSetup(
                         new WorkCenterController(
@@ -99,6 +104,7 @@ class WorkCenterControllerHttpTest {
                         )
                 )
                 .setControllerAdvice(new WorkCenterExceptionHandler())
+                .setCustomArgumentResolvers(new ResponseLanguageArgumentResolver())
                 .build();
     }
 
@@ -181,7 +187,9 @@ class WorkCenterControllerHttpTest {
 
     @Test
     void contactEndpointsUseContactNumberAsBusinessKey() throws Exception {
-        WorkCenterContact contact = new WorkCenterContact(1, "EMAIL", "Email", "hq@example.com");
+        WorkCenterContact contact = new WorkCenterContact(1, "EMAIL", "hq@example.com");
+        when(ruleEntityLabelResolver.resolveName("ESP", "CONTACT_TYPE", "EMAIL", null))
+                .thenReturn(Optional.of("Email"));
         when(createWorkCenterContactUseCase.create(any(CreateWorkCenterContactCommand.class))).thenReturn(contact);
         when(listWorkCenterContactsUseCase.list("ESP", "MADRID-HQ")).thenReturn(List.of(contact));
         when(getWorkCenterContactUseCase.get(any(GetWorkCenterContactQuery.class))).thenReturn(contact);

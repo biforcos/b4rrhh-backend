@@ -66,7 +66,6 @@ public class WorkCenterContactPersistenceAdapter implements WorkCenterContactRep
         return new WorkCenterContact(
                 entity.getContactNumber(),
                 entity.getContactTypeCode(),
-                null,
                 entity.getContactValue()
         );
     }

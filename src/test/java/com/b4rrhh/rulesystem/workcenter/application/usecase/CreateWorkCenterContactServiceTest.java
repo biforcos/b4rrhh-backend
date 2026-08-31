@@ -2,7 +2,6 @@ package com.b4rrhh.rulesystem.workcenter.application.usecase;
 
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
-import com.b4rrhh.rulesystem.workcenter.application.port.WorkCenterContactCatalogReadPort;
 import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterCatalogValidator;
 import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterInputNormalizer;
 import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterResolver;
@@ -32,8 +31,6 @@ class CreateWorkCenterContactServiceTest {
     private RuleEntityRepository ruleEntityRepository;
     @Mock
     private WorkCenterContactRepository workCenterContactRepository;
-    @Mock
-    private WorkCenterContactCatalogReadPort workCenterContactCatalogReadPort;
 
     private CreateWorkCenterContactService service;
 
@@ -43,8 +40,7 @@ class CreateWorkCenterContactServiceTest {
                 new WorkCenterResolver(ruleEntityRepository),
                 new WorkCenterInputNormalizer(),
                 new WorkCenterCatalogValidator(ruleEntityRepository),
-                workCenterContactRepository,
-                workCenterContactCatalogReadPort
+                workCenterContactRepository
         );
     }
 
@@ -59,8 +55,6 @@ class CreateWorkCenterContactServiceTest {
                 .thenReturn(Optional.empty());
         when(workCenterContactRepository.save(any(Long.class), any(WorkCenterContact.class)))
                 .thenAnswer(invocation -> invocation.getArgument(1));
-        when(workCenterContactCatalogReadPort.findContactTypeName("ESP", "EMAIL"))
-                .thenReturn(Optional.of("Email"));
 
         WorkCenterContact result = service.create(new CreateWorkCenterContactCommand(
                 "esp",
@@ -71,7 +65,6 @@ class CreateWorkCenterContactServiceTest {
 
         assertEquals(1, result.getContactNumber());
         assertEquals("EMAIL", result.getContactTypeCode());
-        assertEquals("Email", result.getContactTypeName());
         verify(workCenterContactRepository).save(any(Long.class), any(WorkCenterContact.class));
     }
 
@@ -83,7 +76,7 @@ class CreateWorkCenterContactServiceTest {
                 .thenReturn(Optional.of(ruleEntity(20L, "CONTACT_TYPE", "EMAIL")));
         when(workCenterContactRepository.nextContactNumberForWorkCenterRuleEntityId(10L)).thenReturn(1);
         when(workCenterContactRepository.findByWorkCenterRuleEntityIdAndContactNumber(10L, 1))
-                .thenReturn(Optional.of(new WorkCenterContact(1, "EMAIL", null, "existing@example.com")));
+                .thenReturn(Optional.of(new WorkCenterContact(1, "EMAIL", "existing@example.com")));
 
         assertThrows(WorkCenterContactAlreadyExistsException.class, () -> service.create(new CreateWorkCenterContactCommand(
                 "ESP",

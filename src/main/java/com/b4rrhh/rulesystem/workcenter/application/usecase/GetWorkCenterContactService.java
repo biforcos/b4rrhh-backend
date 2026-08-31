@@ -1,7 +1,6 @@
 package com.b4rrhh.rulesystem.workcenter.application.usecase;
 
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
-import com.b4rrhh.rulesystem.workcenter.application.port.WorkCenterContactCatalogReadPort;
 import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterInputNormalizer;
 import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterResolver;
 import com.b4rrhh.rulesystem.workcenter.domain.exception.WorkCenterContactNotFoundException;
@@ -16,18 +15,15 @@ public class GetWorkCenterContactService implements GetWorkCenterContactUseCase 
     private final WorkCenterResolver workCenterResolver;
     private final WorkCenterInputNormalizer inputNormalizer;
     private final WorkCenterContactRepository workCenterContactRepository;
-    private final WorkCenterContactCatalogReadPort workCenterContactCatalogReadPort;
 
     public GetWorkCenterContactService(
             WorkCenterResolver workCenterResolver,
             WorkCenterInputNormalizer inputNormalizer,
-            WorkCenterContactRepository workCenterContactRepository,
-            WorkCenterContactCatalogReadPort workCenterContactCatalogReadPort
+            WorkCenterContactRepository workCenterContactRepository
     ) {
         this.workCenterResolver = workCenterResolver;
         this.inputNormalizer = inputNormalizer;
         this.workCenterContactRepository = workCenterContactRepository;
-        this.workCenterContactCatalogReadPort = workCenterContactCatalogReadPort;
     }
 
     @Override
@@ -39,13 +35,8 @@ public class GetWorkCenterContactService implements GetWorkCenterContactUseCase 
 
         RuleEntity workCenterEntity = workCenterResolver.resolveApplicableToday(ruleSystemCode, workCenterCode);
 
-        WorkCenterContact contact = workCenterContactRepository
+        return workCenterContactRepository
                 .findByWorkCenterRuleEntityIdAndContactNumber(workCenterEntity.getId(), contactNumber)
                 .orElseThrow(() -> new WorkCenterContactNotFoundException(ruleSystemCode, workCenterCode, contactNumber));
-
-        return contact.withContactTypeName(
-                workCenterContactCatalogReadPort.findContactTypeName(ruleSystemCode, contact.getContactTypeCode())
-                        .orElse(null)
-        );
     }
 }

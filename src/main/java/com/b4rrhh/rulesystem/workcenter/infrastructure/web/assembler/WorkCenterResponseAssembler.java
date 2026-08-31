@@ -1,5 +1,7 @@
 package com.b4rrhh.rulesystem.workcenter.infrastructure.web.assembler;
 
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.rulesystem.workcenter.application.usecase.WorkCenterRuleEntityTypeCodes;
 import com.b4rrhh.rulesystem.workcenter.application.view.WorkCenterDetails;
 import com.b4rrhh.rulesystem.workcenter.domain.model.WorkCenter;
 import com.b4rrhh.rulesystem.workcenter.domain.model.WorkCenterContact;
@@ -8,10 +10,17 @@ import com.b4rrhh.rulesystem.workcenter.infrastructure.web.dto.WorkCenterAddress
 import com.b4rrhh.rulesystem.workcenter.infrastructure.web.dto.WorkCenterContactResponse;
 import com.b4rrhh.rulesystem.workcenter.infrastructure.web.dto.WorkCenterListItemResponse;
 import com.b4rrhh.rulesystem.workcenter.infrastructure.web.dto.WorkCenterResponse;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.stereotype.Component;
 
 @Component("rulesystemWorkCenterResponseAssembler")
 public class WorkCenterResponseAssembler {
+
+    private final RuleEntityLabelResolver ruleEntityLabelResolver;
+
+    public WorkCenterResponseAssembler(RuleEntityLabelResolver ruleEntityLabelResolver) {
+        this.ruleEntityLabelResolver = ruleEntityLabelResolver;
+    }
 
     public WorkCenterResponse toResponse(WorkCenterDetails details) {
         WorkCenter workCenter = details.workCenter();
@@ -47,11 +56,21 @@ public class WorkCenterResponseAssembler {
         );
     }
 
-    public WorkCenterContactResponse toContactResponse(WorkCenterContact contact) {
+    /**
+     * El literal del tipo de contacto se resuelve aqui, en la capa web, en el idioma de la
+     * respuesta: el modelo de dominio ya no lo lleva y ningun caso de uso conoce el idioma
+     * (ADR-052 §4; backend#27).
+     */
+    public WorkCenterContactResponse toContactResponse(String ruleSystemCode, WorkCenterContact contact, ResponseLanguage language) {
+        String contactTypeName = ruleEntityLabelResolver
+                .resolveName(ruleSystemCode, WorkCenterRuleEntityTypeCodes.CONTACT_TYPE,
+                        contact.getContactTypeCode(), language.code())
+                .orElse(null);
+
         return new WorkCenterContactResponse(
                 contact.getContactNumber(),
                 contact.getContactTypeCode(),
-                contact.getContactTypeName(),
+                contactTypeName,
                 contact.getContactValue()
         );
     }

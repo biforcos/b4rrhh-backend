@@ -11,6 +11,7 @@ import com.b4rrhh.rulesystem.workcenter.infrastructure.web.dto.CreateWorkCenterC
 import com.b4rrhh.rulesystem.workcenter.infrastructure.web.dto.UpdateWorkCenterContactRequest;
 import com.b4rrhh.rulesystem.workcenter.infrastructure.web.dto.WorkCenterContactResponse;
 import com.b4rrhh.rulesystem.workcenter.infrastructure.web.mapper.WorkCenterContactCommandMapper;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -57,12 +58,13 @@ public class WorkCenterContactController {
     @GetMapping
     public ResponseEntity<List<WorkCenterContactResponse>> list(
             @PathVariable String ruleSystemCode,
-            @PathVariable String workCenterCode
+            @PathVariable String workCenterCode,
+            ResponseLanguage language
     ) {
         return ResponseEntity.ok(
                 listWorkCenterContactsUseCase.list(ruleSystemCode, workCenterCode)
                         .stream()
-                        .map(workCenterResponseAssembler::toContactResponse)
+                        .map(contact -> workCenterResponseAssembler.toContactResponse(ruleSystemCode, contact, language))
                         .toList()
         );
     }
@@ -71,25 +73,30 @@ public class WorkCenterContactController {
     public ResponseEntity<WorkCenterContactResponse> create(
             @PathVariable String ruleSystemCode,
             @PathVariable String workCenterCode,
-            @RequestBody CreateWorkCenterContactRequest request
+            @RequestBody CreateWorkCenterContactRequest request,
+            ResponseLanguage language
     ) {
         WorkCenterContact created = createWorkCenterContactUseCase.create(
                 workCenterContactCommandMapper.toCreateCommand(ruleSystemCode, workCenterCode, request)
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(workCenterResponseAssembler.toContactResponse(created));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(workCenterResponseAssembler.toContactResponse(ruleSystemCode, created, language));
     }
 
     @GetMapping("/{contactNumber}")
     public ResponseEntity<WorkCenterContactResponse> get(
             @PathVariable String ruleSystemCode,
             @PathVariable String workCenterCode,
-            @PathVariable Integer contactNumber
+            @PathVariable Integer contactNumber,
+            ResponseLanguage language
     ) {
         return ResponseEntity.ok(workCenterResponseAssembler.toContactResponse(
+                ruleSystemCode,
                 getWorkCenterContactUseCase.get(
                         workCenterContactCommandMapper.toGetQuery(ruleSystemCode, workCenterCode, contactNumber)
-                )
+                ),
+                language
         ));
     }
 
@@ -98,13 +105,14 @@ public class WorkCenterContactController {
             @PathVariable String ruleSystemCode,
             @PathVariable String workCenterCode,
             @PathVariable Integer contactNumber,
-            @RequestBody UpdateWorkCenterContactRequest request
+            @RequestBody UpdateWorkCenterContactRequest request,
+            ResponseLanguage language
     ) {
         WorkCenterContact updated = updateWorkCenterContactUseCase.update(
                 workCenterContactCommandMapper.toUpdateCommand(ruleSystemCode, workCenterCode, contactNumber, request)
         );
 
-        return ResponseEntity.ok(workCenterResponseAssembler.toContactResponse(updated));
+        return ResponseEntity.ok(workCenterResponseAssembler.toContactResponse(ruleSystemCode, updated, language));
     }
 
     @DeleteMapping("/{contactNumber}")
