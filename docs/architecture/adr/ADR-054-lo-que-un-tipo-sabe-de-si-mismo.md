@@ -182,8 +182,42 @@ están en el sitio equivocado— sigue abierta, pero ya no bloquea el menú.
 | `EMPLOYEE_ADDRESS_TYPE` | vocabulario del dominio | se mantiene | Organización |
 | `CONTACT_TYPE` | vocabulario del dominio | se mantiene | Organización |
 | `EMPLOYEE_IDENTIFIER_TYPE` | vocabulario del dominio | se mantiene | Organización |
-| `EMPLOYEE_ABSENCE_TYPE` | vocabulario del dominio | se mantiene | Organización |
+| `EMPLOYEE_ABSENCE_TYPE` | cita reglamentaria | se mantiene | Organización |
 | `EMPLOYEE_TYPE` | vocabulario del dominio | **cerrado** | Organización |
+
+### Corrección (backend#37): `EMPLOYEE_ABSENCE_TYPE` es cita, no vocabulario
+
+La primera redacción de la tabla lo clasificaba como vocabulario del dominio. Está corregido arriba,
+y conviene dejar escrito por qué, porque lo destapó una guardia y no una revisión.
+
+Al reconvertir la guardia de universalidad (backend#25) para que leyera la clase de la columna en vez
+de una lista a mano, saltó en rojo: los siete códigos de la V102 existen sólo en ESP. La primera
+lectura fue que faltaba sembrarlos en FRA y PRT. Es la lectura equivocada: lo que falta no son filas,
+es que la clasificación era mía y estaba mal.
+
+Los literales lo dicen solos —«IT Contingencia Común», «IT Accidente de Trabajo / Enfermedad
+Profesional», «Permiso por fuerza mayor»—: terminología de la Seguridad Social y el artículo 37.3 del
+Estatuto. Es Derecho laboral español, como `CONTRACT` y `CONTRACT_SUBTYPE`, que ya estaban bien
+clasificados y sembrados sólo en ESP sin que nadie lo tomara por un agujero. Tres señales más
+apuntaban a lo mismo y ninguna se miró al escribir la tabla: el fichero se llama
+`V102__seed_employee_absence_type_esp.sql`; no lleva el `cross join` sobre `rule_system` que sí llevan
+la V4 y la V16; y el nombre está en castellano con la descripción en inglés, al revés que en todos los
+tipos de vocabulario.
+
+Sembrar los siete en FRA y PRT habría exigido **inventarse los tipos de ausencia franceses y
+portugueses**, es decir, meter contenido normativo falso en la base para que un test se pusiera verde.
+
+### Límite conocido: la clase va en el tipo, no en la fila
+
+El mismo caso destapa un límite de este ADR. De los siete códigos de ausencia, `IT_COMMON` e
+`IT_WORK_ACCIDENT` son citas sin discusión, pero `VACATION` y `UNPAID_LEAVE` son bastante genéricos.
+El tipo es **mixto**, y aquí la clase se declara una vez por tipo.
+
+Se deja así a propósito: una clase por fila multiplica por el número de filas un trabajo que hoy se
+hace dieciséis veces, y todavía no se conoce ningún consumidor al que la mezcla le cambie la
+respuesta. **Disparador:** el día que un tipo mixto tenga una consecuencia real —una fila que debería
+traducirse dentro de un tipo que no se traduce, o al revés—, la clase baja a la fila, con ese caso
+delante.
 
 ## Consecuencias
 
