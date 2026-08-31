@@ -23,28 +23,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 @TestSobreEsquemaReal
 class UniversalCatalogLiteralsGuardTest {
 
-    /**
-     * Los tipos universales, **provisionalmente** aquí. El ADR-052 §2 los declara como un
-     * atributo de {@code rule_entity_type} que llegará con el #15; cuando exista, esta lista se
-     * sustituye por una consulta a ese atributo y este comentario desaparece.
-     *
-     * {@code CONTACT_TYPE} es el nombre actual del tipo de contacto: V37 canonicalizó
-     * {@code EMPLOYEE_CONTACT_TYPE} bajo ese código.
-     *
-     * NO van aquí {@code CONTRACT}, {@code CONTRACT_SUBTYPE} ni {@code AGREEMENT_CATEGORY}: son
-     * citas de la norma española y sus literales *deben* diferir entre reglamentaciones. Con
-     * ellos dentro el test fallaría siempre y acabaría desactivado.
-     */
-    private static final List<String> UNIVERSAL_TYPE_CODES = List.of(
-            "EMPLOYEE_PRESENCE_ENTRY_REASON",
-            "EMPLOYEE_PRESENCE_EXIT_REASON",
-            "EMPLOYEE_ADDRESS_TYPE",
-            "CONTACT_TYPE",
-            "EMPLOYEE_IDENTIFIER_TYPE"
-    );
-
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    /**
+     * Los tipos universales salen del modelo, no de una lista a mano: son los de clase
+     * «vocabulario del dominio» (ADR-054 §8, V111). CONTRACT, CONTRACT_SUBTYPE, AGREEMENT y
+     * AGREEMENT_CATEGORY quedan fuera solos —son citas de la norma y sus literales *deben*
+     * diferir entre reglamentaciones—, igual que los nombres propios.
+     */
+    private List<String> universalTypeCodes() {
+        return jdbcTemplate.queryForList("""
+                select code from rulesystem.rule_entity_type
+                 where literal_class = 'DOMAIN_VOCABULARY'
+                 order by code
+                """, String.class);
+    }
 
     @Test
     void universalCodesReadTheSameInEveryRuleSystem() {
@@ -109,13 +103,12 @@ class UniversalCatalogLiteralsGuardTest {
 
         List<Absence> absences = findAbsences();
 
-        assertThat(absences).hasSize(1);
+        // Se afirma contenido, no tamaño: un hasSize ata la sonda al estado global de la
+        // semilla y la pone roja por causas ajenas a HIRING, que ya vigila el otro test.
         String message = describeAbsences(absences);
-        assertThat(message)
-                .contains("EMPLOYEE_PRESENCE_ENTRY_REASON")
-                .contains("HIRING")
-                .contains("está en: ESP, FRA")
-                .contains("falta en: PRT");
+        assertThat(message).contains(
+                "EMPLOYEE_PRESENCE_ENTRY_REASON/HIRING no está en todas las reglamentaciones activas"
+                        + " — está en: ESP, FRA — falta en: PRT");
     }
 
     /** Un código universal cuyas filas no dicen lo mismo en todas las reglamentaciones. */
@@ -126,8 +119,9 @@ class UniversalCatalogLiteralsGuardTest {
     }
 
     private List<Divergence> findDivergences() {
-        String placeholders = UNIVERSAL_TYPE_CODES.stream().map(code -> "?").collect(Collectors.joining(", "));
-        Object[] params = UNIVERSAL_TYPE_CODES.toArray();
+        List<String> universalTypeCodes = universalTypeCodes();
+        String placeholders = universalTypeCodes.stream().map(code -> "?").collect(Collectors.joining(", "));
+        Object[] params = universalTypeCodes.toArray();
 
         List<Divergence> divergences = jdbcTemplate.query("""
                 select rule_entity_type_code, code
@@ -178,10 +172,20 @@ class UniversalCatalogLiteralsGuardTest {
         List<String> activeRuleSystems = jdbcTemplate.queryForList(
                 "select code from rulesystem.rule_system where active order by code", String.class);
 
-        String placeholders = UNIVERSAL_TYPE_CODES.stream().map(code -> "?").collect(Collectors.joining(", "));
-        Object[] params = new Object[UNIVERSAL_TYPE_CODES.size() + 1];
-        UNIVERSAL_TYPE_CODES.toArray(params);
-        params[UNIVERSAL_TYPE_CODES.size()] = activeRuleSystems.size();
+        // Un tipo cerrado sólo se declara donde hace falta: que EMPLOYEE_TYPE exista sólo
+        // en ESP no es un hueco (ADR-054, Consecuencias). En el chequeo de divergencia sí
+        // entra: donde exista, tiene que decir lo mismo.
+        List<String> checkedTypeCodes = jdbcTemplate.queryForList("""
+                select code from rulesystem.rule_entity_type
+                 where literal_class = 'DOMAIN_VOCABULARY'
+                   and maintenance_mode <> 'CLOSED'
+                 order by code
+                """, String.class);
+
+        String placeholders = checkedTypeCodes.stream().map(code -> "?").collect(Collectors.joining(", "));
+        Object[] params = new Object[checkedTypeCodes.size() + 1];
+        checkedTypeCodes.toArray(params);
+        params[checkedTypeCodes.size()] = activeRuleSystems.size();
 
         return jdbcTemplate.query("""
                 select rule_entity_type_code, code
