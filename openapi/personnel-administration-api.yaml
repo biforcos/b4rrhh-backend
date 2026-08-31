@@ -8819,6 +8819,9 @@ components:
         - code
         - name
         - active
+        - literalClass
+        - maintenanceMode
+        - group
       properties:
         code:
           type: string
@@ -8826,6 +8829,27 @@ components:
           type: string
         active:
           type: boolean
+        literalClass:
+          type: string
+          enum: [DOMAIN_VOCABULARY, REGULATORY_CITATION, PROPER_NOUN]
+        maintenanceMode:
+          type: string
+          enum: [MAINTAINED, REFERENCE, CLOSED]
+        group:
+          $ref: "#/components/schemas/RuleEntityTypeGroupResponse"
+    RuleEntityTypeGroupResponse:
+      type: object
+      required:
+        - code
+        - name
+        - displayOrder
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        displayOrder:
+          type: integer
     CreateRuleEntityRequest:
       type: object
       required:

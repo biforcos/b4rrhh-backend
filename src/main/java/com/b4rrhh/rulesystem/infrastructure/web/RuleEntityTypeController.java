@@ -3,10 +3,13 @@ package com.b4rrhh.rulesystem.infrastructure.web;
 import com.b4rrhh.rulesystem.application.usecase.CreateRuleEntityTypeCommand;
 import com.b4rrhh.rulesystem.application.usecase.CreateRuleEntityTypeUseCase;
 import com.b4rrhh.rulesystem.application.usecase.GetRuleEntityTypeByCodeUseCase;
+import com.b4rrhh.rulesystem.application.usecase.ListRuleEntityTypeGroupsUseCase;
 import com.b4rrhh.rulesystem.application.usecase.ListRuleEntityTypesUseCase;
 import com.b4rrhh.rulesystem.domain.model.LiteralClass;
 import com.b4rrhh.rulesystem.domain.model.MaintenanceMode;
 import com.b4rrhh.rulesystem.domain.model.RuleEntityType;
+import com.b4rrhh.rulesystem.domain.model.RuleEntityTypeGroup;
+import com.b4rrhh.rulesystem.infrastructure.web.assembler.RuleEntityTypeResponseAssembler;
 import com.b4rrhh.rulesystem.infrastructure.web.dto.CreateRuleEntityTypeRequest;
 import com.b4rrhh.rulesystem.infrastructure.web.dto.RuleEntityTypeResponse;
 import org.springframework.http.HttpStatus;
@@ -27,15 +30,21 @@ public class RuleEntityTypeController {
     private final CreateRuleEntityTypeUseCase createRuleEntityTypeUseCase;
     private final GetRuleEntityTypeByCodeUseCase getRuleEntityTypeByCodeUseCase;
     private final ListRuleEntityTypesUseCase listRuleEntityTypesUseCase;
+    private final ListRuleEntityTypeGroupsUseCase listRuleEntityTypeGroupsUseCase;
+    private final RuleEntityTypeResponseAssembler assembler;
 
     public RuleEntityTypeController(
             CreateRuleEntityTypeUseCase createRuleEntityTypeUseCase,
             GetRuleEntityTypeByCodeUseCase getRuleEntityTypeByCodeUseCase,
-            ListRuleEntityTypesUseCase listRuleEntityTypesUseCase
+            ListRuleEntityTypesUseCase listRuleEntityTypesUseCase,
+            ListRuleEntityTypeGroupsUseCase listRuleEntityTypeGroupsUseCase,
+            RuleEntityTypeResponseAssembler assembler
     ) {
         this.createRuleEntityTypeUseCase = createRuleEntityTypeUseCase;
         this.getRuleEntityTypeByCodeUseCase = getRuleEntityTypeByCodeUseCase;
         this.listRuleEntityTypesUseCase = listRuleEntityTypesUseCase;
+        this.listRuleEntityTypeGroupsUseCase = listRuleEntityTypeGroupsUseCase;
+        this.assembler = assembler;
     }
 
     @PostMapping
@@ -62,10 +71,10 @@ public class RuleEntityTypeController {
 
     @GetMapping
     public ResponseEntity<List<RuleEntityTypeResponse>> list() {
-        List<RuleEntityTypeResponse> response = listRuleEntityTypesUseCase.listAll()
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        List<RuleEntityTypeResponse> response = assembler.toResponseList(
+                listRuleEntityTypesUseCase.listAll(),
+                listRuleEntityTypeGroupsUseCase.listAll()
+        );
 
         return ResponseEntity.ok(response);
     }
@@ -76,10 +85,12 @@ public class RuleEntityTypeController {
     }
 
     private RuleEntityTypeResponse toResponse(RuleEntityType ruleEntityType) {
-        return new RuleEntityTypeResponse(
-                ruleEntityType.getCode(),
-                ruleEntityType.getName(),
-                ruleEntityType.isActive()
-        );
+        RuleEntityTypeGroup group = listRuleEntityTypeGroupsUseCase.listAll().stream()
+                .filter(candidate -> candidate.code().equals(ruleEntityType.getGroupCode()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "El grupo " + ruleEntityType.getGroupCode() + " no está sembrado"));
+
+        return assembler.toResponse(ruleEntityType, group);
     }
 }
