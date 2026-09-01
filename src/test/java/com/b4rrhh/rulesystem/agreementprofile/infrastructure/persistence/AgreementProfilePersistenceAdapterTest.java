@@ -1,33 +1,50 @@
 package com.b4rrhh.rulesystem.agreementprofile.infrastructure.persistence;
 
 import com.b4rrhh.rulesystem.agreementprofile.domain.model.AgreementProfile;
+import com.b4rrhh.support.DatosDePrueba;
+import com.b4rrhh.support.TestSobreEsquemaReal;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@DataJpaTest(properties = {
-    "spring.flyway.enabled=false",
-    "spring.jpa.hibernate.ddl-auto=create-drop",
-    "spring.jpa.properties.hibernate.hbm2ddl.create_namespaces=true"
-})
-@Import(AgreementProfilePersistenceAdapter.class)
+// La sexta clase con H2, y la que el grep no veia: no escribia jdbc:h2 en
+// ningun sitio porque dejaba que @DataJpaTest sustituyera el datasource por
+// "la base embebida que haya en el classpath". Al borrar el jar del pom dejo
+// de arrancar (#2).
+//
+// El esquema que H2 sacaba del mapeo JPA no tenia la clave ajena que
+// produccion si tiene: agreement_profile.agreement_rule_entity_id ->
+// rule_entity(id) (V59). Por eso un 1L fijo colaba. Aqui el convenio se crea,
+// y el que "no existe" es un id fuera de rango.
+@TestSobreEsquemaReal
 class AgreementProfilePersistenceAdapterTest {
 
-    @Autowired
-    private SpringDataAgreementProfileRepository repository;
+    private static final long CONVENIO_INEXISTENTE = 999_999_999L;
 
     @Autowired
     private AgreementProfilePersistenceAdapter adapter;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    private Long agreementRuleEntityId;
+
+    @BeforeEach
+    void convenioSinPerfil() {
+        agreementRuleEntityId = DatosDePrueba.ruleEntity(
+                jdbcTemplate, "AGREEMENT", "TST-CA-2024", "Convenio de prueba",
+                LocalDate.of(2024, 1, 1), null);
+    }
+
     @Test
     void savesPersistsAgreementProfileByAgreementRuleEntityId() {
-        Long agreementRuleEntityId = 1L;
         AgreementProfile profile = new AgreementProfile(
                 "CA-2024-001",
                 "Collective Agreement 2024",
@@ -47,7 +64,6 @@ class AgreementProfilePersistenceAdapterTest {
 
     @Test
     void findByAgreementRuleEntityIdReturnsProfileWhenExists() {
-        Long agreementRuleEntityId = 1L;
         AgreementProfile profile = new AgreementProfile(
                 "CA-2024-001",
                 "Collective Agreement 2024",
@@ -65,14 +81,13 @@ class AgreementProfilePersistenceAdapterTest {
 
     @Test
     void findByAgreementRuleEntityIdReturnsEmptyWhenNotFound() {
-        Optional<AgreementProfile> found = adapter.findByAgreementRuleEntityId(999L);
+        Optional<AgreementProfile> found = adapter.findByAgreementRuleEntityId(CONVENIO_INEXISTENTE);
 
         assertTrue(found.isEmpty());
     }
 
     @Test
     void updateModifiesExistingProfile() {
-        Long agreementRuleEntityId = 1L;
         AgreementProfile original = new AgreementProfile(
                 "CA-2024-001",
                 "Original Name",
