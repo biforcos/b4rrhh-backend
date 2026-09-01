@@ -6,12 +6,11 @@ import com.b4rrhh.payroll.application.usecase.PayrollLaunchEmployeeTarget;
 import com.b4rrhh.payroll.application.usecase.PayrollLaunchTargetSelection;
 import com.b4rrhh.payroll.application.usecase.PayrollLaunchTargetSelectionType;
 import com.b4rrhh.payroll.domain.model.CalculationRun;
+import com.b4rrhh.support.TestWebSobreEsquemaReal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -19,20 +18,20 @@ import java.time.LocalDate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@SpringBootTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.flyway.enabled=false",
-        "spring.jpa.properties.hibernate.hbm2ddl.create_namespaces=true",
-        "spring.datasource.url=jdbc:h2:mem:payroll_happy_path;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
-        "spring.datasource.driver-class-name=org.h2.Driver",
-        "spring.datasource.username=sa",
-        "spring.datasource.password=",
-        "payroll.launch.execution.mode=ELIGIBLE_REAL"
-})
-@Transactional
+// No hace ninguna peticion HTTP, pero necesita lo mismo que la franja E2E: la
+// aplicacion entera (el motor de nomina no se monta a trozos), en transaccion,
+// sobre el esquema real. Declarar eso a mano seria otro contexto y otro clon;
+// con la anotacion compartida entra en el mismo que los *EndToEndTest (#2).
+//
+// El sistema de reglas no puede ser ESP: las migraciones siembran para ESP el
+// mismo grafo de conceptos, el binding y la tabla del convenio 99002405011982
+// y el perfil de la categoria 99002405-G2 (V61, V66/V67, V71-V91, V87), y el
+// fixture insertaria todo eso por segunda vez. Bajo TST el grafo es solo el que
+// el escenario declara, que es lo que estas cifras afirman.
+@TestWebSobreEsquemaReal
 class PayrollHappyPathIntegrationTest {
 
-    private static final String RULE_SYSTEM   = "ESP";
+    private static final String RULE_SYSTEM   = "TST";
     private static final String EMPLOYEE_TYPE = "INTERNAL";
     private static final String PERIOD        = "202501";
     private static final String PAYROLL_TYPE  = "NORMAL";

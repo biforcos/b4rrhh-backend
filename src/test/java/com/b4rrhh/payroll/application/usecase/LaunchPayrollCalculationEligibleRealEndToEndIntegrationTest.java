@@ -1,12 +1,11 @@
 package com.b4rrhh.payroll.application.usecase;
 
 import com.b4rrhh.payroll.scenario.PayrollScenarioFixtures;
+import com.b4rrhh.support.TestWebSobreEsquemaReal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -14,18 +13,16 @@ import java.time.LocalDate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@SpringBootTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.flyway.enabled=false",
-        "spring.jpa.properties.hibernate.hbm2ddl.create_namespaces=true",
-        "spring.datasource.url=jdbc:h2:mem:payroll_e2e_eligible_real;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
-        "spring.datasource.driver-class-name=org.h2.Driver",
-        "spring.datasource.username=sa",
-        "spring.datasource.password=",
-        "payroll.launch.execution.mode=ELIGIBLE_REAL"
-})
-@Transactional
+// Sin peticion HTTP, pero con la aplicacion entera, en transaccion y sobre el
+// esquema real: lo mismo que la franja E2E, y por eso comparte su contexto y
+// su clon en vez de declarar uno propio (#2).
+//
+// TST y no ESP por la misma razon que PayrollHappyPathIntegrationTest: las
+// migraciones ya siembran para ESP el grafo que el fixture monta.
+@TestWebSobreEsquemaReal
 class LaunchPayrollCalculationEligibleRealEndToEndIntegrationTest {
+
+    private static final String RULE_SYSTEM = "TST";
 
     private String employeeNumber;
     private PayrollScenarioFixtures fixtures;
@@ -39,10 +36,10 @@ class LaunchPayrollCalculationEligibleRealEndToEndIntegrationTest {
     @BeforeEach
     void setUpData() {
         fixtures = new PayrollScenarioFixtures(jdbcTemplate);
-        fixtures.seedConceptGraph("ESP");
+        fixtures.seedConceptGraph(RULE_SYSTEM);
 
         employeeNumber = "ER" + (System.nanoTime() % 1_000_000_000L);
-        long employeeId = fixtures.insertEmployee("ESP", "INTERNAL", employeeNumber);
+        long employeeId = fixtures.insertEmployee(RULE_SYSTEM, "INTERNAL", employeeNumber);
         fixtures.insertPresence(employeeId, 1, LocalDate.of(2025, 1, 1), null);
         fixtures.insertLaborClassification(employeeId, LocalDate.of(2025, 1, 1));
         fixtures.insertWorkingTime(employeeId, new BigDecimal("100.00"),
@@ -52,7 +49,7 @@ class LaunchPayrollCalculationEligibleRealEndToEndIntegrationTest {
     @Test
     void launchPersistsEligibleConceptsWithAggregates() {
         var run = launchPayrollCalculationUseCase.launch(new LaunchPayrollCalculationCommand(
-                "ESP",
+                RULE_SYSTEM,
                 "202501",
                 "NORMAL",
                 "ENGINE",
@@ -71,7 +68,7 @@ class LaunchPayrollCalculationEligibleRealEndToEndIntegrationTest {
         Long payrollId = jdbcTemplate.queryForObject(
                 "select id from payroll.payroll where rule_system_code = ? and employee_type_code = ? and employee_number = ? and payroll_period_code = ? and payroll_type_code = ? and presence_number = ? and status = ?",
                 Long.class,
-                "ESP", "INTERNAL", employeeNumber, "202501", "NORMAL", 1, "CALCULATED");
+                RULE_SYSTEM, "INTERNAL", employeeNumber, "202501", "NORMAL", 1, "CALCULATED");
         assertNotNull(payrollId);
 
         Integer conceptCount = jdbcTemplate.queryForObject(

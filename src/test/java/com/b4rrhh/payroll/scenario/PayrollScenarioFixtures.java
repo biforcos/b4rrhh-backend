@@ -161,13 +161,17 @@ public class PayrollScenarioFixtures {
     /**
      * Inserts one presence row; endDate may be null for an open-ended presence.
      * Returns the generated surrogate id.
+     *
+     * HIRING es el motivo de entrada que siembran las migraciones; el "HIRE" que
+     * habia aqui no existe en ningun catalogo, y solo colaba porque
+     * employee.presence no tiene clave ajena al motivo (#2).
      */
     public long insertPresence(long employeeId, int presenceNumber, LocalDate startDate, LocalDate endDate) {
         jdbc.update(
                 "insert into employee.presence" +
                 " (employee_id, presence_number, company_code, entry_reason_code, start_date, end_date, created_at, updated_at)" +
                 " values (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                employeeId, presenceNumber, "ES01", "HIRE", startDate, endDate);
+                employeeId, presenceNumber, "ES01", "HIRING", startDate, endDate);
         return jdbc.queryForObject(
                 "select id from employee.presence where employee_id = ? and presence_number = ?",
                 Long.class, employeeId, presenceNumber);
