@@ -1,16 +1,14 @@
 package com.b4rrhh.payroll_engine.concept.infrastructure.web;
 
+import com.b4rrhh.support.TestWebSobreEsquemaReal;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,17 +20,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.flyway.enabled=false",
-        "spring.jpa.properties.hibernate.hbm2ddl.create_namespaces=true",
-        "spring.datasource.url=jdbc:h2:mem:concept_wiring_mgmt;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
-        "spring.datasource.driver-class-name=org.h2.Driver",
-        "spring.datasource.username=sa",
-        "spring.datasource.password="
-})
-@AutoConfigureMockMvc
-@Transactional
+// Extremo a extremo de verdad: la peticion entra por MockMvc y los operandos y
+// feeds se escriben y se releen de la base. No hay nada mockeado, asi que su
+// sitio es la franja E2E (backend#31), no un H2 disfrazado de Postgres (#2).
+//
+// ESP viene sembrado por las migraciones y no se vuelve a insertar. Los tres
+// objetos de este test (SALARIO_BASE, T_DIAS_PRESENCIA, T_PRECIO_DIA como
+// object_code) no los siembra nadie: los conceptos reales van por numero (101,
+// 700, ...) y SALARIO_BASE es solo el mnemonico del 101.
+@TestWebSobreEsquemaReal
 class ConceptWiringControllerTest {
 
     private static final String RULE_SYSTEM_CODE = "ESP";
@@ -51,11 +47,6 @@ class ConceptWiringControllerTest {
 
     @BeforeEach
     void seed() {
-        jdbc.update("insert into rulesystem.rule_system "
-                        + "(code, name, country_code, active, created_at, updated_at) "
-                        + "values (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                RULE_SYSTEM_CODE, "Spain", "ESP", true);
-
         seedConcept(TARGET_CONCEPT_CODE, "SALARIO_BASE", "RATE_BY_QUANTITY",
                 "EARNING", "REPLACE", "PERIOD");
         seedConcept(SOURCE_QUANTITY_CODE, "T_DIAS_PRESENCIA", "DIRECT_AMOUNT",

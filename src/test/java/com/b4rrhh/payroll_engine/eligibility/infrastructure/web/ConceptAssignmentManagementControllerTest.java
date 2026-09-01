@@ -1,16 +1,14 @@
 package com.b4rrhh.payroll_engine.eligibility.infrastructure.web;
 
+import com.b4rrhh.support.TestWebSobreEsquemaReal;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -24,20 +22,19 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.flyway.enabled=false",
-        "spring.jpa.properties.hibernate.hbm2ddl.create_namespaces=true",
-        "spring.datasource.url=jdbc:h2:mem:concept_assignment_mgmt;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
-        "spring.datasource.driver-class-name=org.h2.Driver",
-        "spring.datasource.username=sa",
-        "spring.datasource.password="
-})
-@AutoConfigureMockMvc
-@Transactional
+// Extremo a extremo de verdad: la peticion entra por MockMvc y la asignacion se
+// escribe, se actualiza, se borra y se relee de la base, sin nada mockeado. Su
+// sitio es la franja E2E (backend#31), no un H2 disfrazado de Postgres (#2).
+//
+// El sistema de reglas no puede ser ESP: las migraciones le siembran
+// concept_assignment (V73, V74, V77, V88, V91) y "la lista esta vacia cuando
+// no hay ninguna" dejaria de ser verdad. TST no lo siembra nadie, y
+// payroll_engine no tiene clave ajena a rulesystem.rule_system, asi que no
+// hace falta insertarlo.
+@TestWebSobreEsquemaReal
 class ConceptAssignmentManagementControllerTest {
 
-    private static final String RULE_SYSTEM_CODE = "ESP";
+    private static final String RULE_SYSTEM_CODE = "TST";
     private static final String CONCEPT_CODE = "SALARIO_BASE";
 
     @Autowired
@@ -51,11 +48,6 @@ class ConceptAssignmentManagementControllerTest {
 
     @BeforeEach
     void seed() {
-        jdbc.update("insert into rulesystem.rule_system "
-                        + "(code, name, country_code, active, created_at, updated_at) "
-                        + "values (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                RULE_SYSTEM_CODE, "Spain", "ESP", true);
-
         jdbc.update("insert into payroll_engine.payroll_object "
                         + "(rule_system_code, object_type_code, object_code, created_at, updated_at) "
                         + "values (?, 'CONCEPT', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",

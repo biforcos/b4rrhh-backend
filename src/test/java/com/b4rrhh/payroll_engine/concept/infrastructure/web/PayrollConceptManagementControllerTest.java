@@ -1,16 +1,12 @@
 package com.b4rrhh.payroll_engine.concept.infrastructure.web;
 
+import com.b4rrhh.support.TestWebSobreEsquemaReal;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -22,17 +18,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = {
-        "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.flyway.enabled=false",
-        "spring.jpa.properties.hibernate.hbm2ddl.create_namespaces=true",
-        "spring.datasource.url=jdbc:h2:mem:payroll_concept_mgmt;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
-        "spring.datasource.driver-class-name=org.h2.Driver",
-        "spring.datasource.username=sa",
-        "spring.datasource.password="
-})
-@AutoConfigureMockMvc
-@Transactional
+// Extremo a extremo de verdad: la peticion entra por MockMvc y el concepto se
+// escribe y se relee de la base, sin nada mockeado. Su sitio es la franja E2E
+// (backend#31), no un H2 disfrazado de Postgres (#2).
+//
+// Antes sembraba a mano ESP y "un concepto igual al 101 de la V71". Sobre el
+// esquema real ambos vienen de las migraciones (V49, V71): el 409 se afirma
+// contra el 101 que produccion tiene, y no contra una copia.
+@TestWebSobreEsquemaReal
 class PayrollConceptManagementControllerTest {
 
     private static final String RULE_SYSTEM_CODE = "ESP";
@@ -43,41 +36,6 @@ class PayrollConceptManagementControllerTest {
 
     @Autowired
     private ObjectMapper objectMapper;
-
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
-    @BeforeEach
-    void seedConcept() {
-        // Seed rule_system row required by FK constraints
-        jdbcTemplate.update(
-                "insert into rulesystem.rule_system (code, name, country_code, active, created_at, updated_at) "
-                        + "values (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                RULE_SYSTEM_CODE, "Spain", "ESP", true
-        );
-
-        // Seed one PayrollObject + PayrollConcept matching the V71 seed (concept '101').
-        jdbcTemplate.update(
-                "insert into payroll_engine.payroll_object "
-                        + "(rule_system_code, object_type_code, object_code, created_at, updated_at) "
-                        + "values (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                RULE_SYSTEM_CODE, "CONCEPT", EXISTING_SEEDED_CONCEPT_CODE
-        );
-        Long objectId = jdbcTemplate.queryForObject(
-                "select id from payroll_engine.payroll_object "
-                        + "where rule_system_code = ? and object_type_code = ? and object_code = ?",
-                Long.class, RULE_SYSTEM_CODE, "CONCEPT", EXISTING_SEEDED_CONCEPT_CODE
-        );
-        jdbcTemplate.update(
-                "insert into payroll_engine.payroll_concept "
-                        + "(object_id, concept_mnemonic, calculation_type, functional_nature, "
-                        + "result_composition_mode, payslip_order_code, execution_scope, "
-                        + "persist_to_concepts, created_at, updated_at) "
-                        + "values (?, ?, ?, ?, ?, ?, ?, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                objectId, "SALARIO_BASE", "RATE_BY_QUANTITY", "EARNING",
-                "REPLACE", "101", "PERIOD"
-        );
-    }
 
     @Test
     @WithMockUser(roles = "ADMIN")
