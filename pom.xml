@@ -73,11 +73,6 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>test</scope>
-        </dependency>
         <!-- Testcontainers: la suite levanta su propio Postgres y lo destruye al
              acabar. Sin esto, los tests de integracion dependen de que alguien
              se acuerde de arrancar un contenedor a mano, y un runner de CI no
