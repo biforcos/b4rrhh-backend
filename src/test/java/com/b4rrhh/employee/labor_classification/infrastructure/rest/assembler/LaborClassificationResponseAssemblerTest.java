@@ -16,6 +16,10 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,6 +41,8 @@ class LaborClassificationResponseAssemblerTest {
                 .thenReturn(Optional.of("Administrative Category"));
         when(agreementCategoryProfileRepository.findGrupoCotizacionCodeByCategoryCode("ESP", "CAT_ADMIN"))
                 .thenReturn(Optional.of("05"));
+        when(ruleEntityLabelResolver.resolveName("ESP", "GRUPO_COTIZACION", "05", "es-ES"))
+                .thenReturn(Optional.of("Oficiales Administrativos"));
 
         LaborClassificationResponse response = assembler.toResponse("ESP", laborClassification, new ResponseLanguage("es-ES"));
 
@@ -45,6 +51,7 @@ class LaborClassificationResponseAssemblerTest {
         assertEquals("CAT_ADMIN", response.agreementCategoryCode());
         assertEquals("Administrative Category", response.agreementCategoryName());
         assertEquals("05", response.grupoCotizacionCode());
+        assertEquals("Oficiales Administrativos", response.grupoCotizacionName());
     }
 
     @Test
@@ -64,6 +71,9 @@ class LaborClassificationResponseAssemblerTest {
         assertNull(response.agreementName());
         assertNull(response.agreementCategoryName());
         assertNull(response.grupoCotizacionCode());
+        assertNull(response.grupoCotizacionName());
+        // Sin grupo no hay nada que resolver: el resolutor no se consulta para ese tipo.
+        verify(ruleEntityLabelResolver, never()).resolveName(any(), eq("GRUPO_COTIZACION"), any(), any());
     }
 
     // El grupo de cotizacion se busca con los codigos normalizados, como hacia el adaptador.

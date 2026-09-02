@@ -41,6 +41,14 @@ public class LaborClassificationResponseAssembler {
                 .orElse(null);
         String grupoCotizacionCode = findGrupoCotizacionCode(ruleSystemCode, laborClassification.getAgreementCategoryCode())
                 .orElse(null);
+        // Cita reglamentaria (ADR-054): el resolutor devuelve el literal base porque no hay
+        // traduccion que sembrar. Sin grupo, sin nombre: nada de relleno (backend#41).
+        String grupoCotizacionName = grupoCotizacionCode == null
+                ? null
+                : ruleEntityLabelResolver
+                        .resolveName(ruleSystemCode, LaborClassificationRuleEntityTypeCodes.GRUPO_COTIZACION,
+                                grupoCotizacionCode, language.code())
+                        .orElse(null);
 
         return new LaborClassificationResponse(
                 laborClassification.getAgreementCode(),
@@ -48,6 +56,7 @@ public class LaborClassificationResponseAssembler {
                 laborClassification.getAgreementCategoryCode(),
                 agreementCategoryName,
                 grupoCotizacionCode,
+                grupoCotizacionName,
                 laborClassification.getStartDate(),
                 laborClassification.getEndDate()
         );

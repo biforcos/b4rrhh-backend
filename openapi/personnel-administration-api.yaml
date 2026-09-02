@@ -7913,6 +7913,13 @@ components:
         grupoCotizacionCode:
           type: string
           nullable: true
+        grupoCotizacionName:
+          type: string
+          nullable: true
+          description: >-
+            Literal del grupo de cotización de la Seguridad Social. Es cita reglamentaria
+            (ADR-054), así que no se traduce: llega el literal base del catálogo.
+            Nulo cuando la categoría no tiene grupo, igual que grupoCotizacionCode.
         startDate:
           type: string
           format: date

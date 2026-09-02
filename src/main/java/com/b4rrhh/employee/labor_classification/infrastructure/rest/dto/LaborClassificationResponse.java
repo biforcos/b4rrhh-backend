@@ -8,6 +8,7 @@ public record LaborClassificationResponse(
         String agreementCategoryCode,
         String agreementCategoryName,
         String grupoCotizacionCode,
+        String grupoCotizacionName,
         LocalDate startDate,
         LocalDate endDate
 ) {
