@@ -4,7 +4,6 @@ import com.b4rrhh.support.TestWebSobreEsquemaReal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -20,6 +19,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * dominio; ahora la conversion vive en el assembler de la capa web, y este test afirma que
  * el idioma viaja de la cabecera al resolutor de verdad: sin cabecera, el literal base;
  * con ella, la traduccion.
+ *
+ * La traduccion la trae la semilla de la V114 (backend#40). Hasta entonces la tabla
+ * llegaba vacia y este test sembraba la suya.
  */
 @TestWebSobreEsquemaReal
 class WorkCenterContactLanguageEndToEndTest {
@@ -27,20 +29,9 @@ class WorkCenterContactLanguageEndToEndTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
     @Test
     @WithMockUser(roles = "ADMIN")
     void contactsServeTheSeededTranslationWhenAcceptLanguageAsksForIt() throws Exception {
-        jdbcTemplate.update("""
-                insert into rulesystem.rule_entity_translation (rule_entity_id, language_code, name)
-                select id, 'es-ES', 'Correo electrónico' from rulesystem.rule_entity
-                 where rule_system_code = 'ESP'
-                   and rule_entity_type_code = 'CONTACT_TYPE'
-                   and code = 'EMAIL'
-                """);
-
         mockMvc.perform(post("/work-centers/ESP/MAIN_OFFICE/contacts")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""

@@ -36,10 +36,10 @@ class DeleteRuleEntityCascadesTranslationsIntegrationTest {
                 select id from rulesystem.rule_entity
                  where rule_system_code = 'ESP' and rule_entity_type_code = ? and code = 'HIRING'
                 """, Long.class, ENTRY_REASON);
-        jdbcTemplate.update("""
-                insert into rulesystem.rule_entity_translation (rule_entity_id, language_code, name)
-                values (?, 'es-ES', 'Contratación')
-                """, ruleEntityId);
+        // La traducción viene sembrada (V114, backend#40); antes este test insertaba la suya.
+        assertThat(count("rulesystem.rule_entity_translation", ruleEntityId))
+                .as("la semilla trae la traducción de HIRING/ESP")
+                .isPositive();
 
         deleteRuleEntityUseCase.delete(new DeleteRuleEntityCommand(
                 "ESP", ENTRY_REASON, "HIRING", LocalDate.of(1900, 1, 1)));

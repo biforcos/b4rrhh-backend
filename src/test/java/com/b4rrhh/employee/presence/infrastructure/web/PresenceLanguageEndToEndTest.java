@@ -5,7 +5,6 @@ import com.b4rrhh.employee.lifecycle.application.usecase.HireEmployeeUseCase;
 import com.b4rrhh.support.TestWebSobreEsquemaReal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -24,6 +23,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * la respuesta HTTP — el parametro llegaba porque el test se lo daba. Aqui el idioma tiene
  * que viajar de la cabecera al resolutor de literales de verdad, y se afirma sobre el
  * cuerpo: un test que solo mirara el 200 recibiria el literal base y no se enteraria.
+ *
+ * La traduccion la trae la semilla de la V114 (backend#40). Hasta entonces la tabla
+ * llegaba vacia y este test sembraba la suya; ahora afirma lo que ve la ficha de verdad.
  */
 @TestWebSobreEsquemaReal
 class PresenceLanguageEndToEndTest {
@@ -34,20 +36,9 @@ class PresenceLanguageEndToEndTest {
     @Autowired
     private HireEmployeeUseCase hireEmployeeUseCase;
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
     @Test
     @WithMockUser(roles = "ADMIN")
     void presencesServeTheSeededTranslationWhenAcceptLanguageAsksForIt() throws Exception {
-        jdbcTemplate.update("""
-                insert into rulesystem.rule_entity_translation (rule_entity_id, language_code, name)
-                select id, 'es-ES', 'Contratación' from rulesystem.rule_entity
-                 where rule_system_code = 'ESP'
-                   and rule_entity_type_code = 'EMPLOYEE_PRESENCE_ENTRY_REASON'
-                   and code = 'HIRING'
-                """);
-
         String employeeNumber = hireBaselineEmployee();
 
         mockMvc.perform(get("/employees/ESP/INTERNAL/{employeeNumber}/presences", employeeNumber)
