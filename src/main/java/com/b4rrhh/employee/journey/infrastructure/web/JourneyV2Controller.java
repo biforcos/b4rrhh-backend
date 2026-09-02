@@ -53,8 +53,6 @@ public class JourneyV2Controller {
                 event.eventDate(),
                 event.eventType().name(),
                 event.trackCode().name(),
-                event.title(),
-                event.subtitle(),
                 event.status().apiValue(),
                 event.isCurrent(),
                 event.details()

@@ -7,8 +7,6 @@ public record JourneyEventResponse(
         LocalDate eventDate,
         String eventType,
         String trackCode,
-        String title,
-        String subtitle,
         String status,
         boolean isCurrent,
         Map<String, Object> details

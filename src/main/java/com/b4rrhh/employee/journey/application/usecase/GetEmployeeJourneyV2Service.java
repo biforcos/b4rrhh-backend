@@ -120,8 +120,6 @@ public class GetEmployeeJourneyV2Service implements GetEmployeeJourneyV2UseCase 
                             presence.startDate(),
                             startType,
                             JourneyTrackCode.PRESENCE,
-                            titleFor(startType),
-                            presence.companyCode() + " · period #" + periodNumber,
                             statusFor(presence.startDate(), isCurrent, today),
                             isCurrent,
                             presenceDetails(presence, periodNumber)
@@ -140,8 +138,6 @@ public class GetEmployeeJourneyV2Service implements GetEmployeeJourneyV2UseCase 
                                 presence.endDate(),
                                 endType,
                                 JourneyTrackCode.PRESENCE,
-                                titleFor(endType),
-                                presence.companyCode() + " · period #" + periodNumber,
                                 statusFor(presence.endDate(), false, today),
                                 false,
                                 presenceDetails(presence, periodNumber)
@@ -173,8 +169,6 @@ public class GetEmployeeJourneyV2Service implements GetEmployeeJourneyV2UseCase 
                             contract.startDate(),
                             startType,
                             JourneyTrackCode.CONTRACT,
-                            titleFor(startType),
-                            contract.contractCode() + " / " + contract.contractSubtypeCode(),
                             statusFor(contract.startDate(), isCurrent, today),
                             isCurrent,
                             contractDetails(contract)
@@ -189,8 +183,6 @@ public class GetEmployeeJourneyV2Service implements GetEmployeeJourneyV2UseCase 
                                 contract.endDate(),
                                 JourneyEventType.CONTRACT_END,
                                 JourneyTrackCode.CONTRACT,
-                                titleFor(JourneyEventType.CONTRACT_END),
-                                contract.contractCode() + " / " + contract.contractSubtypeCode(),
                                 statusFor(contract.endDate(), false, today),
                                 false,
                                 contractDetails(contract)
@@ -226,8 +218,6 @@ public class GetEmployeeJourneyV2Service implements GetEmployeeJourneyV2UseCase 
                             laborClassification.startDate(),
                             startType,
                             JourneyTrackCode.LABOR_CLASSIFICATION,
-                            titleFor(startType),
-                            laborClassification.agreementCode() + " / " + laborClassification.agreementCategoryCode(),
                             statusFor(laborClassification.startDate(), isCurrent, today),
                             isCurrent,
                             laborClassificationDetails(laborClassification)
@@ -242,8 +232,6 @@ public class GetEmployeeJourneyV2Service implements GetEmployeeJourneyV2UseCase 
                                 laborClassification.endDate(),
                                 JourneyEventType.LABOR_CLASSIFICATION_END,
                                 JourneyTrackCode.LABOR_CLASSIFICATION,
-                                titleFor(JourneyEventType.LABOR_CLASSIFICATION_END),
-                                laborClassification.agreementCode() + " / " + laborClassification.agreementCategoryCode(),
                                 statusFor(laborClassification.endDate(), false, today),
                                 false,
                                 laborClassificationDetails(laborClassification)
@@ -271,8 +259,6 @@ public class GetEmployeeJourneyV2Service implements GetEmployeeJourneyV2UseCase 
                             workCenter.startDate(),
                             JourneyEventType.WORK_CENTER_START,
                             JourneyTrackCode.WORK_CENTER,
-                            titleFor(JourneyEventType.WORK_CENTER_START),
-                            subtitleForWorkCenter(workCenter),
                             statusFor(workCenter.startDate(), isCurrent, today),
                             isCurrent,
                             workCenterDetails(workCenter)
@@ -287,8 +273,6 @@ public class GetEmployeeJourneyV2Service implements GetEmployeeJourneyV2UseCase 
                                 workCenter.endDate(),
                                 JourneyEventType.WORK_CENTER_END,
                                 JourneyTrackCode.WORK_CENTER,
-                                titleFor(JourneyEventType.WORK_CENTER_END),
-                                subtitleForWorkCenter(workCenter),
                                 statusFor(workCenter.endDate(), false, today),
                                 false,
                                 workCenterDetails(workCenter)
@@ -334,28 +318,6 @@ public class GetEmployeeJourneyV2Service implements GetEmployeeJourneyV2UseCase 
             details.put("endDate", workCenter.endDate());
         }
         return details;
-    }
-
-    private String subtitleForWorkCenter(JourneyWorkCenterRecord workCenter) {
-        return workCenter.workCenterCode() + " · assignment #" + workCenter.workCenterAssignmentNumber();
-    }
-
-    private String titleFor(JourneyEventType eventType) {
-        return switch (eventType) {
-            case HIRE -> "Employee hired";
-            case REHIRE -> "Employee rehired";
-            case TERMINATION -> "Employment terminated";
-            case PRESENCE_START -> "Presence period started";
-            case PRESENCE_END -> "Presence period ended";
-            case CONTRACT_START -> "Contract started";
-            case CONTRACT_CHANGE -> "Contract changed";
-            case CONTRACT_END -> "Contract ended";
-            case LABOR_CLASSIFICATION_START -> "Labor classification started";
-            case LABOR_CLASSIFICATION_CHANGE -> "Labor classification changed";
-            case LABOR_CLASSIFICATION_END -> "Labor classification ended";
-            case WORK_CENTER_START -> "Work center assignment started";
-            case WORK_CENTER_END -> "Work center assignment ended";
-        };
     }
 
     private JourneyEventStatus statusFor(LocalDate eventDate, boolean isCurrent, LocalDate today) {

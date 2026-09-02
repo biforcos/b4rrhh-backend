@@ -63,7 +63,9 @@ class JourneyV2ControllerHttpTest {
                 .andExpect(jsonPath("$.events[0].eventDate[2]").value(10))
                 .andExpect(jsonPath("$.events[0].eventType").value("HIRE"))
                 .andExpect(jsonPath("$.events[0].trackCode").value("PRESENCE"))
-                .andExpect(jsonPath("$.events[0].title").value("Employee hired"))
+                // Sin frases: el cliente rotula el tipo de evento (ADR-052 §4, backend#40).
+                .andExpect(jsonPath("$.events[0].title").doesNotExist())
+                .andExpect(jsonPath("$.events[0].subtitle").doesNotExist())
                 .andExpect(jsonPath("$.events[0].status").value("completed"))
                 .andExpect(jsonPath("$.events[0].isCurrent").value(false))
                 .andExpect(jsonPath("$.events[0].details.presenceNumber").value(1))
@@ -100,8 +102,6 @@ class JourneyV2ControllerHttpTest {
                                 LocalDate.of(2023, 1, 10),
                                 JourneyEventType.HIRE,
                                 JourneyTrackCode.PRESENCE,
-                                "Employee hired",
-                                "ES01 · period #1",
                                 JourneyEventStatus.COMPLETED,
                                 false,
                                 Map.of(
