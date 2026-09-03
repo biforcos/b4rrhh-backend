@@ -1,11 +1,11 @@
-﻿# ADR Bundle
+# ADR Bundle
 
-> Fichero generado automÃ¡ticamente. No editar a mano.
-> Fecha de generaciÃ³n: 2026-09-03 21:01:15
+> Fichero generado automáticamente. No editar a mano.
+> Fecha de generación: 2026-09-03 19:36:59
 
 ---
 
-## Ãndice
+## Índice
 
 - [ADR-001-vertical-architecture-and-api-identity.md](#file-adr-001-vertical-architecture-and-api-identity-md)
 - [ADR-002-employee-contact-vertical.md](#file-adr-002-employee-contact-vertical-md)
@@ -60,6 +60,7 @@
 - [ADR-053-la-raiz-y-sus-extensiones.md](#file-adr-053-la-raiz-y-sus-extensiones-md)
 - [ADR-054-lo-que-un-tipo-sabe-de-si-mismo.md](#file-adr-054-lo-que-un-tipo-sabe-de-si-mismo-md)
 - [ADR-055-la-integridad-de-los-codigos-en-uso-vive-en-la-aplicacion.md](#file-adr-055-la-integridad-de-los-codigos-en-uso-vive-en-la-aplicacion-md)
+- [ADR-056-la-unicidad-de-un-codigo-no-incluye-la-vigencia.md](#file-adr-056-la-unicidad-de-un-codigo-no-incluye-la-vigencia-md)
 - [ADR-28-payroll-calculation-launch-semantics.md](#file-adr-28-payroll-calculation-launch-semantics-md)
 
 ---
@@ -769,7 +770,6 @@ A partir de este ADR:
 Este documento debe usarse como referencia base para diseño humano, revisión técnica y prompts a Copilot.
 
 
-
 <!-- END FILE: ADR-001-vertical-architecture-and-api-identity.md -->
 
 
@@ -1046,7 +1046,6 @@ This vertical serves as the **reference implementation** for:
 - metamodel catalog validation
 
 Future verticals in the `employee` bounded context should follow this pattern.
-
 <!-- END FILE: ADR-002-employee-contact-vertical.md -->
 
 
@@ -1341,7 +1340,6 @@ This ADR must be used together with:
 - ADR-001 — vertical architecture and API identity rules
 - ADR-002 — employee.contact vertical
 
-
 <!-- END FILE: ADR-003-rule-entity-metamodel-strategy.md -->
 
 
@@ -1593,7 +1591,6 @@ This ADR must be used together with:
 - ADR-001 — vertical architecture and API identity rules
 - ADR-002 — employee.contact vertical
 - ADR-003 — rule entity metamodel strategy
-
 
 <!-- END FILE: ADR-004-employee-business-key-strategy.md -->
 
@@ -2302,7 +2299,6 @@ A partir de este ADR:
 Este documento debe usarse como referencia base para diseño humano, revisión técnica y prompts a Copilot.
 
 
-
 <!-- END FILE: ADR-005-arquitectura_por_verticales_y_reglas_api.md -->
 
 
@@ -2512,7 +2508,6 @@ systems.
 
 These questions are intentionally deferred until the rule model matures
 further.
-
 
 <!-- END FILE: ADR-006_rule_entity_type_domain.md -->
 
@@ -2814,7 +2809,6 @@ La introducción de **Employee Lifecycle Workflows** permite:
 
 Este ADR establece la base conceptual para futuras implementaciones de Hire, Terminate y Rehire en el sistema B4RRHH.
 
-
 <!-- END FILE: ADR-007-employee-lifecycle-workflows.md -->
 
 
@@ -3009,7 +3003,6 @@ Si aparecen variaciones significativas:
 ## 11. Estado
 
 Patrón activo y recomendado.
-
 
 <!-- END FILE: ADR-008-strong-timeline-replace-pattern.md -->
 
@@ -3391,7 +3384,6 @@ la vista técnica por tracks
 la vista funcional de journey
 
 Esto permitirá construir una timeline realmente útil para frontend, alineada con el ciclo de vida del empleado y con la semántica de negocio del dominio.
-
 <!-- END FILE: ADR-009-journey.md -->
 
 
@@ -3671,7 +3663,6 @@ Para verticales temporales:
 
 El frontend respetará siempre la semántica realmente soportada por backend.
 
-
 <!-- END FILE: ADR-010-employee-frontend-editing.md -->
 
 
@@ -3941,7 +3932,6 @@ La razón es simple: conviene seguir capturando el patrón donde el beneficio es
 - `contract` y `labor_classification` deben esperar.
 - Este documento debe usarse como criterio de diseño y como prólogo de prompts para Copilot.
 
-
 <!-- END FILE: ADR-011-shared-lookup-decision-matrix-and-guidelines.md -->
 
 
@@ -4157,7 +4147,6 @@ Consecuencias negativas
 aparece deuda visible en nombres ya existentes
 obliga a pensar más antes de crear nuevos tipos
 en el futuro puede requerir migraciones o aliases si se decide racionalizar nombres existentes
-
 <!-- END FILE: ADR-012-Racionalización-de-naming-y-alcance-semántico-de-rule_entity_type.md -->
 
 
@@ -4442,7 +4431,6 @@ close
 delete restringido
 
 DELETE existirá, pero únicamente como operación excepcional y segura, protegida por validación backend de ausencia total de referencias dentro del rule_system.
-
 <!-- END FILE: ADR-013-Mantenimiento-de-rule_entity.md -->
 
 
@@ -4513,7 +4501,6 @@ Componente base que define:
 2. Aplicar a contacts
 3. Reutilizar en identifiers
 4. Extender a temporales
-
 
 <!-- END FILE: ADR-014-employee-frontend-ui.md -->
 
@@ -4694,7 +4681,6 @@ Bindings iniciales a registrar:
 - Diseñar una API universal compleja antes de validar casos reales.
 - Introducir IDs técnicos en contratos públicos.
 - Romper vertical-first moviendo reglas de dominio fuera de sus verticales.
-
 
 <!-- END FILE: ADR-015-Binding-de-catalogos-por-recurso-y-campo.md -->
 
@@ -4959,7 +4945,6 @@ no parece CRUD
 expresa claramente el dominio
 escala sin romperse
 puede evolucionar hacia producto completo de RRHH
-
 <!-- END FILE: ADR-016-Anatomia-visual-y-patrones-de-interacción-de-la-ficha-de-empleado.md -->
 
 
@@ -5496,7 +5481,6 @@ líneas paralelas con la misma startDate;
 cierre completo en TERMINATION;
 catálogo COST_CENTER;
 operaciones canónicas orientadas a crear, sustituir y cerrar distribuciones
-
 <!-- END FILE: ADR-017-Cost-center-design.md -->
 
 
@@ -5852,7 +5836,6 @@ define su contexto organizativo inicial
 garantiza coherencia temporal
 
 Todo ello en una única operación orquestada, alineada con el modelo de verticales y con el ciclo de vida real del empleado.
-
 <!-- END FILE: ADR-018-hiring-an-employee.md -->
 
 
@@ -5962,7 +5945,6 @@ La cascada en base de datos se considera una decisión de persistencia y consist
 
 ```text
 DELETE /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}
-
 <!-- END FILE: ADR-019-employee-delete-administrativo.md -->
 
 
@@ -6092,7 +6074,6 @@ Relación con otras verticales
 Esta decisión acerca work_center a un patrón de sustitución temporal por fecha efectiva, aunque sin convertirlo automáticamente en STRONG_TIMELINE.
 
 No se afirma que work_center y contract sean idénticos como verticales, pero sí que ambos requieren una operación canónica de sustitución temporal cuando el cambio funcional afecta a una asignación vigente.
-
 
 <!-- END FILE: ADR-020-work-center-replace-from-date.md -->
 
@@ -6505,7 +6486,6 @@ dirección
 y dejará fuera, de momento, numeración y contactos empresariales.
 
 Esta decisión no crea todavía un nuevo universo organization.*, pero sí fija una vía muy importante para el crecimiento del rulesystem: catálogo reusable → profile enriquecido → posible vertical plena solo si el dominio lo exige.
-
 <!-- END FILE: ADR-021-COMPANY-como-catalogo-enriquecido-y-anclado-a-rule_entity.md -->
 
 
@@ -6765,7 +6745,6 @@ It is a **system-level capability**.
 All meaningful application feedback must be:
 
 > centralized, visible, predictable, and non-intrusive.
-
 
 <!-- END FILE: ADR-022-Global-message-and-feedback-policy.md -->
 
@@ -7071,7 +7050,6 @@ The system controls how feedback is displayed.
 
 > If a vertical performs an operation,
 > it MUST publish the outcome to the global system.
-
 
 <!-- END FILE: ADR-023-UI-interaction-contracts-per-vertical.md -->
 
@@ -7424,7 +7402,6 @@ La combinación de recurso jerárquico, perfil reusable y propagación al árbol
 - overrides explícitos para recursos sensibles o workflows concretos
 - crecimiento limpio sin mantenimiento infernal
 
-
 <!-- END FILE: ADR-024_autorizacion_jerarquica_B4RRHH.md -->
 
 
@@ -7496,7 +7473,6 @@ Integración con proveedor externo manteniendo autorización interna.
 
 ## Sobre subjeect_code
 subject_code representa la identidad autenticada del actor y se trata como identificador opaco; no se normaliza por case y no se interpreta como business key.
-
 <!-- END FILE: ADR-025-subject-roles.md.md -->
 
 
@@ -7572,7 +7548,6 @@ El motor solo borra/recrea nóminas en NOT_VALID.
 
 ## Resumen
 Workflow seguro que evita recálculos accidentales mediante invalidación explícita previa.
-
 
 <!-- END FILE: ADR-026-payroll-status-workflow.md.md -->
 
@@ -7654,7 +7629,6 @@ ESP + EMP + 0001 + 202501 + ORD + 2
 
 ## Resumen
 `payroll.payroll` es un resultado materializado, no editable, regenerable por cálculo, con conceptos y snapshots dependientes.
-
 
 <!-- END FILE: ADR-027-payroll-root-model.md.md -->
 
@@ -7915,7 +7889,6 @@ Se rechaza en esta fase:
 En B4RRHH, `calculate` es el caso de uso especializado que recibe unidades explícitas ya resueltas y materializa `payroll.payroll` con conceptos y snapshots.
 
 En la primera iteración, puede implementarse como un **stub calculator útil**, orientado a validar el flujo técnico y funcional, no a resolver todavía el motor real de reglas de nómina.
-
 
 <!-- END FILE: ADR-029-payroll-calculate-contract-stub.md -->
 
@@ -8447,7 +8420,6 @@ payroll.calculation_claim garantiza exclusión concurrente por unidad de cálcul
 calculate será un caso de uso interno especializado y desacoplado del contrato público final;
 el launch coordina, reclama, delega y registra;
 la semántica queda preparada tanto para una V1 secuencial como para una evolución futura paralelizable y observable.
-
 <!-- END FILE: ADR-030-Payroll-Launch-Calculation-Run-Claim-and-Internal-Calculator-Orchestration.md -->
 
 
@@ -8960,7 +8932,6 @@ payroll.calculation_claim garantiza exclusión concurrente por unidad;
 payroll.calculation_run_message concentra mensajes operativos/técnicos del run;
 calculation_run_item no forma parte del núcleo inicial;
 el sistema queda preparado para diseñar launch sin acoplarlo prematuramente al motor real.
-
 <!-- END FILE: ADR-031-Modelo-físico-de-payroll-launch- calculation-run-claims-y-mensajes.md -->
 
 
@@ -9327,7 +9298,6 @@ actualiza contadores y estado del run
 registra mensajes del run
 
 Todo ello sin acoplar todavía el workflow al motor real de nómina.
-
 <!-- END FILE: ADR-032-Payroll-Launch-Workflow-(síncrono, con-run-persistido-y-claims-por-unidad)-Estado.md -->
 
 
@@ -9426,7 +9396,6 @@ objectCode
 Los subtipos como PayrollConcept, PayrollTable o PayrollConstant heredarán esa identidad común.
 
 Los nombres como conceptCode o tableCode se consideran alias semánticos contextuales del objectCode, no nuevas business keys.
-
 <!-- END FILE: ADR-033-PayrollObject-como-raíz-metamodelo-canónica-del-motor-nómina.md -->
 
 
@@ -9643,7 +9612,6 @@ Su núcleo estable está formado por:
 `calculationType` es inmutable.
 
 Los cambios en la naturaleza del concepto implican la creación de un nuevo concepto.
-
 <!-- END FILE: ADR-034-Modelo-semántico-de-PayrollConcept.md -->
 
 
@@ -9961,7 +9929,6 @@ El modelo se apoya en la separación entre:
 - resolución de datos (operandos)
 
 lo que habilita un motor flexible, composicional y extensible.
-
 <!-- END FILE: ADR-036-Tipologías-canónicas-de-cálculo-de-payrollconcept.md -->
 
 
@@ -10304,7 +10271,6 @@ Cada operando de un concepto se resuelve mediante un source, desacoplando comple
 - el origen de los datos
 
 Este modelo permite construir un motor composicional, reutilizable y altamente con
-
 <!-- END FILE: ADR-037-Sources-y-resolución-de-operandos-en-PayrollConcept.md -->
 
 
@@ -10609,7 +10575,6 @@ Ambas estrategias son necesarias para modelar correctamente:
 - totales funcionales (derivados automáticamente)
 
 Este modelo evita listas manuales frágiles y permite construir un motor de nómina flexible, escalable y alineado con el dominio.
-
 <!-- END FILE: ADR-038-Estrategias-de-agregación-y-relaciones-de-alimentación-en-PayrollConcept.md -->
 
 
@@ -10924,7 +10889,6 @@ Se definen tres tipos de dependencia:
 El grafo debe ser acíclico, explícito y completamente derivable de la configuración.
 
 Este modelo constituye la base para la futura ejecución del motor de cálculo.
-
 <!-- END FILE: ADR-039-Modelo-dependencias-y-grafo-de-cálculo-de-PayrollConcept.md -->
 
 
@@ -11214,7 +11178,6 @@ un subgrafo efectivo reducido
 un plan de cálculo derivado por ordenación topológica
 
 Este enfoque permite ejecutar el motor de forma declarativa, predecible y extensible.
-
 <!-- END FILE: ADR-040-Macro-grafo-activación-de-conceptos-y-plan-de-cálculo-efectivo.md -->
 
 
@@ -11585,7 +11548,6 @@ Este modelo permite:
 - mantener coherencia en retroactividad  
 - preservar un único grafo de cálculo  
 - garantizar trazabilidad completa del resultado  
-
 <!-- END FILE: ADR-041-Segmentación-temporal-ámbito-de-ejecución-y-cálculo-por-tramos-en-PayrollConcept.md -->
 
 
@@ -11732,7 +11694,6 @@ Se establece una frontera explícita:
 - `payroll_engine` = definición del motor
 
 Esto evita mezclar metamodelo y cálculo materializado en el mismo dominio y prepara una base más limpia para la implementación.
-
 <!-- END FILE: ADR-042-Separación-entre-payrol-y-payroll_engine.md -->
 
 
@@ -12031,7 +11992,6 @@ Y el sistema se organiza en torno a tres pilares:
 Contexto (agreement, company, etc.)
 Activación (conceptos)
 Binding (fuentes)
-
 <!-- END FILE: ADR-043-Agreement-Profile-y-Activación-de-Payroll-basada-en-Contexto.md -->
 
 
@@ -12320,7 +12280,6 @@ mini grafo
 conceptos técnicos
 tipologías mínimas
 lookup a tabla binded
-
 <!-- END FILE: ADR-044-Primer-cálculo-real-de-salario-base-mediante-conceptos-tipados-y-grafo-mínimo.md -->
 
 
@@ -12450,7 +12409,6 @@ El concepto 980 (TOTAL_DEDUCCIONES) no se siembra en `concept_assignment` mientr
 | ADR-040 | Define el modelo conceptual de macro-grafo + activación + plan — este ADR documenta su implementación real |
 | ADR-043 | Propuso `payroll_object_activation` como mecanismo de activación — desplazado por `concept_assignment` |
 | ADR-044 | Inició la dirección del grafo mínimo real — este ADR completa y generaliza esa dirección |
-
 
 <!-- END FILE: ADR-045-Ejecucion-elegible-real-basada-en-concept_assignment-y-plan-de-calculo.md -->
 
@@ -12640,7 +12598,6 @@ Las clases técnicas no deben calcular conceptos económicos.
 
 Se adopta la nomenclatura D01/D02/D03 por ser más cómoda para negocio y no generar
 confusión entre DIAS_MES_REALES (D03) y DIAS_MES_NOMINA (D02).
-
 
 <!-- END FILE: ADR-046-Conceptos-técnicos-base-de-período-y-presencia-en-nómina.md -->
 
@@ -12927,7 +12884,6 @@ El Lifecycle Workflow Participant Pattern invierte la dependencia entre el orque
 
 La transacción, el orden de ejecución y el contrato de API permanecen inalterados. Lo que cambia es que añadir un nuevo vertical al hire o al terminate se convierte en una operación local (crear un fichero), no en una modificación del servicio central.
 
-
 <!-- END FILE: ADR-047-lifecycle-workflow-participant-pattern.md -->
 
 
@@ -13192,7 +13148,6 @@ cotización a `SEGMENT` sin entender esto, el recorte deja de cuadrar.
 | ADR-045 | La elegibilidad de todos estos conceptos se resuelve por `concept_assignment` |
 | ADR-046 | `ENGINE_PROVIDED` es el `JAVA_PROVIDED` de ese ADR, renombrado en V89; la regla de que estas clases no calculan conceptos económicos se mantiene intacta |
 
-
 <!-- END FILE: ADR-048-modelo-de-cotizacion-ss-e-irpf.md -->
 
 
@@ -13296,7 +13251,6 @@ herramienta equivocada: eso se responde añadiendo la columna al directorio y or
 ## Fuera de alcance
 
 La pantalla de inicio (bandeja de trabajo frente a panel de métricas) sigue sin decidir.
-
 
 <!-- END FILE: ADR-049-arquitectura-de-informacion-del-frontend.md -->
 
@@ -13409,7 +13363,6 @@ poner cosas al lado, no para estirar. El esqueleto decide esto una vez, no cada 
 
 Qué aspecto tiene cada bloque dentro de `principal`. Eso es ADR-051.
 
-
 <!-- END FILE: ADR-050-esqueleto-de-pagina.md -->
 
 
@@ -13513,7 +13466,6 @@ que crea la jerarquía.
 
 La escala del eje temporal —cómo se representa una relación de veinte años con un cambio de dos
 semanas— sigue sin resolver, y es el riesgo conocido de la implementación.
-
 
 <!-- END FILE: ADR-051-el-contenedor-deriva-del-modo-de-mantenimiento.md -->
 
@@ -13758,7 +13710,6 @@ Los literales de la interfaz —títulos, cabeceras de columna, botones—, que 
 funcionan. El formato de fechas y números, que es locale y no idioma, y va aparte. Y la traducción de
 los mensajes de error del backend, que merece su propia conversación.
 
-
 <!-- END FILE: ADR-052-idioma-de-los-literales-del-metamodelo.md -->
 
 
@@ -13939,7 +13890,6 @@ La escritura genérica, descartada arriba. La agrupación y visibilidad de los t
 Catálogos, y la clase del literal del ADR-052 §2: son metadatos del **tipo**, no de sus extensiones, y
 van en `rule_entity_type` (backend#15). Y el nombre de la pantalla —«Maestros» en el menú, «Catálogos»
 en el título—, que es una decisión de vocabulario y no de modelo.
-
 
 <!-- END FILE: ADR-053-la-raiz-y-sus-extensiones.md -->
 
@@ -14196,7 +14146,6 @@ delante.
 - **Si a los centros de coste les falta un perfil.** Sale de §8 y se decide con el ADR-053 delante,
   no aquí.
 
-
 <!-- END FILE: ADR-054-lo-que-un-tipo-sabe-de-si-mismo.md -->
 
 
@@ -14333,8 +14282,124 @@ Sembrar las tres verticales vacías (workforce-loader#5). Las otras siete diverg
 backend#2 al sacar los tests de H2. Y las claves ajenas ausentes entre `payroll`/`payroll_engine` y
 `rulesystem`: misma familia, otro tamaño, se miran aparte.
 
-
 <!-- END FILE: ADR-055-la-integridad-de-los-codigos-en-uso-vive-en-la-aplicacion.md -->
+
+
+---
+
+# FILE: ADR-056-la-unicidad-de-un-codigo-no-incluye-la-vigencia.md
+<a name="file-adr-056-la-unicidad-de-un-codigo-no-incluye-la-vigencia-md"></a>
+
+<!-- BEGIN FILE: ADR-056-la-unicidad-de-un-codigo-no-incluye-la-vigencia.md -->
+
+# ADR-056 — La unicidad de un código de catálogo no incluye la vigencia
+
+## Estado
+Aceptado
+
+## Contexto
+
+El backend#5 apareció al intentar sembrar los tipos de contrato españoles anteriores a la reforma
+del RDL 32/2021. La reforma **reutilizó números con significados nuevos**: el `401` era «obra o
+servicio determinado» y desde 2022-03-30 es «temporal por circunstancias de la producción»; el `410`
+era «interinidad» y ahora es «sustitución con reserva de puesto».
+
+Sembrar los antiguos exige que el mismo código exista dos veces con vigencias disjuntas. Y eso hoy
+lo impide una restricción, no una regla de negocio:
+
+```sql
+-- V1__initial_personnel_model.sql
+alter table rulesystem.rule_entity
+    add constraint uk_rule_entity_business
+    unique (rule_system_code, rule_entity_type_code, code);
+```
+
+`rule_entity` tiene `start_date` y `end_date`, pero su unicidad los ignora. Dicho de otra forma: **el
+modelo afirma que un código tiene un único significado para siempre**, y el dominio dice lo
+contrario cada vez que una norma renumera algo. No es una peculiaridad de los contratos: los grupos
+de cotización, los tipos de ausencia y las categorías de convenio están expuestos a lo mismo.
+
+### Lo que se midió antes de decidir
+
+El issue daba por hecho que levantar la restricción arrastraría al catálogo entero. Al mirarlo, el
+terreno resultó **menos hostil de lo que parecía, y no por casualidad**:
+
+- `RuleEntityPersistenceAdapter.findApplicableByBusinessKey(sistema, tipo, código, fechaDeReferencia)`
+  ya existe: resuelve por fecha y **lanza `IllegalStateException` si encuentra más de una fila
+  aplicable**. Es decir, alguien ya previó que pudiera haber varias y dejó puesto el detector de
+  ambigüedad.
+- `findByBusinessKeyAndStartDate(...)` también existe: la fecha de inicio ya se usa como parte de la
+  identidad al actualizar.
+- Los adaptadores de catálogo que leen subtipos de contrato y categorías de convenio **ya filtran por
+  fecha de referencia** sobre las tres tablas implicadas. Dos filas del `401` con vigencias disjuntas
+  no los confundirían: elegirían la correcta.
+
+Así que el bloqueo no es conceptual. Es una restricción, y unos cuantos sitios que preguntan por un
+código **sin decir a qué fecha**.
+
+### Lo que sí costaría
+
+`RuleEntityRepository.findByBusinessKey(sistema, tipo, código)` —la versión sin fecha— se usa en
+**una veintena de puntos**, casi todos validadores de catálogo: los que comprueban que el código
+existe al escribir una dirección, un contacto, un contrato, una presencia, una clasificación. Cada
+uno tendría que decidir *a qué fecha* valida. La respuesta suele ser evidente —la fecha de inicio de
+la fila que se está escribiendo, que ya tienen a mano—, pero son veinte decisiones, no una.
+
+Y queda una que no es mecánica: **la resolución de etiquetas**. `RuleEntityLabelResolver` busca por
+clave de negocio sin fecha. Si el `401` tuviera dos significados, un contrato de 2020 se mostraría
+con la etiqueta de 2022. Hoy eso no puede pasar porque sólo hay un `401`; el día que hubiera dos,
+el histórico empezaría a leerse mal en pantalla sin que nada fallara.
+
+Hay además un síntoma ya presente de esta misma familia: tres puntos de `rulesystem` llaman a
+`findApplicableByBusinessKey(..., LocalDate.now())`. Resuelven «lo que significa hoy» aunque el dato
+sea de antes. Con un solo significado por código da igual; con dos, deja de dar igual.
+
+## Decisión
+
+**La unicidad de `rule_entity` sigue siendo `(rule_system_code, rule_entity_type_code, code)`, sin
+componente temporal. Se descarta la `exclude` con solapamiento de rangos.** Un código de catálogo
+tiene, en este sistema, un único significado a lo largo del tiempo.
+
+Es una decisión de alcance, no de arquitectura: lo que compra hoy hacerlo es poder mostrar en una
+demo contratos derogados hace más de cuatro años. Lo que cuesta es llevar una fecha de referencia
+por una veintena de validadores más una semántica nueva para las etiquetas. La relación no sale.
+
+Los códigos anteriores a una reforma que renumeró significados **no se siembran**. Si alguna vez
+hicieran falta para una demo, la salida barata es de datos y no de esquema: darlos de alta con un
+código distinto que diga lo que son (`401_PRE2022`) y un nombre que lo explique. Es feo, y es
+deliberadamente feo: que se note que es un apaño evita que alguien lo tome por el modelo.
+
+## Consecuencias
+
+- **Está escrito que es una simplificación, no un descuido.** Éste es el motivo por el que este ADR
+  existe: la alternativa era cerrar el issue en silencio y que dentro de un año alguien —incluidos
+  nosotros— construyera encima sin saber que había una asunción debajo.
+- El histórico se lee con el significado actual del código. Mientras un código signifique una sola
+  cosa, eso es correcto; en cuanto deje de serlo, será incorrecto **sin que ninguna guardia se queje**.
+  No hay forma barata de vigilarlo: la restricción de unicidad es precisamente lo que impide que el
+  caso llegue a existir, así que el sistema no puede detectar lo que no permite.
+- El detector de ambigüedad de `findApplicableByBusinessKey` se queda donde está. Hoy no puede
+  dispararse, y ésa es la mejor razón para no tocarlo: el día que la restricción cambie, es la red
+  que avisa.
+- `LocalDate.now()` en los tres puntos citados sigue siendo aceptable por la misma razón, y deja de
+  serlo el mismo día.
+
+## Cuándo reabrir
+
+Cuando haga falta un código con dos significados **en producción, no en la demo**. Señales concretas:
+una reforma que renumere mientras el sistema tenga nóminas históricas que la crucen; o un segundo
+sistema de reglas cuyo catálogo ya venga con códigos reutilizados de origen.
+
+Si llega ese día, el orden es: primero la fecha de referencia en los validadores y en la resolución
+de etiquetas, y sólo después la restricción. Al revés —levantar la unicidad primero— deja la puerta
+abierta con el histórico leyéndose mal y sin nada que lo diga.
+
+## Fuera de alcance
+
+Sembrar catálogo antiguo por otras vías. La vigencia de las **extensiones** (ADR-053), que sí cuelgan
+de la fila y heredan su periodo. Y las siete divergencias del backend#2, que son otra familia.
+
+<!-- END FILE: ADR-056-la-unicidad-de-un-codigo-no-incluye-la-vigencia.md -->
 
 
 ---
@@ -14593,7 +14658,6 @@ En B4RRHH, `launch` no calcula la nómina por sí mismo.
 - considera elegibles las unidades sin nómina previa o con nómina `NOT_VALID`;
 - delega el cálculo efectivo;
 - devuelve un resumen explícito del proceso.
-
 
 <!-- END FILE: ADR-28-payroll-calculation-launch-semantics.md -->
 
