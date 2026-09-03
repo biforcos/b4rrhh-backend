@@ -17,6 +17,10 @@ import java.util.stream.Collectors;
  * el join; las tablas que llevan su propio {@code rule_system_code} —{@code employee} y
  * {@code employee_payroll_input}— lo dicen con {@link RuleSystemSource#OWN_COLUMN}. Tabla y
  * columnas vienen de constantes del vertical, nunca de la petición.
+ *
+ * Lo que declara lo expone también, con {@link #declaredUsages()}: tabla, columna, tipo de catálogo
+ * y de dónde sale la reglamentación. Es lo que las guardias leen para no llevar su propia lista
+ * (backend#29, backend#43): la única lista es el {@code Map} del vertical.
  */
 public abstract class EmployeeOwnedRuleEntityUsageParticipant implements RuleEntityUsageParticipant {
 
@@ -26,6 +30,23 @@ public abstract class EmployeeOwnedRuleEntityUsageParticipant implements RuleEnt
         OWNER_EMPLOYEE,
         /** En la propia tabla. */
         OWN_COLUMN
+    }
+
+    /**
+     * Una columna de catálogo declarada: qué tabla y columna, qué tipo de {@code rule_entity} guarda
+     * y de dónde sale el {@code rule_system_code} dentro del cual el código existe. Con esto una
+     * guardia puede comprobar el dato sin repetir la lista (backend#43).
+     */
+    public record CatalogColumnUsage(
+            String table,
+            String column,
+            String ruleEntityTypeCode,
+            RuleSystemSource ruleSystemSource
+    ) {
+        /** {@code tabla.columna}, como lo nombra el guardarraíl del esquema. */
+        public String qualifiedColumn() {
+            return table + "." + column;
+        }
     }
 
     private final JdbcTemplate jdbcTemplate;
@@ -64,8 +85,19 @@ public abstract class EmployeeOwnedRuleEntityUsageParticipant implements RuleEnt
 
     /** Las columnas que este participante cubre, como {@code tabla.columna}; para el guardarraíl del esquema. */
     public final Set<String> declaredColumns() {
-        return columnByRuleEntityTypeCode.values().stream()
-                .map(column -> table + "." + column)
+        return declaredUsages().stream()
+                .map(CatalogColumnUsage::qualifiedColumn)
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    /**
+     * Lo que este participante declara, columna a columna, con su tipo de catálogo y de dónde sale
+     * la reglamentación. Sale del mismo {@code Map} que usa {@link #countReferences}: no hay una
+     * segunda lista que mantener (backend#43).
+     */
+    public final Set<CatalogColumnUsage> declaredUsages() {
+        return columnByRuleEntityTypeCode.entrySet().stream()
+                .map(entry -> new CatalogColumnUsage(table, entry.getValue(), entry.getKey(), ruleSystemSource))
                 .collect(Collectors.toUnmodifiableSet());
     }
 
