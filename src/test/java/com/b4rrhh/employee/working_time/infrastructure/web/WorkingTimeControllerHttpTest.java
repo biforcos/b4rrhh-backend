@@ -2,12 +2,20 @@ package com.b4rrhh.employee.working_time.infrastructure.web;
 
 import com.b4rrhh.employee.working_time.application.usecase.CloseWorkingTimeCommand;
 import com.b4rrhh.employee.working_time.application.usecase.CloseWorkingTimeUseCase;
+import com.b4rrhh.employee.temporal.support.TimelineOperation;
+import com.b4rrhh.employee.temporal.support.TimelineRejection;
+import com.b4rrhh.employee.working_time.application.model.WorkingTimePlan;
+import com.b4rrhh.employee.working_time.application.model.WorkingTimePlanAdjustment;
 import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeCommand;
 import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeUseCase;
+import com.b4rrhh.employee.working_time.application.usecase.DeleteWorkingTimeCommand;
+import com.b4rrhh.employee.working_time.application.usecase.DeleteWorkingTimeUseCase;
 import com.b4rrhh.employee.working_time.application.usecase.GetWorkingTimeByBusinessKeyCommand;
 import com.b4rrhh.employee.working_time.application.usecase.GetWorkingTimeByBusinessKeyUseCase;
 import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesCommand;
 import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesUseCase;
+import com.b4rrhh.employee.working_time.application.usecase.PlanWorkingTimeChangeCommand;
+import com.b4rrhh.employee.working_time.application.usecase.PlanWorkingTimeChangeUseCase;
 import com.b4rrhh.employee.working_time.application.usecase.UpdateWorkingTimeCommand;
 import com.b4rrhh.employee.working_time.application.usecase.UpdateWorkingTimeUseCase;
 import com.b4rrhh.employee.working_time.application.service.StandardWorkingTimeDerivationPolicy;
@@ -37,8 +45,10 @@ import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -58,6 +68,10 @@ class WorkingTimeControllerHttpTest {
     private CloseWorkingTimeUseCase closeWorkingTimeUseCase;
     @Mock
     private UpdateWorkingTimeUseCase updateWorkingTimeUseCase;
+    @Mock
+    private DeleteWorkingTimeUseCase deleteWorkingTimeUseCase;
+    @Mock
+    private PlanWorkingTimeChangeUseCase planWorkingTimeChangeUseCase;
 
     private final StandardWorkingTimeDerivationPolicy derivationPolicy = new StandardWorkingTimeDerivationPolicy();
     private MockMvc mockMvc;
@@ -70,6 +84,8 @@ class WorkingTimeControllerHttpTest {
                 getWorkingTimeByBusinessKeyUseCase,
                 closeWorkingTimeUseCase,
                 updateWorkingTimeUseCase,
+                deleteWorkingTimeUseCase,
+                planWorkingTimeChangeUseCase,
                 new WorkingTimeResponseAssembler()
         );
 
@@ -263,6 +279,132 @@ class WorkingTimeControllerHttpTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("WORKING_TIME_OVERLAP"))
                 .andExpect(jsonPath("$.message", containsString("solapa")));
+    }
+
+    @Test
+    void deleteMapsPathToCommandAndAnswersNoContent() throws Exception {
+        mockMvc.perform(delete("/employees/ESP/INTERNAL/EMP001/working-times/2"))
+                .andExpect(status().isNoContent());
+
+        ArgumentCaptor<DeleteWorkingTimeCommand> captor = ArgumentCaptor.forClass(DeleteWorkingTimeCommand.class);
+        verify(deleteWorkingTimeUseCase).delete(captor.capture());
+        assertEquals("ESP", captor.getValue().ruleSystemCode());
+        assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
+        assertEquals("EMP001", captor.getValue().employeeNumber());
+        assertEquals(2, captor.getValue().workingTimeNumber());
+    }
+
+    @Test
+    void deleteMapsACoverageGapToHttp409NamingTheNeighboursToStretch() throws Exception {
+        doThrow(new WorkingTimeCoverageGapException(
+                "ESP", "INTERNAL", "EMP001",
+                List.of(new WorkingTimePeriod(LocalDate.of(2026, 1, 16), LocalDate.of(2026, 1, 31))),
+                List.of(
+                        new WorkingTimeOccurrence(1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)),
+                        new WorkingTimeOccurrence(3, LocalDate.of(2026, 2, 1), null)
+                )
+        )).when(deleteWorkingTimeUseCase).delete(any(DeleteWorkingTimeCommand.class));
+
+        mockMvc.perform(delete("/employees/ESP/INTERNAL/EMP001/working-times/2"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("WORKING_TIME_COVERAGE_GAP"))
+                .andExpect(jsonPath("$.details.stretchCandidates[0].workingTimeNumber").value(1))
+                .andExpect(jsonPath("$.details.stretchCandidates[1].workingTimeNumber").value(3));
+    }
+
+    @Test
+    void planMapsTheRequestToTheCommandAndReturnsThePlanWithoutApplyingIt() throws Exception {
+        when(planWorkingTimeChangeUseCase.plan(any(PlanWorkingTimeChangeCommand.class)))
+                .thenReturn(new WorkingTimePlan(
+                        TimelineOperation.ADD,
+                        null,
+                        new WorkingTimeOccurrence(null, LocalDate.of(2026, 1, 16), null),
+                        new WorkingTimePlanAdjustment(
+                                1,
+                                new WorkingTimePeriod(LocalDate.of(2026, 1, 1), null),
+                                new WorkingTimePeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15))
+                        ),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(
+                                new WorkingTimeOccurrence(1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)),
+                                new WorkingTimeOccurrence(null, LocalDate.of(2026, 1, 16), null)
+                        )
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/working-times/plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "operation": "ADD",
+                                  "startDate": "2026-01-16"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.operation").value("ADD"))
+                .andExpect(jsonPath("$.accepted").value(true))
+                .andExpect(jsonPath("$.rejection").doesNotExist())
+                .andExpect(jsonPath("$.occurrence.workingTimeNumber").doesNotExist())
+                .andExpect(jsonPath("$.adjustedOccurrence.workingTimeNumber").value(1))
+                .andExpect(jsonPath("$.adjustedOccurrence.after.endDate[2]").value(15))
+                .andExpect(jsonPath("$.projected[0].workingTimeNumber").value(1))
+                .andExpect(jsonPath("$.projected[1].workingTimeNumber").doesNotExist());
+
+        ArgumentCaptor<PlanWorkingTimeChangeCommand> captor = ArgumentCaptor.forClass(PlanWorkingTimeChangeCommand.class);
+        verify(planWorkingTimeChangeUseCase).plan(captor.capture());
+        assertEquals(TimelineOperation.ADD, captor.getValue().operation());
+        assertEquals(LocalDate.of(2026, 1, 16), captor.getValue().startDate());
+        assertNull(captor.getValue().endDate());
+        assertNull(captor.getValue().workingTimeNumber());
+        verify(createWorkingTimeUseCase, org.mockito.Mockito.never()).create(any());
+    }
+
+    @Test
+    void aRejectedPlanIsStillHttp200WithTheGapNamed() throws Exception {
+        when(planWorkingTimeChangeUseCase.plan(any(PlanWorkingTimeChangeCommand.class)))
+                .thenReturn(new WorkingTimePlan(
+                        TimelineOperation.REMOVE,
+                        TimelineRejection.GAP_NOT_ALLOWED,
+                        new WorkingTimeOccurrence(2, LocalDate.of(2026, 1, 16), LocalDate.of(2026, 1, 31)),
+                        null,
+                        List.of(),
+                        List.of(new WorkingTimePeriod(LocalDate.of(2026, 1, 16), LocalDate.of(2026, 1, 31))),
+                        List.of(new WorkingTimeOccurrence(1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15))),
+                        List.of(new WorkingTimeOccurrence(1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)))
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/working-times/plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "operation": "REMOVE",
+                                  "workingTimeNumber": 2
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accepted").value(false))
+                .andExpect(jsonPath("$.rejection").value("GAP_NOT_ALLOWED"))
+                .andExpect(jsonPath("$.gaps[0].startDate[2]").value(16))
+                .andExpect(jsonPath("$.stretchCandidates[0].workingTimeNumber").value(1));
+
+        ArgumentCaptor<PlanWorkingTimeChangeCommand> captor = ArgumentCaptor.forClass(PlanWorkingTimeChangeCommand.class);
+        verify(planWorkingTimeChangeUseCase).plan(captor.capture());
+        assertEquals(TimelineOperation.REMOVE, captor.getValue().operation());
+        assertEquals(2, captor.getValue().workingTimeNumber());
+    }
+
+    @Test
+    void planRejectsAnUnknownOperation() throws Exception {
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/working-times/plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "operation": "REPLACE",
+                                  "startDate": "2026-01-16"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
     }
 
     private WorkingTime workingTime(
