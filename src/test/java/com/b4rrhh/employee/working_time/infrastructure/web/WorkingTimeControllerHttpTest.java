@@ -8,11 +8,15 @@ import com.b4rrhh.employee.working_time.application.usecase.GetWorkingTimeByBusi
 import com.b4rrhh.employee.working_time.application.usecase.GetWorkingTimeByBusinessKeyUseCase;
 import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesCommand;
 import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesUseCase;
+import com.b4rrhh.employee.working_time.application.usecase.UpdateWorkingTimeCommand;
 import com.b4rrhh.employee.working_time.application.usecase.UpdateWorkingTimeUseCase;
 import com.b4rrhh.employee.working_time.application.service.StandardWorkingTimeDerivationPolicy;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeCoverageGapException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOverlapException;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTimeOccurrence;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTimePeriod;
 import com.b4rrhh.employee.working_time.infrastructure.web.assembler.WorkingTimeResponseAssembler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,11 +35,13 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -97,7 +103,87 @@ class WorkingTimeControllerHttpTest {
         assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
         assertEquals("EMP001", captor.getValue().employeeNumber());
         assertEquals(LocalDate.of(2026, 1, 10), captor.getValue().startDate());
+        assertNull(captor.getValue().endDate());
         assertEquals(new BigDecimal("50"), captor.getValue().workingTimePercentage());
+    }
+
+    @Test
+    void createCarriesTheEndDateWhenGiven() throws Exception {
+        when(createWorkingTimeUseCase.create(any(CreateWorkingTimeCommand.class)))
+                .thenReturn(workingTime(1, LocalDate.of(2026, 1, 10), LocalDate.of(2026, 3, 31), new BigDecimal("50")));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/working-times")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "startDate": "2026-01-10",
+                                  "endDate": "2026-03-31",
+                                  "workingTimePercentage": 50
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.endDate[0]").value(2026))
+                .andExpect(jsonPath("$.endDate[1]").value(3))
+                .andExpect(jsonPath("$.endDate[2]").value(31));
+
+        ArgumentCaptor<CreateWorkingTimeCommand> captor = ArgumentCaptor.forClass(CreateWorkingTimeCommand.class);
+        verify(createWorkingTimeUseCase).create(captor.capture());
+        assertEquals(LocalDate.of(2026, 3, 31), captor.getValue().endDate());
+    }
+
+    @Test
+    void updateCarriesBothDatesAndThePercentage() throws Exception {
+        when(updateWorkingTimeUseCase.update(any(UpdateWorkingTimeCommand.class)))
+                .thenReturn(workingTime(2, LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28), new BigDecimal("60")));
+
+        mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/working-times/2")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "startDate": "2026-02-01",
+                                  "endDate": "2026-02-28",
+                                  "workingTimePercentage": 60
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.workingTimeNumber").value(2));
+
+        ArgumentCaptor<UpdateWorkingTimeCommand> captor = ArgumentCaptor.forClass(UpdateWorkingTimeCommand.class);
+        verify(updateWorkingTimeUseCase).update(captor.capture());
+        assertEquals(2, captor.getValue().workingTimeNumber());
+        assertEquals(LocalDate.of(2026, 2, 1), captor.getValue().startDate());
+        assertEquals(LocalDate.of(2026, 2, 28), captor.getValue().endDate());
+        assertEquals(new BigDecimal("60"), captor.getValue().workingTimePercentage());
+    }
+
+    @Test
+    void createMapsACoverageGapToHttp409SayingWhichGapAndWhatToStretch() throws Exception {
+        when(createWorkingTimeUseCase.create(any(CreateWorkingTimeCommand.class)))
+                .thenThrow(new WorkingTimeCoverageGapException(
+                        "ESP", "INTERNAL", "EMP001",
+                        List.of(new WorkingTimePeriod(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28))),
+                        List.of(
+                                new WorkingTimeOccurrence(1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31)),
+                                new WorkingTimeOccurrence(null, LocalDate.of(2026, 3, 1), null)
+                        )
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/working-times")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "startDate": "2026-03-01",
+                                  "workingTimePercentage": 50
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("WORKING_TIME_COVERAGE_GAP"))
+                .andExpect(jsonPath("$.message", containsString("sin cubrir")))
+                .andExpect(jsonPath("$.details.gaps[0].startDate[1]").value(2))
+                .andExpect(jsonPath("$.details.gaps[0].startDate[2]").value(1))
+                .andExpect(jsonPath("$.details.gaps[0].endDate[2]").value(28))
+                .andExpect(jsonPath("$.details.stretchCandidates[0].workingTimeNumber").value(1))
+                .andExpect(jsonPath("$.details.stretchCandidates[1].workingTimeNumber").doesNotExist());
     }
 
     @Test

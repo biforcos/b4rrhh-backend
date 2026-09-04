@@ -9,5 +9,6 @@ public record UpdateWorkingTimeCommand(
         String employeeNumber,
         Integer workingTimeNumber,
         LocalDate startDate,
+        LocalDate endDate,
         BigDecimal workingTimePercentage
 ) {}

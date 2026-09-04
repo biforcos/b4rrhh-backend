@@ -68,6 +68,7 @@ public class WorkingTimeController {
                         employeeTypeCode,
                         employeeNumber,
                         request.getStartDate(),
+                        request.getEndDate(),
                         request.getWorkingTimePercentage()
                 )
         );
@@ -150,6 +151,7 @@ public class WorkingTimeController {
                         employeeNumber,
                         workingTimeNumber,
                         request.startDate(),
+                        request.endDate(),
                         request.workingTimePercentage()
                 )
         );

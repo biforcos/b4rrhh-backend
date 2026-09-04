@@ -20,6 +20,7 @@ import com.b4rrhh.employee.workcenter.infrastructure.persistence.WorkCenterRuleE
 import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeBusinessKeyLookupSupport;
 import com.b4rrhh.employee.working_time.application.service.DefaultWorkingTimePresenceConsistencyValidator;
 import com.b4rrhh.employee.working_time.application.service.StandardWorkingTimeDerivationPolicy;
+import com.b4rrhh.employee.working_time.application.service.WorkingTimeTimelineService;
 import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeService;
 import com.b4rrhh.employee.working_time.infrastructure.persistence.AgreementAnnualHoursLookupAdapter;
 import com.b4rrhh.employee.working_time.infrastructure.persistence.EmployeeAgreementContextLookupAdapter;
@@ -84,6 +85,7 @@ import java.lang.annotation.Target;
 @Import({
         // working_time
         CreateWorkingTimeService.class,
+        WorkingTimeTimelineService.class,
         WorkingTimePersistenceAdapter.class,
         EmployeeWorkingTimeLookupAdapter.class,
         EmployeeBusinessKeyLookupSupport.class,

@@ -8,6 +8,7 @@ public record CreateWorkingTimeCommand(
         String employeeTypeCode,
         String employeeNumber,
         LocalDate startDate,
+        LocalDate endDate,
         BigDecimal workingTimePercentage
 ) {
 }

@@ -3,17 +3,23 @@ package com.b4rrhh.employee.working_time.infrastructure.web;
 import com.b4rrhh.employee.working_time.domain.exception.InvalidWorkingTimeDateRangeException;
 import com.b4rrhh.employee.working_time.domain.exception.InvalidWorkingTimePercentageException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeAlreadyClosedException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeCoverageGapException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeEmployeeNotFoundException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeNotFoundException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeNumberConflictException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOutsidePresencePeriodException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOverlapException;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTimeOccurrence;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTimePeriod;
 import com.b4rrhh.employee.working_time.infrastructure.web.dto.WorkingTimeErrorResponse;
+import com.b4rrhh.employee.working_time.infrastructure.web.dto.WorkingTimeOccurrenceResponse;
+import com.b4rrhh.employee.working_time.infrastructure.web.dto.WorkingTimePeriodResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.List;
 import java.util.Map;
 
 @RestControllerAdvice(assignableTypes = WorkingTimeController.class)
@@ -62,16 +68,27 @@ public class WorkingTimeExceptionHandler {
 
     @ExceptionHandler({
             WorkingTimeOverlapException.class,
+            WorkingTimeCoverageGapException.class,
             WorkingTimeOutsidePresencePeriodException.class,
             WorkingTimeAlreadyClosedException.class,
             WorkingTimeNumberConflictException.class
     })
     public ResponseEntity<WorkingTimeErrorResponse> handleConflict(RuntimeException ex) {
-        if (ex instanceof WorkingTimeOverlapException) {
+        if (ex instanceof WorkingTimeOverlapException overlap) {
             return conflict(
                     "WORKING_TIME_OVERLAP",
                     "El periodo informado se solapa con otra jornada del empleado.",
-                    null
+                    overlap.overlaps().isEmpty() ? null : Map.of("overlaps", periods(overlap.overlaps()))
+            );
+        }
+        if (ex instanceof WorkingTimeCoverageGapException gap) {
+            return conflict(
+                    "WORKING_TIME_COVERAGE_GAP",
+                    "La jornada dejaria sin cubrir un tramo de la presencia del empleado.",
+                    Map.of(
+                            "gaps", periods(gap.gaps()),
+                            "stretchCandidates", occurrences(gap.stretchCandidates())
+                    )
             );
         }
         if (ex instanceof WorkingTimeOutsidePresencePeriodException) {
@@ -94,6 +111,22 @@ public class WorkingTimeExceptionHandler {
                 "La jornada ya estaba cerrada y no puede cerrarse nuevamente.",
                 null
         );
+    }
+
+    private static List<WorkingTimePeriodResponse> periods(List<WorkingTimePeriod> periods) {
+        return periods.stream()
+                .map(period -> new WorkingTimePeriodResponse(period.startDate(), period.endDate()))
+                .toList();
+    }
+
+    private static List<WorkingTimeOccurrenceResponse> occurrences(List<WorkingTimeOccurrence> occurrences) {
+        return occurrences.stream()
+                .map(occurrence -> new WorkingTimeOccurrenceResponse(
+                        occurrence.workingTimeNumber(),
+                        occurrence.startDate(),
+                        occurrence.endDate()
+                ))
+                .toList();
     }
 
     private ResponseEntity<WorkingTimeErrorResponse> notFound(

@@ -1,10 +1,13 @@
 package com.b4rrhh.employee.working_time.infrastructure.persistence;
 
+import com.b4rrhh.employee.temporal.support.DateRange;
 import com.b4rrhh.employee.working_time.application.port.WorkingTimePresenceConsistencyPort;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Component;
 
+import java.sql.Date;
 import java.time.LocalDate;
+import java.util.List;
 
 @Component
 public class WorkingTimePresenceConsistencyAdapter implements WorkingTimePresenceConsistencyPort {
@@ -42,5 +45,45 @@ public class WorkingTimePresenceConsistencyAdapter implements WorkingTimePresenc
         }
 
         return Boolean.parseBoolean(String.valueOf(result));
+    }
+
+    @Override
+    public List<DateRange> findPresencePeriodsByEmployeeIdOrderByStartDate(Long employeeId) {
+        List<?> rows = entityManager.createNativeQuery("""
+                select start_date, end_date
+                from employee.presence
+                where employee_id = :employeeId
+                order by start_date
+                """)
+                .setParameter("employeeId", employeeId)
+                .getResultList();
+
+        return rows.stream()
+                .map(this::toDateRange)
+                .toList();
+    }
+
+    private DateRange toDateRange(Object row) {
+        if (!(row instanceof Object[] columns) || columns.length < 2) {
+            throw new IllegalStateException("Unexpected row shape for working time presence query");
+        }
+
+        return new DateRange(toLocalDate(columns[0]), toLocalDate(columns[1]));
+    }
+
+    private LocalDate toLocalDate(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof LocalDate localDate) {
+            return localDate;
+        }
+        if (value instanceof Date sqlDate) {
+            return sqlDate.toLocalDate();
+        }
+
+        throw new IllegalStateException(
+                "Unexpected date type in working time presence query: " + value.getClass()
+        );
     }
 }

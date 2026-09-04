@@ -8,6 +8,7 @@ import java.time.LocalDate;
 public class CreateWorkingTimeRequest {
 
     private LocalDate startDate;
+    private LocalDate endDate;
     private BigDecimal workingTimePercentage;
 
     public LocalDate getStartDate() {
@@ -16,6 +17,14 @@ public class CreateWorkingTimeRequest {
 
     public void setStartDate(LocalDate startDate) {
         this.startDate = startDate;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
     }
 
     public BigDecimal getWorkingTimePercentage() {

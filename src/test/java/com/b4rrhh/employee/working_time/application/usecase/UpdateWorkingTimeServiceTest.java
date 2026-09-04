@@ -1,14 +1,21 @@
 package com.b4rrhh.employee.working_time.application.usecase;
 
+import com.b4rrhh.employee.temporal.support.DateRange;
 import com.b4rrhh.employee.working_time.application.port.AgreementAnnualHoursLookupPort;
 import com.b4rrhh.employee.working_time.application.port.EmployeeAgreementContext;
 import com.b4rrhh.employee.working_time.application.port.EmployeeAgreementContextLookupPort;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeContext;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeLookupPort;
-import com.b4rrhh.employee.working_time.application.service.WorkingTimePresenceConsistencyValidator;
-import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeAlreadyClosedException;
+import com.b4rrhh.employee.working_time.application.port.WorkingTimePresenceConsistencyPort;
+import com.b4rrhh.employee.working_time.application.service.WorkingTimeTimelineService;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeCoverageGapException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeNotFoundException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOutsidePresencePeriodException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOverlapException;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTimeOccurrence;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTimePeriod;
 import com.b4rrhh.employee.working_time.domain.port.WorkingTimeRepository;
 import com.b4rrhh.employee.working_time.domain.service.WorkingTimeDerivationPolicy;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +32,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -32,6 +40,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Correcting a working time moves nothing else (ADR-057, decision 3). The
+ * timeline service is real and the repository and presence port are mocked:
+ * the employee is present from 2024-01-01 onwards.
+ */
 @ExtendWith(MockitoExtension.class)
 class UpdateWorkingTimeServiceTest {
 
@@ -40,6 +53,7 @@ class UpdateWorkingTimeServiceTest {
     private static final String EMPLOYEE_NUMBER = "EMP001";
     private static final String AGREEMENT_CODE = "99002405011982";
     private static final BigDecimal ANNUAL_HOURS = new BigDecimal("1736.00");
+    private static final LocalDate PRESENCE_START = LocalDate.of(2024, 1, 1);
 
     private static final WorkingTimeDerivedHours DERIVED_HOURS = new WorkingTimeDerivedHours(
             new BigDecimal("20.00"),
@@ -51,7 +65,7 @@ class UpdateWorkingTimeServiceTest {
     @Mock private EmployeeWorkingTimeLookupPort employeeWorkingTimeLookupPort;
     @Mock private EmployeeAgreementContextLookupPort employeeAgreementContextLookupPort;
     @Mock private AgreementAnnualHoursLookupPort agreementAnnualHoursLookupPort;
-    @Mock private WorkingTimePresenceConsistencyValidator workingTimePresenceConsistencyValidator;
+    @Mock private WorkingTimePresenceConsistencyPort presencePort;
     @Mock private WorkingTimeDerivationPolicy workingTimeDerivationPolicy;
 
     private UpdateWorkingTimeService service;
@@ -63,35 +77,28 @@ class UpdateWorkingTimeServiceTest {
                 employeeWorkingTimeLookupPort,
                 employeeAgreementContextLookupPort,
                 agreementAnnualHoursLookupPort,
-                workingTimePresenceConsistencyValidator,
+                new WorkingTimeTimelineService(workingTimeRepository, presencePort),
                 workingTimeDerivationPolicy
         );
     }
 
     @Test
-    void updatesWhenValid() {
-        LocalDate startDate = LocalDate.of(2026, 1, 1);
+    void correctsThePercentageKeepingTheDates() {
+        LocalDate startDate = PRESENCE_START;
         BigDecimal newPercentage = new BigDecimal("50");
+        WorkingTime existing = workingTime(1, startDate, null, new BigDecimal("40"));
 
-        WorkingTime existing = activeWorkingTime(1, startDate, new BigDecimal("40"));
-
-        whenEmployeeExists();
-        when(workingTimeRepository.findByEmployeeIdAndWorkingTimeNumber(10L, 1))
-                .thenReturn(Optional.of(existing));
-        when(workingTimeRepository.findByEmployeeIdOrderByStartDate(10L))
-                .thenReturn(List.of(existing));
-        stubAgreementResolution(10L, startDate);
+        givenEmployeeWithSeries(existing);
+        when(workingTimeRepository.findByEmployeeIdAndWorkingTimeNumber(10L, 1)).thenReturn(Optional.of(existing));
+        stubAgreementResolution(startDate);
         when(workingTimeDerivationPolicy.derive(newPercentage, ANNUAL_HOURS)).thenReturn(DERIVED_HOURS);
-        when(workingTimeRepository.existsOverlappingPeriodExcluding(10L, startDate, null, 1))
-                .thenReturn(false);
         when(workingTimeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        WorkingTime updated = service.update(new UpdateWorkingTimeCommand(
-                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER, 1, startDate, newPercentage
-        ));
+        WorkingTime updated = service.update(command(1, startDate, null, newPercentage));
 
         assertThat(updated.getWorkingTimePercentage()).isEqualByComparingTo(newPercentage);
         assertThat(updated.getStartDate()).isEqualTo(startDate);
+        assertThat(updated.getEndDate()).isNull();
 
         ArgumentCaptor<WorkingTime> captor = ArgumentCaptor.forClass(WorkingTime.class);
         verify(workingTimeRepository, times(1)).save(captor.capture());
@@ -99,93 +106,115 @@ class UpdateWorkingTimeServiceTest {
     }
 
     @Test
-    void rejectsUpdateWhenRecordIsClosed() {
-        LocalDate startDate = LocalDate.of(2026, 1, 1);
-        WorkingTime closed = WorkingTime.rehydrate(
-                1L, 10L, 1, startDate, LocalDate.of(2026, 1, 31),
-                new BigDecimal("40"), DERIVED_HOURS, LocalDateTime.now(), LocalDateTime.now()
+    void stretchesAClosedOneOverTheGapItLeft() {
+        WorkingTime first = workingTime(1, LocalDate.of(2024, 1, 1), LocalDate.of(2024, 11, 30), new BigDecimal("40"));
+        WorkingTime second = workingTime(2, LocalDate.of(2025, 1, 1), null, new BigDecimal("40"));
+
+        givenEmployeeWithSeries(first, second);
+        when(workingTimeRepository.findByEmployeeIdAndWorkingTimeNumber(10L, 1)).thenReturn(Optional.of(first));
+        stubAgreementResolution(LocalDate.of(2024, 1, 1));
+        when(workingTimeDerivationPolicy.derive(new BigDecimal("40"), ANNUAL_HOURS)).thenReturn(DERIVED_HOURS);
+        when(workingTimeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        WorkingTime updated = service.update(
+                command(1, LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31), new BigDecimal("40"))
         );
 
-        whenEmployeeExists();
-        when(workingTimeRepository.findByEmployeeIdAndWorkingTimeNumber(10L, 1))
-                .thenReturn(Optional.of(closed));
+        assertThat(updated.getEndDate()).isEqualTo(LocalDate.of(2024, 12, 31));
+        verify(workingTimeRepository, times(1)).save(any());
+    }
 
-        assertThrows(WorkingTimeAlreadyClosedException.class, () -> service.update(
-                new UpdateWorkingTimeCommand(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER,
-                        1, startDate, new BigDecimal("50"))
-        ));
+    @Test
+    void movingTheStartLaterDoesNotStretchThePredecessorButNamesIt() {
+        WorkingTime predecessor = workingTime(1, LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31), new BigDecimal("40"));
+        WorkingTime current = workingTime(2, LocalDate.of(2025, 1, 1), null, new BigDecimal("40"));
+        LocalDate newStart = LocalDate.of(2025, 2, 1);
+
+        givenEmployeeWithSeries(predecessor, current);
+        when(workingTimeRepository.findByEmployeeIdAndWorkingTimeNumber(10L, 2)).thenReturn(Optional.of(current));
+        stubAgreementResolution(newStart);
+        when(workingTimeDerivationPolicy.derive(new BigDecimal("60"), ANNUAL_HOURS)).thenReturn(DERIVED_HOURS);
+
+        WorkingTimeCoverageGapException ex = assertThrows(
+                WorkingTimeCoverageGapException.class,
+                () -> service.update(command(2, newStart, null, new BigDecimal("60")))
+        );
+
+        assertEquals(
+                List.of(new WorkingTimePeriod(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))),
+                ex.gaps()
+        );
+        assertEquals(
+                List.of(
+                        new WorkingTimeOccurrence(1, LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)),
+                        new WorkingTimeOccurrence(2, newStart, null)
+                ),
+                ex.stretchCandidates()
+        );
         verify(workingTimeRepository, never()).save(any());
     }
 
     @Test
-    void whenStartDateDiffers_predecessorEndDateIsCascaded() {
-        LocalDate predecessorStart = LocalDate.of(2024, 1, 1);
-        LocalDate predecessorEnd   = LocalDate.of(2024, 12, 31);
-        LocalDate currentStart     = LocalDate.of(2025, 1, 1);
-        LocalDate newStart         = LocalDate.of(2025, 2, 1);
-        BigDecimal newPercentage   = new BigDecimal("60");
+    void reachingIntoTheNextOneIsRejectedAsAnOverlap() {
+        WorkingTime first = workingTime(1, LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31), new BigDecimal("40"));
+        WorkingTime second = workingTime(2, LocalDate.of(2025, 1, 1), null, new BigDecimal("40"));
 
-        WorkingTime predecessor = WorkingTime.rehydrate(
-                99L, 10L, 1, predecessorStart, predecessorEnd,
-                new BigDecimal("40"), DERIVED_HOURS, LocalDateTime.now(), LocalDateTime.now()
+        givenEmployeeWithSeries(first, second);
+        when(workingTimeRepository.findByEmployeeIdAndWorkingTimeNumber(10L, 1)).thenReturn(Optional.of(first));
+        stubAgreementResolution(LocalDate.of(2024, 1, 1));
+        when(workingTimeDerivationPolicy.derive(new BigDecimal("40"), ANNUAL_HOURS)).thenReturn(DERIVED_HOURS);
+
+        WorkingTimeOverlapException ex = assertThrows(
+                WorkingTimeOverlapException.class,
+                () -> service.update(command(1, LocalDate.of(2024, 1, 1), LocalDate.of(2025, 1, 15), new BigDecimal("40")))
         );
-        WorkingTime current = activeWorkingTime(2, currentStart, new BigDecimal("40"));
 
-        whenEmployeeExists();
-        when(workingTimeRepository.findByEmployeeIdAndWorkingTimeNumber(10L, 2))
-                .thenReturn(Optional.of(current));
-        when(workingTimeRepository.findByEmployeeIdOrderByStartDate(10L))
-                .thenReturn(List.of(predecessor, current));
-        stubAgreementResolution(10L, newStart);
-        when(workingTimeDerivationPolicy.derive(newPercentage, ANNUAL_HOURS)).thenReturn(DERIVED_HOURS);
-        when(workingTimeRepository.existsOverlappingPeriodExcluding(any(), any(), any(), any()))
-                .thenReturn(false);
-        when(workingTimeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        service.update(new UpdateWorkingTimeCommand(
-                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER, 2, newStart, newPercentage
-        ));
-
-        ArgumentCaptor<WorkingTime> captor = ArgumentCaptor.forClass(WorkingTime.class);
-        verify(workingTimeRepository, times(2)).save(captor.capture());
-
-        WorkingTime savedPredecessor = captor.getAllValues().stream()
-                .filter(wt -> wt.getWorkingTimeNumber().equals(1))
-                .findFirst().orElseThrow();
-        WorkingTime savedCurrent = captor.getAllValues().stream()
-                .filter(wt -> wt.getWorkingTimeNumber().equals(2))
-                .findFirst().orElseThrow();
-
-        assertThat(savedPredecessor.getEndDate()).isEqualTo(newStart.minusDays(1));
-        assertThat(savedCurrent.getStartDate()).isEqualTo(newStart);
+        assertEquals(
+                List.of(new WorkingTimePeriod(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 15))),
+                ex.overlaps()
+        );
+        verify(workingTimeRepository, never()).save(any());
     }
 
     @Test
-    void whenStartDateDiffers_andNoPredecessor_onlySavesUpdated() {
-        LocalDate currentStart = LocalDate.of(2025, 1, 1);
-        LocalDate newStart     = LocalDate.of(2025, 2, 1);
-        BigDecimal newPercentage = new BigDecimal("50");
+    void movingBeforeThePresenceIsRejected() {
+        WorkingTime existing = workingTime(1, LocalDate.of(2024, 1, 1), null, new BigDecimal("40"));
+        LocalDate beforePresence = LocalDate.of(2023, 12, 1);
 
-        WorkingTime current = activeWorkingTime(1, currentStart, new BigDecimal("40"));
+        givenEmployeeWithSeries(existing);
+        when(workingTimeRepository.findByEmployeeIdAndWorkingTimeNumber(10L, 1)).thenReturn(Optional.of(existing));
+        stubAgreementResolution(beforePresence);
+        when(workingTimeDerivationPolicy.derive(new BigDecimal("40"), ANNUAL_HOURS)).thenReturn(DERIVED_HOURS);
 
+        assertThrows(
+                WorkingTimeOutsidePresencePeriodException.class,
+                () -> service.update(command(1, beforePresence, null, new BigDecimal("40")))
+        );
+        verify(workingTimeRepository, never()).save(any());
+    }
+
+    @Test
+    void rejectsWhenTheWorkingTimeDoesNotExist() {
         whenEmployeeExists();
-        when(workingTimeRepository.findByEmployeeIdAndWorkingTimeNumber(10L, 1))
-                .thenReturn(Optional.of(current));
-        when(workingTimeRepository.findByEmployeeIdOrderByStartDate(10L))
-                .thenReturn(List.of(current));
-        stubAgreementResolution(10L, newStart);
-        when(workingTimeDerivationPolicy.derive(newPercentage, ANNUAL_HOURS)).thenReturn(DERIVED_HOURS);
-        when(workingTimeRepository.existsOverlappingPeriodExcluding(any(), any(), any(), any()))
-                .thenReturn(false);
-        when(workingTimeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(workingTimeRepository.findByEmployeeIdAndWorkingTimeNumber(10L, 7)).thenReturn(Optional.empty());
 
-        service.update(new UpdateWorkingTimeCommand(
-                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER, 1, newStart, newPercentage
-        ));
+        assertThrows(
+                WorkingTimeNotFoundException.class,
+                () -> service.update(command(7, LocalDate.of(2026, 1, 1), null, new BigDecimal("50")))
+        );
+    }
 
-        ArgumentCaptor<WorkingTime> captor = ArgumentCaptor.forClass(WorkingTime.class);
-        verify(workingTimeRepository, times(1)).save(captor.capture());
-        assertThat(captor.getValue().getStartDate()).isEqualTo(newStart);
+    private UpdateWorkingTimeCommand command(int number, LocalDate startDate, LocalDate endDate, BigDecimal percentage) {
+        return new UpdateWorkingTimeCommand(
+                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER, number, startDate, endDate, percentage
+        );
+    }
+
+    private void givenEmployeeWithSeries(WorkingTime... occurrences) {
+        whenEmployeeExists();
+        when(workingTimeRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(occurrences));
+        when(presencePort.findPresencePeriodsByEmployeeIdOrderByStartDate(10L))
+                .thenReturn(List.of(new DateRange(PRESENCE_START, null)));
     }
 
     private void whenEmployeeExists() {
@@ -196,20 +225,20 @@ class UpdateWorkingTimeServiceTest {
         )));
     }
 
-    private void stubAgreementResolution(Long employeeId, LocalDate startDate) {
-        when(employeeAgreementContextLookupPort.resolveContext(employeeId, startDate))
+    private void stubAgreementResolution(LocalDate startDate) {
+        when(employeeAgreementContextLookupPort.resolveContext(10L, startDate))
                 .thenReturn(new EmployeeAgreementContext(RULE_SYSTEM_CODE, AGREEMENT_CODE));
         when(agreementAnnualHoursLookupPort.resolveAnnualHours(RULE_SYSTEM_CODE, AGREEMENT_CODE))
                 .thenReturn(ANNUAL_HOURS);
     }
 
-    private static WorkingTime activeWorkingTime(int number, LocalDate startDate, BigDecimal percentage) {
+    private static WorkingTime workingTime(int number, LocalDate startDate, LocalDate endDate, BigDecimal percentage) {
         return WorkingTime.rehydrate(
                 (long) number,
                 10L,
                 number,
                 startDate,
-                null,
+                endDate,
                 percentage,
                 DERIVED_HOURS,
                 LocalDateTime.now(),

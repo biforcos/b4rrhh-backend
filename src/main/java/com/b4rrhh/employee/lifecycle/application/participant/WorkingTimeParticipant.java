@@ -7,6 +7,7 @@ import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeConflictExcept
 import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeCommand;
 import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeUseCase;
 import com.b4rrhh.employee.working_time.domain.exception.InvalidWorkingTimePercentageException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeCoverageGapException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeEmployeeNotFoundException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeNumberConflictException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOutsidePresencePeriodException;
@@ -32,11 +33,12 @@ public class WorkingTimeParticipant implements HireParticipant {
         try {
             ctx.setWorkingTimeResult(createWorkingTimeUseCase.create(new CreateWorkingTimeCommand(
                     ctx.ruleSystemCode(), ctx.employeeTypeCode(), ctx.employeeNumber(),
-                    ctx.hireDate(), ctx.workingTime().workingTimePercentage()
+                    ctx.hireDate(), null, ctx.workingTime().workingTimePercentage()
             )));
         } catch (InvalidWorkingTimePercentageException
                  | WorkingTimeOutsidePresencePeriodException
-                 | WorkingTimeOverlapException ex) {
+                 | WorkingTimeOverlapException
+                 | WorkingTimeCoverageGapException ex) {
             throw new HireEmployeeBusinessValidationException(ex.getMessage(), ex);
         } catch (WorkingTimeNumberConflictException ex) {
             throw new HireEmployeeConflictException(ex.getMessage());

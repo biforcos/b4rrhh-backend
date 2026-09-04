@@ -7,5 +7,6 @@ import java.time.LocalDate;
 
 public record UpdateWorkingTimeRequest(
         @JsonFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+        @JsonFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
         BigDecimal workingTimePercentage
 ) {}

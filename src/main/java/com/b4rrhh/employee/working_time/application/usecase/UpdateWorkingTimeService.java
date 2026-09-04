@@ -5,11 +5,11 @@ import com.b4rrhh.employee.working_time.application.port.EmployeeAgreementContex
 import com.b4rrhh.employee.working_time.application.port.EmployeeAgreementContextLookupPort;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeContext;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeLookupPort;
-import com.b4rrhh.employee.working_time.application.service.WorkingTimePresenceConsistencyValidator;
-import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeAlreadyClosedException;
+import com.b4rrhh.employee.temporal.support.DateRange;
+import com.b4rrhh.employee.working_time.application.model.WorkingTimePlan;
+import com.b4rrhh.employee.working_time.application.service.WorkingTimeTimelineService;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeEmployeeNotFoundException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeNotFoundException;
-import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOverlapException;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
 import com.b4rrhh.employee.working_time.domain.port.WorkingTimeRepository;
@@ -19,8 +19,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 
+/**
+ * Corrects an occurrence: its dates, its percentage, or both. Nothing else
+ * moves (ADR-057, decision 3): if the corrected dates leave a gap or an
+ * overlap, the plan rejects them and names what the user would have to
+ * stretch instead.
+ */
 @Service
 public class UpdateWorkingTimeService implements UpdateWorkingTimeUseCase {
 
@@ -28,7 +33,7 @@ public class UpdateWorkingTimeService implements UpdateWorkingTimeUseCase {
     private final EmployeeWorkingTimeLookupPort employeeWorkingTimeLookupPort;
     private final EmployeeAgreementContextLookupPort employeeAgreementContextLookupPort;
     private final AgreementAnnualHoursLookupPort agreementAnnualHoursLookupPort;
-    private final WorkingTimePresenceConsistencyValidator workingTimePresenceConsistencyValidator;
+    private final WorkingTimeTimelineService workingTimeTimelineService;
     private final WorkingTimeDerivationPolicy workingTimeDerivationPolicy;
 
     public UpdateWorkingTimeService(
@@ -36,14 +41,14 @@ public class UpdateWorkingTimeService implements UpdateWorkingTimeUseCase {
             EmployeeWorkingTimeLookupPort employeeWorkingTimeLookupPort,
             EmployeeAgreementContextLookupPort employeeAgreementContextLookupPort,
             AgreementAnnualHoursLookupPort agreementAnnualHoursLookupPort,
-            WorkingTimePresenceConsistencyValidator workingTimePresenceConsistencyValidator,
+            WorkingTimeTimelineService workingTimeTimelineService,
             WorkingTimeDerivationPolicy workingTimeDerivationPolicy
     ) {
         this.workingTimeRepository = workingTimeRepository;
         this.employeeWorkingTimeLookupPort = employeeWorkingTimeLookupPort;
         this.employeeAgreementContextLookupPort = employeeAgreementContextLookupPort;
         this.agreementAnnualHoursLookupPort = agreementAnnualHoursLookupPort;
-        this.workingTimePresenceConsistencyValidator = workingTimePresenceConsistencyValidator;
+        this.workingTimeTimelineService = workingTimeTimelineService;
         this.workingTimeDerivationPolicy = workingTimeDerivationPolicy;
     }
 
@@ -78,10 +83,6 @@ public class UpdateWorkingTimeService implements UpdateWorkingTimeUseCase {
                         normalizedWorkingTimeNumber
                 ));
 
-        if (!existing.isActive()) {
-            throw new WorkingTimeAlreadyClosedException(normalizedWorkingTimeNumber);
-        }
-
         // Resolve agreement context at the new startDate to compute derived hours
         EmployeeAgreementContext agreementContext = employeeAgreementContextLookupPort
                 .resolveContext(employee.employeeId(), normalizedStartDate);
@@ -98,46 +99,20 @@ public class UpdateWorkingTimeService implements UpdateWorkingTimeUseCase {
                 existing.getEmployeeId(),
                 existing.getWorkingTimeNumber(),
                 normalizedStartDate,
-                existing.getEndDate(),
+                command.endDate(),
                 normalizedPercentage,
                 derivedHours,
                 existing.getCreatedAt(),
                 null
         );
 
-        List<WorkingTime> fullHistory = workingTimeRepository.findByEmployeeIdOrderByStartDate(employee.employeeId());
-
-        if (!normalizedStartDate.equals(existing.getStartDate())) {
-            LocalDate expectedPredecessorEnd = existing.getStartDate().minusDays(1);
-            WorkingTime predecessor = fullHistory.stream()
-                    .filter(wt -> expectedPredecessorEnd.equals(wt.getEndDate()))
-                    .findFirst()
-                    .orElse(null);
-            if (predecessor != null && normalizedStartDate.isAfter(predecessor.getStartDate())) {
-                WorkingTime cascadedPredecessor = predecessor.adjustEndDate(normalizedStartDate.minusDays(1));
-                workingTimeRepository.save(cascadedPredecessor);
-            }
-        }
-
-        if (workingTimeRepository.existsOverlappingPeriodExcluding(
+        WorkingTimePlan plan = workingTimeTimelineService.planCorrect(
                 employee.employeeId(),
-                updated.getStartDate(),
-                updated.getEndDate(),
-                normalizedWorkingTimeNumber
-        )) {
-            throw new WorkingTimeOverlapException(
-                    normalizedRuleSystemCode,
-                    normalizedEmployeeTypeCode,
-                    normalizedEmployeeNumber,
-                    updated.getStartDate(),
-                    updated.getEndDate()
-            );
-        }
-
-        workingTimePresenceConsistencyValidator.validatePeriodWithinPresence(
-                employee.employeeId(),
-                updated.getStartDate(),
-                updated.getEndDate(),
+                existing,
+                new DateRange(updated.getStartDate(), updated.getEndDate())
+        );
+        workingTimeTimelineService.requireAccepted(
+                plan,
                 normalizedRuleSystemCode,
                 normalizedEmployeeTypeCode,
                 normalizedEmployeeNumber

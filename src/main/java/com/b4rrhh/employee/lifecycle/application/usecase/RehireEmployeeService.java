@@ -58,6 +58,7 @@ import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeUse
 import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesCommand;
 import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesUseCase;
 import com.b4rrhh.employee.working_time.domain.exception.InvalidWorkingTimePercentageException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeCoverageGapException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeEmployeeNotFoundException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeNumberConflictException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOutsidePresencePeriodException;
@@ -300,6 +301,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                     employeeTypeCode,
                     employeeNumber,
                     rehireDate,
+                    null,
                     workingTime.workingTimePercentage()
             ));
         } catch (EmployeeTypeInvalidException
@@ -318,7 +320,8 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
             throw new RehireEmployeeDependentRelationInvalidException(ex.getMessage(), ex);
         } catch (InvalidWorkingTimePercentageException
                  | WorkingTimeOutsidePresencePeriodException
-                 | WorkingTimeOverlapException ex) {
+                 | WorkingTimeOverlapException
+                 | WorkingTimeCoverageGapException ex) {
             throw new RehireEmployeeBusinessValidationException(ex.getMessage(), ex);
         } catch (WorkingTimeNumberConflictException ex) {
             throw new RehireEmployeeConflictException(ex.getMessage(), ex);

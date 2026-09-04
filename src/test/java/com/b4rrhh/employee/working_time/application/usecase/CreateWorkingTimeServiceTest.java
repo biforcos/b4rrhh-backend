@@ -1,16 +1,21 @@
 package com.b4rrhh.employee.working_time.application.usecase;
 
+import com.b4rrhh.employee.temporal.support.DateRange;
 import com.b4rrhh.employee.working_time.application.port.AgreementAnnualHoursLookupPort;
 import com.b4rrhh.employee.working_time.application.port.EmployeeAgreementContext;
 import com.b4rrhh.employee.working_time.application.port.EmployeeAgreementContextLookupPort;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeContext;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeLookupPort;
-import com.b4rrhh.employee.working_time.application.service.WorkingTimePresenceConsistencyValidator;
+import com.b4rrhh.employee.working_time.application.port.WorkingTimePresenceConsistencyPort;
+import com.b4rrhh.employee.working_time.application.service.WorkingTimeTimelineService;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeCoverageGapException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeNumberConflictException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOutsidePresencePeriodException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOverlapException;
-import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTimeOccurrence;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTimePeriod;
 import com.b4rrhh.employee.working_time.domain.port.WorkingTimeRepository;
 import com.b4rrhh.employee.working_time.domain.service.WorkingTimeDerivationPolicy;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,18 +29,25 @@ import org.springframework.dao.DataIntegrityViolationException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Adding a working time is planned against the invariants of the series
+ * (ADR-057). The timeline service is real and the repository and presence
+ * port are mocked: the employee is present from 2026-01-01 onwards.
+ */
 @ExtendWith(MockitoExtension.class)
 class CreateWorkingTimeServiceTest {
 
@@ -44,7 +56,9 @@ class CreateWorkingTimeServiceTest {
     private static final String EMPLOYEE_NUMBER = "EMP001";
     private static final String AGREEMENT_CODE = "99002405011982";
     private static final BigDecimal ANNUAL_HOURS = new BigDecimal("1736.00");
-    private static final LocalDate EFFECTIVE_DATE = LocalDate.of(2026, 1, 10);
+    private static final LocalDate PRESENCE_START = LocalDate.of(2026, 1, 1);
+    private static final WorkingTimeDerivedHours DERIVED_HOURS = new WorkingTimeDerivedHours(
+            new BigDecimal("16.69"), new BigDecimal("3.34"), new BigDecimal("72.33"));
 
     @Mock
     private WorkingTimeRepository workingTimeRepository;
@@ -55,7 +69,7 @@ class CreateWorkingTimeServiceTest {
     @Mock
     private AgreementAnnualHoursLookupPort agreementAnnualHoursLookupPort;
     @Mock
-    private WorkingTimePresenceConsistencyValidator workingTimePresenceConsistencyValidator;
+    private WorkingTimePresenceConsistencyPort presencePort;
     @Mock
     private WorkingTimeDerivationPolicy workingTimeDerivationPolicy;
 
@@ -68,169 +82,215 @@ class CreateWorkingTimeServiceTest {
                 employeeWorkingTimeLookupPort,
                 employeeAgreementContextLookupPort,
                 agreementAnnualHoursLookupPort,
-                workingTimePresenceConsistencyValidator,
+                new WorkingTimeTimelineService(workingTimeRepository, presencePort),
                 workingTimeDerivationPolicy
         );
     }
 
     @Test
-    void createsWorkingTimeAndCalculatesDerivedHours() {
-        CreateWorkingTimeCommand command = new CreateWorkingTimeCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                EFFECTIVE_DATE,
-                new BigDecimal("50")
-        );
-        WorkingTimeDerivedHours derivedHours = new WorkingTimeDerivedHours(
-                new BigDecimal("16.69"),
-                new BigDecimal("3.34"),
-                new BigDecimal("72.33")
-        );
+    void createsTheFirstWorkingTimeAndCalculatesDerivedHours() {
+        givenEmployeeWithSeries();
+        stubAgreementResolution(PRESENCE_START);
+        stubDerivedHours(new BigDecimal("50"));
+        when(workingTimeRepository.findMaxWorkingTimeNumberByEmployeeId(10L)).thenReturn(Optional.empty());
+        when(workingTimeRepository.save(any(WorkingTime.class))).thenAnswer(invocation -> persisted(invocation.getArgument(0)));
 
-        when(employeeWorkingTimeLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .thenReturn(Optional.of(employeeContext(10L)));
-        stubAgreementResolution(10L, EFFECTIVE_DATE);
-        when(workingTimeRepository.findMaxWorkingTimeNumberByEmployeeId(10L)).thenReturn(Optional.of(2));
-        when(workingTimeRepository.existsOverlappingPeriod(10L, EFFECTIVE_DATE, null)).thenReturn(false);
-        stubDerivedHours(new BigDecimal("50"), derivedHours);
-        when(workingTimeRepository.save(any(WorkingTime.class))).thenAnswer(invocation -> {
-            WorkingTime input = invocation.getArgument(0);
-            return WorkingTime.rehydrate(
-                    99L,
-                    input.getEmployeeId(),
-                    input.getWorkingTimeNumber(),
-                    input.getStartDate(),
-                    input.getEndDate(),
-                    input.getWorkingTimePercentage(),
-                    new WorkingTimeDerivedHours(
-                            input.getWeeklyHours(),
-                            input.getDailyHours(),
-                            input.getMonthlyHours()
-                    ),
-                    LocalDateTime.now(),
-                    LocalDateTime.now()
-            );
-        });
-
-        WorkingTime created = service.create(command);
+        WorkingTime created = service.create(command(PRESENCE_START, null, new BigDecimal("50")));
 
         assertEquals(99L, created.getId());
-        assertEquals(3, created.getWorkingTimeNumber());
+        assertEquals(1, created.getWorkingTimeNumber());
+        assertNull(created.getEndDate());
         assertEquals(0, created.getWorkingTimePercentage().compareTo(new BigDecimal("50")));
         assertEquals(new BigDecimal("16.69"), created.getWeeklyHours());
         assertEquals(new BigDecimal("3.34"), created.getDailyHours());
         assertEquals(new BigDecimal("72.33"), created.getMonthlyHours());
-
-        ArgumentCaptor<WorkingTime> captor = ArgumentCaptor.forClass(WorkingTime.class);
-        verify(workingTimeRepository).save(captor.capture());
         verify(workingTimeDerivationPolicy, atLeastOnce())
                 .derive(
                         argThat(pct -> pct != null && pct.compareTo(new BigDecimal("50")) == 0),
                         argThat(hrs -> hrs != null && hrs.compareTo(ANNUAL_HOURS) == 0)
                 );
-        assertEquals(3, captor.getValue().getWorkingTimeNumber());
-        assertEquals(new BigDecimal("16.69"), captor.getValue().getWeeklyHours());
-        assertEquals(new BigDecimal("3.34"), captor.getValue().getDailyHours());
-        assertEquals(new BigDecimal("72.33"), captor.getValue().getMonthlyHours());
     }
 
     @Test
-    void rejectsOverlappingWorkingTimePeriod() {
-        CreateWorkingTimeCommand command = new CreateWorkingTimeCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                EFFECTIVE_DATE,
-                new BigDecimal("80")
+    void addingFromTheSixteenthClosesTheOpenOneOnTheFifteenthInsteadOfRejectingIt() {
+        WorkingTime open = workingTime(1, PRESENCE_START, null);
+        LocalDate newStart = LocalDate.of(2026, 1, 16);
+        givenEmployeeWithSeries(open);
+        stubAgreementResolution(newStart);
+        stubDerivedHours(new BigDecimal("50"));
+        when(workingTimeRepository.findMaxWorkingTimeNumberByEmployeeId(10L)).thenReturn(Optional.of(1));
+        when(workingTimeRepository.findByEmployeeIdAndWorkingTimeNumber(10L, 1)).thenReturn(Optional.of(open));
+        when(workingTimeRepository.save(any(WorkingTime.class))).thenAnswer(invocation -> persisted(invocation.getArgument(0)));
+
+        WorkingTime created = service.create(command(newStart, null, new BigDecimal("50")));
+
+        assertEquals(2, created.getWorkingTimeNumber());
+        assertEquals(newStart, created.getStartDate());
+
+        ArgumentCaptor<WorkingTime> captor = ArgumentCaptor.forClass(WorkingTime.class);
+        verify(workingTimeRepository, times(2)).save(captor.capture());
+        WorkingTime closedFirst = captor.getAllValues().get(0);
+        assertEquals(1, closedFirst.getWorkingTimeNumber());
+        assertEquals(PRESENCE_START, closedFirst.getStartDate());
+        assertEquals(LocalDate.of(2026, 1, 15), closedFirst.getEndDate());
+        assertEquals(2, captor.getAllValues().get(1).getWorkingTimeNumber());
+    }
+
+    @Test
+    void acceptsAnEndDateFromTheRequest() {
+        when(employeeWorkingTimeLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(new EmployeeWorkingTimeContext(10L, RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER)));
+        when(workingTimeRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
+        when(presencePort.findPresencePeriodsByEmployeeIdOrderByStartDate(10L))
+                .thenReturn(List.of(new DateRange(PRESENCE_START, LocalDate.of(2026, 6, 30))));
+        stubAgreementResolution(PRESENCE_START);
+        stubDerivedHours(new BigDecimal("50"));
+        when(workingTimeRepository.findMaxWorkingTimeNumberByEmployeeId(10L)).thenReturn(Optional.empty());
+        when(workingTimeRepository.save(any(WorkingTime.class))).thenAnswer(invocation -> persisted(invocation.getArgument(0)));
+
+        WorkingTime created = service.create(command(PRESENCE_START, LocalDate.of(2026, 6, 30), new BigDecimal("50")));
+
+        assertEquals(LocalDate.of(2026, 6, 30), created.getEndDate());
+    }
+
+    @Test
+    void rejectsAWorkingTimeThatLeavesAGapSayingWhichGapAndWhatToStretch() {
+        WorkingTime closed = workingTime(1, PRESENCE_START, LocalDate.of(2026, 1, 31));
+        LocalDate newStart = LocalDate.of(2026, 3, 1);
+        givenEmployeeWithSeries(closed);
+        stubAgreementResolution(newStart);
+        stubDerivedHours(new BigDecimal("80"));
+        when(workingTimeRepository.findMaxWorkingTimeNumberByEmployeeId(10L)).thenReturn(Optional.of(1));
+
+        WorkingTimeCoverageGapException ex = assertThrows(
+                WorkingTimeCoverageGapException.class,
+                () -> service.create(command(newStart, null, new BigDecimal("80")))
         );
 
-        when(employeeWorkingTimeLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .thenReturn(Optional.of(employeeContext(10L)));
-        stubAgreementResolution(10L, EFFECTIVE_DATE);
-        when(workingTimeRepository.findMaxWorkingTimeNumberByEmployeeId(10L)).thenReturn(Optional.empty());
-        stubDerivedHours(new BigDecimal("80"), new WorkingTimeDerivedHours(
-                new BigDecimal("26.71"), new BigDecimal("5.34"), new BigDecimal("115.73")));
-        when(workingTimeRepository.existsOverlappingPeriod(10L, EFFECTIVE_DATE, null)).thenReturn(true);
+        assertEquals(
+                List.of(new WorkingTimePeriod(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28))),
+                ex.gaps()
+        );
+        assertEquals(
+                List.of(
+                        new WorkingTimeOccurrence(1, PRESENCE_START, LocalDate.of(2026, 1, 31)),
+                        new WorkingTimeOccurrence(null, newStart, null)
+                ),
+                ex.stretchCandidates()
+        );
+        verify(workingTimeRepository, never()).save(any(WorkingTime.class));
+    }
 
-        assertThrows(WorkingTimeOverlapException.class, () -> service.create(command));
+    @Test
+    void rejectsAWorkingTimeThatReachesIntoTheNextOneAsAnOverlap() {
+        WorkingTime first = workingTime(1, PRESENCE_START, LocalDate.of(2026, 1, 31));
+        WorkingTime second = workingTime(2, LocalDate.of(2026, 2, 1), null);
+        LocalDate newStart = LocalDate.of(2026, 1, 16);
+        givenEmployeeWithSeries(first, second);
+        stubAgreementResolution(newStart);
+        stubDerivedHours(new BigDecimal("80"));
+        when(workingTimeRepository.findMaxWorkingTimeNumberByEmployeeId(10L)).thenReturn(Optional.of(2));
+
+        WorkingTimeOverlapException ex = assertThrows(
+                WorkingTimeOverlapException.class,
+                () -> service.create(command(newStart, LocalDate.of(2026, 2, 10), new BigDecimal("80")))
+        );
+
+        assertEquals(
+                List.of(new WorkingTimePeriod(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 10))),
+                ex.overlaps()
+        );
         verify(workingTimeRepository, never()).save(any(WorkingTime.class));
     }
 
     @Test
     void rejectsWhenOutsidePresenceHistory() {
-        CreateWorkingTimeCommand command = new CreateWorkingTimeCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                EFFECTIVE_DATE,
-                new BigDecimal("80")
-        );
-
-        when(employeeWorkingTimeLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .thenReturn(Optional.of(employeeContext(10L)));
-        stubAgreementResolution(10L, EFFECTIVE_DATE);
+        LocalDate beforePresence = LocalDate.of(2025, 12, 1);
+        givenEmployeeWithSeries();
+        stubAgreementResolution(beforePresence);
+        stubDerivedHours(new BigDecimal("80"));
         when(workingTimeRepository.findMaxWorkingTimeNumberByEmployeeId(10L)).thenReturn(Optional.empty());
-        stubDerivedHours(new BigDecimal("80"), new WorkingTimeDerivedHours(
-                new BigDecimal("26.71"), new BigDecimal("5.34"), new BigDecimal("115.73")));
-        when(workingTimeRepository.existsOverlappingPeriod(10L, EFFECTIVE_DATE, null)).thenReturn(false);
 
-        doThrow(new WorkingTimeOutsidePresencePeriodException(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                EFFECTIVE_DATE,
-                null
-        )).when(workingTimePresenceConsistencyValidator).validatePeriodWithinPresence(
-                10L,
-                EFFECTIVE_DATE,
-                null,
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER
+        assertThrows(
+                WorkingTimeOutsidePresencePeriodException.class,
+                () -> service.create(command(beforePresence, null, new BigDecimal("80")))
         );
-
-        assertThrows(WorkingTimeOutsidePresencePeriodException.class, () -> service.create(command));
+        verify(workingTimeRepository, never()).save(any(WorkingTime.class));
     }
 
     @Test
     void translatesFunctionalNumberUniquenessConflict() {
-        CreateWorkingTimeCommand command = new CreateWorkingTimeCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                EFFECTIVE_DATE,
-                new BigDecimal("80")
-        );
-
-        when(employeeWorkingTimeLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .thenReturn(Optional.of(employeeContext(10L)));
-        stubAgreementResolution(10L, EFFECTIVE_DATE);
+        givenEmployeeWithSeries();
+        stubAgreementResolution(PRESENCE_START);
+        stubDerivedHours(new BigDecimal("80"));
         when(workingTimeRepository.findMaxWorkingTimeNumberByEmployeeId(10L)).thenReturn(Optional.of(1));
-        stubDerivedHours(new BigDecimal("80"), new WorkingTimeDerivedHours(
-                new BigDecimal("26.71"), new BigDecimal("5.34"), new BigDecimal("115.73")));
-        when(workingTimeRepository.existsOverlappingPeriod(10L, EFFECTIVE_DATE, null)).thenReturn(false);
         when(workingTimeRepository.save(any(WorkingTime.class)))
                 .thenThrow(new DataIntegrityViolationException("duplicate working_time_number"));
 
-        assertThrows(WorkingTimeNumberConflictException.class, () -> service.create(command));
+        assertThrows(
+                WorkingTimeNumberConflictException.class,
+                () -> service.create(command(PRESENCE_START, null, new BigDecimal("80")))
+        );
     }
 
-    private EmployeeWorkingTimeContext employeeContext(Long employeeId) {
-        return new EmployeeWorkingTimeContext(employeeId, RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER);
+    private CreateWorkingTimeCommand command(LocalDate startDate, LocalDate endDate, BigDecimal percentage) {
+        return new CreateWorkingTimeCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                startDate,
+                endDate,
+                percentage
+        );
     }
 
-    private void stubAgreementResolution(Long employeeId, LocalDate effectiveDate) {
-        when(employeeAgreementContextLookupPort.resolveContext(employeeId, effectiveDate))
+    private void givenEmployeeWithSeries(WorkingTime... occurrences) {
+        when(employeeWorkingTimeLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(new EmployeeWorkingTimeContext(10L, RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER)));
+        when(workingTimeRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(occurrences));
+        when(presencePort.findPresencePeriodsByEmployeeIdOrderByStartDate(10L))
+                .thenReturn(List.of(new DateRange(PRESENCE_START, null)));
+    }
+
+    private void stubAgreementResolution(LocalDate effectiveDate) {
+        when(employeeAgreementContextLookupPort.resolveContext(10L, effectiveDate))
                 .thenReturn(new EmployeeAgreementContext(RULE_SYSTEM_CODE, AGREEMENT_CODE));
         when(agreementAnnualHoursLookupPort.resolveAnnualHours(RULE_SYSTEM_CODE, AGREEMENT_CODE))
                 .thenReturn(ANNUAL_HOURS);
     }
 
-    private void stubDerivedHours(BigDecimal percentage, WorkingTimeDerivedHours derivedHours) {
+    private void stubDerivedHours(BigDecimal percentage) {
         when(workingTimeDerivationPolicy.derive(
                 argThat(pct -> pct != null && pct.compareTo(percentage) == 0),
                 argThat(hrs -> hrs != null && hrs.compareTo(ANNUAL_HOURS) == 0)
-        )).thenReturn(derivedHours);
+        )).thenReturn(DERIVED_HOURS);
+    }
+
+    private static WorkingTime persisted(WorkingTime input) {
+        return WorkingTime.rehydrate(
+                input.getId() == null ? 99L : input.getId(),
+                input.getEmployeeId(),
+                input.getWorkingTimeNumber(),
+                input.getStartDate(),
+                input.getEndDate(),
+                input.getWorkingTimePercentage(),
+                new WorkingTimeDerivedHours(input.getWeeklyHours(), input.getDailyHours(), input.getMonthlyHours()),
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
+    }
+
+    private static WorkingTime workingTime(int number, LocalDate startDate, LocalDate endDate) {
+        return WorkingTime.rehydrate(
+                (long) number,
+                10L,
+                number,
+                startDate,
+                endDate,
+                new BigDecimal("50"),
+                DERIVED_HOURS,
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
     }
 }

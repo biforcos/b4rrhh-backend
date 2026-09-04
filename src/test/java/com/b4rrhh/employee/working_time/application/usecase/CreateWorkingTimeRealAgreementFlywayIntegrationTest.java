@@ -41,6 +41,7 @@ class CreateWorkingTimeRealAgreementFlywayIntegrationTest {
                 EMPLOYEE_TYPE_CODE,
                 employeeNumber,
                 startDate,
+                null,
                 new BigDecimal("50")
         ));
 

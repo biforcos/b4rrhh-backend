@@ -5,10 +5,11 @@ import com.b4rrhh.employee.working_time.application.port.EmployeeAgreementContex
 import com.b4rrhh.employee.working_time.application.port.EmployeeAgreementContextLookupPort;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeContext;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeLookupPort;
-import com.b4rrhh.employee.working_time.application.service.WorkingTimePresenceConsistencyValidator;
+import com.b4rrhh.employee.temporal.support.DateRange;
+import com.b4rrhh.employee.working_time.application.model.WorkingTimePlan;
+import com.b4rrhh.employee.working_time.application.service.WorkingTimeTimelineService;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeEmployeeNotFoundException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeNumberConflictException;
-import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOverlapException;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
 import com.b4rrhh.employee.working_time.domain.port.WorkingTimeRepository;
@@ -26,7 +27,7 @@ public class CreateWorkingTimeService implements CreateWorkingTimeUseCase {
     private final EmployeeWorkingTimeLookupPort employeeWorkingTimeLookupPort;
     private final EmployeeAgreementContextLookupPort employeeAgreementContextLookupPort;
     private final AgreementAnnualHoursLookupPort agreementAnnualHoursLookupPort;
-    private final WorkingTimePresenceConsistencyValidator workingTimePresenceConsistencyValidator;
+    private final WorkingTimeTimelineService workingTimeTimelineService;
     private final WorkingTimeDerivationPolicy workingTimeDerivationPolicy;
 
     public CreateWorkingTimeService(
@@ -34,14 +35,14 @@ public class CreateWorkingTimeService implements CreateWorkingTimeUseCase {
             EmployeeWorkingTimeLookupPort employeeWorkingTimeLookupPort,
             EmployeeAgreementContextLookupPort employeeAgreementContextLookupPort,
             AgreementAnnualHoursLookupPort agreementAnnualHoursLookupPort,
-            WorkingTimePresenceConsistencyValidator workingTimePresenceConsistencyValidator,
+            WorkingTimeTimelineService workingTimeTimelineService,
             WorkingTimeDerivationPolicy workingTimeDerivationPolicy
     ) {
         this.workingTimeRepository = workingTimeRepository;
         this.employeeWorkingTimeLookupPort = employeeWorkingTimeLookupPort;
         this.employeeAgreementContextLookupPort = employeeAgreementContextLookupPort;
         this.agreementAnnualHoursLookupPort = agreementAnnualHoursLookupPort;
-        this.workingTimePresenceConsistencyValidator = workingTimePresenceConsistencyValidator;
+        this.workingTimeTimelineService = workingTimeTimelineService;
         this.workingTimeDerivationPolicy = workingTimeDerivationPolicy;
     }
 
@@ -87,35 +88,39 @@ public class CreateWorkingTimeService implements CreateWorkingTimeUseCase {
                 employee.employeeId(),
                 nextWorkingTimeNumber,
                 command.startDate(),
-                null,
+                command.endDate(),
                 command.workingTimePercentage(),
                 derivedHours,
                 annualHours,
                 workingTimeDerivationPolicy
         );
 
-        if (workingTimeRepository.existsOverlappingPeriod(
+        // Step 3: Adding an occurrence is planned against the invariants of the series (ADR-057):
+        // inside the presence, no overlap, no gap. The one automatic consequence is closing the
+        // occurrence in force on the new start date the day before it.
+        WorkingTimePlan plan = workingTimeTimelineService.planAdd(
                 employee.employeeId(),
-                newWorkingTime.getStartDate(),
-                newWorkingTime.getEndDate()
-        )) {
-            throw new WorkingTimeOverlapException(
-                    normalizedRuleSystemCode,
-                    normalizedEmployeeTypeCode,
-                    normalizedEmployeeNumber,
-                    newWorkingTime.getStartDate(),
-                    newWorkingTime.getEndDate()
-            );
-        }
-
-        workingTimePresenceConsistencyValidator.validatePeriodWithinPresence(
-                employee.employeeId(),
-                newWorkingTime.getStartDate(),
-                newWorkingTime.getEndDate(),
+                new DateRange(newWorkingTime.getStartDate(), newWorkingTime.getEndDate())
+        );
+        workingTimeTimelineService.requireAccepted(
+                plan,
                 normalizedRuleSystemCode,
                 normalizedEmployeeTypeCode,
                 normalizedEmployeeNumber
         );
+
+        if (plan.adjustsAnOccurrence()) {
+            WorkingTime covering = workingTimeRepository
+                    .findByEmployeeIdAndWorkingTimeNumber(
+                            employee.employeeId(),
+                            plan.adjustedOccurrence().workingTimeNumber()
+                    )
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Planned occurrence vanished: workingTimeNumber="
+                                    + plan.adjustedOccurrence().workingTimeNumber()
+                    ));
+            workingTimeRepository.save(covering.adjustEndDate(plan.adjustedOccurrence().after().endDate()));
+        }
 
         try {
             return workingTimeRepository.save(newWorkingTime);
