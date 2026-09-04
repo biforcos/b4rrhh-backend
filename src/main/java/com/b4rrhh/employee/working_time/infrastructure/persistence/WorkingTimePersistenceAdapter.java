@@ -69,6 +69,11 @@ public class WorkingTimePersistenceAdapter implements WorkingTimeRepository {
         return toDomain(saved);
     }
 
+    @Override
+    public void delete(WorkingTime workingTime) {
+        springDataWorkingTimeRepository.deleteById(workingTime.getId());
+    }
+
     private WorkingTime toDomain(WorkingTimeEntity entity) {
         return WorkingTime.rehydrate(
                 entity.getId(),

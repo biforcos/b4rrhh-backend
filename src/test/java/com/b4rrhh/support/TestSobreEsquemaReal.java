@@ -22,6 +22,9 @@ import com.b4rrhh.employee.working_time.application.service.DefaultWorkingTimePr
 import com.b4rrhh.employee.working_time.application.service.StandardWorkingTimeDerivationPolicy;
 import com.b4rrhh.employee.working_time.application.service.WorkingTimeTimelineService;
 import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeService;
+import com.b4rrhh.employee.working_time.application.usecase.DeleteWorkingTimeService;
+import com.b4rrhh.employee.working_time.application.usecase.PlanWorkingTimeChangeService;
+import com.b4rrhh.employee.working_time.application.usecase.UpdateWorkingTimeService;
 import com.b4rrhh.employee.working_time.infrastructure.persistence.AgreementAnnualHoursLookupAdapter;
 import com.b4rrhh.employee.working_time.infrastructure.persistence.EmployeeAgreementContextLookupAdapter;
 import com.b4rrhh.employee.working_time.infrastructure.persistence.EmployeeWorkingTimeLookupAdapter;
@@ -85,6 +88,9 @@ import java.lang.annotation.Target;
 @Import({
         // working_time
         CreateWorkingTimeService.class,
+        UpdateWorkingTimeService.class,
+        DeleteWorkingTimeService.class,
+        PlanWorkingTimeChangeService.class,
         WorkingTimeTimelineService.class,
         WorkingTimePersistenceAdapter.class,
         EmployeeWorkingTimeLookupAdapter.class,

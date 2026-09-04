@@ -19,4 +19,6 @@ public interface WorkingTimeRepository {
     Optional<Integer> findMaxWorkingTimeNumberByEmployeeId(Long employeeId);
 
     WorkingTime save(WorkingTime workingTime);
+
+    void delete(WorkingTime workingTime);
 }
