@@ -1,11 +1,13 @@
 package com.b4rrhh.employee.temporal.support;
 
 /**
- * The two ways a temporal series is written (ADR-057): an occurrence is
- * added, or an occurrence is removed. Stretching or shrinking one is the
- * user's act and not an operation of the component.
+ * The ways a temporal series is written (ADR-057): an occurrence is added,
+ * an occurrence is removed, or the user corrects one. Stretching or
+ * shrinking an occurrence is the user's act, never a consequence the
+ * component produces on its own; the component only judges the result.
  */
 public enum TimelineOperation {
     ADD,
-    REMOVE
+    REMOVE,
+    CORRECT
 }

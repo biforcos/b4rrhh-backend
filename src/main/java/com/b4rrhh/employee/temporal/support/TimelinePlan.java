@@ -12,7 +12,8 @@ import java.util.List;
  *       {@link TimelineOperation#ADD} the occurrence the new one starts inside
  *       of, closed the day before; on {@link TimelineOperation#REMOVE} the
  *       previous occurrence, reopened up to where the removed one ended.
- *       {@code null} when nothing else moves.</li>
+ *       {@code null} when nothing else moves, and always on
+ *       {@link TimelineOperation#CORRECT}.</li>
  *   <li>{@link #gaps()} are the stretches inside the presence that the
  *       resulting series leaves uncovered. With optional coverage they are
  *       legal and the plan is still accepted.</li>

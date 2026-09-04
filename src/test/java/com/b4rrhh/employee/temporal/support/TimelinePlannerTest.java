@@ -263,6 +263,98 @@ class TimelinePlannerTest {
     }
 
     @Nested
+    class CorrectingAnOccurrence {
+
+        @Test
+        void stretchingOneOverAGapCoversItAndMovesNothingElse() {
+            DateRange shortSecond = range(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 5, 31));
+            DateRange corrected = range(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 6, 30));
+
+            TimelinePlan plan = planner.planCorrect(mandatory(FIRST, shortSecond, LAST), shortSecond, corrected);
+
+            assertTrue(plan.isAccepted());
+            assertEquals(TimelineOperation.CORRECT, plan.operation());
+            assertEquals(corrected, plan.occurrence());
+            assertNull(plan.adjustedOccurrence());
+            assertTrue(plan.gaps().isEmpty());
+            assertEquals(List.of(FIRST, corrected, LAST), plan.projected());
+        }
+
+        @Test
+        void movingTheStartLaterLeavesAGapAndNamesThePreviousOneToStretch() {
+            DateRange corrected = range(LocalDate.of(2026, 4, 15), LocalDate.of(2026, 6, 30));
+
+            TimelinePlan plan = planner.planCorrect(mandatory(FIRST, SECOND, LAST), SECOND, corrected);
+
+            assertFalse(plan.isAccepted());
+            assertEquals(TimelineRejection.GAP_NOT_ALLOWED, plan.rejection());
+            assertEquals(List.of(range(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 14))), plan.gaps());
+            assertEquals(List.of(FIRST, corrected), plan.stretchCandidates());
+        }
+
+        @Test
+        void movingTheStartLaterIsAcceptedWhenCoverageIsOptional() {
+            DateRange corrected = range(LocalDate.of(2026, 4, 15), LocalDate.of(2026, 6, 30));
+
+            TimelinePlan plan = planner.planCorrect(optional(FIRST, SECOND, LAST), SECOND, corrected);
+
+            assertTrue(plan.isAccepted());
+            assertEquals(List.of(range(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 14))), plan.gaps());
+        }
+
+        @Test
+        void reachingIntoTheNextOneIsAnOverlapAndNothingElseMoves() {
+            DateRange corrected = range(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 7, 15));
+
+            TimelinePlan plan = planner.planCorrect(mandatory(FIRST, SECOND, LAST), SECOND, corrected);
+
+            assertFalse(plan.isAccepted());
+            assertEquals(TimelineRejection.OVERLAP, plan.rejection());
+            assertEquals(List.of(range(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 15))), plan.overlaps());
+            assertNull(plan.adjustedOccurrence());
+            assertEquals(List.of(FIRST, corrected, LAST), plan.projected());
+        }
+
+        @Test
+        void reopeningTheLastOneIsAccepted() {
+            DateRange closedLast = range(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 9, 30));
+
+            TimelinePlan plan = planner.planCorrect(mandatory(FIRST, SECOND, closedLast), closedLast, LAST);
+
+            assertTrue(plan.isAccepted());
+            assertEquals(List.of(FIRST, SECOND, LAST), plan.projected());
+        }
+
+        @Test
+        void outsideThePresenceIsRejected() {
+            DateRange corrected = range(LocalDate.of(2025, 12, 1), LocalDate.of(2026, 3, 31));
+
+            TimelinePlan plan = planner.planCorrect(mandatory(FIRST, SECOND, LAST), FIRST, corrected);
+
+            assertFalse(plan.isAccepted());
+            assertEquals(TimelineRejection.OUTSIDE_PRESENCE, plan.rejection());
+        }
+
+        @Test
+        void leavingTheDatesAsTheyAreIsAccepted() {
+            TimelinePlan plan = planner.planCorrect(mandatory(FIRST, SECOND, LAST), SECOND, SECOND);
+
+            assertTrue(plan.isAccepted());
+            assertEquals(List.of(FIRST, SECOND, LAST), plan.projected());
+        }
+
+        @Test
+        void anOccurrenceThatIsNotInTheSeriesIsAProgrammingError() {
+            DateRange stranger = range(LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31));
+
+            assertThrows(
+                    IllegalArgumentException.class,
+                    () -> planner.planCorrect(mandatory(FIRST, SECOND, LAST), stranger, stranger)
+            );
+        }
+    }
+
+    @Nested
     class PlanningWithoutApplying {
 
         @Test

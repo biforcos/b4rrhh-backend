@@ -24,6 +24,10 @@ import java.util.List;
  * removed one started. Removing any other occurrence leaves its dates
  * uncovered: with mandatory coverage the gap invariant rejects it and the
  * plan names the neighbours the user could stretch.
+ *
+ * <p><b>Correcting</b> an occurrence replaces its dates with the ones the
+ * user gives and moves nothing else: whatever gap or overlap the new dates
+ * leave is judged like any other resulting state.
  */
 public final class TimelinePlanner {
 
@@ -76,6 +80,29 @@ public final class TimelinePlanner {
         }
 
         return judge(TimelineOperation.REMOVE, occurrence, reopening, projected, timeline, true);
+    }
+
+    public TimelinePlan planCorrect(Timeline timeline, DateRange existing, DateRange corrected) {
+        requireTimeline(timeline);
+        if (existing == null) {
+            throw new IllegalArgumentException("existing is required");
+        }
+        if (corrected == null) {
+            throw new IllegalArgumentException("corrected is required");
+        }
+
+        int index = timeline.occurrences().indexOf(existing);
+        if (index < 0) {
+            throw new IllegalArgumentException("occurrence is not in the series: " + existing);
+        }
+
+        boolean insidePresence = timelineCoverageValidator.isContained(List.of(corrected), timeline.presence());
+
+        List<DateRange> projected = new ArrayList<>(timeline.occurrences());
+        projected.set(index, corrected);
+        projected.sort(Comparator.comparing(DateRange::startDate));
+
+        return judge(TimelineOperation.CORRECT, corrected, null, projected, timeline, insidePresence);
     }
 
     private TimelinePlan judge(
