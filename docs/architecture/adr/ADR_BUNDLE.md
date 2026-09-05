@@ -1,7 +1,7 @@
 # ADR Bundle
 
 > Fichero generado automáticamente. No editar a mano.
-> Fecha de generación: 2026-09-03 19:36:59
+> Fecha de generación: 2026-09-05 13:58:02
 
 ---
 
@@ -34,6 +34,7 @@
 - [ADR-025-subject-roles.md.md](#file-adr-025-subject-roles-md-md)
 - [ADR-026-payroll-status-workflow.md.md](#file-adr-026-payroll-status-workflow-md-md)
 - [ADR-027-payroll-root-model.md.md](#file-adr-027-payroll-root-model-md-md)
+- [ADR-28-payroll-calculation-launch-semantics.md](#file-adr-28-payroll-calculation-launch-semantics-md)
 - [ADR-029-payroll-calculate-contract-stub.md](#file-adr-029-payroll-calculate-contract-stub-md)
 - [ADR-030-Payroll-Launch-Calculation-Run-Claim-and-Internal-Calculator-Orchestration.md](#file-adr-030-payroll-launch-calculation-run-claim-and-internal-calculator-orchestration-md)
 - [ADR-031-Modelo-físico-de-payroll-launch- calculation-run-claims-y-mensajes.md](#file-adr-031-modelo-f-sico-de-payroll-launch--calculation-run-claims-y-mensajes-md)
@@ -61,7 +62,8 @@
 - [ADR-054-lo-que-un-tipo-sabe-de-si-mismo.md](#file-adr-054-lo-que-un-tipo-sabe-de-si-mismo-md)
 - [ADR-055-la-integridad-de-los-codigos-en-uso-vive-en-la-aplicacion.md](#file-adr-055-la-integridad-de-los-codigos-en-uso-vive-en-la-aplicacion-md)
 - [ADR-056-la-unicidad-de-un-codigo-no-incluye-la-vigencia.md](#file-adr-056-la-unicidad-de-un-codigo-no-incluye-la-vigencia-md)
-- [ADR-28-payroll-calculation-launch-semantics.md](#file-adr-28-payroll-calculation-launch-semantics-md)
+- [ADR-057-una-serie-temporal-se-gobierna-por-sus-invariantes-no-por-sus-operaciones.md](#file-adr-057-una-serie-temporal-se-gobierna-por-sus-invariantes-no-por-sus-operaciones-md)
+- [ADR-058-ningun-operando-cruza-de-segmento-a-periodo.md](#file-adr-058-ningun-operando-cruza-de-segmento-a-periodo-md)
 
 ---
 
@@ -7635,6 +7637,266 @@ ESP + EMP + 0001 + 202501 + ORD + 2
 
 ---
 
+# FILE: ADR-28-payroll-calculation-launch-semantics.md
+<a name="file-adr-28-payroll-calculation-launch-semantics-md"></a>
+
+<!-- BEGIN FILE: ADR-28-payroll-calculation-launch-semantics.md -->
+
+# ADR — Payroll Calculation Launch Semantics
+
+## Estado
+Propuesto
+
+## Contexto
+
+B4RRHH organiza el código por vertical/subdominio y exige APIs públicas basadas en business keys, nunca en IDs técnicos. Además, cuando una operación no encaja como CRUD plano, el proyecto favorece modelarla como una acción de negocio o workflow explícito. fileciteturn4file10 fileciteturn4file12 fileciteturn4file8
+
+En el bounded context `payroll` ya se ha decidido que:
+
+- la raíz funcional es `payroll.payroll`;
+- su identidad funcional es:
+  - `ruleSystemCode`
+  - `employeeTypeCode`
+  - `employeeNumber`
+  - `payrollPeriodCode`
+  - `payrollTypeCode`
+  - `presenceNumber`;
+- la nómina es un resultado materializado, no editable, regenerable por cálculo;
+- las hijas cuelgan con `ON DELETE CASCADE`;
+- solo `NOT_VALID` es estado recalcable entre las nóminas ya existentes. fileciteturn4file1 fileciteturn4file6
+
+También se ha fijado que `employee.presence` es un recurso funcional identificado por business key ampliada `ruleSystemCode + employeeTypeCode + employeeNumber + presenceNumber`, y que las acciones de negocio compuestas deben vivir como workflows por encima de los recursos canónicos. fileciteturn4file14 fileciteturn4file16 fileciteturn4file8
+
+Al empezar a hablar de cálculo de nómina aparece una tensión natural:
+
+- una cosa es el **modelo de datos del resultado** (`payroll.payroll`);
+- otra cosa distinta es el **lanzamiento del cálculo**.
+
+Si ambas cosas se mezclan demasiado pronto, el diseño queda borroso y se dificulta la evolución futura del motor de reglas.
+
+## Problema
+
+Se necesita definir qué significa técnicamente “lanzar nómina” sin entrar todavía en el motor real de reglas de cálculo.
+
+El sistema debe poder:
+
+- recibir un período y un tipo de nómina;
+- resolver una población objetivo;
+- expandir esa población a unidades reales de cálculo;
+- decidir cuáles son elegibles;
+- delegar el cálculo efectivo a otro caso de uso especializado;
+- devolver un resumen de ejecución.
+
+Además, el launch no debe recalcular indiscriminadamente:
+
+- una nómina existente en `CALCULATED` no debe tocarse;
+- una nómina existente en `EXPLICIT_VALIDATED` no debe tocarse;
+- una nómina `DEFINITIVE` jamás debe tocarse;
+- una unidad sin nómina previa sí debe calcularse;
+- una unidad con nómina previa en `NOT_VALID` sí debe recalcularse.
+
+## Decisión
+
+Se introduce la semántica de **Payroll Calculation Launch** como workflow de aplicación dentro del bounded context `payroll`.
+
+El launch:
+
+- **no es** la raíz funcional del dominio;
+- **no es** un CRUD;
+- **no es** todavía un recurso persistente canónico tipo `payroll_run`;
+- **no implementa** por sí mismo el motor de cálculo;
+- **resuelve y orquesta** qué unidades deben intentarse calcular.
+
+### Regla principal
+
+`launch` resuelve la lista de unidades de cálculo elegibles y delega el cálculo efectivo a un caso de uso/endpoint especializado de cálculo.
+
+## Definición funcional
+
+Lanzar nómina significa:
+
+> ejecutar un workflow que, para un `ruleSystemCode`, `payrollPeriodCode`, `payrollTypeCode` y una población objetivo determinada, resuelve las unidades de cálculo candidato, considera elegibles las que no tienen nómina previa o la tienen en `NOT_VALID`, delega el cálculo efectivo a un componente especializado y devuelve un resumen de ejecución.
+
+## Unidad funcional de cálculo
+
+La unidad mínima de cálculo es:
+
+- `ruleSystemCode`
+- `employeeTypeCode`
+- `employeeNumber`
+- `payrollPeriodCode`
+- `payrollTypeCode`
+- `presenceNumber`
+
+Justificación:
+
+- `payroll.payroll` ya está anclada a una presencia concreta; fileciteturn4file1
+- `presence` tiene identidad pública propia dentro del empleado; fileciteturn4file14 fileciteturn4file16
+- dos presencias distintas en el mismo mes representan nóminas independientes.
+
+El launch trabaja con una colección de estas unidades, no con “empleados enteros” de forma opaca.
+
+## Población objetivo vs población elegible
+
+Se distinguen dos conceptos:
+
+### 1. Población objetivo
+
+Es el conjunto de empleados o ámbitos sobre los que el usuario desea lanzar el cálculo.
+
+Ejemplos posibles:
+
+- un empleado;
+- una lista explícita de empleados;
+- todos los empleados de un `ruleSystemCode`;
+- futuros filtros más ricos.
+
+### 2. Población elegible
+
+Es el conjunto de unidades de cálculo que realmente pueden entrar al cálculo efectivo.
+
+Una unidad es elegible si:
+
+- **no existe** `payroll.payroll` para su business key funcional; o
+- **existe** y su `status = NOT_VALID`.
+
+Una unidad no es elegible si existe y su estado es:
+
+- `CALCULATED`
+- `EXPLICIT_VALIDATED`
+- `DEFINITIVE`
+
+## Responsabilidades del launch
+
+El launch debe:
+
+1. recibir el contexto de ejecución;
+2. resolver la población objetivo;
+3. expandirla a unidades de cálculo candidatas;
+4. comprobar existencia y estado de `payroll.payroll`;
+5. construir la lista final de unidades elegibles;
+6. delegar el cálculo efectivo;
+7. consolidar un resumen de ejecución.
+
+El launch no debe:
+
+- generar directamente conceptos de nómina;
+- decidir reglas salariales;
+- prorratear;
+- aplicar retroactividad real;
+- convertirse en el motor de cálculo.
+
+## Contexto mínimo de ejecución
+
+El launch debe trabajar al menos con:
+
+- `ruleSystemCode`
+- `payrollPeriodCode`
+- `payrollTypeCode`
+- `calculationEngineCode`
+- `calculationEngineVersion`
+- `targetSelection`
+
+Los dos campos de engine son obligatorios por coherencia con el modelo raíz ya adoptado para `payroll.payroll`. fileciteturn4file1
+
+## targetSelection
+
+`targetSelection` representa la población objetivo.
+
+No se fija todavía un único shape contractual cerrado, pero el modelo debe permitir al menos:
+
+- cálculo de un empleado concreto;
+- cálculo de una lista explícita;
+- cálculo masivo por ámbito.
+
+El diseño exacto del payload se cerrará en OpenAPI posterior.
+
+## Delegación al cálculo efectivo
+
+El launch no implementa el cálculo. Delegará en un caso de uso/endpoint especializado, en adelante `calculate`.
+
+Esta separación permite:
+
+- probar el flujo completo antes de tener motor real;
+- evolucionar el componente de cálculo sin rediseñar el launch;
+- distinguir claramente entre orquestación y cálculo.
+
+## Resultado del launch
+
+El launch debe devolver un resumen explícito de ejecución.
+
+Campos esperables del resumen:
+
+- total de candidatos detectados;
+- total de unidades elegibles;
+- total de unidades no elegibles por estado;
+- total de unidades calculadas con resultado `CALCULATED`;
+- total de unidades calculadas con resultado `NOT_VALID`;
+- total de errores técnicos;
+- detalle opcional por unidad.
+
+No se decide todavía persistir este resumen como recurso canónico.
+
+## Qué se rechaza explícitamente
+
+Se rechaza en esta fase:
+
+- modelar `launch` como CRUD;
+- mezclar launch y cálculo efectivo en la misma semántica;
+- recalcular cualquier nómina encontrada dentro de la población objetivo;
+- introducir ya un `payroll_run` como centro del dominio;
+- abrir todavía un repositorio/microservicio separado sólo para el cálculo.
+
+## Relación con el workflow de estados
+
+Este ADR no sustituye al ADR de estados de nómina.
+
+Se complementa con él:
+
+- `NOT_VALID` sigue siendo el estado que autoriza la sustitución de una nómina existente; fileciteturn4file0
+- además, una unidad sin nómina previa es también elegible para cálculo.
+
+## API conceptual inicial
+
+A falta de OpenAPI definitivo, se recomienda un endpoint de negocio del estilo:
+
+- `POST /payroll/calculations/launch`
+
+El nombre debe seguir semántica de negocio, no nomenclatura técnica vaga. El proyecto prioriza nombres orientados a negocio y paths por business keys cuando aplica. fileciteturn4file12
+
+## Consecuencias
+
+### Positivas
+
+- separa claramente modelo y proceso;
+- permite probar el flujo completo sin motor real;
+- protege de recálculos accidentales;
+- deja abierta evolución futura del motor;
+- encaja con el patrón del proyecto de workflows explícitos. fileciteturn4file8
+
+### Costes
+
+- introduce un caso de uso adicional;
+- exige resolver correctamente la expansión de población a presencias;
+- obliga a diseñar un resumen de ejecución útil.
+
+## Resumen
+
+En B4RRHH, `launch` no calcula la nómina por sí mismo.
+
+`launch` es el workflow que:
+
+- resuelve la población objetivo;
+- expande a unidades reales de cálculo;
+- considera elegibles las unidades sin nómina previa o con nómina `NOT_VALID`;
+- delega el cálculo efectivo;
+- devuelve un resumen explícito del proceso.
+
+<!-- END FILE: ADR-28-payroll-calculation-launch-semantics.md -->
+
+
+---
+
 # FILE: ADR-029-payroll-calculate-contract-stub.md
 <a name="file-adr-029-payroll-calculate-contract-stub-md"></a>
 
@@ -14404,260 +14666,347 @@ de la fila y heredan su periodo. Y las siete divergencias del backend#2, que son
 
 ---
 
-# FILE: ADR-28-payroll-calculation-launch-semantics.md
-<a name="file-adr-28-payroll-calculation-launch-semantics-md"></a>
+# FILE: ADR-057-una-serie-temporal-se-gobierna-por-sus-invariantes-no-por-sus-operaciones.md
+<a name="file-adr-057-una-serie-temporal-se-gobierna-por-sus-invariantes-no-por-sus-operaciones-md"></a>
 
-<!-- BEGIN FILE: ADR-28-payroll-calculation-launch-semantics.md -->
+<!-- BEGIN FILE: ADR-057-una-serie-temporal-se-gobierna-por-sus-invariantes-no-por-sus-operaciones.md -->
 
-# ADR — Payroll Calculation Launch Semantics
+# ADR-057 — Una serie temporal se gobierna por sus invariantes, no por sus operaciones
 
 ## Estado
-Propuesto
+Aceptado
 
 ## Contexto
 
-B4RRHH organiza el código por vertical/subdominio y exige APIs públicas basadas en business keys, nunca en IDs técnicos. Además, cuando una operación no encaja como CRUD plano, el proyecto favorece modelarla como una acción de negocio o workflow explícito. fileciteturn4file10 fileciteturn4file12 fileciteturn4file8
+Un intento de cambiar la jornada de un empleado a mitad de mes devolvió un `409
+WORKING_TIME_OVERLAP`. Al tirar del hilo apareció un segundo síntoma: una ocurrencia metida por
+error no se puede deshacer en casi ninguna vertical. Se hizo el inventario de las quince verticales
+de `employee`, controlador a controlador y *gateway* a *gateway*, y los dos síntomas resultaron ser
+el mismo: **no hay una forma acordada de «una cosa del empleado que cambia con el tiempo»**. Cada
+vertical se inventó su propio subconjunto de operaciones.
 
-En el bounded context `payroll` ya se ha decidido que:
+Agrupadas por comportamiento salen cinco tipos:
 
-- la raíz funcional es `payroll.payroll`;
-- su identidad funcional es:
-  - `ruleSystemCode`
-  - `employeeTypeCode`
-  - `employeeNumber`
-  - `payrollPeriodCode`
-  - `payrollTypeCode`
-  - `presenceNumber`;
-- la nómina es un resultado materializado, no editable, regenerable por cálculo;
-- las hijas cuelgan con `ON DELETE CASCADE`;
-- solo `NOT_VALID` es estado recalcable entre las nóminas ya existentes. fileciteturn4file1 fileciteturn4file6
+- **A — serie temporal con cierre explícito**: `contract`, `labor_classification`, `workcenter`,
+  `cost_center`, `working_time`, `address`. Una vigente cada vez, con fecha de fin propia.
+- **B — serie temporal con fin implícito**: `tax_information`. La vigencia acaba donde empieza la
+  siguiente; sin cierre, sustituir *es* insertar.
+- **C — colección atemporal**: `contact`, `identifier`, `payroll_input`. CRUD completo, sin deuda.
+- **D — valor singular**: `employee`, `photo`.
+- **E — derivada**: `journey`. Sólo lectura por construcción.
 
-También se ha fijado que `employee.presence` es un recurso funcional identificado por business key ampliada `ruleSystemCode + employeeTypeCode + employeeNumber + presenceNumber`, y que las acciones de negocio compuestas deben vivir como workflows por encima de los recursos canónicos. fileciteturn4file14 fileciteturn4file16 fileciteturn4file8
+`presence` quedó fuera del tipo A: la escriben los flujos `HIRE`, `TERMINATE` y `REHIRE`, no el
+usuario, y que su pantalla sólo lea es la forma correcta, no una carencia. El eje que la separa —
+quién escribe: usuario o flujo de negocio — afecta también a la *creación* de `contract` y
+`labor_classification`, que nacen al contratar.
 
-Al empezar a hablar de cálculo de nómina aparece una tensión natural:
+Los tipos C y D están completos. **Toda la deuda vive en el tipo A**, y no está repartida al azar:
 
-- una cosa es el **modelo de datos del resultado** (`payroll.payroll`);
-- otra cosa distinta es el **lanzamiento del cálculo**.
+| | crear | sustituir desde fecha | corregir | cerrar | borrar |
+|---|---|---|---|---|---|
+| `contract` | sí | **sí** | sí | sí | no |
+| `labor_classification` | sí | **sí** | sí | sí | no |
+| `workcenter` | sí | **sí** (el front no lo llama) | sí | sí | sí |
+| `cost_center` | sí | **sí** | no | sí | no |
+| `working_time` | sí | **no** | sí | sí | no |
+| `address` | sí | **no** | sí | sí | no |
 
-Si ambas cosas se mezclan demasiado pronto, el diseño queda borroso y se dificulta la evolución futura del motor de reglas.
+La causa está en la columna del medio. `Replace…FromDate` se resolvió como **una operación**, y una
+operación sólo obliga a quien pasa por ella: la vertical que no la implementó no se quedó sin un
+método, se quedó **sin la regla**. `working_time` y `address` saben cerrar y saben crear, pero no
+ofrecen hacerlo a la vez, así que el usuario tiene que ser la transacción, en el orden correcto —o
+se come el solapamiento. `workcenter` tiene el remedio escrito y la pantalla no lo usa.
 
-## Problema
-
-Se necesita definir qué significa técnicamente “lanzar nómina” sin entrar todavía en el motor real de reglas de cálculo.
-
-El sistema debe poder:
-
-- recibir un período y un tipo de nómina;
-- resolver una población objetivo;
-- expandir esa población a unidades reales de cálculo;
-- decidir cuáles son elegibles;
-- delegar el cálculo efectivo a otro caso de uso especializado;
-- devolver un resumen de ejecución.
-
-Además, el launch no debe recalcular indiscriminadamente:
-
-- una nómina existente en `CALCULATED` no debe tocarse;
-- una nómina existente en `EXPLICIT_VALIDATED` no debe tocarse;
-- una nómina `DEFINITIVE` jamás debe tocarse;
-- una unidad sin nómina previa sí debe calcularse;
-- una unidad con nómina previa en `NOT_VALID` sí debe recalcularse.
+Y lo que el inventario no vio a la primera: **la abstracción ya existe a medias**. En
+`employee/temporal/support` están `DateRange`, `TemporalDates`, `TimelineCoverageValidator` — con
+`isContained` («ninguna ocurrencia fuera de la presencia») e `isFullyCovered` («sin huecos dentro de
+ella») — y `StrongTimelineReplacePlanner`, cuyo `ReplaceMode {NO_COVERING, EXACT_START, SPLIT}` ya
+contempla la inserción en medio. La usan `contract`, `labor_classification` y `workcenter` —tres de las
+seis—, y dos de ellas se apoyan además en `ReplaceMode.EXACT_START` para que empezar el mismo día que
+una ocurrencia existente la **sustituya**. Ese comportamiento no sobrevive a la decisión 2 de este ADR
+y hay que decidirlo expresamente antes de migrarlas.
 
 ## Decisión
 
-Se introduce la semántica de **Payroll Calculation Launch** como workflow de aplicación dentro del bounded context `payroll`.
+### 0. Antes que nada: cuál es la unidad de la serie
 
-El launch:
+Una serie temporal no siempre va por empleado. Antes de aplicarle invariante alguno hay que
+responder **de qué es serie**, porque de eso depende sobre qué conjunto se juzgan el solape y el
+hueco:
 
-- **no es** la raíz funcional del dominio;
-- **no es** un CRUD;
-- **no es** todavía un recurso persistente canónico tipo `payroll_run`;
-- **no implementa** por sí mismo el motor de cálculo;
-- **resuelve y orquesta** qué unidades deben intentarse calcular.
+- **Por empleado**: `working_time`, `contract`, `labor_classification`, `workcenter`. Una vigente
+  cada vez, y punto.
+- **Por empleado y un discriminante**: `address`, que va por **tipo de dirección** — domicilio,
+  fiscal, notificaciones—. Son series independientes que conviven, y cada una puede tener su propia
+  cobertura.
+- **Por empleado, pero con la ocurrencia compuesta**: `cost_center`, donde una ocurrencia no es una
+  fila sino **un conjunto de líneas que suman 100** en un tramo de fechas. El invariante se aplica al
+  tramo, no a la línea.
 
-### Regla principal
+Esta pregunta faltaba en la primera versión del ADR y costó un issue: `address` se planteó como una
+serie por empleado y habría bloqueado a 253 de mil empleados desde el primer día, además de borrar
+del dominio que alguien tenga domicilio y dirección fiscal a la vez.
 
-`launch` resuelve la lista de unidades de cálculo elegibles y delega el cálculo efectivo a un caso de uso/endpoint especializado de cálculo.
+**Qué discriminante marca la cobertura obligatoria no se codifica en Java.** Qué tipo de dirección es
+«el domicilio» es una propiedad del catálogo `EMPLOYEE_ADDRESS_TYPE`, no una constante `HOME` en el
+código: el metamodelo es donde vive la semántica en este producto (ADR-054), y otro `rule_system`
+puede marcar un tipo distinto. Con una guarda que compruebe que hay exactamente uno marcado por
+sistema de reglas.
 
-## Definición funcional
+### 1. El tipo A se define por sus invariantes, no por su juego de operaciones
 
-Lanzar nómina significa:
+Dos, y son separables:
 
-> ejecutar un workflow que, para un `ruleSystemCode`, `payrollPeriodCode`, `payrollTypeCode` y una población objetivo determinada, resuelve las unidades de cálculo candidato, considera elegibles las que no tienen nómina previa o la tienen en `NOT_VALID`, delega el cálculo efectivo a un componente especializado y devuelve un resumen de ejecución.
+- **Sin solapes.** Siempre, en las seis.
+- **Sin huecos dentro del período de presencia.** Sólo en las de **cobertura obligatoria**: si el
+  empleado está presente tiene que haber un contrato, una jornada y una clasificación. Una dirección
+  se puede no tener, y un hueco ahí es legal.
 
-## Unidad funcional de cálculo
+Cada vertical declara si su cobertura es obligatoria. El planificador ya se llama `Strong`: la
+variante débil estaba prevista y aquí se nombra.
 
-La unidad mínima de cálculo es:
+Y hay un tercer eje declarable que salió al migrar `address`: **si las ocurrencias pueden sobrevivir
+a la presencia**. La jornada no —fuera de la presencia no hay jornada que valga—, pero una dirección
+sí: alguien que causa baja sigue teniendo un domicilio al que enviarle un certificado, y en la base
+local hay 779 direcciones abiertas tras un cese que son correctas. Leer la presencia para exigir que
+el domicilio la cubra **no es lo mismo que no poder salir de ella**, y confundir las dos cosas habría
+congelado esas 779: seguirían ahí, pero corregir una la habría vuelto a juzgar y la habría rechazado.
 
-- `ruleSystemCode`
-- `employeeTypeCode`
-- `employeeNumber`
-- `payrollPeriodCode`
-- `payrollTypeCode`
-- `presenceNumber`
+Así que una serie declara tres cosas, y las tres son independientes: **de qué es serie** (decisión 0),
+**si su cobertura es obligatoria**, y **si sus ocurrencias pueden sobrevivir a la presencia**.
 
-Justificación:
+Esto es el ADR-055 un paso más allá. Allí se decidió que la integridad de los códigos vive en la
+aplicación y no en una clave ajena; aquí se decide que la integridad de una serie vive en **el
+estado resultante**, no en la precondición de una operación. Un invariante sobre la serie es
+comprobable en cualquier momento y por cualquier camino —una migración, un script, una importación—;
+una regla escondida en una operación sólo protege a quien pasa por ella, que es exactamente cómo
+llegamos aquí.
 
-- `payroll.payroll` ya está anclada a una presencia concreta; fileciteturn4file1
-- `presence` tiene identidad pública propia dentro del empleado; fileciteturn4file14 fileciteturn4file16
-- dos presencias distintas en el mismo mes representan nóminas independientes.
+### 2. Una sola forma de escribir: añadir una ocurrencia
 
-El launch trabaja con una colección de estas unidades, no con “empleados enteros” de forma opaca.
+El usuario mete una ocurrencia con inicio y fin. **Una única consecuencia automática**, y acotada: si
+la nueva empieza después de la última y esa última está abierta, se cierra el día anterior al inicio
+de la nueva. Nada más se mueve solo.
 
-## Población objetivo vs población elegible
+Desaparecen `replace-from-date` y `close` como operaciones del API. Lo que hacían pasa a ser efecto
+del invariante.
 
-Se distinguen dos conceptos:
+### 3. Estirar o encoger una ocurrencia lo hace el usuario
 
-### 1. Población objetivo
+Nunca el sistema. De ahí sale la regla del borrado, que es donde estaba la pregunta difícil —poner
+controles porque el dato es el núcleo, contra «me equivoqué, era día 4 y no día 3»:
 
-Es el conjunto de empleados o ámbitos sobre los que el usuario desea lanzar el cálculo.
+- **Borrar la última** reabre la anterior. Es el «ups» y es seguro.
+- **Borrar una de en medio** lo rechaza el invariante de huecos. Si de verdad hay que tapar el
+  agujero, se estira una vecina, explícitamente.
 
-Ejemplos posibles:
+La línea no está en prohibir el cambio: está en que **reescribir un histórico sea un acto
+deliberado y no el efecto colateral de un borrado**.
 
-- un empleado;
-- una lista explícita de empleados;
-- todos los empleados de un `ruleSystemCode`;
-- futuros filtros más ricos.
+### 4. El orden se deriva de la fecha de inicio y no se persiste
 
-### 2. Población elegible
+No hay número de ocurrencia que haga de orden. El `workingTimeNumber` y sus hermanos siguen siendo
+identificadores. Un orden almacenado sería una segunda fuente de verdad capaz de contradecir a las
+fechas, y entonces habría que decidir quién gana.
 
-Es el conjunto de unidades de cálculo que realmente pueden entrar al cálculo efectivo.
+### 5. `Replace…FromDate` deja de ser el modelo
 
-Una unidad es elegible si:
+**No se escribe ninguno nuevo.** En particular, no se escribe `ReplaceWorkingTimeFromDate`: sería la
+quinta copia de lo que este ADR sustituye. Las verticales sin el patrón se enganchan al componente
+temporal; las cuatro que lo tienen se reconducen a él.
 
-- **no existe** `payroll.payroll` para su business key funcional; o
-- **existe** y su `status = NOT_VALID`.
+### 6. El cambio se planifica antes de aplicarse
 
-Una unidad no es elegible si existe y su estado es:
+`StrongTimelineReplacePlan` ya es un plan y no una ejecución. Se generaliza: el usuario mete lo que
+quiera y ve qué le va a pasar a la línea temporal —qué se cierra, qué hueco aparece— antes de
+confirmar. Es lo que permite que la escritura sea libre sin que la consecuencia sea una sorpresa.
 
-- `CALCULATED`
-- `EXPLICIT_VALIDATED`
-- `DEFINITIVE`
+Y el plan es también donde se resuelve el caso que la decisión 2 dejaría fuera. Hoy, en `contract` y
+`labor_classification`, añadir una ocurrencia que empieza **exactamente** el mismo día que otra la
+**sustituye** (`ReplaceMode.EXACT_START`): si el contrato ya empezaba el 1 de marzo y el error fue el
+tipo, lo que se quiere es corregir ese contrato, no meter uno de cero días en el histórico. Ese
+comportamiento se conserva, pero deja de ser una adivinanza: el plan responde «esto no añade nada,
+**corrige la ocurrencia del 1 de marzo**» y el usuario confirma una corrección. La sustitución
+silenciosa es lo que se retira; la comodidad, no.
 
-## Responsabilidades del launch
-
-El launch debe:
-
-1. recibir el contexto de ejecución;
-2. resolver la población objetivo;
-3. expandirla a unidades de cálculo candidatas;
-4. comprobar existencia y estado de `payroll.payroll`;
-5. construir la lista final de unidades elegibles;
-6. delegar el cálculo efectivo;
-7. consolidar un resumen de ejecución.
-
-El launch no debe:
-
-- generar directamente conceptos de nómina;
-- decidir reglas salariales;
-- prorratear;
-- aplicar retroactividad real;
-- convertirse en el motor de cálculo.
-
-## Contexto mínimo de ejecución
-
-El launch debe trabajar al menos con:
-
-- `ruleSystemCode`
-- `payrollPeriodCode`
-- `payrollTypeCode`
-- `calculationEngineCode`
-- `calculationEngineVersion`
-- `targetSelection`
-
-Los dos campos de engine son obligatorios por coherencia con el modelo raíz ya adoptado para `payroll.payroll`. fileciteturn4file1
-
-## targetSelection
-
-`targetSelection` representa la población objetivo.
-
-No se fija todavía un único shape contractual cerrado, pero el modelo debe permitir al menos:
-
-- cálculo de un empleado concreto;
-- cálculo de una lista explícita;
-- cálculo masivo por ámbito.
-
-El diseño exacto del payload se cerrará en OpenAPI posterior.
-
-## Delegación al cálculo efectivo
-
-El launch no implementa el cálculo. Delegará en un caso de uso/endpoint especializado, en adelante `calculate`.
-
-Esta separación permite:
-
-- probar el flujo completo antes de tener motor real;
-- evolucionar el componente de cálculo sin rediseñar el launch;
-- distinguir claramente entre orquestación y cálculo.
-
-## Resultado del launch
-
-El launch debe devolver un resumen explícito de ejecución.
-
-Campos esperables del resumen:
-
-- total de candidatos detectados;
-- total de unidades elegibles;
-- total de unidades no elegibles por estado;
-- total de unidades calculadas con resultado `CALCULATED`;
-- total de unidades calculadas con resultado `NOT_VALID`;
-- total de errores técnicos;
-- detalle opcional por unidad.
-
-No se decide todavía persistir este resumen como recurso canónico.
-
-## Qué se rechaza explícitamente
-
-Se rechaza en esta fase:
-
-- modelar `launch` como CRUD;
-- mezclar launch y cálculo efectivo en la misma semántica;
-- recalcular cualquier nómina encontrada dentro de la población objetivo;
-- introducir ya un `payroll_run` como centro del dominio;
-- abrir todavía un repositorio/microservicio separado sólo para el cálculo.
-
-## Relación con el workflow de estados
-
-Este ADR no sustituye al ADR de estados de nómina.
-
-Se complementa con él:
-
-- `NOT_VALID` sigue siendo el estado que autoriza la sustitución de una nómina existente; fileciteturn4file0
-- además, una unidad sin nómina previa es también elegible para cálculo.
-
-## API conceptual inicial
-
-A falta de OpenAPI definitivo, se recomienda un endpoint de negocio del estilo:
-
-- `POST /payroll/calculations/launch`
-
-El nombre debe seguir semántica de negocio, no nomenclatura técnica vaga. El proyecto prioriza nombres orientados a negocio y paths por business keys cuando aplica. fileciteturn4file12
+Con un matiz que costó una regresión aprenderlo: **decir que algo es una corrección no es lo mismo
+que aceptarlo como alta**. El primer intento devolvió ese plan como aceptado, y el caso de uso de
+alta —que no miraba la operación resultante— guardó una segunda ocurrencia con el mismo inicio. Así
+que el plan lleva **la intención con la que se pidió** además de la operación que resultó ser, y uno
+que no coincide nace rechazado: la información del §6 está toda ahí —qué ocurrencia corrige, cómo
+quedaría—, pero aplicarlo como alta es imposible por construcción y no por disciplina de cada
+vertical. Es la misma lección que el resto del ADR: una regla que hay que acordarse de comprobar
+sólo protege a quien se acuerda.
 
 ## Consecuencias
 
-### Positivas
+**Seis verticales pasan a tener la misma forma**, y las pantallas dejan de necesitar saberse el orden
+de dos llamadas. El `409` de la jornada desaparece por construcción, no por un arreglo.
 
-- separa claramente modelo y proceso;
-- permite probar el flujo completo sin motor real;
-- protege de recálculos accidentales;
-- deja abierta evolución futura del motor;
-- encaja con el patrón del proyecto de workflows explícitos. fileciteturn4file8
+**Cuesta reconducir cuatro verticales que ya están en el patrón viejo**, y sus *gateways* en el
+front: `employee-contract-read`, `employee-labor-classification-read`, `employee-work-center` y
+`employee-cost-center` llaman hoy a `replace…FromDate` o a `close`. Se hace ahora, antes de que haya
+datos reales de clientes.
 
-### Costes
+**Este ADR no decide tres cosas, y conviene que no se lea como si lo hiciera:**
 
-- introduce un caso de uso adicional;
-- exige resolver correctamente la expansión de población a presencias;
-- obliga a diseñar un resumen de ejecución útil.
+1. **Qué pasa con las nóminas ya calculadas cuando se cambia un dato hacia atrás.** El
+   `payroll_context_snapshot` deja saber qué jornada usó cada nómina, así que la trazabilidad está
+   cubierta; lo que falta es que el cambio *avise* de qué nóminas quedan desactualizadas. Es el ciclo
+   de nómina y tendrá su propia serie de ADRs.
+2. ~~Si `address` es de cobertura obligatoria u opcional.~~ **Decidido: el domicilio es de cobertura
+   obligatoria; los demás tipos de dirección, opcionales.** Un empleado está legalmente obligado a
+   declarar domicilio, pero puede tener a la vez domicilio y dirección fiscal, así que la serie de
+   direcciones **no es una por empleado, es una por empleado y tipo** (ver la decisión 0).
 
-## Resumen
+   La primera versión de esta decisión decía «obligatoria» a secas y citaba «cero períodos con
+   hueco» de una comprobación previa. Esa comprobación medía la cobertura agregando todos los tipos
+   con `range_agg` y contando sólo huecos: no podía ver solapes, y al agregar los tipos escondía
+   justo el problema. Con la serie por empleado, **253 de mil empleados tienen hoy domicilio y
+   dirección fiscal a la vez y quedarían bloqueados para toda escritura**. Con la serie por
+   `(empleado, tipo)`, los datos pasan limpios: cero huecos por tipo y cero solapes dentro del mismo
+   tipo.
+3. **Cómo se crean las verticales que nacen de un flujo.** `contract` y `labor_classification` se
+   crean al contratar, y este ADR no toca los flujos de ciclo de vida.
 
-En B4RRHH, `launch` no calcula la nómina por sí mismo.
+**Y deja a la vista tres cosas que no se callan aunque queden fuera:** `photo` está entera en el
+backend sin un solo *gateway* en el front; `journey` tiene dos endpoints vivos a la vez (`/journey` y
+`/journey-v2`); y `cost_center` deja sustituir una distribución pero no corregir una errata dentro,
+lo que obliga a inventar un cambio histórico que nunca ocurrió.
 
-`launch` es el workflow que:
+<!-- END FILE: ADR-057-una-serie-temporal-se-gobierna-por-sus-invariantes-no-por-sus-operaciones.md -->
 
-- resuelve la población objetivo;
-- expande a unidades reales de cálculo;
-- considera elegibles las unidades sin nómina previa o con nómina `NOT_VALID`;
-- delega el cálculo efectivo;
-- devuelve un resumen explícito del proceso.
 
-<!-- END FILE: ADR-28-payroll-calculation-launch-semantics.md -->
+---
+
+# FILE: ADR-058-ningun-operando-cruza-de-segmento-a-periodo.md
+<a name="file-adr-058-ningun-operando-cruza-de-segmento-a-periodo-md"></a>
+
+<!-- BEGIN FILE: ADR-058-ningun-operando-cruza-de-segmento-a-periodo.md -->
+
+# ADR-058 — Ningún operando cruza de segmento a período
+
+## Estado
+Aceptado
+
+## Contexto
+
+El piloto del backend#46 puso un concepto en `SEGMENT` sobre un empleado con la jornada partida al
+50 % a mitad de mes y miró qué salía. Salió lo que se esperaba —dos líneas de `SALARIO_BASE`, 15 ×
+61,67 y 15 × 30,84— y, de paso, algo que no:
+
+> Con el concepto de vuelta en `PERIOD` y la misma jornada partida, **el recibo sale idéntico**.
+
+`execution_scope` no lo lee nadie. Y no está solo:
+
+```
+persistToConcepts       referencias en com.b4rrhh.payroll: 0
+resultCompositionMode   referencias en com.b4rrhh.payroll: 0
+executionScope          referencias en com.b4rrhh.payroll: 0
+```
+
+Tres propiedades del metamodelo de nómina, guardadas, expuestas en la API, dos de ellas pintadas en
+el panel de detalle del designer, y ninguna gobierna nada. El motor deduce el comportamiento de
+`functionalNature` —vía `isAccumulable = EARNING || DEDUCTION`— y de `payslipOrderCode != null`. Lo
+que parte el recibo son **exclusivamente las ventanas de jornada**.
+
+Debajo hay algo peor que tres campos muertos: **dos defectos que se estaban tapando el uno al otro**.
+`DIAS_DEVENGO` está documentado en la V74 como *«accrual days in segment, min(daysInSegment, 30)»* —
+es un valor por tramo— y es `TECHNICAL`, así que `isAccumulable` da falso y el motor lo compone con
+`put`: gana el último. El valor mensual compuesto de `DIAS_DEVENGO` en un mes partido es **15, no
+30**. Hoy nadie se lleva ese 15 porque, al no leerse el ámbito, todo se evalúa dentro de su propio
+segmento y nadie lo lee a nivel de período. Cablear el ámbito sin arreglar la composición
+**convertiría un campo decorativo en una nómina mal calculada**.
+
+## Decisión
+
+### 1. `execution_scope` se queda, y significa esto
+
+**`PERIOD` quiere decir que la regla del concepto está definida sobre el período entero y no se
+reparte en subperíodos.** No es «evalúalo una vez porque es más barato».
+
+La diferencia importa, y se ve con dos ejemplos de la propia semilla. Un subsidio de alimentación a
+6 €/día da el mismo número por tramos que de una vez —6×15 + 6×15 = 6×30—: eso es una optimización, y
+una optimización no merece un campo en el modelo. Pero:
+
+```
+'ESP', 'B_CC_MAX', 'BASE_COTIZACION_MAX',   'LEAST'
+'ESP', 'B_CC',     'BASE_COTIZACION_COTIZ', 'GREATEST'
+```
+
+Un tope y un suelo **no se distribuyen**: topar dos quincenas por separado y topar el mes una vez dan
+números distintos, y sólo uno es el que exige la normativa. Ahí el ámbito es semántica, no
+rendimiento, y por eso el campo existe.
+
+### 2. Ningún operando cruza de segmento a período. Los feeds, sí
+
+El modelo ya separa las dos clases de arista en dos tablas, y no son lo mismo:
+
+- **`payroll_concept_feed_relation`** — la bolsa. Un feed de un concepto `SEGMENT` a uno `PERIOD`
+  **suma**, y sumar está definido: 15 días + 15 días = 30; 925,05 + 462,60 = 1387,65. Una base
+  `PERIOD` alimentada por devengos `SEGMENT` es correcta y es el caso normal.
+- **`payroll_concept_operand`** — `qty`, `rate`, `base`, `pct`, `left`, `right`. Un operando
+  `SEGMENT` leído desde un concepto `PERIOD` **no tiene respuesta**: «el precio del día» en un mes
+  con dos precios no es un número. **Se prohíbe.**
+
+La restricción es de una sola dirección: un concepto `SEGMENT` que lee un valor `PERIOD` no tiene
+problema, porque es un número solo, igual en todos los tramos.
+
+Se planteó primero como «un concepto `PERIOD` no puede usar conceptos `SEGMENT`, salvo las bases».
+Se descartó porque la excepción hacía todo el trabajo: una base `PERIOD` alimentada por devengos
+`SEGMENT` **es** un `PERIOD` leyendo `SEGMENT`. Puesta sobre la arista, la regla no necesita
+excepciones y además explica por qué la base es distinta en vez de listarla como caso especial.
+
+### 3. `result_composition_mode` se retira, por consecuencia
+
+Con la regla anterior, una **tasa** `SEGMENT` ya no puede ser operando de nadie a nivel de período,
+así que **nunca hace falta componerla**. Y una **magnitud** `SEGMENT` sólo se compone de dos maneras
+—para salir en el recibo, o para alimentar un feed— y las dos son suma.
+
+La composición deja de ser una elección del concepto y pasa a ser **siempre suma**. El único caso en
+que no lo era queda prohibido por el invariante del grafo, no resuelto por un campo.
+
+Se retira porque sobra, no porque no importara: el eje que intentaba expresar —magnitudes contra
+tasas, que `functionalNature` no puede distinguir porque `DIAS_DEVENGO` y `TIPO_IRPF` son las dos
+`TECHNICAL`— sigue siendo real. Lo que cambia es que la regla del grafo lo hace inobservable.
+
+### 4. `persistToConcepts` se retira
+
+Su razón era no llenar la tabla de resultados. Esa razón no sobrevive a la aritmética: son 36 filas
+por nómina, unas 31.000 para los mil empleados sembrados, tres veces una tabla diminuta. Y con la
+separación entre el recibo y la traza de cálculo hay que persistirlo todo, precisamente para poder
+explicar un importe.
+
+### 5. Esto es una guarda, no una convención
+
+El invariante de la decisión 2 se comprueba **al guardar el grafo** y en **un test que recorra los
+conceptos sembrados**. Una regla que sólo vive en este documento protege a quien se acuerda de ella,
+que es exactamente cómo llegamos a tener tres campos muertos.
+
+## Consecuencias
+
+**El designer deja de mentir.** Hoy su panel de detalle ofrece cambiar «Composición» y «Persiste
+resultado», y ninguna de las dos cosas hace nada: se puede cambiar delante de quien sea, guardar,
+recalcular, y el recibo sale igual. Al retirarlas, lo que queda en pantalla gobierna de verdad, que
+es lo que hace demostrable la frase «edito el grafo y la nómina cambia».
+
+**Hay que repasar los 36 conceptos sembrados** y decir de cada uno si su ámbito es `SEGMENT` o
+`PERIOD`. Ese valor hoy no lo ha mirado nadie al sembrarlo —los 36 están en `PERIOD` y nadie lo
+notó, porque no se lee— y en cuanto empiece a mandar, decidirá el resultado.
+
+**El orden del trabajo no es libre.** Primero el invariante de aristas —que además dirá si la semilla
+actual ya lo cumple—, después cablear el ámbito, y sólo entonces retirar los dos campos. Al revés,
+cablear el ámbito con la composición sin arreglar convierte `DIAS_DEVENGO` en 15 días.
+
+**Lo que este ADR no decide:**
+
+1. **El valor mensual compuesto que se guarda para la traza.** La regla del grafo arregla el cálculo;
+   el registro es otra cosa. Cuando exista la tabla de valores de cálculo, el compuesto de
+   `DIAS_DEVENGO` en un mes partido tiene que ser 30, y eso hay que escribirlo aparte.
+2. **El redondeo por tramo** (backend#61), que es independiente y sigue abierto.
+3. **Qué pasa con la V118** del piloto, que puso `SALARIO_BASE` en `SEGMENT`: con este ADR pasa a
+   ser una declaración correcta en cuanto el ámbito se cable, pero hay que confirmarla al repasar los
+   36.
+
+<!-- END FILE: ADR-058-ningun-operando-cruza-de-segmento-a-periodo.md -->
 
