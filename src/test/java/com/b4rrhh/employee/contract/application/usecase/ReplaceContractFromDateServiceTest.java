@@ -1,17 +1,21 @@
 package com.b4rrhh.employee.contract.application.usecase;
 
 import com.b4rrhh.employee.contract.application.command.ReplaceContractFromDateCommand;
+import com.b4rrhh.employee.contract.application.port.ContractPresenceConsistencyPort;
 import com.b4rrhh.employee.contract.application.port.EmployeeContractContext;
 import com.b4rrhh.employee.contract.application.port.EmployeeContractLookupPort;
+import com.b4rrhh.employee.contract.application.port.PresencePeriod;
 import com.b4rrhh.employee.contract.application.service.ContractSubtypeRelationValidator;
 import com.b4rrhh.employee.contract.application.service.ContractCatalogValidator;
-import com.b4rrhh.employee.contract.application.service.ContractPresenceCoverageValidator;
+import com.b4rrhh.employee.contract.application.service.ContractTimelineService;
 import com.b4rrhh.employee.contract.domain.exception.ContractSubtypeRelationInvalidException;
 import com.b4rrhh.employee.contract.domain.exception.ContractCoverageIncompleteException;
 import com.b4rrhh.employee.contract.domain.exception.ContractEmployeeNotFoundException;
+import com.b4rrhh.employee.contract.domain.exception.ContractIsACorrectionException;
 import com.b4rrhh.employee.contract.domain.exception.ContractOutsidePresencePeriodException;
 import com.b4rrhh.employee.contract.domain.exception.ContractOverlapException;
 import com.b4rrhh.employee.contract.domain.model.Contract;
+import com.b4rrhh.employee.contract.domain.model.ContractPeriod;
 import com.b4rrhh.employee.contract.domain.port.ContractRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,10 +25,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -33,6 +35,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * The deprecated {@code replace-from-date} as an adapter over the temporal
+ * component (ADR-057). The behaviour the old {@code ReplaceMode} gave the
+ * screen is kept where the ADR keeps it: SPLIT inside an open or a closed
+ * contract, insertion when nothing covers. EXACT_START is the one that
+ * changes: it is no longer a silent replacement but a rejected plan that
+ * names the contract to correct (backend#52).
+ */
 @ExtendWith(MockitoExtension.class)
 class ReplaceContractFromDateServiceTest {
 
@@ -44,24 +54,24 @@ class ReplaceContractFromDateServiceTest {
     private ContractRepository contractRepository;
     @Mock
     private EmployeeContractLookupPort employeeContractLookupPort;
+    @Mock
+    private ContractPresenceConsistencyPort presencePort;
 
     private TestContractCatalogValidator contractCatalogValidator;
     private TestContractSubtypeRelationValidator contractSubtypeRelationValidator;
-    private TestContractPresenceCoverageValidator contractPresenceCoverageValidator;
     private ReplaceContractFromDateService service;
 
     @BeforeEach
     void setUp() {
         contractCatalogValidator = new TestContractCatalogValidator();
         contractSubtypeRelationValidator = new TestContractSubtypeRelationValidator();
-        contractPresenceCoverageValidator = new TestContractPresenceCoverageValidator();
 
         service = new ReplaceContractFromDateService(
                 contractRepository,
                 employeeContractLookupPort,
                 contractCatalogValidator,
                 contractSubtypeRelationValidator,
-                contractPresenceCoverageValidator
+                new ContractTimelineService(contractRepository, presencePort)
         );
     }
 
@@ -75,8 +85,9 @@ class ReplaceContractFromDateServiceTest {
                 null
         );
 
-        whenEmployeeExists();
-        when(contractRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(existing));
+        givenEmployeePresent(LocalDate.of(2026, 1, 1), null, existing);
+        when(contractRepository.findByEmployeeIdAndStartDate(10L, LocalDate.of(2026, 1, 1)))
+                .thenReturn(Optional.of(existing));
 
         Contract replaced = service.replaceFromDate(command(
                 LocalDate.of(2026, 3, 1),
@@ -103,8 +114,6 @@ class ReplaceContractFromDateServiceTest {
         assertEquals("PT1", savedCaptor.getValue().getContractSubtypeCode());
         assertEquals(LocalDate.of(2026, 3, 1), savedCaptor.getValue().getStartDate());
         assertEquals(null, savedCaptor.getValue().getEndDate());
-
-        assertEquals(2, contractPresenceCoverageValidator.lastProjectedHistory.size());
     }
 
     @Test
@@ -117,8 +126,10 @@ class ReplaceContractFromDateServiceTest {
                 LocalDate.of(2026, 3, 31)
         );
 
-        whenEmployeeExists();
-        when(contractRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(existing));
+        // The employee left on the same day the contract ends: no gap after it.
+        givenEmployeePresent(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), existing);
+        when(contractRepository.findByEmployeeIdAndStartDate(10L, LocalDate.of(2026, 1, 1)))
+                .thenReturn(Optional.of(existing));
 
         Contract replaced = service.replaceFromDate(command(
                 LocalDate.of(2026, 3, 1),
@@ -138,8 +149,12 @@ class ReplaceContractFromDateServiceTest {
         assertEquals(LocalDate.of(2026, 3, 31), savedCaptor.getValue().getEndDate());
     }
 
+    // Was replaceAtExactStartDateUpdatesWithoutDuplicateIdentityRow: the old
+    // EXACT_START replaced the codes silently. ADR-057 §6 keeps what the user
+    // wanted (no second row on the same start) but says it out loud: the plan
+    // is a correction, it is rejected as such, and nothing is written.
     @Test
-    void replaceAtExactStartDateUpdatesWithoutDuplicateIdentityRow() {
+    void replaceAtExactStartDateIsRejectedAsACorrectionAndWritesNoDuplicateIdentityRow() {
         Contract existing = new Contract(
                 10L,
                 "IND",
@@ -148,19 +163,15 @@ class ReplaceContractFromDateServiceTest {
                 null
         );
 
-        whenEmployeeExists();
-        when(contractRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(existing));
+        givenEmployeePresent(LocalDate.of(2026, 3, 1), null, existing);
 
-        Contract replaced = service.replaceFromDate(command(
-                LocalDate.of(2026, 3, 1),
-                "TMP",
-                "PT1"
-        ));
+        ContractIsACorrectionException ex = assertThrows(
+                ContractIsACorrectionException.class,
+                () -> service.replaceFromDate(command(LocalDate.of(2026, 3, 1), "TMP", "PT1"))
+        );
 
-        assertEquals(LocalDate.of(2026, 3, 1), replaced.getStartDate());
-        assertEquals("TMP", replaced.getContractCode());
-
-        verify(contractRepository).update(any(Contract.class), any(LocalDate.class));
+        assertEquals(new ContractPeriod(LocalDate.of(2026, 3, 1), null), ex.correctedOccurrence());
+        verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
         verify(contractRepository, never()).save(any(Contract.class));
     }
 
@@ -196,23 +207,22 @@ class ReplaceContractFromDateServiceTest {
 
     @Test
     void rejectsWhenReplacementBreaksPresenceCoverage() {
-        Contract existing = new Contract(
+        Contract closedInJanuary = new Contract(
                 10L,
                 "IND",
                 "FT1",
                 LocalDate.of(2026, 1, 1),
-                null
+                LocalDate.of(2026, 1, 31)
         );
 
-        contractPresenceCoverageValidator.setIncompleteCoverage(true);
-        whenEmployeeExists();
-        when(contractRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(existing));
+        givenEmployeePresent(LocalDate.of(2026, 1, 1), null, closedInJanuary);
 
-        assertThrows(
+        ContractCoverageIncompleteException ex = assertThrows(
                 ContractCoverageIncompleteException.class,
                 () -> service.replaceFromDate(command(LocalDate.of(2026, 3, 1), "TMP", "PT1"))
         );
 
+        assertEquals(List.of(new ContractPeriod(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28))), ex.gaps());
         verify(contractRepository, never()).save(any(Contract.class));
         verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
     }
@@ -227,13 +237,11 @@ class ReplaceContractFromDateServiceTest {
                 null
         );
 
-        contractPresenceCoverageValidator.setOutsidePresence(true);
-        whenEmployeeExists();
-        when(contractRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(existing));
+        givenEmployeePresent(LocalDate.of(2026, 1, 1), null, existing);
 
         assertThrows(
                 ContractOutsidePresencePeriodException.class,
-                () -> service.replaceFromDate(command(LocalDate.of(2026, 3, 1), "TMP", "PT1"))
+                () -> service.replaceFromDate(command(LocalDate.of(2025, 12, 1), "TMP", "PT1"))
         );
 
         verify(contractRepository, never()).save(any(Contract.class));
@@ -250,8 +258,7 @@ class ReplaceContractFromDateServiceTest {
                 null
         );
 
-        whenEmployeeExists();
-        when(contractRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(futureOpen));
+        givenEmployeePresent(LocalDate.of(2026, 1, 1), null, futureOpen);
 
         assertThrows(
                 ContractOverlapException.class,
@@ -264,8 +271,7 @@ class ReplaceContractFromDateServiceTest {
 
     @Test
     void createsNewPeriodWhenNoCoveringAndProjectedTimelineIsValid() {
-        whenEmployeeExists();
-        when(contractRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
+        givenEmployeePresent(LocalDate.of(2026, 3, 1), null);
 
         Contract replaced = service.replaceFromDate(command(
                 LocalDate.of(2026, 3, 1),
@@ -278,6 +284,13 @@ class ReplaceContractFromDateServiceTest {
 
         verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
         verify(contractRepository).save(any(Contract.class));
+    }
+
+    private void givenEmployeePresent(LocalDate presenceStart, LocalDate presenceEnd, Contract... occurrences) {
+        whenEmployeeExists();
+        when(contractRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(occurrences));
+        when(presencePort.findPresencePeriodsByEmployeeIdOrderByStartDate(10L))
+                .thenReturn(List.of(new PresencePeriod(presenceStart, presenceEnd)));
     }
 
     private void whenEmployeeExists() {
@@ -310,9 +323,6 @@ class ReplaceContractFromDateServiceTest {
 
     private static final class TestContractCatalogValidator extends ContractCatalogValidator {
 
-        private final Set<String> invalidContractCodes = new HashSet<>();
-        private final Set<String> invalidSubtypeCodes = new HashSet<>();
-
         private TestContractCatalogValidator() {
             super(null);
         }
@@ -328,9 +338,7 @@ class ReplaceContractFromDateServiceTest {
 
         @Override
         public void validateContractCode(String ruleSystemCode, String contractCode, LocalDate referenceDate) {
-            if (invalidContractCodes.contains(contractCode)) {
-                throw new IllegalArgumentException("contractCode is invalid");
-            }
+            // Always valid in these tests.
         }
 
         @Override
@@ -339,9 +347,7 @@ class ReplaceContractFromDateServiceTest {
                 String contractSubtypeCode,
                 LocalDate referenceDate
         ) {
-            if (invalidSubtypeCodes.contains(contractSubtypeCode)) {
-                throw new IllegalArgumentException("contractSubtypeCode is invalid");
-            }
+            // Always valid in these tests.
         }
     }
 
@@ -370,56 +376,6 @@ class ReplaceContractFromDateServiceTest {
                         contractCode,
                         contractSubtypeCode,
                         referenceDate
-                );
-            }
-        }
-    }
-
-    private static final class TestContractPresenceCoverageValidator
-            extends ContractPresenceCoverageValidator {
-
-        private boolean outsidePresence;
-        private boolean incompleteCoverage;
-        private List<Contract> lastProjectedHistory = List.of();
-
-        private TestContractPresenceCoverageValidator() {
-            super(null);
-        }
-
-        void setOutsidePresence(boolean outsidePresence) {
-            this.outsidePresence = outsidePresence;
-        }
-
-        void setIncompleteCoverage(boolean incompleteCoverage) {
-            this.incompleteCoverage = incompleteCoverage;
-        }
-
-        @Override
-        public void validateFullCoverage(
-                Long employeeId,
-                List<Contract> projectedContractHistory,
-                String ruleSystemCode,
-                String employeeTypeCode,
-                String employeeNumber
-        ) {
-            lastProjectedHistory = projectedContractHistory;
-            if (outsidePresence) {
-                Contract sample = projectedContractHistory.isEmpty()
-                        ? null
-                        : projectedContractHistory.get(0);
-                throw new ContractOutsidePresencePeriodException(
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        employeeNumber,
-                        sample == null ? null : sample.getStartDate(),
-                        sample == null ? null : sample.getEndDate()
-                );
-            }
-            if (incompleteCoverage) {
-                throw new ContractCoverageIncompleteException(
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        employeeNumber
                 );
             }
         }

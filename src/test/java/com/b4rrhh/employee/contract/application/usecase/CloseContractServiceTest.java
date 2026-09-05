@@ -1,12 +1,15 @@
 package com.b4rrhh.employee.contract.application.usecase;
 
 import com.b4rrhh.employee.contract.application.command.CloseContractCommand;
+import com.b4rrhh.employee.contract.application.port.ContractPresenceConsistencyPort;
 import com.b4rrhh.employee.contract.application.port.EmployeeContractContext;
 import com.b4rrhh.employee.contract.application.port.EmployeeContractLookupPort;
-import com.b4rrhh.employee.contract.application.service.ContractPresenceCoverageValidator;
+import com.b4rrhh.employee.contract.application.port.PresencePeriod;
+import com.b4rrhh.employee.contract.application.service.ContractTimelineService;
 import com.b4rrhh.employee.contract.domain.exception.ContractAlreadyClosedException;
 import com.b4rrhh.employee.contract.domain.exception.ContractCoverageIncompleteException;
 import com.b4rrhh.employee.contract.domain.model.Contract;
+import com.b4rrhh.employee.contract.domain.model.ContractPeriod;
 import com.b4rrhh.employee.contract.domain.port.ContractRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +29,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * The deprecated {@code close} as an adapter over the temporal component
+ * (ADR-057): closing is a correction of the end date and the resulting
+ * series decides. The timeline service is real; the repository and the
+ * presence port are mocked.
+ */
 @ExtendWith(MockitoExtension.class)
 class CloseContractServiceTest {
 
@@ -37,20 +46,22 @@ class CloseContractServiceTest {
     private ContractRepository contractRepository;
     @Mock
     private EmployeeContractLookupPort employeeContractLookupPort;
+    @Mock
+    private ContractPresenceConsistencyPort presencePort;
 
-    private TestContractPresenceCoverageValidator contractPresenceCoverageValidator;
     private CloseContractService service;
 
     @BeforeEach
     void setUp() {
-        contractPresenceCoverageValidator = new TestContractPresenceCoverageValidator();
         service = new CloseContractService(
                 contractRepository,
                 employeeContractLookupPort,
-                contractPresenceCoverageValidator
+                new ContractTimelineService(contractRepository, presencePort)
         );
     }
 
+    // The termination flow closes the presence first (order 5), so closing the
+    // contract on the same day leaves nothing uncovered.
     @Test
     void closesWhenValid() {
         CloseContractCommand command = new CloseContractCommand(
@@ -69,10 +80,9 @@ class CloseContractServiceTest {
                 null
         );
 
-        whenEmployeeExists();
+        givenEmployeePresent(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), existing);
         when(contractRepository.findByEmployeeIdAndStartDate(10L, LocalDate.of(2026, 1, 1)))
                 .thenReturn(Optional.of(existing));
-        when(contractRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(existing));
 
         Contract closed = service.close(command);
 
@@ -127,14 +137,24 @@ class CloseContractServiceTest {
                 null
         );
 
-        contractPresenceCoverageValidator.setIncompleteCoverage(true);
-        whenEmployeeExists();
+        givenEmployeePresent(LocalDate.of(2026, 1, 1), null, existing);
         when(contractRepository.findByEmployeeIdAndStartDate(10L, LocalDate.of(2026, 1, 1)))
                 .thenReturn(Optional.of(existing));
-        when(contractRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(existing));
 
-        assertThrows(ContractCoverageIncompleteException.class, () -> service.close(command));
+        ContractCoverageIncompleteException ex = assertThrows(
+                ContractCoverageIncompleteException.class,
+                () -> service.close(command)
+        );
+
+        assertEquals(List.of(new ContractPeriod(LocalDate.of(2026, 1, 16), null)), ex.gaps());
         verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
+    }
+
+    private void givenEmployeePresent(LocalDate presenceStart, LocalDate presenceEnd, Contract... occurrences) {
+        whenEmployeeExists();
+        when(contractRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(occurrences));
+        when(presencePort.findPresencePeriodsByEmployeeIdOrderByStartDate(10L))
+                .thenReturn(List.of(new PresencePeriod(presenceStart, presenceEnd)));
     }
 
     private void whenEmployeeExists() {
@@ -148,48 +168,5 @@ class CloseContractServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER
         )));
-    }
-
-    private static final class TestContractPresenceCoverageValidator
-            extends ContractPresenceCoverageValidator {
-
-        private boolean incompleteCoverage;
-
-        private TestContractPresenceCoverageValidator() {
-            super(null);
-        }
-
-        void setIncompleteCoverage(boolean incompleteCoverage) {
-            this.incompleteCoverage = incompleteCoverage;
-        }
-
-        @Override
-        public void validatePeriodWithinPresence(
-                Long employeeId,
-                LocalDate startDate,
-                LocalDate endDate,
-                String ruleSystemCode,
-                String employeeTypeCode,
-                String employeeNumber
-        ) {
-            // Always valid in these tests.
-        }
-
-        @Override
-        public void validateFullCoverage(
-                Long employeeId,
-                List<Contract> projectedContractHistory,
-                String ruleSystemCode,
-                String employeeTypeCode,
-                String employeeNumber
-        ) {
-            if (incompleteCoverage) {
-                throw new ContractCoverageIncompleteException(
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        employeeNumber
-                );
-            }
-        }
     }
 }

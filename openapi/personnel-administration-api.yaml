@@ -2086,6 +2086,14 @@ paths:
     post:
       operationId: replaceContractFromDateByBusinessKey
       summary: Replace employee contract from effective date by business key
+      deprecated: true
+      description: >-
+        Kept while the contract screen and the workforce loader still call it.
+        ADR-057 retires replace-from-date as a model: it is an add (POST) whose
+        end date is the tail of the contract in force on the effective date.
+        Starting on the very start date of an existing contract is no longer a
+        silent replacement: it is rejected as CONTRACT_IS_A_CORRECTION, naming
+        the contract, and the correction is asked for as such (PUT).
       tags:
         - Employee Contract
       parameters:
@@ -2337,6 +2345,13 @@ paths:
     post:
       operationId: closeContractByBusinessKey
       summary: Close employee contract by business key
+      deprecated: true
+      description: >-
+        Kept while the contract screen still closes a contract before adding
+        the next one. ADR-057 retires close as an operation: adding a contract
+        already closes the one in force the day before, and any other end date
+        is a correction (PUT). Judged like a correction: closing the contract
+        in force while the presence goes on is rejected as CONTRACT_COVERAGE_GAP.
       tags:
         - Employee Contract
       parameters:

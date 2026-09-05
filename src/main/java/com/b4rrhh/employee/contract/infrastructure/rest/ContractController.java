@@ -165,6 +165,12 @@ public class ContractController {
         return ResponseEntity.ok(toResponse(ruleSystemCode, updated, language));
     }
 
+    /**
+     * Kept while the contract screen still closes a contract before adding the
+     * next one. To be removed once the screen has migrated: adding a contract
+     * already closes the one in force the day before (ADR-057).
+     */
+    @Deprecated
     @PostMapping("/{startDate}/close")
     public ResponseEntity<ContractResponse> close(
             @PathVariable String ruleSystemCode,
@@ -187,6 +193,12 @@ public class ContractController {
         return ResponseEntity.ok(toResponse(ruleSystemCode, closed, language));
     }
 
+    /**
+     * Kept while the contract screen and the workforce loader still call it.
+     * ADR-057 retires replace-from-date as a model: it is an add whose end date
+     * is the tail of the contract in force on the effective date.
+     */
+    @Deprecated
     @PostMapping("/replace-from-date")
     public ResponseEntity<ContractResponse> replaceFromDate(
             @PathVariable String ruleSystemCode,

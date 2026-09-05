@@ -7,11 +7,14 @@ import com.b4rrhh.employee.contract.application.port.EmployeeContractContext;
 import com.b4rrhh.employee.contract.application.port.EmployeeContractLookupPort;
 import com.b4rrhh.employee.contract.application.service.ContractSubtypeRelationValidator;
 import com.b4rrhh.employee.contract.application.service.ContractCatalogValidator;
-import com.b4rrhh.employee.contract.application.service.ContractPresenceCoverageValidator;
+import com.b4rrhh.employee.contract.application.service.ContractTimelineService;
 import com.b4rrhh.employee.contract.domain.exception.ContractInvalidException;
+import com.b4rrhh.employee.contract.domain.exception.ContractIsACorrectionException;
 import com.b4rrhh.employee.contract.domain.model.Contract;
+import com.b4rrhh.employee.contract.domain.model.ContractPeriod;
 import com.b4rrhh.employee.contract.infrastructure.persistence.ContractEntity;
 import com.b4rrhh.employee.contract.infrastructure.persistence.ContractPersistenceAdapter;
+import com.b4rrhh.employee.contract.infrastructure.persistence.ContractPresenceConsistencyAdapter;
 import com.b4rrhh.employee.contract.infrastructure.persistence.SpringDataContractRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,6 +43,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 })
 @Import({
         ContractPersistenceAdapter.class,
+        ContractPresenceConsistencyAdapter.class,
+        ContractTimelineService.class,
         ReplaceContractFromDateService.class,
         ReplaceContractFromDateServiceIntegrationTest.ReplaceContractTestConfig.class
 })
@@ -72,6 +77,9 @@ class ReplaceContractFromDateServiceIntegrationTest {
     @BeforeEach
     void setUpDatos() {
         employeeId = DatosDePrueba.empleado(jdbcTemplate);
+        // Present from the day the first contract starts, and still present: the
+        // component judges the series against the real presence (ADR-057).
+        DatosDePrueba.presencia(jdbcTemplate, employeeId, 1, LocalDate.of(2026, 1, 1), null);
 
         insertContract(
                 employeeId,
@@ -110,33 +118,32 @@ class ReplaceContractFromDateServiceIntegrationTest {
         assertEquals("PT1", rows.get(1).getContractSubtypeCode());
     }
 
+    // Was replaceAtExactStartDateUpdatesSingleExistingRowWithoutDuplicate: the
+    // old EXACT_START replaced the codes of the existing row silently. Under
+    // ADR-057 it is rejected as the correction it is, naming the contract, and
+    // the single row stays exactly as it was (backend#52).
     @Test
-    void replaceAtExactStartDateUpdatesSingleExistingRowWithoutDuplicate() {
-        jdbcTemplate.update("delete from employee.contract where employee_id = ?", employeeId);
-        insertContract(
-                employeeId,
-                "IND",
-                "FT1",
-                LocalDate.of(2026, 3, 1),
-                null
+    void replaceAtExactStartDateIsRejectedAsACorrectionAndLeavesTheSingleRowUntouched() {
+        ContractIsACorrectionException ex = assertThrows(
+                ContractIsACorrectionException.class,
+                () -> service.replaceFromDate(new ReplaceContractFromDateCommand(
+                        RULE_SYSTEM_CODE,
+                        EMPLOYEE_TYPE_CODE,
+                        EMPLOYEE_NUMBER,
+                        LocalDate.of(2026, 1, 1),
+                        "TMP",
+                        "PT1"
+                ))
         );
 
-        Contract replaced = service.replaceFromDate(new ReplaceContractFromDateCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                LocalDate.of(2026, 3, 1),
-                "TMP",
-                "PT1"
-        ));
-
-        assertEquals(LocalDate.of(2026, 3, 1), replaced.getStartDate());
+        assertEquals(new ContractPeriod(LocalDate.of(2026, 1, 1), null), ex.correctedOccurrence());
 
         List<ContractEntity> rows = repository.findByEmployeeIdOrderByStartDateAsc(employeeId);
         assertEquals(1, rows.size());
-        assertEquals(LocalDate.of(2026, 3, 1), rows.get(0).getStartDate());
-        assertEquals("TMP", rows.get(0).getContractCode());
-        assertEquals("PT1", rows.get(0).getContractSubtypeCode());
+        assertEquals(LocalDate.of(2026, 1, 1), rows.get(0).getStartDate());
+        assertNull(rows.get(0).getEndDate());
+        assertEquals("IND", rows.get(0).getContractCode());
+        assertEquals("FT1", rows.get(0).getContractSubtypeCode());
     }
 
     @Test
@@ -284,22 +291,6 @@ class ReplaceContractFromDateServiceIntegrationTest {
                         LocalDate referenceDate
                 ) {
                     // Always valid in this integration test.
-                }
-            };
-        }
-
-        @Bean
-        ContractPresenceCoverageValidator contractPresenceCoverageValidator() {
-            return new ContractPresenceCoverageValidator(null) {
-                @Override
-                public void validateFullCoverage(
-                        Long employeeId,
-                        List<Contract> projectedContractHistory,
-                        String ruleSystemCode,
-                        String employeeTypeCode,
-                        String employeeNumber
-                ) {
-                    // No-op for persistence-focused integration scenarios.
                 }
             };
         }

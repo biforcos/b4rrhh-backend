@@ -18,9 +18,11 @@ import com.b4rrhh.employee.contact.infrastructure.persistence.ContactRuleEntityU
 import com.b4rrhh.employee.contract.application.service.ContractCatalogValidator;
 import com.b4rrhh.employee.contract.application.service.ContractSubtypeRelationValidator;
 import com.b4rrhh.employee.contract.application.service.ContractTimelineService;
+import com.b4rrhh.employee.contract.application.usecase.CloseContractService;
 import com.b4rrhh.employee.contract.application.usecase.CreateContractService;
 import com.b4rrhh.employee.contract.application.usecase.DeleteContractService;
 import com.b4rrhh.employee.contract.application.usecase.PlanContractChangeService;
+import com.b4rrhh.employee.contract.application.usecase.ReplaceContractFromDateService;
 import com.b4rrhh.employee.contract.application.usecase.UpdateContractService;
 import com.b4rrhh.employee.contract.infrastructure.persistence.ContractPersistenceAdapter;
 import com.b4rrhh.employee.contract.infrastructure.persistence.ContractPresenceConsistencyAdapter;
@@ -131,6 +133,8 @@ import java.lang.annotation.Target;
         UpdateContractService.class,
         DeleteContractService.class,
         PlanContractChangeService.class,
+        CloseContractService.class,
+        ReplaceContractFromDateService.class,
         ContractTimelineService.class,
         ContractCatalogValidator.class,
         ContractSubtypeRelationValidator.class,
