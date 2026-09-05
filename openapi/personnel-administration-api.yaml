@@ -728,7 +728,12 @@ paths:
               $ref: "#/components/schemas/CreateAddressRequest"
       responses:
         "201":
-          description: Address created
+          description: >-
+            Address added to the series of its type (ADR-057). Addresses form one
+            series per employee and address type: the domicile, the fiscal address
+            and the mailing address live side by side. If an address of the same
+            type was in force on the new start date it has been closed the day
+            before: that is the only automatic consequence.
           content:
             application/json:
               schema:
@@ -738,7 +743,22 @@ paths:
         "404":
           description: Rule system, employee, or catalog not found
         "409":
-          description: Address period overlaps for the same employee and address type
+          description: >-
+            The resulting series of that type would break an invariant (ADR-057).
+            Error codes: ADDRESS_OVERLAP (details.overlaps names the dates shared
+            with another address of the same type), ADDRESS_COVERAGE_GAP (the type
+            is the domicile and details.gaps names the uncovered stretches of the
+            presence, details.stretchCandidates the neighbouring addresses the user
+            could stretch), ADDRESS_IS_A_CORRECTION (the new address starts on the
+            start date of an existing one of the same type, named in
+            details.correctedOccurrence: it would correct that one, not add a
+            second one, and has to be asked for as a correction), or
+            ADDRESS_TYPE_COVERAGE_NOT_DECLARED (the catalog does not say whether
+            the type is mandatory or optional).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddressErrorResponse"
     get:
       operationId: listEmployeeAddressesByBusinessKey
       summary: List employee addresses by business key
@@ -819,14 +839,17 @@ paths:
           description: Rule system, employee, or address not found
     put:
       operationId: updateAddressByBusinessKey
-      summary: Correct employee address by business key
+      summary: Correct employee address by business key (fields and/or dates)
       tags:
         - Employee Address
       description: >-
         Administrative correction of the same address occurrence identified by
         ruleSystemCode, employeeTypeCode, employeeNumber, and addressNumber.
-        This operation does not create a new occurrence and does not mutate
-        occurrence identity fields.
+        This operation does not create a new occurrence and never changes the
+        address type, which names the series the occurrence belongs to. The
+        dates can be corrected too (ADR-057, decision 3): nothing else moves,
+        and the corrected dates are judged against the same invariants as an
+        add. Omit startDate to leave the dates as they are.
       parameters:
         - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
@@ -861,7 +884,9 @@ paths:
               $ref: "#/components/schemas/UpdateAddressRequest"
       responses:
         "200":
-          description: Address corrected
+          description: >-
+            Address corrected. Nothing else moves (ADR-057): stretching or
+            shrinking a neighbour is a separate, explicit correction.
           content:
             application/json:
               schema:
@@ -871,7 +896,15 @@ paths:
         "404":
           description: Rule system, employee, or address not found
         "409":
-          description: Domain conflict if correction is invalid
+          description: >-
+            The corrected dates would break an invariant of the series of that
+            type (ADR-057): ADDRESS_OVERLAP, or ADDRESS_COVERAGE_GAP when the
+            type is the domicile (details name the gap and the neighbour to
+            stretch).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddressErrorResponse"
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/addresses/{addressNumber}/close:
     post:
@@ -7448,6 +7481,72 @@ components:
         regionCode:
           type: string
           maxLength: 30
+          nullable: true
+        startDate:
+          type: string
+          format: date
+          nullable: true
+          description: >-
+            The corrected start date. Omit it to leave both dates as they are;
+            when given, endDate is taken as given too (ADR-057, decision 3).
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: The corrected end date. Omit it, with startDate given, for an address that stays open.
+    AddressErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: >-
+            ADDRESS_NOT_FOUND, ADDRESS_INVALID_REQUEST, ADDRESS_ALREADY_CLOSED,
+            ADDRESS_OVERLAP, ADDRESS_COVERAGE_GAP, ADDRESS_IS_A_CORRECTION or
+            ADDRESS_TYPE_COVERAGE_NOT_DECLARED.
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: >-
+            What a plan rejection names (ADR-057). ADDRESS_OVERLAP: overlaps
+            (AddressPeriod[]). ADDRESS_COVERAGE_GAP: addressTypeCode, gaps
+            (AddressPeriod[]) and stretchCandidates (AddressOccurrence[]).
+            ADDRESS_IS_A_CORRECTION: correctedOccurrence (AddressOccurrence).
+            ADDRESS_TYPE_COVERAGE_NOT_DECLARED: addressTypeCode.
+    AddressPeriod:
+      type: object
+      required:
+        - startDate
+      properties:
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: Null means onwards.
+    AddressOccurrence:
+      type: object
+      required:
+        - startDate
+      properties:
+        addressNumber:
+          type: integer
+          format: int32
+          nullable: true
+          description: Null only for the address a plan would add, which has no number yet.
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
           nullable: true
     AddressResponse:
       type: object

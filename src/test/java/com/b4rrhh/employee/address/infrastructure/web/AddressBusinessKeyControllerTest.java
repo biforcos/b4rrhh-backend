@@ -149,7 +149,9 @@ class AddressBusinessKeyControllerTest {
                 "Madrid",
                 "ESP",
                 "28009",
-                "MD"
+                "MD",
+                null,
+                null
         );
 
         when(ruleEntityLabelResolver.resolveName("ESP", "EMPLOYEE_ADDRESS_TYPE", "HOME", null)).thenReturn(Optional.empty());

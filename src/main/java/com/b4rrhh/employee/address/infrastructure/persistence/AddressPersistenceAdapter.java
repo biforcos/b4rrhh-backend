@@ -33,6 +33,14 @@ public class AddressPersistenceAdapter implements AddressRepository {
                 .toList();
     }
 
+    @Override
+    public List<Address> findByEmployeeIdAndAddressTypeCodeOrderByStartDate(Long employeeId, String addressTypeCode) {
+        return springDataAddressRepository.findByEmployeeIdAndAddressTypeCodeOrderByStartDateAsc(employeeId, addressTypeCode)
+                .stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
         @Override
         public boolean existsOverlappingPeriodByAddressType(
             Long employeeId,
@@ -60,6 +68,11 @@ public class AddressPersistenceAdapter implements AddressRepository {
         AddressEntity entity = toEntity(address);
         AddressEntity saved = springDataAddressRepository.save(entity);
         return toDomain(saved);
+    }
+
+    @Override
+    public void delete(Address address) {
+        springDataAddressRepository.deleteById(address.getId());
     }
 
     private Address toDomain(AddressEntity entity) {

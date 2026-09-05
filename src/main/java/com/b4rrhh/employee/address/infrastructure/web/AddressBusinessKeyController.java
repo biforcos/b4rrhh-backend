@@ -134,7 +134,9 @@ public class AddressBusinessKeyController {
                         request.city(),
                         request.countryCode(),
                         request.postalCode(),
-                        request.regionCode()
+                        request.regionCode(),
+                        request.startDate(),
+                        request.endDate()
                 )
         );
 

@@ -1,13 +1,20 @@
 package com.b4rrhh.employee.address.application.usecase;
 
+import com.b4rrhh.employee.address.application.port.AddressPresenceLookupPort;
+import com.b4rrhh.employee.address.application.port.AddressTypeCoverageLookupPort;
 import com.b4rrhh.employee.address.application.port.EmployeeAddressContext;
 import com.b4rrhh.employee.address.application.port.EmployeeAddressLookupPort;
 import com.b4rrhh.employee.address.application.service.AddressCatalogValidator;
+import com.b4rrhh.employee.address.application.service.AddressTimelineService;
 import com.b4rrhh.employee.address.domain.exception.AddressCatalogValueInvalidException;
+import com.b4rrhh.employee.address.domain.exception.AddressCoverageGapException;
 import com.b4rrhh.employee.address.domain.exception.AddressEmployeeNotFoundException;
 import com.b4rrhh.employee.address.domain.exception.AddressNotFoundException;
 import com.b4rrhh.employee.address.domain.model.Address;
+import com.b4rrhh.employee.address.domain.model.AddressPeriod;
 import com.b4rrhh.employee.address.domain.port.AddressRepository;
+import com.b4rrhh.employee.temporal.support.DateRange;
+import com.b4rrhh.employee.temporal.support.TimelineCoverage;
 import com.b4rrhh.rulesystem.domain.model.RuleSystem;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import com.b4rrhh.rulesystem.domain.port.RuleSystemRepository;
@@ -20,11 +27,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -43,6 +52,10 @@ class UpdateAddressServiceTest {
     private RuleSystemRepository ruleSystemRepository;
     @Mock
     private RuleEntityRepository ruleEntityRepository;
+    @Mock
+    private AddressPresenceLookupPort presencePort;
+    @Mock
+    private AddressTypeCoverageLookupPort coveragePort;
 
     private UpdateAddressService service;
 
@@ -53,8 +66,85 @@ class UpdateAddressServiceTest {
                 addressRepository,
                 employeeAddressLookupPort,
                 ruleSystemRepository,
-                addressCatalogValidator
+                addressCatalogValidator,
+                new AddressTimelineService(addressRepository, presencePort, coveragePort)
         );
+    }
+
+    @Test
+    void correctsTheDatesWhenTheyAreGiven() {
+        UpdateAddressCommand command = new UpdateAddressCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                1,
+                "Calle Mayor 10",
+                "Madrid",
+                "ESP",
+                "28013",
+                "MD",
+                LocalDate.of(2026, 1, 10),
+                LocalDate.of(2026, 6, 30)
+        );
+
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem()));
+        when(employeeAddressLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L)));
+        when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existingAddress()));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "ESP"))
+                .thenReturn(Optional.of(activeCountryRuleEntity()));
+        // The employee left on 2026-06-30: closing the domicile that day leaves no gap.
+        when(addressRepository.findByEmployeeIdAndAddressTypeCodeOrderByStartDate(10L, "HOME"))
+                .thenReturn(List.of(existingAddress()));
+        when(presencePort.findPresencePeriodsByEmployeeIdOrderByStartDate(10L))
+                .thenReturn(List.of(new DateRange(LocalDate.of(2026, 1, 10), LocalDate.of(2026, 6, 30))));
+        when(coveragePort.findCoverage(RULE_SYSTEM_CODE, "HOME")).thenReturn(Optional.of(TimelineCoverage.MANDATORY));
+        when(addressRepository.save(any(Address.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Address updated = service.update(command);
+
+        assertEquals(LocalDate.of(2026, 1, 10), updated.getStartDate());
+        assertEquals(LocalDate.of(2026, 6, 30), updated.getEndDate());
+        assertEquals(1, updated.getAddressNumber());
+    }
+
+    @Test
+    void rejectsCorrectedDatesThatLeaveTheDomicileUncovered() {
+        UpdateAddressCommand command = new UpdateAddressCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                1,
+                "Calle Mayor 10",
+                "Madrid",
+                "ESP",
+                "28013",
+                "MD",
+                LocalDate.of(2026, 2, 1),
+                null
+        );
+
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem()));
+        when(employeeAddressLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L)));
+        when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existingAddress()));
+        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "ESP"))
+                .thenReturn(Optional.of(activeCountryRuleEntity()));
+        givenTheHomeSeriesOf(existingAddress());
+
+        AddressCoverageGapException ex = assertThrows(AddressCoverageGapException.class, () -> service.update(command));
+
+        assertEquals(List.of(new AddressPeriod(LocalDate.of(2026, 1, 10), LocalDate.of(2026, 1, 31))), ex.gaps());
+        verify(addressRepository, never()).save(any(Address.class));
+    }
+
+    /** The employee is present from the day the existing domicile starts, so leaving its dates alone is always accepted. */
+    private void givenTheHomeSeriesOf(Address... occurrences) {
+        when(addressRepository.findByEmployeeIdAndAddressTypeCodeOrderByStartDate(10L, "HOME"))
+                .thenReturn(List.of(occurrences));
+        when(presencePort.findPresencePeriodsByEmployeeIdOrderByStartDate(10L))
+                .thenReturn(List.of(new DateRange(LocalDate.of(2026, 1, 10), null)));
+        when(coveragePort.findCoverage(RULE_SYSTEM_CODE, "HOME")).thenReturn(Optional.of(TimelineCoverage.MANDATORY));
     }
 
     @Test
@@ -68,7 +158,9 @@ class UpdateAddressServiceTest {
                 "Madrid",
                 "esp",
                 "28009",
-                "md"
+                "md",
+                null,
+                null
         );
 
         Address existing = existingAddress();
@@ -79,6 +171,7 @@ class UpdateAddressServiceTest {
         when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existing));
         when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "ESP"))
                 .thenReturn(Optional.of(activeCountryRuleEntity()));
+        givenTheHomeSeriesOf(existingAddress());
         when(addressRepository.save(any(Address.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Address updated = service.update(command);
@@ -114,7 +207,9 @@ class UpdateAddressServiceTest {
                 "Madrid",
                 "ESP",
                 "28009",
-                "MD"
+                "MD",
+                null,
+                null
         );
 
         when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem()));
@@ -135,7 +230,9 @@ class UpdateAddressServiceTest {
                 "Madrid",
                 "ESP",
                 "28009",
-                "MD"
+                "MD",
+                null,
+                null
         );
 
         when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem()));
@@ -157,7 +254,9 @@ class UpdateAddressServiceTest {
                 "Madrid",
                 "BAD",
                 "28009",
-                "MD"
+                "MD",
+                null,
+                null
         );
 
         when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem()));
@@ -181,7 +280,9 @@ class UpdateAddressServiceTest {
                 "Madrid",
                 "  ",
                 "28009",
-                "MD"
+                "MD",
+                null,
+                null
         );
 
         Address existing = existingAddress();
@@ -192,6 +293,7 @@ class UpdateAddressServiceTest {
         when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existing));
         when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "ESP"))
                 .thenReturn(Optional.of(activeCountryRuleEntity()));
+        givenTheHomeSeriesOf(existingAddress());
         when(addressRepository.save(any(Address.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Address updated = service.update(command);
@@ -210,7 +312,9 @@ class UpdateAddressServiceTest {
                 "",
                 "ESP",
                 "28009",
-                "MD"
+                "MD",
+                null,
+                null
         );
 
         Address existing = existingAddress();
@@ -221,6 +325,7 @@ class UpdateAddressServiceTest {
         when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existing));
         when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "ESP"))
                 .thenReturn(Optional.of(activeCountryRuleEntity()));
+        givenTheHomeSeriesOf(existingAddress());
         when(addressRepository.save(any(Address.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Address updated = service.update(command);
@@ -240,7 +345,9 @@ class UpdateAddressServiceTest {
                 "Madrid",
                 "ESP",
                 "  ",
-                ""
+                "",
+                null,
+                null
         );
 
         Address existing = existingAddress();
@@ -251,6 +358,7 @@ class UpdateAddressServiceTest {
         when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existing));
         when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "ESP"))
                 .thenReturn(Optional.of(activeCountryRuleEntity()));
+        givenTheHomeSeriesOf(existingAddress());
         when(addressRepository.save(any(Address.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Address updated = service.update(command);
@@ -270,6 +378,8 @@ class UpdateAddressServiceTest {
                 "Madrid",
                 "ESP",
                 null,
+                null,
+                null,
                 null
         );
 
@@ -281,6 +391,7 @@ class UpdateAddressServiceTest {
         when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existing));
         when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "ESP"))
                 .thenReturn(Optional.of(activeCountryRuleEntity()));
+        givenTheHomeSeriesOf(existingAddress());
         when(addressRepository.save(any(Address.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Address updated = service.update(command);
@@ -300,7 +411,9 @@ class UpdateAddressServiceTest {
                 "Madrid",
                 "ESP",
                 "28001",
-                "ca"
+                "ca",
+                null,
+                null
         );
 
         when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem()));
@@ -309,6 +422,7 @@ class UpdateAddressServiceTest {
         when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existingAddress()));
         when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "ESP"))
                 .thenReturn(Optional.of(activeCountryRuleEntity()));
+        givenTheHomeSeriesOf(existingAddress());
         when(addressRepository.save(any(Address.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Address updated = service.update(command);

@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -32,9 +31,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * de trabajar aqui. Solo con la segunda entraria tax_information, que consulta
  * la presencia para comprobar una fecha de inicio pero no tiene nada que cerrar.
  *
- * "Se puede cerrar" se detecta por la convencion Close*Service. Si algun dia un
- * vertical llama de otra forma a esa operacion, este test dejara de verlo: es la
- * limitacion conocida de mirar nombres en vez de bytecode.
+ * "Se puede cerrar" se detecta por la convencion Close*Service. "Depende de la
+ * presencia" se detecta por la excepcion *OutsidePresence*: es la que declara
+ * que sus periodos no pueden salir de la presencia, y por eso hay que cerrarlos
+ * con ella. Nombrar la presencia no basta: desde backend#53 address la lee para
+ * exigir que el domicilio la cubra, pero sus ocurrencias la sobreviven
+ * (TimelineContainment.MAY_OUTLIVE_PRESENCE) y no tiene esa excepcion. Si algun
+ * dia un vertical llama de otra forma a cualquiera de las dos, este test dejara
+ * de verlo: es la limitacion conocida de mirar nombres en vez de bytecode.
  *
  * Se mira el codigo fuente y no el bytecode a proposito. Con bytecode haria
  * falta ArchUnit; leyendo los .java no hace falta ninguna dependencia y la
@@ -105,11 +109,12 @@ class TerminationCoversEveryPresenceVerticalTest {
     }
 
     /**
-     * Nombra a Presence en algun sitio: puertos de consistencia, validadores o
-     * excepciones de tipo "fuera del periodo de presencia".
+     * Rechaza las ocurrencias que salen de la presencia: tiene una excepcion
+     * "fuera del periodo de presencia". Leer la presencia no es depender de
+     * ella (address la lee y la sobrevive).
      */
     private boolean dependeDeLaPresencia(Path vertical) {
-        return hayFichero(vertical, f -> f.toString().endsWith(".java") && leer(f).contains("Presence"));
+        return hayFichero(vertical, f -> f.getFileName().toString().contains("OutsidePresence"));
     }
 
     private boolean hayFichero(Path vertical, java.util.function.Predicate<Path> criterio) {
@@ -146,11 +151,4 @@ class TerminationCoversEveryPresenceVerticalTest {
         return texto.replace("_", "").toLowerCase();
     }
 
-    private String leer(Path fichero) {
-        try {
-            return Files.readString(fichero, StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
 }

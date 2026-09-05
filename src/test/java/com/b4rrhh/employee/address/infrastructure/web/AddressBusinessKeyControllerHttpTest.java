@@ -10,9 +10,14 @@ import com.b4rrhh.employee.address.application.usecase.UpdateAddressUseCase;
 import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
 import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguageArgumentResolver;
 import com.b4rrhh.employee.address.domain.exception.AddressCatalogValueInvalidException;
+import com.b4rrhh.employee.address.domain.exception.AddressCoverageGapException;
 import com.b4rrhh.employee.address.domain.exception.AddressEmployeeNotFoundException;
+import com.b4rrhh.employee.address.domain.exception.AddressIsACorrectionException;
 import com.b4rrhh.employee.address.domain.exception.AddressNotFoundException;
+import com.b4rrhh.employee.address.domain.exception.AddressOverlapException;
 import com.b4rrhh.employee.address.domain.model.Address;
+import com.b4rrhh.employee.address.domain.model.AddressOccurrence;
+import com.b4rrhh.employee.address.domain.model.AddressPeriod;
 import com.b4rrhh.employee.address.infrastructure.web.assembler.AddressResponseAssembler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +39,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -103,6 +109,109 @@ class AddressBusinessKeyControllerHttpTest {
         assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
         assertEquals("EMP001", captor.getValue().employeeNumber());
         assertEquals(1, captor.getValue().addressNumber());
+    }
+
+    @Test
+    void putCarriesTheCorrectedDatesToTheCommand() throws Exception {
+        when(ruleEntityLabelResolver.resolveName("ESP", "EMPLOYEE_ADDRESS_TYPE", "HOME", null))
+                .thenReturn(Optional.empty());
+        when(updateAddressUseCase.update(any(UpdateAddressCommand.class))).thenReturn(updatedAddress());
+
+        mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/addresses/1")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "street": "Calle de Alcala 100",
+                                  "city": "Madrid",
+                                  "countryCode": "ESP",
+                                  "startDate": "2026-01-10",
+                                  "endDate": "2026-06-30"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<UpdateAddressCommand> captor = ArgumentCaptor.forClass(UpdateAddressCommand.class);
+        verify(updateAddressUseCase).update(captor.capture());
+        assertEquals(LocalDate.of(2026, 1, 10), captor.getValue().startDate());
+        assertEquals(LocalDate.of(2026, 6, 30), captor.getValue().endDate());
+    }
+
+    // ADR-057: a rejected correction is a 409 that names the gap and what to stretch.
+    @Test
+    void putMapsACoverageGapToHttp409NamingTheGapAndTheNeighbours() throws Exception {
+        when(updateAddressUseCase.update(any(UpdateAddressCommand.class)))
+                .thenThrow(new AddressCoverageGapException(
+                        "ESP", "INTERNAL", "EMP001", "HOME",
+                        List.of(new AddressPeriod(LocalDate.of(2026, 1, 10), LocalDate.of(2026, 1, 31))),
+                        List.of(new AddressOccurrence(1, LocalDate.of(2026, 2, 1), null))
+                ));
+
+        mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/addresses/1")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "street": "Calle de Alcala 100",
+                                  "city": "Madrid",
+                                  "countryCode": "ESP",
+                                  "startDate": "2026-02-01"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ADDRESS_COVERAGE_GAP"))
+                .andExpect(jsonPath("$.details.addressTypeCode").value("HOME"))
+                .andExpect(jsonPath("$.details.gaps[0].endDate[2]").value(31))
+                .andExpect(jsonPath("$.details.stretchCandidates[0].addressNumber").value(1));
+    }
+
+    @Test
+    void postMapsAnOverlapToHttp409WithTheSharedDates() throws Exception {
+        when(createAddressUseCase.create(any()))
+                .thenThrow(new AddressOverlapException(
+                        "ESP", "INTERNAL", "EMP001", "HOME",
+                        LocalDate.of(2026, 1, 20), LocalDate.of(2026, 2, 10),
+                        List.of(new AddressPeriod(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 10)))
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/addresses")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "addressTypeCode": "HOME",
+                                  "street": "Calle de Alcala 100",
+                                  "city": "Madrid",
+                                  "countryCode": "ESP",
+                                  "startDate": "2026-01-20",
+                                  "endDate": "2026-02-10"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ADDRESS_OVERLAP"))
+                .andExpect(jsonPath("$.details.overlaps[0].startDate[1]").value(2));
+    }
+
+    @Test
+    void postMapsACorrectionAskedForAsAnAddToHttp409NamingTheAddressToCorrect() throws Exception {
+        when(createAddressUseCase.create(any()))
+                .thenThrow(new AddressIsACorrectionException(
+                        "ESP", "INTERNAL", "EMP001", "HOME",
+                        new AddressOccurrence(1, LocalDate.of(2026, 1, 10), null),
+                        new AddressPeriod(LocalDate.of(2026, 1, 10), null)
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/addresses")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "addressTypeCode": "HOME",
+                                  "street": "Calle de Alcala 100",
+                                  "city": "Madrid",
+                                  "countryCode": "ESP",
+                                  "startDate": "2026-01-10"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ADDRESS_IS_A_CORRECTION"))
+                .andExpect(jsonPath("$.details.correctedOccurrence.addressNumber").value(1));
     }
 
     @Test

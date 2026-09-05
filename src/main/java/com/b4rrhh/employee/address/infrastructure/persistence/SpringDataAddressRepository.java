@@ -14,6 +14,8 @@ public interface SpringDataAddressRepository extends JpaRepository<AddressEntity
 
     List<AddressEntity> findByEmployeeIdOrderByStartDateAsc(Long employeeId);
 
+    List<AddressEntity> findByEmployeeIdAndAddressTypeCodeOrderByStartDateAsc(Long employeeId, String addressTypeCode);
+
         @Query("""
             select case when count(a) > 0 then true else false end
             from AddressEntity a

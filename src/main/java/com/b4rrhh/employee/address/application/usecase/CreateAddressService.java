@@ -1,17 +1,25 @@
 package com.b4rrhh.employee.address.application.usecase;
 
+import com.b4rrhh.employee.address.application.model.AddressPlan;
 import com.b4rrhh.employee.address.application.port.EmployeeAddressContext;
 import com.b4rrhh.employee.address.application.port.EmployeeAddressLookupPort;
 import com.b4rrhh.employee.address.application.service.AddressCatalogValidator;
+import com.b4rrhh.employee.address.application.service.AddressTimelineService;
 import com.b4rrhh.employee.address.domain.exception.AddressEmployeeNotFoundException;
-import com.b4rrhh.employee.address.domain.exception.AddressOverlapException;
 import com.b4rrhh.employee.address.domain.exception.AddressRuleSystemNotFoundException;
 import com.b4rrhh.employee.address.domain.model.Address;
 import com.b4rrhh.employee.address.domain.port.AddressRepository;
+import com.b4rrhh.employee.temporal.support.DateRange;
 import com.b4rrhh.rulesystem.domain.port.RuleSystemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Adds an address to the series of its type (ADR-057, decision 2). The one
+ * automatic consequence is closing, the day before, the address of the same
+ * type in force on the new start date; anything else the resulting series
+ * would break is rejected by the plan.
+ */
 @Service
 public class CreateAddressService implements CreateAddressUseCase {
 
@@ -19,17 +27,20 @@ public class CreateAddressService implements CreateAddressUseCase {
     private final EmployeeAddressLookupPort employeeAddressLookupPort;
     private final RuleSystemRepository ruleSystemRepository;
     private final AddressCatalogValidator addressCatalogValidator;
+    private final AddressTimelineService addressTimelineService;
 
     public CreateAddressService(
             AddressRepository addressRepository,
             EmployeeAddressLookupPort employeeAddressLookupPort,
             RuleSystemRepository ruleSystemRepository,
-            AddressCatalogValidator addressCatalogValidator
+            AddressCatalogValidator addressCatalogValidator,
+            AddressTimelineService addressTimelineService
     ) {
         this.addressRepository = addressRepository;
         this.employeeAddressLookupPort = employeeAddressLookupPort;
         this.ruleSystemRepository = ruleSystemRepository;
         this.addressCatalogValidator = addressCatalogValidator;
+        this.addressTimelineService = addressTimelineService;
     }
 
     @Override
@@ -80,18 +91,30 @@ public class CreateAddressService implements CreateAddressUseCase {
                 null
         );
 
-        if (addressRepository.existsOverlappingPeriodByAddressType(
+        // Adding is planned against the invariants of the series of this type (ADR-057): no
+        // overlap within the type, no gap in the presence when the type is the domicile. The
+        // one automatic consequence is closing the address of the type in force on the new
+        // start date the day before it.
+        AddressPlan plan = addressTimelineService.planAdd(
                 employee.employeeId(),
+                normalizedRuleSystemCode,
                 newAddress.getAddressTypeCode(),
-                newAddress.getStartDate(),
-                newAddress.getEndDate()
-        )) {
-            throw new AddressOverlapException(
-                    normalizedRuleSystemCode,
-                    normalizedEmployeeTypeCode,
-                    normalizedEmployeeNumber,
-                    newAddress.getAddressTypeCode()
-            );
+                new DateRange(newAddress.getStartDate(), newAddress.getEndDate())
+        );
+        addressTimelineService.requireAccepted(
+                plan,
+                normalizedRuleSystemCode,
+                normalizedEmployeeTypeCode,
+                normalizedEmployeeNumber
+        );
+
+        if (plan.adjustsAnOccurrence()) {
+            Address covering = addressRepository
+                    .findByEmployeeIdAndAddressNumber(employee.employeeId(), plan.adjustedOccurrence().addressNumber())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Planned occurrence vanished: addressNumber=" + plan.adjustedOccurrence().addressNumber()
+                    ));
+            addressRepository.save(covering.adjustEndDate(plan.adjustedOccurrence().after().endDate()));
         }
 
         return addressRepository.save(newAddress);

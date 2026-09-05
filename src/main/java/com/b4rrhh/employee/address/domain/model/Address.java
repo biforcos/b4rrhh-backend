@@ -79,14 +79,22 @@ public class Address {
         );
     }
 
-            public Address correct(
-                String street,
-                String city,
-                String countryCode,
-                String postalCode,
-                String regionCode
-            ) {
-            return new Address(
+    /**
+     * The user's correction of this occurrence (ADR-057, decision 3): its
+     * fields and its dates. The type never changes: it names the series the
+     * occurrence belongs to. Whether the corrected dates leave a gap or an
+     * overlap is judged by the series, not here.
+     */
+    public Address correct(
+            String street,
+            String city,
+            String countryCode,
+            String postalCode,
+            String regionCode,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        return new Address(
                 id,
                 employeeId,
                 addressNumber,
@@ -100,8 +108,31 @@ public class Address {
                 endDate,
                 createdAt,
                 updatedAt
-            );
-            }
+        );
+    }
+
+    /**
+     * The one automatic consequence a plan applies to an existing occurrence
+     * (ADR-057): closed the day before a new one, or reopened when the one
+     * that closed it is removed. Only the end date moves.
+     */
+    public Address adjustEndDate(LocalDate newEndDate) {
+        return new Address(
+                id,
+                employeeId,
+                addressNumber,
+                addressTypeCode,
+                street,
+                city,
+                countryCode,
+                postalCode,
+                regionCode,
+                startDate,
+                newEndDate,
+                createdAt,
+                updatedAt
+        );
+    }
 
     public boolean isActive() {
         return endDate == null;
