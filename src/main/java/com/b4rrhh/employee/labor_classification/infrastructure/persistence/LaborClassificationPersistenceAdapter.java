@@ -74,6 +74,17 @@ public class LaborClassificationPersistenceAdapter implements LaborClassificatio
         springDataLaborClassificationRepository.save(entity);
     }
 
+    @Override
+    public void delete(LaborClassification laborClassification) {
+        LaborClassificationEntity entity = springDataLaborClassificationRepository
+                .findByEmployeeIdAndStartDate(laborClassification.getEmployeeId(), laborClassification.getStartDate())
+                .orElseThrow(() -> new IllegalStateException(
+                        "Labor classification not found for delete by functional identity"
+                ));
+
+        springDataLaborClassificationRepository.delete(entity);
+    }
+
     private LaborClassification toDomain(LaborClassificationEntity entity) {
         return new LaborClassification(
                 entity.getEmployeeId(),

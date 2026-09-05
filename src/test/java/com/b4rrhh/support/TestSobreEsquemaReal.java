@@ -37,6 +37,17 @@ import com.b4rrhh.employee.journey.infrastructure.persistence.JourneyCostCenterR
 import com.b4rrhh.employee.journey.infrastructure.persistence.JourneyLaborClassificationReadAdapter;
 import com.b4rrhh.employee.journey.infrastructure.persistence.JourneyPresenceReadAdapter;
 import com.b4rrhh.employee.journey.infrastructure.persistence.JourneyWorkCenterReadAdapter;
+import com.b4rrhh.employee.labor_classification.application.service.AgreementCategoryRelationValidator;
+import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationCatalogValidator;
+import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationTimelineService;
+import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationService;
+import com.b4rrhh.employee.labor_classification.application.usecase.DeleteLaborClassificationService;
+import com.b4rrhh.employee.labor_classification.application.usecase.PlanLaborClassificationChangeService;
+import com.b4rrhh.employee.labor_classification.application.usecase.UpdateLaborClassificationService;
+import com.b4rrhh.employee.labor_classification.infrastructure.persistence.AgreementCategoryRelationLookupAdapter;
+import com.b4rrhh.employee.labor_classification.infrastructure.persistence.EmployeeLaborClassificationLookupAdapter;
+import com.b4rrhh.employee.labor_classification.infrastructure.persistence.LaborClassificationPersistenceAdapter;
+import com.b4rrhh.employee.labor_classification.infrastructure.persistence.LaborClassificationPresenceConsistencyAdapter;
 import com.b4rrhh.employee.labor_classification.infrastructure.persistence.LaborClassificationRuleEntityUsageParticipant;
 import com.b4rrhh.employee.presence.infrastructure.persistence.PresenceRuleEntityUsageParticipant;
 import com.b4rrhh.employee.workcenter.infrastructure.persistence.WorkCenterRuleEntityUsageParticipant;
@@ -142,6 +153,18 @@ import java.lang.annotation.Target;
         ContractPersistenceAdapter.class,
         ContractPresenceConsistencyAdapter.class,
         EmployeeContractLookupAdapter.class,
+        // labor_classification: la serie por empleado sobre el componente temporal (backend#56)
+        CreateLaborClassificationService.class,
+        UpdateLaborClassificationService.class,
+        DeleteLaborClassificationService.class,
+        PlanLaborClassificationChangeService.class,
+        LaborClassificationTimelineService.class,
+        LaborClassificationCatalogValidator.class,
+        AgreementCategoryRelationValidator.class,
+        AgreementCategoryRelationLookupAdapter.class,
+        LaborClassificationPersistenceAdapter.class,
+        LaborClassificationPresenceConsistencyAdapter.class,
+        EmployeeLaborClassificationLookupAdapter.class,
         // address: la serie por (empleado, tipo) sobre el componente temporal (backend#53)
         CreateAddressService.class,
         UpdateAddressService.class,

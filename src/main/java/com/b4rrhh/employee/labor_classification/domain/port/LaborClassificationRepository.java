@@ -22,4 +22,7 @@ public interface LaborClassificationRepository {
     void save(LaborClassification laborClassification);
 
     void update(LaborClassification laborClassification, LocalDate originalStartDate);
+
+    /** Removes the labor classification by its functional identity: employee and start date. */
+    void delete(LaborClassification laborClassification);
 }
