@@ -2,14 +2,22 @@ package com.b4rrhh.employee.labor_classification.infrastructure.rest;
 
 import com.b4rrhh.employee.labor_classification.application.command.CloseLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.command.CreateLaborClassificationCommand;
+import com.b4rrhh.employee.labor_classification.application.command.DeleteLaborClassificationCommand;
+import com.b4rrhh.employee.labor_classification.application.command.PlanLaborClassificationChangeCommand;
 import com.b4rrhh.employee.labor_classification.application.command.ReplaceLaborClassificationFromDateCommand;
+import com.b4rrhh.employee.labor_classification.application.model.LaborClassificationPlan;
+import com.b4rrhh.employee.labor_classification.application.model.LaborClassificationPlanAdjustment;
+import com.b4rrhh.employee.temporal.support.TimelineOperation;
+import com.b4rrhh.employee.temporal.support.TimelineRejection;
 import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
 import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguageArgumentResolver;
 import com.b4rrhh.rulesystem.agreementcategoryprofile.domain.port.AgreementCategoryProfileRepository;
 import com.b4rrhh.employee.labor_classification.application.usecase.CloseLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationUseCase;
+import com.b4rrhh.employee.labor_classification.application.usecase.DeleteLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.GetLaborClassificationByBusinessKeyUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.ListEmployeeLaborClassificationsUseCase;
+import com.b4rrhh.employee.labor_classification.application.usecase.PlanLaborClassificationChangeUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.ReplaceLaborClassificationFromDateUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.UpdateLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.command.UpdateLaborClassificationCommand;
@@ -42,9 +50,11 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -64,10 +74,14 @@ class LaborClassificationControllerHttpTest {
     private UpdateLaborClassificationUseCase updateLaborClassificationUseCase;
     @Mock
     private CloseLaborClassificationUseCase closeLaborClassificationUseCase;
-                @Mock
-                private ReplaceLaborClassificationFromDateUseCase replaceLaborClassificationFromDateUseCase;
-                @Mock
-                private RuleEntityLabelResolver ruleEntityLabelResolver;
+    @Mock
+    private ReplaceLaborClassificationFromDateUseCase replaceLaborClassificationFromDateUseCase;
+    @Mock
+    private DeleteLaborClassificationUseCase deleteLaborClassificationUseCase;
+    @Mock
+    private PlanLaborClassificationChangeUseCase planLaborClassificationChangeUseCase;
+    @Mock
+    private RuleEntityLabelResolver ruleEntityLabelResolver;
     @Mock
     private AgreementCategoryProfileRepository agreementCategoryProfileRepository;
 
@@ -85,6 +99,8 @@ class LaborClassificationControllerHttpTest {
                 updateLaborClassificationUseCase,
                 closeLaborClassificationUseCase,
                 replaceLaborClassificationFromDateUseCase,
+                deleteLaborClassificationUseCase,
+                planLaborClassificationChangeUseCase,
                 laborClassificationResponseAssembler
         );
 
@@ -432,6 +448,167 @@ class LaborClassificationControllerHttpTest {
         mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/labor-classifications/2026-01-01"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("LABOR_CLASSIFICATION_NOT_FOUND"));
+    }
+
+    @Test
+    void deleteMapsPathToCommandAndAnswersNoContent() throws Exception {
+        mockMvc.perform(delete("/employees/ESP/INTERNAL/EMP001/labor-classifications/2026-01-16"))
+                .andExpect(status().isNoContent());
+
+        ArgumentCaptor<DeleteLaborClassificationCommand> captor =
+                ArgumentCaptor.forClass(DeleteLaborClassificationCommand.class);
+        verify(deleteLaborClassificationUseCase).delete(captor.capture());
+        assertEquals("ESP", captor.getValue().ruleSystemCode());
+        assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
+        assertEquals("EMP001", captor.getValue().employeeNumber());
+        assertEquals(LocalDate.of(2026, 1, 16), captor.getValue().startDate());
+    }
+
+    @Test
+    void deleteMapsACoverageGapToHttp409NamingTheNeighboursToStretch() throws Exception {
+        doThrow(new LaborClassificationCoverageIncompleteException(
+                "ESP", "INTERNAL", "EMP001",
+                List.of(new LaborClassificationPeriod(LocalDate.of(2026, 1, 16), LocalDate.of(2026, 1, 31))),
+                List.of(
+                        new LaborClassificationPeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)),
+                        new LaborClassificationPeriod(LocalDate.of(2026, 2, 1), null)
+                )
+        )).when(deleteLaborClassificationUseCase).delete(any(DeleteLaborClassificationCommand.class));
+
+        mockMvc.perform(delete("/employees/ESP/INTERNAL/EMP001/labor-classifications/2026-01-16"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("LABOR_CLASSIFICATION_INCOMPLETE_COVERAGE"))
+                .andExpect(jsonPath("$.details.stretchCandidates[0].startDate[2]").value(1))
+                .andExpect(jsonPath("$.details.stretchCandidates[1].startDate[1]").value(2));
+    }
+
+    @Test
+    void planMapsTheRequestToTheCommandAndReturnsThePlanWithoutApplyingIt() throws Exception {
+        when(planLaborClassificationChangeUseCase.plan(any(PlanLaborClassificationChangeCommand.class)))
+                .thenReturn(new LaborClassificationPlan(
+                        TimelineOperation.ADD,
+                        null,
+                        new LaborClassificationPeriod(LocalDate.of(2026, 1, 16), null),
+                        null,
+                        new LaborClassificationPlanAdjustment(
+                                new LaborClassificationPeriod(LocalDate.of(2026, 1, 1), null),
+                                new LaborClassificationPeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15))
+                        ),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(
+                                new LaborClassificationPeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)),
+                                new LaborClassificationPeriod(LocalDate.of(2026, 1, 16), null)
+                        )
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/labor-classifications/plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "operation": "ADD",
+                                  "startDate": "2026-01-16"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.operation").value("ADD"))
+                .andExpect(jsonPath("$.accepted").value(true))
+                .andExpect(jsonPath("$.rejection").doesNotExist())
+                .andExpect(jsonPath("$.adjustedOccurrence.before.endDate").doesNotExist())
+                .andExpect(jsonPath("$.adjustedOccurrence.after.endDate[2]").value(15))
+                .andExpect(jsonPath("$.projected[1].startDate[2]").value(16));
+
+        ArgumentCaptor<PlanLaborClassificationChangeCommand> captor =
+                ArgumentCaptor.forClass(PlanLaborClassificationChangeCommand.class);
+        verify(planLaborClassificationChangeUseCase).plan(captor.capture());
+        assertEquals(TimelineOperation.ADD, captor.getValue().operation());
+        assertEquals(LocalDate.of(2026, 1, 16), captor.getValue().startDate());
+        assertNull(captor.getValue().endDate());
+        assertNull(captor.getValue().laborClassificationStartDate());
+        verify(createLaborClassificationUseCase, org.mockito.Mockito.never()).create(any());
+    }
+
+    @Test
+    void planTellsTheScreenAnAddOnAnExistingStartDateIsACorrectionOfThatOccurrence() throws Exception {
+        when(planLaborClassificationChangeUseCase.plan(any(PlanLaborClassificationChangeCommand.class)))
+                .thenReturn(new LaborClassificationPlan(
+                        TimelineOperation.CORRECT,
+                        TimelineRejection.IS_A_CORRECTION,
+                        new LaborClassificationPeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)),
+                        new LaborClassificationPeriod(LocalDate.of(2026, 1, 1), null),
+                        null,
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(new LaborClassificationPeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)))
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/labor-classifications/plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "operation": "ADD",
+                                  "startDate": "2026-01-01",
+                                  "endDate": "2026-01-15"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.operation").value("CORRECT"))
+                .andExpect(jsonPath("$.accepted").value(false))
+                .andExpect(jsonPath("$.rejection").value("IS_A_CORRECTION"))
+                .andExpect(jsonPath("$.correctedOccurrence.startDate[0]").value(2026))
+                .andExpect(jsonPath("$.correctedOccurrence.endDate").doesNotExist())
+                .andExpect(jsonPath("$.occurrence.endDate[2]").value(15));
+    }
+
+    @Test
+    void planIdentifiesTheOccurrenceToRemoveByItsStartDate() throws Exception {
+        when(planLaborClassificationChangeUseCase.plan(any(PlanLaborClassificationChangeCommand.class)))
+                .thenReturn(new LaborClassificationPlan(
+                        TimelineOperation.REMOVE,
+                        TimelineRejection.GAP_NOT_ALLOWED,
+                        new LaborClassificationPeriod(LocalDate.of(2026, 1, 16), LocalDate.of(2026, 1, 31)),
+                        null,
+                        null,
+                        List.of(),
+                        List.of(new LaborClassificationPeriod(LocalDate.of(2026, 1, 16), LocalDate.of(2026, 1, 31))),
+                        List.of(new LaborClassificationPeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15))),
+                        List.of(new LaborClassificationPeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)))
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/labor-classifications/plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "operation": "REMOVE",
+                                  "laborClassificationStartDate": "2026-01-16"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accepted").value(false))
+                .andExpect(jsonPath("$.rejection").value("GAP_NOT_ALLOWED"))
+                .andExpect(jsonPath("$.gaps[0].startDate[2]").value(16))
+                .andExpect(jsonPath("$.stretchCandidates[0].startDate[2]").value(1));
+
+        ArgumentCaptor<PlanLaborClassificationChangeCommand> captor =
+                ArgumentCaptor.forClass(PlanLaborClassificationChangeCommand.class);
+        verify(planLaborClassificationChangeUseCase).plan(captor.capture());
+        assertEquals(TimelineOperation.REMOVE, captor.getValue().operation());
+        assertEquals(LocalDate.of(2026, 1, 16), captor.getValue().laborClassificationStartDate());
+    }
+
+    @Test
+    void planRejectsAnUnknownOperation() throws Exception {
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/labor-classifications/plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "operation": "REPLACE",
+                                  "startDate": "2026-01-16"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

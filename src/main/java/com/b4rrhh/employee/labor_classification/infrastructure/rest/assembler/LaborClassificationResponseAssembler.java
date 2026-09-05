@@ -1,7 +1,13 @@
 package com.b4rrhh.employee.labor_classification.infrastructure.rest.assembler;
 
+import com.b4rrhh.employee.labor_classification.application.model.LaborClassificationPlan;
+import com.b4rrhh.employee.labor_classification.application.model.LaborClassificationPlanAdjustment;
 import com.b4rrhh.employee.labor_classification.application.usecase.LaborClassificationRuleEntityTypeCodes;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
+import com.b4rrhh.employee.labor_classification.domain.model.LaborClassificationPeriod;
+import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.LaborClassificationPeriodResponse;
+import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.LaborClassificationPlanAdjustmentResponse;
+import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.LaborClassificationPlanResponse;
 import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.LaborClassificationResponse;
 import com.b4rrhh.rulesystem.agreementcategoryprofile.domain.port.AgreementCategoryProfileRepository;
 import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
@@ -70,6 +76,33 @@ public class LaborClassificationResponseAssembler {
         return laborClassifications.stream()
                 .map(laborClassification -> toResponse(ruleSystemCode, laborClassification, language))
                 .toList();
+    }
+
+    public LaborClassificationPlanResponse toPlanResponse(LaborClassificationPlan plan) {
+        return new LaborClassificationPlanResponse(
+                plan.operation().name(),
+                plan.isAccepted(),
+                plan.rejection() == null ? null : plan.rejection().name(),
+                toPeriod(plan.occurrence()),
+                plan.correctedOccurrence() == null ? null : toPeriod(plan.correctedOccurrence()),
+                toAdjustment(plan.adjustedOccurrence()),
+                plan.overlaps().stream().map(this::toPeriod).toList(),
+                plan.gaps().stream().map(this::toPeriod).toList(),
+                plan.stretchCandidates().stream().map(this::toPeriod).toList(),
+                plan.projected().stream().map(this::toPeriod).toList()
+        );
+    }
+
+    private LaborClassificationPlanAdjustmentResponse toAdjustment(LaborClassificationPlanAdjustment adjustment) {
+        if (adjustment == null) {
+            return null;
+        }
+
+        return new LaborClassificationPlanAdjustmentResponse(toPeriod(adjustment.before()), toPeriod(adjustment.after()));
+    }
+
+    private LaborClassificationPeriodResponse toPeriod(LaborClassificationPeriod period) {
+        return new LaborClassificationPeriodResponse(period.startDate(), period.endDate());
     }
 
     // El grupo de cotizacion no es un literal: es un dato del perfil de la categoria. Misma
