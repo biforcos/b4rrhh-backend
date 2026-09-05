@@ -1,7 +1,17 @@
 package com.b4rrhh.support;
 
 import com.b4rrhh.employee.absence.infrastructure.persistence.AbsenceRuleEntityUsageParticipant;
+import com.b4rrhh.employee.address.application.service.AddressCatalogValidator;
+import com.b4rrhh.employee.address.application.service.AddressTimelineService;
+import com.b4rrhh.employee.address.application.usecase.CreateAddressService;
+import com.b4rrhh.employee.address.application.usecase.DeleteAddressService;
+import com.b4rrhh.employee.address.application.usecase.PlanAddressChangeService;
+import com.b4rrhh.employee.address.application.usecase.UpdateAddressService;
+import com.b4rrhh.employee.address.infrastructure.persistence.AddressPersistenceAdapter;
+import com.b4rrhh.employee.address.infrastructure.persistence.AddressPresenceLookupAdapter;
 import com.b4rrhh.employee.address.infrastructure.persistence.AddressRuleEntityUsageParticipant;
+import com.b4rrhh.employee.address.infrastructure.persistence.AddressTypeCoverageLookupAdapter;
+import com.b4rrhh.employee.address.infrastructure.persistence.EmployeeAddressLookupAdapter;
 import com.b4rrhh.employee.employee.infrastructure.persistence.EmployeeRuleEntityUsageParticipant;
 import com.b4rrhh.employee.payroll_input.infrastructure.persistence.PayrollInputRuleEntityUsageParticipant;
 import com.b4rrhh.employee.contact.infrastructure.persistence.ContactRuleEntityUsageParticipant;
@@ -18,6 +28,7 @@ import com.b4rrhh.employee.labor_classification.infrastructure.persistence.Labor
 import com.b4rrhh.employee.presence.infrastructure.persistence.PresenceRuleEntityUsageParticipant;
 import com.b4rrhh.employee.workcenter.infrastructure.persistence.WorkCenterRuleEntityUsageParticipant;
 import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeBusinessKeyLookupSupport;
+import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeOwnedLookupSupport;
 import com.b4rrhh.employee.working_time.application.service.DefaultWorkingTimePresenceConsistencyValidator;
 import com.b4rrhh.employee.working_time.application.service.StandardWorkingTimeDerivationPolicy;
 import com.b4rrhh.employee.working_time.application.service.WorkingTimeTimelineService;
@@ -41,6 +52,7 @@ import com.b4rrhh.rulesystem.application.usecase.DeleteRuleEntityService;
 import com.b4rrhh.rulesystem.employeeaddresstypeprofile.infrastructure.persistence.EmployeeAddressTypeProfilePersistenceAdapter;
 import com.b4rrhh.rulesystem.infrastructure.persistence.RuleEntityPersistenceAdapter;
 import com.b4rrhh.rulesystem.infrastructure.persistence.RuleEntityUsageCheckAdapter;
+import com.b4rrhh.rulesystem.infrastructure.persistence.RuleSystemPersistenceAdapter;
 import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
 import com.b4rrhh.rulesystem.translation.application.usecase.GetRuleEntityTranslationCoverageService;
 import com.b4rrhh.rulesystem.translation.infrastructure.persistence.RuleEntityTranslationCoverageReadAdapter;
@@ -102,6 +114,19 @@ import java.lang.annotation.Target;
         DefaultWorkingTimePresenceConsistencyValidator.class,
         WorkingTimePresenceConsistencyAdapter.class,
         StandardWorkingTimeDerivationPolicy.class,
+        // address: la serie por (empleado, tipo) sobre el componente temporal (backend#53)
+        CreateAddressService.class,
+        UpdateAddressService.class,
+        DeleteAddressService.class,
+        PlanAddressChangeService.class,
+        AddressTimelineService.class,
+        AddressCatalogValidator.class,
+        AddressPersistenceAdapter.class,
+        AddressPresenceLookupAdapter.class,
+        AddressTypeCoverageLookupAdapter.class,
+        EmployeeAddressLookupAdapter.class,
+        EmployeeOwnedLookupSupport.class,
+        RuleSystemPersistenceAdapter.class,
         // journey: lectura de las cinco pistas del historial (backend#1)
         JourneyPresenceReadAdapter.class,
         JourneyContractReadAdapter.class,
