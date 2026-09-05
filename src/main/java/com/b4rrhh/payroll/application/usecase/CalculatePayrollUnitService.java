@@ -25,19 +25,14 @@ import com.b4rrhh.payroll.domain.model.PayrollSegment;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.model.PayrollWarning;
 import com.b4rrhh.payroll.infrastructure.config.PayrollLaunchExecutionProperties;
-import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
+import com.b4rrhh.payroll_engine.concept.domain.model.ExecutionScope;
 import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
 import com.b4rrhh.payroll_engine.eligibility.domain.model.EmployeeAssignmentContext;
 import com.b4rrhh.payroll_engine.execution.application.service.SegmentExecutionEngine;
-import com.b4rrhh.payroll_engine.execution.application.service.TechnicalConceptCalculator;
-import com.b4rrhh.payroll_engine.execution.application.service.TechnicalConceptCalculatorRegistry;
-import com.b4rrhh.payroll_engine.execution.domain.model.AggregateSourceEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.SegmentExecutionState;
-import com.b4rrhh.payroll_engine.execution.domain.model.TechnicalConceptSegmentData;
-import com.b4rrhh.payroll_engine.execution.domain.exception.UnsupportedTechnicalConceptException;
 import com.b4rrhh.payroll_engine.planning.application.service.BuildEligibleExecutionPlanUseCase;
 import com.b4rrhh.payroll_engine.planning.domain.model.EligibleExecutionPlanResult;
 import com.b4rrhh.payroll_engine.segment.domain.model.SegmentCalculationContext;
@@ -75,7 +70,6 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     private final EmployeePersonalDataLookupPort employeePersonalDataLookupPort;
     private final AgreementProfileLookupPort agreementProfileLookupPort;
     private final WorkCenterProfileLookupPort workCenterProfileLookupPort;
-    private final TechnicalConceptCalculatorRegistry technicalCalculatorRegistry;
     private final SegmentExecutionEngine segmentExecutionEngine;
     private final EmployeePayrollInputLookupPort employeePayrollInputLookupPort;
     private final GetAgreementCategoryProfileUseCase getAgreementCategoryProfileUseCase;
@@ -91,7 +85,6 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             EmployeePersonalDataLookupPort employeePersonalDataLookupPort,
             AgreementProfileLookupPort agreementProfileLookupPort,
             WorkCenterProfileLookupPort workCenterProfileLookupPort,
-            TechnicalConceptCalculatorRegistry technicalCalculatorRegistry,
             SegmentExecutionEngine segmentExecutionEngine,
             EmployeePayrollInputLookupPort employeePayrollInputLookupPort,
             GetAgreementCategoryProfileUseCase getAgreementCategoryProfileUseCase,
@@ -106,7 +99,6 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         this.employeePersonalDataLookupPort = employeePersonalDataLookupPort;
         this.agreementProfileLookupPort = agreementProfileLookupPort;
         this.workCenterProfileLookupPort = workCenterProfileLookupPort;
-        this.technicalCalculatorRegistry = technicalCalculatorRegistry;
         this.segmentExecutionEngine = segmentExecutionEngine;
         this.employeePayrollInputLookupPort = employeePayrollInputLookupPort;
         this.getAgreementCategoryProfileUseCase = getAgreementCategoryProfileUseCase;
@@ -201,22 +193,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 command.periodEnd()
         );
 
-        // Split at the first AGGREGATE entry in topological order.
-        // Everything before it is per-segment (uses segment-specific technical values).
-        // Everything from the first AGGREGATE onwards is post-segment (derives from composed results).
-        // This preserves topological correctness when PERCENTAGE concepts depend on AGGREGATE bases.
-        int firstAggIdx = java.util.stream.IntStream.range(0, plan.size())
-                .filter(i -> plan.get(i).calculationType() == CalculationType.AGGREGATE)
-                .findFirst()
-                .orElse(plan.size());
-        List<ConceptExecutionPlanEntry> perSegmentPlan = plan.subList(0, firstAggIdx);
-        List<ConceptExecutionPlanEntry> aggregatePlan  = plan.subList(firstAggIdx, plan.size());
-
         List<SegmentSpec> segments = buildSegments(input, command.periodStart(), command.periodEnd());
         log.info("[NÓMINA] Segmentos de jornada: {}", segments.size());
-
-        Map<ConceptNodeIdentity, BigDecimal> composedState = new HashMap<>();
-        List<ConceptRow> payslipRows = new ArrayList<>();
 
         int period = command.periodStart().getYear() * 100 + command.periodStart().getMonthValue();
         Map<String, BigDecimal> employeeInputsForPeriod = employeePayrollInputLookupPort.findInputsByPeriod(
@@ -226,9 +204,10 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 period
         );
 
-        // Pre-compute DIRECT_AMOUNT concepts once (period-level, invariant across segments)
+        // Pre-compute DIRECT_AMOUNT concepts once: their value comes from the rule system,
+        // not from the segment, so it is the same wherever the concept is evaluated.
         Map<String, BigDecimal> precomputedDirectAmounts = new HashMap<>();
-        for (ConceptExecutionPlanEntry entry : perSegmentPlan) {
+        for (ConceptExecutionPlanEntry entry : plan) {
             if (entry.calculationType() == CalculationType.DIRECT_AMOUNT) {
                 String conceptCode = entry.identity().getConceptCode();
                 PayrollConceptExecutionResult directResult =
@@ -241,15 +220,17 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         BigDecimal monthlySalary = Objects.requireNonNullElse(
                 payrollLaunchExecutionProperties.getEligibleRealMonthlySalaryAmount(), BigDecimal.ZERO);
 
+        // One context and one state per segment, plus one context and one state for the period.
+        // Which of them a concept is evaluated against is decided by its execution scope (ADR-058):
+        //   SEGMENT — once per segment, against that segment's state; the period value is the sum.
+        //   PERIOD  — once, against the period state, with the SEGMENT feeds already composed.
+        List<SegmentCalculationContext> segmentContexts = new ArrayList<>(segments.size());
+        List<SegmentExecutionState> segmentStates = new ArrayList<>(segments.size());
         for (int segIdx = 0; segIdx < segments.size(); segIdx++) {
             SegmentSpec seg = segments.get(segIdx);
-            boolean isFirst = (segIdx == 0);
-            boolean isLast  = (segIdx == segments.size() - 1);
-
             log.info("[NOMINA] Segmento {} de {} ({} dias, jornada={}%)",
                     seg.segmentStart(), seg.segmentEnd(), seg.daysInSegment(), seg.workingTimePercentage());
-
-            SegmentCalculationContext segCtx = new SegmentCalculationContext(
+            segmentContexts.add(new SegmentCalculationContext(
                     command.ruleSystemCode(),
                     command.employeeTypeCode(),
                     command.employeeNumber(),
@@ -257,8 +238,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     command.periodEnd(),
                     seg.segmentStart(),
                     seg.segmentEnd(),
-                    isFirst,
-                    isLast,
+                    segIdx == 0,
+                    segIdx == segments.size() - 1,
                     daysInPeriod,
                     seg.daysInSegment(),
                     seg.workingTimePercentage(),
@@ -267,138 +248,55 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     grupoCotizacionCode,
                     tipoNomina,
                     precomputedDirectAmounts
-            );
-
-            SegmentExecutionState state = segmentExecutionEngine.execute(perSegmentPlan, segCtx);
-
-            for (ConceptExecutionPlanEntry entry : perSegmentPlan) {
-                String conceptCode = entry.identity().getConceptCode();
-                BigDecimal amount = state.getRequiredAmount(entry.identity());
-                BigDecimal quantity = null;
-                BigDecimal rate = null;
-
-                if (entry.calculationType() == CalculationType.RATE_BY_QUANTITY) {
-                    quantity = state.getRequiredAmount(entry.operands().get(OperandRole.QUANTITY));
-                    rate     = state.getRequiredAmount(entry.operands().get(OperandRole.RATE));
-                }
-
-                log.info("[NOMINA] {} {} = {} (q={} r={})", entry.calculationType(), conceptCode, amount, quantity, rate);
-
-                var engineConcept = engineConceptByCode.get(conceptCode);
-                FunctionalNature nature = engineConcept.getFunctionalNature();
-                if (isAccumulable(nature)) {
-                    composedState.merge(entry.identity(), amount, BigDecimal::add);
-                } else {
-                    composedState.put(entry.identity(), amount);
-                }
-                if (engineConcept.getPayslipOrderCode() != null) {
-                    int displayOrder = Integer.parseInt(engineConcept.getPayslipOrderCode());
-                    if (!isAccumulable(nature)) {
-                        payslipRows.removeIf(r -> r.conceptCode().equals(conceptCode));
-                    }
-                    payslipRows.add(new ConceptRow(conceptCode, engineConcept.getConceptMnemonic(),
-                            amount, quantity, rate, nature.name(), displayOrder));
-                }
-            }
+            ));
+            segmentStates.add(new SegmentExecutionState());
         }
-        int aggStep = 0;
-        int aggTotal = aggregatePlan.size();
-        for (ConceptExecutionPlanEntry entry : aggregatePlan) {
-            aggStep++;
+        SegmentCalculationContext periodContext = periodContext(
+                command, segments, daysInPeriod, monthlySalary, employeeInputsForPeriod,
+                grupoCotizacionCode, tipoNomina, precomputedDirectAmounts);
+        SegmentExecutionState periodState = new SegmentExecutionState();
+
+        List<ConceptRow> payslipRows = new ArrayList<>();
+        int step = 0;
+        for (ConceptExecutionPlanEntry entry : plan) {
+            step++;
             String conceptCode = entry.identity().getConceptCode();
-            BigDecimal amount;
-            BigDecimal quantity = null;
-            BigDecimal rate = null;
+            var engineConcept = engineConceptByCode.get(conceptCode);
 
-            switch (entry.calculationType()) {
-                case AGGREGATE -> {
-                    BigDecimal sum = BigDecimal.ZERO;
-                    StringBuilder sourceDesc = new StringBuilder();
-                    for (AggregateSourceEntry source : entry.aggregateSources()) {
-                        BigDecimal sourceAmount = requireStateAmount(composedState, source.identity());
-                        sum = sum.add(source.invertSign() ? sourceAmount.negate() : sourceAmount);
-                        if (!sourceDesc.isEmpty()) sourceDesc.append(" + ");
-                        if (source.invertSign()) {
-                            sourceDesc.append("-").append(source.identity().getConceptCode())
-                                    .append("(").append(sourceAmount).append(")");
-                        } else {
-                            sourceDesc.append(source.identity().getConceptCode())
-                                    .append("(").append(sourceAmount).append(")");
-                        }
-                    }
-                    amount = sum.setScale(2, RoundingMode.HALF_UP);
-                    log.info("[NÓMINA] [{}/{}] {} AGGREGATE → {} = {}",
-                            aggStep, aggTotal, conceptCode, sourceDesc, amount);
+            if (engineConcept.getExecutionScope() == ExecutionScope.SEGMENT) {
+                // Composition is always a sum: a SEGMENT magnitude only gets composed to reach the
+                // payslip or to feed a PERIOD aggregate, and both are sums. A SEGMENT rate is never
+                // read at period level, because no operand crosses from SEGMENT to PERIOD (ADR-058).
+                BigDecimal composed = BigDecimal.ZERO;
+                for (int segIdx = 0; segIdx < segments.size(); segIdx++) {
+                    SegmentSpec seg = segments.get(segIdx);
+                    SegmentExecutionState state = segmentStates.get(segIdx);
+                    BigDecimal amount = segmentExecutionEngine.evaluate(entry, state, segmentContexts.get(segIdx));
+                    state.storeResult(entry.identity(), amount);
+                    composed = composed.add(amount);
+                    log.info("[NÓMINA] [{}/{}] {} {} SEGMENT {}..{} → {} (q={} r={})",
+                            step, plan.size(), conceptCode, entry.calculationType(),
+                            seg.segmentStart(), seg.segmentEnd(), amount,
+                            quantityOf(entry, state), rateOf(entry, state));
+                    addPayslipRow(payslipRows, engineConcept, entry, state, amount);
                 }
-                case RATE_BY_QUANTITY -> {
-                    ConceptNodeIdentity quantityId = entry.operands().get(OperandRole.QUANTITY);
-                    ConceptNodeIdentity rateId = entry.operands().get(OperandRole.RATE);
-                    quantity = requireStateAmount(composedState, quantityId);
-                    rate = requireStateAmount(composedState, rateId);
-                    amount = quantity.multiply(rate).setScale(2, RoundingMode.HALF_UP);
-                    log.info("[NÓMINA] [{}/{}] {} RATE_BY_QUANTITY → {}({}) × {}({}) = {}",
-                            aggStep, aggTotal, conceptCode,
-                            quantityId.getConceptCode(), quantity,
-                            rateId.getConceptCode(), rate,
-                            amount);
+                periodState.storeResult(entry.identity(), composed);
+                if (segments.size() > 1) {
+                    log.info("[NÓMINA] [{}/{}] {} compuesto = {} (suma de {} tramos)",
+                            step, plan.size(), conceptCode, composed, segments.size());
                 }
-                case PERCENTAGE -> {
-                    ConceptNodeIdentity baseId = entry.operands().get(OperandRole.BASE);
-                    ConceptNodeIdentity pctId  = entry.operands().get(OperandRole.PERCENTAGE);
-                    quantity = requireStateAmount(composedState, baseId);
-                    rate     = requireStateAmount(composedState, pctId);
-                    amount   = quantity.multiply(rate).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-                    log.info("[NÓMINA] [{}/{}] {} PERCENTAGE → {}({}) × {}% = {}",
-                            aggStep, aggTotal, conceptCode,
-                            baseId.getConceptCode(), quantity, rate, amount);
+            } else {
+                BigDecimal amount = segmentExecutionEngine.evaluate(entry, periodState, periodContext);
+                periodState.storeResult(entry.identity(), amount);
+                // A period value is a single number, the same in every segment, so a later SEGMENT
+                // concept may read it as an operand.
+                for (SegmentExecutionState state : segmentStates) {
+                    state.storeResult(entry.identity(), amount);
                 }
-                case ENGINE_PROVIDED -> {
-                    // ENGINE_PROVIDED concepts with no segment dependencies (e.g. fixed rates like P_SS, P_IRPF)
-                    // may appear in the post-segment plan due to topological ordering.
-                    // The segment context fields are irrelevant for these constants.
-                    TechnicalConceptCalculator calc = technicalCalculatorRegistry.get(conceptCode);
-                    if (calc == null) {
-                        throw new UnsupportedTechnicalConceptException(conceptCode);
-                    }
-                    SegmentSpec firstSeg = segments.isEmpty() ? null : segments.get(0);
-                    TechnicalConceptSegmentData techData = new TechnicalConceptSegmentData(
-                            command.periodStart(), command.periodEnd(),
-                            firstSeg != null ? firstSeg.segmentStart() : command.periodStart(),
-                            firstSeg != null ? firstSeg.segmentEnd()   : command.periodEnd(),
-                            firstSeg != null ? firstSeg.daysInSegment() : 0L,
-                            firstSeg != null ? firstSeg.workingTimePercentage() : BigDecimal.ZERO,
-                            command.ruleSystemCode(),
-                            grupoCotizacionCode,
-                            tipoNomina
-                    );
-                    amount = calc.resolve(techData);
-                    log.info("[NÓMINA] [{}/{}] {} ENGINE_PROVIDED → {}",
-                            aggStep, aggTotal, conceptCode, amount);
-                }
-                case GREATEST -> {
-                    BigDecimal left  = requireStateAmount(composedState, entry.operands().get(OperandRole.LEFT));
-                    BigDecimal right = requireStateAmount(composedState, entry.operands().get(OperandRole.RIGHT));
-                    amount = left.max(right);
-                    log.info("[NÓMINA] [{}/{}] {} GREATEST → max({},{}) = {}",
-                            aggStep, aggTotal, conceptCode, left, right, amount);
-                }
-                case LEAST -> {
-                    BigDecimal left  = requireStateAmount(composedState, entry.operands().get(OperandRole.LEFT));
-                    BigDecimal right = requireStateAmount(composedState, entry.operands().get(OperandRole.RIGHT));
-                    amount = left.min(right);
-                    log.info("[NÓMINA] [{}/{}] {} LEAST → min({},{}) = {}",
-                            aggStep, aggTotal, conceptCode, left, right, amount);
-                }
-                default -> throw new UnsupportedOperationException(
-                        "Unsupported calculation type in post-segment plan: " + entry.calculationType());
-            }
-
-            composedState.put(entry.identity(), amount);
-            var aggConcept = engineConceptByCode.get(conceptCode);
-            if (aggConcept.getPayslipOrderCode() != null) {
-                int displayOrder = Integer.parseInt(aggConcept.getPayslipOrderCode());
-                payslipRows.add(new ConceptRow(conceptCode, aggConcept.getConceptMnemonic(),
-                        amount, quantity, rate, aggConcept.getFunctionalNature().name(), displayOrder));
+                log.info("[NÓMINA] [{}/{}] {} {} PERIOD → {} (q={} r={})",
+                        step, plan.size(), conceptCode, entry.calculationType(), amount,
+                        quantityOf(entry, periodState), rateOf(entry, periodState));
+                addPayslipRow(payslipRows, engineConcept, entry, periodState, amount);
             }
         }
 
@@ -516,8 +414,93 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 : segments;
     }
 
-    private boolean isAccumulable(FunctionalNature nature) {
-        return nature == FunctionalNature.EARNING || nature == FunctionalNature.DEDUCTION;
+    /**
+     * The period seen as a single stretch: from the first covered day to the last, with every
+     * covered day counted and the working time weighted by days. A PERIOD concept has its rule
+     * defined over the whole period and is not split into sub-periods (ADR-058); when such a rule
+     * reads the working time and the month has two, this is the only period value consistent
+     * with the sum of the segments, and it equals the segment value whenever they all agree.
+     */
+    private SegmentCalculationContext periodContext(
+            CalculatePayrollUnitCommand command,
+            List<SegmentSpec> segments,
+            long daysInPeriod,
+            BigDecimal monthlySalary,
+            Map<String, BigDecimal> employeeInputsForPeriod,
+            String grupoCotizacionCode,
+            String tipoNomina,
+            Map<String, BigDecimal> precomputedDirectAmounts
+    ) {
+        long daysCovered = segments.stream().mapToLong(SegmentSpec::daysInSegment).sum();
+        BigDecimal weightedWorkingTime = BigDecimal.ZERO;
+        for (SegmentSpec seg : segments) {
+            weightedWorkingTime = weightedWorkingTime.add(
+                    seg.workingTimePercentage().multiply(BigDecimal.valueOf(seg.daysInSegment())));
+        }
+        weightedWorkingTime = weightedWorkingTime.divide(BigDecimal.valueOf(daysCovered), 8, RoundingMode.HALF_UP);
+        return new SegmentCalculationContext(
+                command.ruleSystemCode(),
+                command.employeeTypeCode(),
+                command.employeeNumber(),
+                command.periodStart(),
+                command.periodEnd(),
+                segments.getFirst().segmentStart(),
+                segments.getLast().segmentEnd(),
+                true,
+                true,
+                daysInPeriod,
+                daysCovered,
+                weightedWorkingTime,
+                monthlySalary,
+                employeeInputsForPeriod,
+                grupoCotizacionCode,
+                tipoNomina,
+                precomputedDirectAmounts
+        );
+    }
+
+    private void addPayslipRow(
+            List<ConceptRow> payslipRows,
+            com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept engineConcept,
+            ConceptExecutionPlanEntry entry,
+            SegmentExecutionState state,
+            BigDecimal amount
+    ) {
+        if (engineConcept.getPayslipOrderCode() == null) {
+            return;
+        }
+        int displayOrder = Integer.parseInt(engineConcept.getPayslipOrderCode());
+        payslipRows.add(new ConceptRow(
+                engineConcept.getConceptCode(),
+                engineConcept.getConceptMnemonic(),
+                amount,
+                quantityOf(entry, state),
+                rateOf(entry, state),
+                engineConcept.getFunctionalNature().name(),
+                displayOrder));
+    }
+
+    /** The payslip "quantity": the QUANTITY of a RATE_BY_QUANTITY, the BASE of a PERCENTAGE. */
+    private BigDecimal quantityOf(ConceptExecutionPlanEntry entry, SegmentExecutionState state) {
+        return switch (entry.calculationType()) {
+            case RATE_BY_QUANTITY -> operandAmount(entry, state, OperandRole.QUANTITY);
+            case PERCENTAGE -> operandAmount(entry, state, OperandRole.BASE);
+            default -> null;
+        };
+    }
+
+    /** The payslip "rate": the RATE of a RATE_BY_QUANTITY, the PERCENTAGE of a PERCENTAGE. */
+    private BigDecimal rateOf(ConceptExecutionPlanEntry entry, SegmentExecutionState state) {
+        return switch (entry.calculationType()) {
+            case RATE_BY_QUANTITY -> operandAmount(entry, state, OperandRole.RATE);
+            case PERCENTAGE -> operandAmount(entry, state, OperandRole.PERCENTAGE);
+            default -> null;
+        };
+    }
+
+    private BigDecimal operandAmount(ConceptExecutionPlanEntry entry, SegmentExecutionState state, OperandRole role) {
+        ConceptNodeIdentity source = entry.operands().get(role);
+        return source == null ? null : state.getOptionalAmount(source).orElse(null);
     }
 
     private List<ConceptRow> collapsePayslipRows(List<ConceptRow> rows) {
@@ -538,17 +521,6 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             ));
         }
         return new ArrayList<>(collapsed.values());
-    }
-
-    private BigDecimal requireStateAmount(Map<ConceptNodeIdentity, BigDecimal> state, ConceptNodeIdentity id) {
-        BigDecimal value = state.get(id);
-        if (value == null) {
-            throw new IllegalStateException(
-                    "Required concept result not yet computed for: " + id +
-                    ". Check that the execution plan is in topological order."
-            );
-        }
-        return value;
     }
 
     private PayrollWarning eligibleRealWarning(

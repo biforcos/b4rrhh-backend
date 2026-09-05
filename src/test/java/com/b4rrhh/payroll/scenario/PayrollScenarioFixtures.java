@@ -62,10 +62,13 @@ public class PayrollScenarioFixtures {
                 " (object_id, concept_mnemonic, calculation_type, functional_nature, result_composition_mode," +
                 "  payslip_order_code, execution_scope, persist_to_concepts, created_at, updated_at)" +
                 " values (?, ?, ?, ?, ?, ?, ?, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
-        jdbc.update(cSql, id101,       "SALARIO_BASE",            "RATE_BY_QUANTITY", "EARNING",         "REPLACE", "101",  "PERIOD");
-        jdbc.update(cSql, idD01,       "DIAS_DEVENGO",            "ENGINE_PROVIDED",  "TECHNICAL",       "REPLACE",  null,  "PERIOD");
-        jdbc.update(cSql, idJ01,       "COEFICIENTE_JORNADA",     "ENGINE_PROVIDED",  "TECHNICAL",       "REPLACE",  null,  "PERIOD");
-        jdbc.update(cSql, idP01,       "PRECIO_DIA",              "RATE_BY_QUANTITY", "BASE",            "REPLACE",  null,  "PERIOD");
+        // Los mismos ambitos que la semilla de ESP tras backend#64: lo que depende del tramo
+        // (dias devengados, jornada, precio por jornada y el salario que los multiplica) es
+        // SEGMENT; todo lo demas se evalua una vez sobre el periodo.
+        jdbc.update(cSql, id101,       "SALARIO_BASE",            "RATE_BY_QUANTITY", "EARNING",         "REPLACE", "101",  "SEGMENT");
+        jdbc.update(cSql, idD01,       "DIAS_DEVENGO",            "ENGINE_PROVIDED",  "TECHNICAL",       "REPLACE",  null,  "SEGMENT");
+        jdbc.update(cSql, idJ01,       "COEFICIENTE_JORNADA",     "ENGINE_PROVIDED",  "TECHNICAL",       "REPLACE",  null,  "SEGMENT");
+        jdbc.update(cSql, idP01,       "PRECIO_DIA",              "RATE_BY_QUANTITY", "BASE",            "REPLACE",  null,  "SEGMENT");
         jdbc.update(cSql, idP02,       "PRECIO_DIA_PLENO",        "DIRECT_AMOUNT",    "BASE",            "REPLACE",  null,  "PERIOD");
         jdbc.update(cSql, idB01,       "BASE_COTIZABLE",          "AGGREGATE",        "BASE",            "REPLACE",  null,  "PERIOD");
         jdbc.update(cSql, idPSSCC,     "TIPO_CC_TRABAJADOR",      "ENGINE_PROVIDED",  "TECHNICAL",       "REPLACE",  null,  "PERIOD");
@@ -207,6 +210,74 @@ public class PayrollScenarioFixtures {
                 " values (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 employeeId, nextNum, from, to, percentage,
                 new BigDecimal("40.00"), new BigDecimal("8.00"), new BigDecimal("173.33"));
+    }
+
+    /**
+     * Anade al grafo la cadena del tope y el suelo de cotizacion, igual que la siembra
+     * ESP (V88): B_CC_MAX = LEAST(B01, P_TOPE_MAX), B_CC = GREATEST(B_CC_MAX, P_TOPE_MIN),
+     * y los porcentajes 700 y 703 pasan a leer B_CC en vez de B01. Los cuatro conceptos
+     * son PERIOD: el tope se aplica una vez sobre el mes, no por tramos (ADR-058).
+     *
+     * Requiere {@link #seedConceptGraph} antes. El tope y el suelo del grupo 05 MENSUAL
+     * son los que se pasan, para que cada test elija si muerden o no.
+     */
+    public void seedContributionCaps(String ruleSystemCode, BigDecimal baseMin, BigDecimal baseMax) {
+        for (String code : new String[]{"P_TOPE_MAX", "P_TOPE_MIN", "B_CC_MAX", "B_CC"}) {
+            jdbc.update(
+                    "insert into payroll_engine.payroll_object (rule_system_code, object_type_code, object_code, created_at, updated_at)" +
+                    " values (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                    ruleSystemCode, "CONCEPT", code);
+        }
+        Long idB01     = objectId(ruleSystemCode, "CONCEPT", "B01");
+        Long id700     = objectId(ruleSystemCode, "CONCEPT", "700");
+        Long id703     = objectId(ruleSystemCode, "CONCEPT", "703");
+        Long idTopeMax = objectId(ruleSystemCode, "CONCEPT", "P_TOPE_MAX");
+        Long idTopeMin = objectId(ruleSystemCode, "CONCEPT", "P_TOPE_MIN");
+        Long idBccMax  = objectId(ruleSystemCode, "CONCEPT", "B_CC_MAX");
+        Long idBcc     = objectId(ruleSystemCode, "CONCEPT", "B_CC");
+
+        String cSql = "insert into payroll_engine.payroll_concept" +
+                " (object_id, concept_mnemonic, calculation_type, functional_nature, result_composition_mode," +
+                "  payslip_order_code, execution_scope, persist_to_concepts, created_at, updated_at)" +
+                " values (?, ?, ?, ?, ?, null, 'PERIOD', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
+        jdbc.update(cSql, idTopeMax, "TOPE_MAX_COTIZACION",   "ENGINE_PROVIDED", "TECHNICAL", "ACCUMULATE");
+        jdbc.update(cSql, idTopeMin, "TOPE_MIN_COTIZACION",   "ENGINE_PROVIDED", "TECHNICAL", "ACCUMULATE");
+        jdbc.update(cSql, idBccMax,  "BASE_COTIZACION_MAX",   "LEAST",           "BASE",      "REPLACE");
+        jdbc.update(cSql, idBcc,     "BASE_COTIZACION_COTIZ", "GREATEST",        "BASE",      "REPLACE");
+
+        String oSql = "insert into payroll_engine.payroll_concept_operand" +
+                " (target_object_id, operand_role, source_object_id, created_at, updated_at)" +
+                " values (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
+        jdbc.update(oSql, idBccMax, "LEFT",  idB01);
+        jdbc.update(oSql, idBccMax, "RIGHT", idTopeMax);
+        jdbc.update(oSql, idBcc,    "LEFT",  idBccMax);
+        jdbc.update(oSql, idBcc,    "RIGHT", idTopeMin);
+        jdbc.update("update payroll_engine.payroll_concept_operand set source_object_id = ?" +
+                        " where target_object_id in (?, ?) and operand_role = 'BASE'",
+                idBcc, id700, id703);
+
+        jdbc.update(
+                "insert into payroll_engine.ss_cotizacion_topes" +
+                " (rule_system_code, grupo_code, period_type, base_min, base_max, valid_from, valid_to)" +
+                " values (?, ?, ?, ?, ?, DATE '2025-01-01', null)",
+                ruleSystemCode, "05", "MENSUAL", baseMin, baseMax);
+    }
+
+    /** Cambia el precio diario pleno de la categoria del fixture (la fila de P02). */
+    public void setDailyRate(String ruleSystemCode, BigDecimal dailyRate) {
+        jdbc.update(
+                "update payroll.payroll_table_row set daily_value = ?" +
+                " where rule_system_code = ? and table_code = ? and search_code = ?",
+                dailyRate, ruleSystemCode, TABLE_CODE, CATEGORY_CODE);
+    }
+
+    /** Declara el ambito de ejecucion de los conceptos dados. */
+    public void setExecutionScope(String ruleSystemCode, String executionScope, String... conceptCodes) {
+        for (String code : conceptCodes) {
+            jdbc.update(
+                    "update payroll_engine.payroll_concept set execution_scope = ? where object_id = ?",
+                    executionScope, objectId(ruleSystemCode, "CONCEPT", code));
+        }
     }
 
     private Long objectId(String ruleSystemCode, String objectTypeCode, String objectCode) {

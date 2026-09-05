@@ -83,67 +83,74 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
         SegmentExecutionState state = new SegmentExecutionState();
 
         for (ConceptExecutionPlanEntry entry : plan) {
-            BigDecimal amount = switch (entry.calculationType()) {
-                case DIRECT_AMOUNT -> {
-                    String conceptCode = entry.identity().getConceptCode();
-                    BigDecimal precomputed = context.getPrecomputedDirectAmounts().get(conceptCode);
-                    if (precomputed != null) {
-                        yield precomputed;
-                    }
-                    yield technicalValueResolver.resolve(conceptCode, context);
-                }
-
-                case RATE_BY_QUANTITY ->
-                        rateByQuantityResolver.resolve(entry, state);
-
-                case PERCENTAGE ->
-                        percentageConceptResolver.resolve(entry, state);
-
-                case GREATEST ->
-                        greatestConceptResolver.resolve(entry, state);
-
-                case LEAST ->
-                        leastConceptResolver.resolve(entry, state);
-
-                case AGGREGATE -> {
-                    BigDecimal sum = BigDecimal.ZERO;
-                    for (AggregateSourceEntry source : entry.aggregateSources()) {
-                        BigDecimal sourceAmount = state.getRequiredAmount(source.identity());
-                        sum = sum.add(source.invertSign() ? sourceAmount.negate() : sourceAmount);
-                    }
-                    yield sum.setScale(2, RoundingMode.HALF_UP);
-                }
-
-                case ENGINE_PROVIDED -> {
-                    String conceptCode = entry.identity().getConceptCode();
-                    TechnicalConceptCalculator calculator = technicalCalculatorRegistry.get(conceptCode);
-                    if (calculator == null) {
-                        throw new UnsupportedTechnicalConceptException(conceptCode);
-                    }
-                    yield calculator.resolve(new TechnicalConceptSegmentData(
-                            context.getPeriodStart(),
-                            context.getPeriodEnd(),
-                            context.getSegmentStart(),
-                            context.getSegmentEnd(),
-                            context.getDaysInSegment(),
-                            context.getWorkingTimePercentage(),
-                            context.getRuleSystemCode(),
-                            context.getGrupoCotizacionCode(),
-                            context.getTipoNomina()
-                    ));
-                }
-
-                case EMPLOYEE_INPUT ->
-                        context.getEmployeeInputs()
-                                .getOrDefault(entry.identity().getConceptCode(), BigDecimal.ZERO);
-
-                default ->
-                        throw new UnsupportedCalculationTypeException(entry.calculationType());
-            };
-
-            state.storeResult(entry.identity(), amount);
+            state.storeResult(entry.identity(), evaluate(entry, state, context));
         }
 
         return state;
+    }
+
+    @Override
+    public BigDecimal evaluate(
+            ConceptExecutionPlanEntry entry,
+            SegmentExecutionState state,
+            SegmentCalculationContext context
+    ) {
+        return switch (entry.calculationType()) {
+            case DIRECT_AMOUNT -> {
+                String conceptCode = entry.identity().getConceptCode();
+                BigDecimal precomputed = context.getPrecomputedDirectAmounts().get(conceptCode);
+                if (precomputed != null) {
+                    yield precomputed;
+                }
+                yield technicalValueResolver.resolve(conceptCode, context);
+            }
+
+            case RATE_BY_QUANTITY ->
+                    rateByQuantityResolver.resolve(entry, state);
+
+            case PERCENTAGE ->
+                    percentageConceptResolver.resolve(entry, state);
+
+            case GREATEST ->
+                    greatestConceptResolver.resolve(entry, state);
+
+            case LEAST ->
+                    leastConceptResolver.resolve(entry, state);
+
+            case AGGREGATE -> {
+                BigDecimal sum = BigDecimal.ZERO;
+                for (AggregateSourceEntry source : entry.aggregateSources()) {
+                    BigDecimal sourceAmount = state.getRequiredAmount(source.identity());
+                    sum = sum.add(source.invertSign() ? sourceAmount.negate() : sourceAmount);
+                }
+                yield sum.setScale(2, RoundingMode.HALF_UP);
+            }
+
+            case ENGINE_PROVIDED -> {
+                String conceptCode = entry.identity().getConceptCode();
+                TechnicalConceptCalculator calculator = technicalCalculatorRegistry.get(conceptCode);
+                if (calculator == null) {
+                    throw new UnsupportedTechnicalConceptException(conceptCode);
+                }
+                yield calculator.resolve(new TechnicalConceptSegmentData(
+                        context.getPeriodStart(),
+                        context.getPeriodEnd(),
+                        context.getSegmentStart(),
+                        context.getSegmentEnd(),
+                        context.getDaysInSegment(),
+                        context.getWorkingTimePercentage(),
+                        context.getRuleSystemCode(),
+                        context.getGrupoCotizacionCode(),
+                        context.getTipoNomina()
+                ));
+            }
+
+            case EMPLOYEE_INPUT ->
+                    context.getEmployeeInputs()
+                            .getOrDefault(entry.identity().getConceptCode(), BigDecimal.ZERO);
+
+            default ->
+                    throw new UnsupportedCalculationTypeException(entry.calculationType());
+        };
     }
 }

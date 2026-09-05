@@ -159,8 +159,12 @@ Clasifica el concepto según su rol económico:
 
 | Valor | Significado |
 |---|---|
-| `SEGMENT` | Se calcula una vez por segmento temporal |
-| `PERIOD` | Se calcula una vez por período (consolidación global) |
+| `SEGMENT` | Se evalúa en cada segmento temporal; su valor de período es la **suma** de los segmentos |
+| `PERIOD` | La regla está definida sobre el período entero y no se reparte en subperíodos: se evalúa una vez, con los feeds `SEGMENT` ya compuestos |
+
+`PERIOD` no es «evalúalo una vez porque es más barato»: un tope o un suelo aplicados por quincenas dan
+otro número que aplicados al mes. Ningún operando (`qty`, `rate`, `base`, `pct`, `left`, `right`) cruza
+de un concepto `SEGMENT` a uno `PERIOD`; los feeds sí, porque sumar está definido (ADR-058).
 
 ### `ResultCompositionMode`
 
@@ -168,6 +172,8 @@ Clasifica el concepto según su rol económico:
 |---|---|
 | `REPLACE` | El resultado del último segmento reemplaza al anterior |
 | `ACCUMULATE` | Los resultados de todos los segmentos se suman |
+
+> Inerte desde backend#64: la composición es siempre suma por regla (ADR-058). Se retira en backend#60.
 
 ### `PayrollConceptFeedRelation`
 
