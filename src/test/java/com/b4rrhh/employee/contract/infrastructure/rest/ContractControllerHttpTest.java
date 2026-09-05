@@ -14,11 +14,14 @@ import com.b4rrhh.employee.contract.application.usecase.ReplaceContractFromDateU
 import com.b4rrhh.employee.contract.application.usecase.UpdateContractUseCase;
 import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
 import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguageArgumentResolver;
+import com.b4rrhh.employee.contract.domain.exception.ContractCoverageIncompleteException;
 import com.b4rrhh.employee.contract.domain.exception.ContractInvalidException;
+import com.b4rrhh.employee.contract.domain.exception.ContractIsACorrectionException;
 import com.b4rrhh.employee.contract.domain.exception.ContractNotFoundException;
 import com.b4rrhh.employee.contract.domain.exception.ContractOverlapException;
 import com.b4rrhh.employee.contract.domain.exception.ContractSubtypeInvalidException;
 import com.b4rrhh.employee.contract.domain.model.Contract;
+import com.b4rrhh.employee.contract.domain.model.ContractPeriod;
 import com.b4rrhh.employee.contract.infrastructure.rest.assembler.ContractResponseAssembler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +40,7 @@ import java.util.Optional;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -190,6 +194,7 @@ class ContractControllerHttpTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                  "endDate": "2026-06-30",
                                   "contractCode": "TMP",
                                   "contractSubtypeCode": "INT"
                                 }
@@ -204,6 +209,8 @@ class ContractControllerHttpTest {
         assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
         assertEquals("EMP001", captor.getValue().employeeNumber());
         assertEquals(LocalDate.of(2026, 1, 1), captor.getValue().startDate());
+        assertNull(captor.getValue().newStartDate());
+        assertEquals(LocalDate.of(2026, 6, 30), captor.getValue().endDate());
         assertEquals("TMP", captor.getValue().contractCode());
         assertEquals("INT", captor.getValue().contractSubtypeCode());
     }
@@ -312,7 +319,63 @@ class ContractControllerHttpTest {
                                 }
                                 """))
                 .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONTRACT_OVERLAP"))
                 .andExpect(jsonPath("$.message", containsString("overlaps")));
+    }
+
+    @Test
+    void createMapsACoverageGapToHttp409SayingWhichGapAndWhatToStretch() throws Exception {
+        when(createContractUseCase.create(any(CreateContractCommand.class)))
+                .thenThrow(new ContractCoverageIncompleteException(
+                        "ESP", "INTERNAL", "EMP001",
+                        List.of(new ContractPeriod(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28))),
+                        List.of(
+                                new ContractPeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31)),
+                                new ContractPeriod(LocalDate.of(2026, 3, 1), null)
+                        )
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/contracts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "contractCode": "IND",
+                                  "contractSubtypeCode": "FT1",
+                                  "startDate": "2026-03-01"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONTRACT_COVERAGE_GAP"))
+                .andExpect(jsonPath("$.message", containsString("incomplete")))
+                .andExpect(jsonPath("$.details.gaps[0].startDate[1]").value(2))
+                .andExpect(jsonPath("$.details.gaps[0].endDate[2]").value(28))
+                .andExpect(jsonPath("$.details.stretchCandidates[0].startDate[1]").value(1))
+                .andExpect(jsonPath("$.details.stretchCandidates[1].endDate").doesNotExist());
+    }
+
+    @Test
+    void createMapsACorrectionAskedForAsAnAddToHttp409NamingTheContractToCorrect() throws Exception {
+        when(createContractUseCase.create(any(CreateContractCommand.class)))
+                .thenThrow(new ContractIsACorrectionException(
+                        "ESP", "INTERNAL", "EMP001",
+                        new ContractPeriod(LocalDate.of(2026, 1, 1), null),
+                        new ContractPeriod(LocalDate.of(2026, 1, 1), null)
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/contracts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "contractCode": "TMP",
+                                  "contractSubtypeCode": "PT1",
+                                  "startDate": "2026-01-01"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONTRACT_IS_A_CORRECTION"))
+                .andExpect(jsonPath("$.message", containsString("correct")))
+                .andExpect(jsonPath("$.details.correctedOccurrence.startDate[0]").value(2026))
+                .andExpect(jsonPath("$.details.correctedOccurrence.endDate").doesNotExist());
     }
 
     @Test

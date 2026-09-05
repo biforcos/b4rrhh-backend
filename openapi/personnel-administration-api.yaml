@@ -1986,7 +1986,14 @@ paths:
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts:
     post:
       operationId: createContractByBusinessKey
-      summary: Create employee contract by business key
+      summary: Add a contract to the employee's series
+      description: >-
+        The add is planned against the invariants of the series (ADR-057):
+        inside the presence, no overlap, no gap. The one automatic consequence
+        is closing the contract in force on the new start date the day before
+        it. A contract that starts on the start date of an existing one is not
+        an add: it is rejected as CONTRACT_IS_A_CORRECTION, naming the contract
+        it would correct, and has to be asked for as a correction (PUT).
       tags:
         - Employee Contract
       parameters:
@@ -2028,8 +2035,16 @@ paths:
           description: Employee or catalog values not found
         "409":
           description: >-
-            Contract period overlaps, is outside employee presence history,
-            or results in incomplete presence coverage.
+            The resulting series would break an invariant (ADR-057):
+            CONTRACT_OVERLAP (details.overlaps), CONTRACT_COVERAGE_GAP
+            (details.gaps and details.stretchCandidates name the gap and the
+            neighbour to stretch), CONTRACT_OUTSIDE_PRESENCE, or
+            CONTRACT_IS_A_CORRECTION (details.correctedOccurrence names the
+            contract the add would correct).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractErrorResponse"
     get:
       operationId: listEmployeeContractsByBusinessKey
       summary: List employee contracts by business key
@@ -2158,7 +2173,11 @@ paths:
           description: Employee or contract not found
     put:
       operationId: updateContractByBusinessKey
-      summary: Update employee contract by business key
+      summary: Correct a contract (codes and/or dates)
+      description: >-
+        Corrects the contract that starts on the path startDate. Nothing else
+        moves (ADR-057): stretching or shrinking a neighbour is a separate,
+        explicit correction, and a closed contract can be corrected too.
       tags:
         - Employee Contract
       parameters:
@@ -2206,8 +2225,13 @@ paths:
           description: Employee or contract not found
         "409":
           description: >-
-            Contract is already closed,
-            or the resulting timeline is invalid (overlap, outside presence, incomplete coverage).
+            The corrected dates would break an invariant (ADR-057):
+            CONTRACT_OVERLAP, CONTRACT_COVERAGE_GAP (details name the gap and
+            the neighbour to stretch) or CONTRACT_OUTSIDE_PRESENCE.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractErrorResponse"
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts/{startDate}/close:
     post:
@@ -8345,9 +8369,15 @@ components:
           format: date
           nullable: true
           description: >-
-            Corrected start date (yyyy-MM-dd). When provided and different from the
-            path startDate, the predecessor period's endDate is automatically adjusted
-            to newStartDate - 1 day. Must not overlap with other periods.
+            Corrected start date (yyyy-MM-dd). Omit it to keep the path
+            startDate. Nothing else moves (ADR-057): if the new start leaves a
+            gap the predecessor is not stretched, the request is rejected and
+            the error names it as the neighbour to stretch.
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: Corrected end date (yyyy-MM-dd). Omit it for a contract that stays open.
         contractCode:
           type: string
           minLength: 3
@@ -8396,6 +8426,51 @@ components:
           type: string
           format: date
           nullable: true
+    ContractPeriod:
+      type: object
+      description: >-
+        A stretch of dates named by a plan or an error: a contract (identified
+        by its start date), a gap, or an overlap.
+      required:
+        - startDate
+      properties:
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: Null means onwards.
+    ContractErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          enum:
+            - CONTRACT_NOT_FOUND
+            - CONTRACT_EMPLOYEE_NOT_FOUND
+            - CONTRACT_INVALID_REQUEST
+            - CONTRACT_OVERLAP
+            - CONTRACT_COVERAGE_GAP
+            - CONTRACT_OUTSIDE_PRESENCE
+            - CONTRACT_IS_A_CORRECTION
+            - CONTRACT_ALREADY_CLOSED
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+          description: >-
+            What a plan rejection names (ADR-057). CONTRACT_OVERLAP carries
+            overlaps (ContractPeriod[]); CONTRACT_COVERAGE_GAP carries gaps and
+            stretchCandidates (ContractPeriod[] each); CONTRACT_IS_A_CORRECTION
+            carries correctedOccurrence (ContractPeriod), the contract the add
+            would correct. Null when the error has nothing to name.
+          additionalProperties: true
     CreateLaborClassificationRequest:
       type: object
       additionalProperties: false

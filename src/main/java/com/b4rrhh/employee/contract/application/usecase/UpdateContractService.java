@@ -1,24 +1,29 @@
 package com.b4rrhh.employee.contract.application.usecase;
 
 import com.b4rrhh.employee.contract.application.command.UpdateContractCommand;
+import com.b4rrhh.employee.contract.application.model.ContractPlan;
 import com.b4rrhh.employee.contract.application.port.EmployeeContractContext;
 import com.b4rrhh.employee.contract.application.port.EmployeeContractLookupPort;
 import com.b4rrhh.employee.contract.application.service.ContractSubtypeRelationValidator;
 import com.b4rrhh.employee.contract.application.service.ContractCatalogValidator;
-import com.b4rrhh.employee.contract.application.service.ContractPresenceCoverageValidator;
-import com.b4rrhh.employee.contract.domain.exception.ContractAlreadyClosedException;
+import com.b4rrhh.employee.contract.application.service.ContractTimelineService;
 import com.b4rrhh.employee.contract.domain.exception.ContractEmployeeNotFoundException;
 import com.b4rrhh.employee.contract.domain.exception.ContractNotFoundException;
-import com.b4rrhh.employee.contract.domain.exception.ContractOverlapException;
 import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.contract.domain.port.ContractRepository;
+import com.b4rrhh.employee.temporal.support.DateRange;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
 
+/**
+ * Corrects a contract: its codes, its dates, or both. Nothing else moves
+ * (ADR-057, decision 3): if the corrected dates leave a gap or an overlap,
+ * the plan rejects them and names what the user would have to stretch
+ * instead. A closed contract can be corrected too: what identifies it is the
+ * day it starts, and a wrong type on a past contract is still wrong.
+ */
 @Service
 public class UpdateContractService implements UpdateContractUseCase {
 
@@ -26,20 +31,20 @@ public class UpdateContractService implements UpdateContractUseCase {
     private final EmployeeContractLookupPort employeeContractLookupPort;
     private final ContractCatalogValidator contractCatalogValidator;
     private final ContractSubtypeRelationValidator contractSubtypeRelationValidator;
-    private final ContractPresenceCoverageValidator contractPresenceCoverageValidator;
+    private final ContractTimelineService contractTimelineService;
 
     public UpdateContractService(
             ContractRepository contractRepository,
             EmployeeContractLookupPort employeeContractLookupPort,
             ContractCatalogValidator contractCatalogValidator,
             ContractSubtypeRelationValidator contractSubtypeRelationValidator,
-            ContractPresenceCoverageValidator contractPresenceCoverageValidator
+            ContractTimelineService contractTimelineService
     ) {
         this.contractRepository = contractRepository;
         this.employeeContractLookupPort = employeeContractLookupPort;
         this.contractCatalogValidator = contractCatalogValidator;
         this.contractSubtypeRelationValidator = contractSubtypeRelationValidator;
-        this.contractPresenceCoverageValidator = contractPresenceCoverageValidator;
+        this.contractTimelineService = contractTimelineService;
     }
 
     @Override
@@ -71,9 +76,9 @@ public class UpdateContractService implements UpdateContractUseCase {
                         normalizedStartDate
                 ));
 
-        if (!existing.isActive()) {
-            throw new ContractAlreadyClosedException(existing.getStartDate());
-        }
+        LocalDate correctedStartDate = (command.newStartDate() != null)
+                ? command.newStartDate()
+                : normalizedStartDate;
 
         String normalizedContractCode = contractCatalogValidator
                 .normalizeRequiredCode("contractCode", command.contractCode());
@@ -83,105 +88,42 @@ public class UpdateContractService implements UpdateContractUseCase {
         contractCatalogValidator.validateContractCode(
                 normalizedRuleSystemCode,
                 normalizedContractCode,
-                existing.getStartDate()
+                correctedStartDate
         );
         contractCatalogValidator.validateContractSubtypeCode(
                 normalizedRuleSystemCode,
                 normalizedContractSubtypeCode,
-                existing.getStartDate()
+                correctedStartDate
         );
         contractSubtypeRelationValidator.validateContractSubtypeRelation(
                 normalizedRuleSystemCode,
                 normalizedContractCode,
                 normalizedContractSubtypeCode,
-                existing.getStartDate()
+                correctedStartDate
         );
 
-        LocalDate effectiveStartDate = (command.newStartDate() != null)
-                ? command.newStartDate()
-                : normalizedStartDate;
-
-        Contract updated = existing
-                .correctStartDate(effectiveStartDate)
-                .updateContract(normalizedContractCode, normalizedContractSubtypeCode);
-
-        List<Contract> fullHistory = contractRepository
-                .findByEmployeeIdOrderByStartDate(employee.employeeId());
-
-        Contract cascadedPredecessor = null;
-        if (!effectiveStartDate.equals(normalizedStartDate)) {
-            LocalDate expectedPredecessorEnd = normalizedStartDate.minusDays(1);
-            Contract predecessor = fullHistory.stream()
-                    .filter(c -> expectedPredecessorEnd.equals(c.getEndDate()))
-                    .findFirst()
-                    .orElse(null);
-            if (predecessor != null) {
-                cascadedPredecessor = predecessor.adjustEndDate(effectiveStartDate.minusDays(1));
-                contractRepository.update(cascadedPredecessor, cascadedPredecessor.getStartDate());
-            }
-        }
-
-        if (contractRepository.existsOverlappingPeriod(
+        Contract corrected = new Contract(
                 employee.employeeId(),
-                updated.getStartDate(),
-                updated.getEndDate(),
-                normalizedStartDate
-        )) {
-            throw new ContractOverlapException(
-                    normalizedRuleSystemCode,
-                    normalizedEmployeeTypeCode,
-                    normalizedEmployeeNumber,
-                    updated.getStartDate(),
-                    updated.getEndDate()
-            );
-        }
+                normalizedContractCode,
+                normalizedContractSubtypeCode,
+                correctedStartDate,
+                command.endDate()
+        );
 
-        contractPresenceCoverageValidator.validatePeriodWithinPresence(
+        ContractPlan plan = contractTimelineService.planCorrect(
                 employee.employeeId(),
-                updated.getStartDate(),
-                updated.getEndDate(),
+                existing,
+                new DateRange(corrected.getStartDate(), corrected.getEndDate())
+        );
+        contractTimelineService.requireAccepted(
+                plan,
                 normalizedRuleSystemCode,
                 normalizedEmployeeTypeCode,
                 normalizedEmployeeNumber
         );
 
-        List<Contract> projectedHistory = buildProjectedHistory(
-                fullHistory,
-                cascadedPredecessor,
-                updated,
-                normalizedStartDate
-        );
-
-        contractPresenceCoverageValidator.validateFullCoverage(
-                employee.employeeId(),
-                projectedHistory,
-                normalizedRuleSystemCode,
-                normalizedEmployeeTypeCode,
-                normalizedEmployeeNumber
-        );
-
-        contractRepository.update(updated, normalizedStartDate);
-        return updated;
-    }
-
-    private List<Contract> buildProjectedHistory(
-            List<Contract> history,
-            Contract cascadedPredecessor,
-            Contract updated,
-            LocalDate oldStartDate
-    ) {
-        List<Contract> projected = new ArrayList<>(history.size());
-        for (Contract contract : history) {
-            if (contract.getStartDate().equals(oldStartDate)) {
-                projected.add(updated);
-            } else if (cascadedPredecessor != null
-                    && contract.getStartDate().equals(cascadedPredecessor.getStartDate())) {
-                projected.add(cascadedPredecessor);
-            } else {
-                projected.add(contract);
-            }
-        }
-        return projected;
+        contractRepository.update(corrected, normalizedStartDate);
+        return corrected;
     }
 
     private String normalizeRuleSystemCode(String ruleSystemCode) {

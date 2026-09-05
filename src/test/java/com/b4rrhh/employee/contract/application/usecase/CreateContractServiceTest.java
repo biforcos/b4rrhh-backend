@@ -1,20 +1,24 @@
 package com.b4rrhh.employee.contract.application.usecase;
 
 import com.b4rrhh.employee.contract.application.command.CreateContractCommand;
+import com.b4rrhh.employee.contract.application.port.ContractPresenceConsistencyPort;
 import com.b4rrhh.employee.contract.application.port.EmployeeContractContext;
 import com.b4rrhh.employee.contract.application.port.EmployeeContractLookupPort;
+import com.b4rrhh.employee.contract.application.port.PresencePeriod;
 import com.b4rrhh.employee.contract.application.service.ContractSubtypeRelationValidator;
 import com.b4rrhh.employee.contract.application.service.ContractCatalogValidator;
-import com.b4rrhh.employee.contract.application.service.ContractPresenceCoverageValidator;
+import com.b4rrhh.employee.contract.application.service.ContractTimelineService;
 import com.b4rrhh.employee.contract.domain.exception.InvalidContractDateRangeException;
 import com.b4rrhh.employee.contract.domain.exception.ContractSubtypeRelationInvalidException;
 import com.b4rrhh.employee.contract.domain.exception.ContractInvalidException;
+import com.b4rrhh.employee.contract.domain.exception.ContractIsACorrectionException;
 import com.b4rrhh.employee.contract.domain.exception.ContractSubtypeInvalidException;
 import com.b4rrhh.employee.contract.domain.exception.ContractCoverageIncompleteException;
 import com.b4rrhh.employee.contract.domain.exception.ContractEmployeeNotFoundException;
 import com.b4rrhh.employee.contract.domain.exception.ContractOutsidePresencePeriodException;
 import com.b4rrhh.employee.contract.domain.exception.ContractOverlapException;
 import com.b4rrhh.employee.contract.domain.model.Contract;
+import com.b4rrhh.employee.contract.domain.model.ContractPeriod;
 import com.b4rrhh.employee.contract.domain.port.ContractRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,41 +34,48 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Adding a contract is planned against the invariants of the series
+ * (ADR-057). The timeline service is real and the repository and presence
+ * port are mocked: the employee is present from 2026-01-01 onwards.
+ */
 @ExtendWith(MockitoExtension.class)
 class CreateContractServiceTest {
 
     private static final String RULE_SYSTEM_CODE = "ESP";
     private static final String EMPLOYEE_TYPE_CODE = "INTERNAL";
     private static final String EMPLOYEE_NUMBER = "EMP001";
+    private static final LocalDate PRESENCE_START = LocalDate.of(2026, 1, 1);
 
     @Mock
     private ContractRepository contractRepository;
     @Mock
     private EmployeeContractLookupPort employeeContractLookupPort;
+    @Mock
+    private ContractPresenceConsistencyPort presencePort;
 
     private TestContractCatalogValidator contractCatalogValidator;
     private TestContractSubtypeRelationValidator contractSubtypeRelationValidator;
-    private TestContractPresenceCoverageValidator contractPresenceCoverageValidator;
     private CreateContractService service;
 
     @BeforeEach
     void setUp() {
         contractCatalogValidator = new TestContractCatalogValidator();
         contractSubtypeRelationValidator = new TestContractSubtypeRelationValidator();
-        contractPresenceCoverageValidator = new TestContractPresenceCoverageValidator();
 
         service = new CreateContractService(
                 contractRepository,
                 employeeContractLookupPort,
                 contractCatalogValidator,
                 contractSubtypeRelationValidator,
-                contractPresenceCoverageValidator
+                new ContractTimelineService(contractRepository, presencePort)
         );
     }
 
@@ -146,68 +157,43 @@ class CreateContractServiceTest {
     }
 
     @Test
-    void rejectsOverlapOnCreate() {
-        CreateContractCommand command = command(
-                "IND",
-                "FT1",
-                LocalDate.of(2026, 1, 1),
-                null
+    void rejectsOverlapOnCreateNamingTheSharedDates() {
+        Contract first = contract(PRESENCE_START, LocalDate.of(2026, 1, 31));
+        Contract second = contract(LocalDate.of(2026, 2, 1), null);
+        givenEmployeeWithSeries(first, second);
+
+        ContractOverlapException ex = assertThrows(
+                ContractOverlapException.class,
+                () -> service.create(command("IND", "FT1", LocalDate.of(2026, 1, 15), LocalDate.of(2026, 2, 10)))
         );
 
-        whenEmployeeExists();
-        when(contractRepository.existsOverlappingPeriod(
-                10L,
-                LocalDate.of(2026, 1, 1),
-                null,
-                null
-        )).thenReturn(true);
-
-        assertThrows(ContractOverlapException.class, () -> service.create(command));
+        assertEquals(List.of(new ContractPeriod(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 10))), ex.overlaps());
         verify(contractRepository, never()).save(any(Contract.class));
+        verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
     }
 
     @Test
     void rejectsOutsidePresenceOnCreate() {
-        CreateContractCommand command = command(
-                "IND",
-                "FT1",
-                LocalDate.of(2026, 1, 1),
-                null
+        givenEmployeeWithSeries();
+
+        assertThrows(
+                ContractOutsidePresencePeriodException.class,
+                () -> service.create(command("IND", "FT1", LocalDate.of(2025, 12, 1), null))
         );
-
-        contractPresenceCoverageValidator.setOutsidePresence(true);
-        whenEmployeeExists();
-        when(contractRepository.existsOverlappingPeriod(
-                10L,
-                LocalDate.of(2026, 1, 1),
-                null,
-                null
-        )).thenReturn(false);
-
-        assertThrows(ContractOutsidePresencePeriodException.class, () -> service.create(command));
         verify(contractRepository, never()).save(any(Contract.class));
     }
 
     @Test
-    void rejectsIncompleteCoverageOnCreate() {
-        CreateContractCommand command = command(
-                "IND",
-                "FT1",
-                LocalDate.of(2026, 1, 1),
-                null
+    void rejectsIncompleteCoverageOnCreateSayingWhichGapAndWhatToStretch() {
+        givenEmployeeWithSeries();
+
+        ContractCoverageIncompleteException ex = assertThrows(
+                ContractCoverageIncompleteException.class,
+                () -> service.create(command("IND", "FT1", LocalDate.of(2026, 3, 1), null))
         );
 
-        contractPresenceCoverageValidator.setIncompleteCoverage(true);
-        whenEmployeeExists();
-        when(contractRepository.existsOverlappingPeriod(
-                10L,
-                LocalDate.of(2026, 1, 1),
-                null,
-                null
-        )).thenReturn(false);
-        when(contractRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
-
-        assertThrows(ContractCoverageIncompleteException.class, () -> service.create(command));
+        assertEquals(List.of(new ContractPeriod(PRESENCE_START, LocalDate.of(2026, 2, 28))), ex.gaps());
+        assertEquals(List.of(new ContractPeriod(LocalDate.of(2026, 3, 1), null)), ex.stretchCandidates());
         verify(contractRepository, never()).save(any(Contract.class));
     }
 
@@ -220,14 +206,7 @@ class CreateContractServiceTest {
                 null
         );
 
-        whenEmployeeExists();
-        when(contractRepository.existsOverlappingPeriod(
-                10L,
-                LocalDate.of(2026, 1, 1),
-                null,
-                null
-        )).thenReturn(false);
-        when(contractRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
+        givenEmployeeWithSeries();
 
         Contract created = service.create(command);
 
@@ -238,6 +217,52 @@ class CreateContractServiceTest {
         verify(contractRepository).save(captor.capture());
         assertEquals("IND", captor.getValue().getContractCode());
         assertEquals("FT1", captor.getValue().getContractSubtypeCode());
+        verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
+    }
+
+    @Test
+    void addingFromTheSixteenthClosesTheOpenOneOnTheFifteenthInsteadOfRejectingIt() {
+        Contract open = contract(PRESENCE_START, null);
+        givenEmployeeWithSeries(open);
+        when(contractRepository.findByEmployeeIdAndStartDate(10L, PRESENCE_START)).thenReturn(Optional.of(open));
+
+        Contract created = service.create(command("TMP", "PT1", LocalDate.of(2026, 1, 16), null));
+
+        assertEquals(LocalDate.of(2026, 1, 16), created.getStartDate());
+        assertNull(created.getEndDate());
+
+        ArgumentCaptor<Contract> closedCaptor = ArgumentCaptor.forClass(Contract.class);
+        verify(contractRepository).update(closedCaptor.capture(), any(LocalDate.class));
+        assertEquals(PRESENCE_START, closedCaptor.getValue().getStartDate());
+        assertEquals(LocalDate.of(2026, 1, 15), closedCaptor.getValue().getEndDate());
+        assertEquals("IND", closedCaptor.getValue().getContractCode());
+
+        ArgumentCaptor<Contract> savedCaptor = ArgumentCaptor.forClass(Contract.class);
+        verify(contractRepository).save(savedCaptor.capture());
+        assertEquals("TMP", savedCaptor.getValue().getContractCode());
+        assertEquals(LocalDate.of(2026, 1, 16), savedCaptor.getValue().getStartDate());
+    }
+
+    @Test
+    void rejectsAContractStartingOnTheSameDayAsAnExistingOneAsACorrectionNotAnAdd() {
+        Contract open = contract(PRESENCE_START, null);
+        givenEmployeeWithSeries(open);
+
+        ContractIsACorrectionException ex = assertThrows(
+                ContractIsACorrectionException.class,
+                () -> service.create(command("TMP", "PT1", PRESENCE_START, null))
+        );
+
+        assertEquals(new ContractPeriod(PRESENCE_START, null), ex.correctedOccurrence());
+        verify(contractRepository, never()).save(any(Contract.class));
+        verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
+    }
+
+    private void givenEmployeeWithSeries(Contract... occurrences) {
+        whenEmployeeExists();
+        when(contractRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(occurrences));
+        when(presencePort.findPresencePeriodsByEmployeeIdOrderByStartDate(10L))
+                .thenReturn(List.of(new PresencePeriod(PRESENCE_START, null)));
     }
 
     private void whenEmployeeExists() {
@@ -251,6 +276,10 @@ class CreateContractServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER
         )));
+    }
+
+    private static Contract contract(LocalDate startDate, LocalDate endDate) {
+        return new Contract(10L, "IND", "FT1", startDate, endDate);
     }
 
     private CreateContractCommand command(
@@ -343,62 +372,6 @@ class CreateContractServiceTest {
                         contractCode,
                         contractSubtypeCode,
                         referenceDate
-                );
-            }
-        }
-    }
-
-    private static final class TestContractPresenceCoverageValidator
-            extends ContractPresenceCoverageValidator {
-
-        private boolean outsidePresence;
-        private boolean incompleteCoverage;
-
-        private TestContractPresenceCoverageValidator() {
-            super(null);
-        }
-
-        void setOutsidePresence(boolean outsidePresence) {
-            this.outsidePresence = outsidePresence;
-        }
-
-        void setIncompleteCoverage(boolean incompleteCoverage) {
-            this.incompleteCoverage = incompleteCoverage;
-        }
-
-        @Override
-        public void validatePeriodWithinPresence(
-                Long employeeId,
-                LocalDate startDate,
-                LocalDate endDate,
-                String ruleSystemCode,
-                String employeeTypeCode,
-                String employeeNumber
-        ) {
-            if (outsidePresence) {
-                throw new ContractOutsidePresencePeriodException(
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        employeeNumber,
-                        startDate,
-                        endDate
-                );
-            }
-        }
-
-        @Override
-        public void validateFullCoverage(
-                Long employeeId,
-                List<Contract> projectedContractHistory,
-                String ruleSystemCode,
-                String employeeTypeCode,
-                String employeeNumber
-        ) {
-            if (incompleteCoverage) {
-                throw new ContractCoverageIncompleteException(
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        employeeNumber
                 );
             }
         }

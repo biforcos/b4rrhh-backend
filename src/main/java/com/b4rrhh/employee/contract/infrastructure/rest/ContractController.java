@@ -143,6 +143,7 @@ public class ContractController {
                         employeeNumber,
                         startDate,
                         request.startDate(),
+                        request.endDate(),
                         request.contractCode(),
                         request.contractSubtypeCode()
                 )
