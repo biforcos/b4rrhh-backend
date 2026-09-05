@@ -22,4 +22,7 @@ public interface ContractRepository {
     void save(Contract contract);
 
     void update(Contract contract, LocalDate originalStartDate);
+
+    /** Removes the contract by its functional identity: employee and start date. */
+    void delete(Contract contract);
 }

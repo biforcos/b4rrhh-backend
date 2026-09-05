@@ -15,7 +15,18 @@ import com.b4rrhh.employee.address.infrastructure.persistence.EmployeeAddressLoo
 import com.b4rrhh.employee.employee.infrastructure.persistence.EmployeeRuleEntityUsageParticipant;
 import com.b4rrhh.employee.payroll_input.infrastructure.persistence.PayrollInputRuleEntityUsageParticipant;
 import com.b4rrhh.employee.contact.infrastructure.persistence.ContactRuleEntityUsageParticipant;
+import com.b4rrhh.employee.contract.application.service.ContractCatalogValidator;
+import com.b4rrhh.employee.contract.application.service.ContractSubtypeRelationValidator;
+import com.b4rrhh.employee.contract.application.service.ContractTimelineService;
+import com.b4rrhh.employee.contract.application.usecase.CreateContractService;
+import com.b4rrhh.employee.contract.application.usecase.DeleteContractService;
+import com.b4rrhh.employee.contract.application.usecase.PlanContractChangeService;
+import com.b4rrhh.employee.contract.application.usecase.UpdateContractService;
+import com.b4rrhh.employee.contract.infrastructure.persistence.ContractPersistenceAdapter;
+import com.b4rrhh.employee.contract.infrastructure.persistence.ContractPresenceConsistencyAdapter;
 import com.b4rrhh.employee.contract.infrastructure.persistence.ContractRuleEntityUsageParticipant;
+import com.b4rrhh.employee.contract.infrastructure.persistence.ContractSubtypeRelationLookupAdapter;
+import com.b4rrhh.employee.contract.infrastructure.persistence.EmployeeContractLookupAdapter;
 import com.b4rrhh.employee.cost_center.infrastructure.persistence.CostCenterRuleEntityUsageParticipant;
 import com.b4rrhh.employee.identifier.infrastructure.persistence.IdentifierRuleEntityUsageParticipant;
 import com.b4rrhh.employee.journey.infrastructure.persistence.EmployeeJourneyLookupAdapter;
@@ -115,6 +126,18 @@ import java.lang.annotation.Target;
         DefaultWorkingTimePresenceConsistencyValidator.class,
         WorkingTimePresenceConsistencyAdapter.class,
         StandardWorkingTimeDerivationPolicy.class,
+        // contract: la serie por empleado sobre el componente temporal (backend#55)
+        CreateContractService.class,
+        UpdateContractService.class,
+        DeleteContractService.class,
+        PlanContractChangeService.class,
+        ContractTimelineService.class,
+        ContractCatalogValidator.class,
+        ContractSubtypeRelationValidator.class,
+        ContractSubtypeRelationLookupAdapter.class,
+        ContractPersistenceAdapter.class,
+        ContractPresenceConsistencyAdapter.class,
+        EmployeeContractLookupAdapter.class,
         // address: la serie por (empleado, tipo) sobre el componente temporal (backend#53)
         CreateAddressService.class,
         UpdateAddressService.class,

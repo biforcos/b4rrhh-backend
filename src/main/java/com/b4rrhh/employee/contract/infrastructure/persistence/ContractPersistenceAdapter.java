@@ -74,6 +74,17 @@ public class ContractPersistenceAdapter implements ContractRepository {
         springDataContractRepository.save(entity);
     }
 
+    @Override
+    public void delete(Contract contract) {
+        ContractEntity entity = springDataContractRepository
+                .findByEmployeeIdAndStartDate(contract.getEmployeeId(), contract.getStartDate())
+                .orElseThrow(() -> new IllegalStateException(
+                        "Contract not found for delete by functional identity"
+                ));
+
+        springDataContractRepository.delete(entity);
+    }
+
     private Contract toDomain(ContractEntity entity) {
         return new Contract(
                 entity.getEmployeeId(),
