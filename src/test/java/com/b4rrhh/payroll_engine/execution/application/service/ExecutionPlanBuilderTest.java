@@ -6,7 +6,6 @@ import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
-import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraph;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraphBuilder;
@@ -111,10 +110,8 @@ class ExecutionPlanBuilderTest {
                 object, code,
                 type,
                 FunctionalNature.INFORMATIONAL,
-                ResultCompositionMode.REPLACE,
                 null,
                 ExecutionScope.SEGMENT,
-                true,
                 null, null
         );
     }

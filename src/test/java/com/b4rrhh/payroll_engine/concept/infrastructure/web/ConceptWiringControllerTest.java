@@ -55,16 +55,15 @@ class ConceptWiringControllerTest {
     @BeforeEach
     void seed() {
         seedConcept(TARGET_CONCEPT_CODE, "SALARIO_BASE", "RATE_BY_QUANTITY",
-                "EARNING", "REPLACE", "SEGMENT");
+                "EARNING", "SEGMENT");
         seedConcept(SOURCE_QUANTITY_CODE, "T_DIAS_PRESENCIA", "DIRECT_AMOUNT",
-                "TECHNICAL", "REPLACE", "SEGMENT");
+                "TECHNICAL", "SEGMENT");
         seedConcept(SOURCE_RATE_CODE, "T_PRECIO_DIA", "DIRECT_AMOUNT",
-                "TECHNICAL", "REPLACE", "PERIOD");
+                "TECHNICAL", "PERIOD");
     }
 
     private void seedConcept(String objectCode, String mnemonic, String calculationType,
-                             String functionalNature, String resultCompositionMode,
-                             String executionScope) {
+                             String functionalNature, String executionScope) {
         jdbc.update("insert into payroll_engine.payroll_object "
                         + "(rule_system_code, object_type_code, object_code, created_at, updated_at) "
                         + "values (?, 'CONCEPT', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
@@ -76,11 +75,10 @@ class ConceptWiringControllerTest {
         );
         jdbc.update("insert into payroll_engine.payroll_concept "
                         + "(object_id, concept_mnemonic, calculation_type, functional_nature, "
-                        + "result_composition_mode, payslip_order_code, execution_scope, "
-                        + "persist_to_concepts, created_at, updated_at) "
-                        + "values (?, ?, ?, ?, ?, ?, ?, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                        + "payslip_order_code, execution_scope, created_at, updated_at) "
+                        + "values (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 objectId, mnemonic, calculationType, functionalNature,
-                resultCompositionMode, objectCode, executionScope);
+                objectCode, executionScope);
     }
 
     @Test

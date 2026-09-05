@@ -34,17 +34,11 @@ public class PayrollConceptEntity {
     @Column(name = "functional_nature", nullable = false, length = 30)
     private String functionalNature;
 
-    @Column(name = "result_composition_mode", nullable = false, length = 30)
-    private String resultCompositionMode;
-
     @Column(name = "payslip_order_code", length = 30)
     private String payslipOrderCode;
 
     @Column(name = "execution_scope", nullable = false, length = 30)
     private String executionScope;
-
-    @Column(name = "persist_to_concepts", nullable = false)
-    private boolean persistToConcepts = true;
 
     @Column(name = "summary", columnDefinition = "TEXT")
     private String summary;
@@ -86,17 +80,11 @@ public class PayrollConceptEntity {
     public String getFunctionalNature() { return functionalNature; }
     public void setFunctionalNature(String functionalNature) { this.functionalNature = functionalNature; }
 
-    public String getResultCompositionMode() { return resultCompositionMode; }
-    public void setResultCompositionMode(String resultCompositionMode) { this.resultCompositionMode = resultCompositionMode; }
-
     public String getPayslipOrderCode() { return payslipOrderCode; }
     public void setPayslipOrderCode(String payslipOrderCode) { this.payslipOrderCode = payslipOrderCode; }
 
     public String getExecutionScope() { return executionScope; }
     public void setExecutionScope(String executionScope) { this.executionScope = executionScope; }
-
-    public boolean isPersistToConcepts() { return persistToConcepts; }
-    public void setPersistToConcepts(boolean persistToConcepts) { this.persistToConcepts = persistToConcepts; }
 
     public String getSummary() { return summary; }
     public void setSummary(String summary) { this.summary = summary; }

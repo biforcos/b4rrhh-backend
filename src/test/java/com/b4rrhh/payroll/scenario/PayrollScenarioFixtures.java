@@ -59,27 +59,27 @@ public class PayrollScenarioFixtures {
         Long idP02Table    = objectId(ruleSystemCode, "TABLE",   "P02_DAILY_AMOUNT_TABLE");
 
         String cSql = "insert into payroll_engine.payroll_concept" +
-                " (object_id, concept_mnemonic, calculation_type, functional_nature, result_composition_mode," +
-                "  payslip_order_code, execution_scope, persist_to_concepts, created_at, updated_at)" +
-                " values (?, ?, ?, ?, ?, ?, ?, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
+                " (object_id, concept_mnemonic, calculation_type, functional_nature," +
+                "  payslip_order_code, execution_scope, created_at, updated_at)" +
+                " values (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
         // Los mismos ambitos que la semilla de ESP tras backend#64: lo que depende del tramo
         // (dias devengados, jornada, precio por jornada y el salario que los multiplica) es
         // SEGMENT; todo lo demas se evalua una vez sobre el periodo.
-        jdbc.update(cSql, id101,       "SALARIO_BASE",            "RATE_BY_QUANTITY", "EARNING",         "REPLACE", "101",  "SEGMENT");
-        jdbc.update(cSql, idD01,       "DIAS_DEVENGO",            "ENGINE_PROVIDED",  "TECHNICAL",       "REPLACE",  null,  "SEGMENT");
-        jdbc.update(cSql, idJ01,       "COEFICIENTE_JORNADA",     "ENGINE_PROVIDED",  "TECHNICAL",       "REPLACE",  null,  "SEGMENT");
-        jdbc.update(cSql, idP01,       "PRECIO_DIA",              "RATE_BY_QUANTITY", "BASE",            "REPLACE",  null,  "SEGMENT");
-        jdbc.update(cSql, idP02,       "PRECIO_DIA_PLENO",        "DIRECT_AMOUNT",    "BASE",            "REPLACE",  null,  "PERIOD");
-        jdbc.update(cSql, idB01,       "BASE_COTIZABLE",          "AGGREGATE",        "BASE",            "REPLACE",  null,  "PERIOD");
-        jdbc.update(cSql, idPSSCC,     "TIPO_CC_TRABAJADOR",      "ENGINE_PROVIDED",  "TECHNICAL",       "REPLACE",  null,  "PERIOD");
-        jdbc.update(cSql, idPSSDESEMP, "TIPO_DESEMPLEO_TRABAJADOR","ENGINE_PROVIDED", "TECHNICAL",       "REPLACE",  null,  "PERIOD");
-        jdbc.update(cSql, idPIRPF,     "TIPO_IRPF",               "ENGINE_PROVIDED",  "TECHNICAL",       "REPLACE",  null,  "PERIOD");
-        jdbc.update(cSql, id700,       "CC_TRABAJADOR",           "PERCENTAGE",       "DEDUCTION",       "REPLACE", "700",  "PERIOD");
-        jdbc.update(cSql, id703,       "DESEMPLEO_TRABAJADOR",    "PERCENTAGE",       "DEDUCTION",       "REPLACE", "703",  "PERIOD");
-        jdbc.update(cSql, id800,       "RETENCION_IRPF",          "PERCENTAGE",       "DEDUCTION",       "REPLACE", "800",  "PERIOD");
-        jdbc.update(cSql, id970,       "TOTAL_DEVENGOS",          "AGGREGATE",        "TOTAL_EARNING",   "REPLACE", "970",  "PERIOD");
-        jdbc.update(cSql, id980,       "TOTAL_DEDUCCIONES",       "AGGREGATE",        "TOTAL_DEDUCTION", "REPLACE", "980",  "PERIOD");
-        jdbc.update(cSql, id990,       "LIQUIDO_A_PAGAR",         "AGGREGATE",        "NET_PAY",         "REPLACE", "990",  "PERIOD");
+        jdbc.update(cSql, id101,       "SALARIO_BASE",            "RATE_BY_QUANTITY", "EARNING",         "101",  "SEGMENT");
+        jdbc.update(cSql, idD01,       "DIAS_DEVENGO",            "ENGINE_PROVIDED",  "TECHNICAL",       null,  "SEGMENT");
+        jdbc.update(cSql, idJ01,       "COEFICIENTE_JORNADA",     "ENGINE_PROVIDED",  "TECHNICAL",       null,  "SEGMENT");
+        jdbc.update(cSql, idP01,       "PRECIO_DIA",              "RATE_BY_QUANTITY", "BASE",            null,  "SEGMENT");
+        jdbc.update(cSql, idP02,       "PRECIO_DIA_PLENO",        "DIRECT_AMOUNT",    "BASE",            null,  "PERIOD");
+        jdbc.update(cSql, idB01,       "BASE_COTIZABLE",          "AGGREGATE",        "BASE",            null,  "PERIOD");
+        jdbc.update(cSql, idPSSCC,     "TIPO_CC_TRABAJADOR",      "ENGINE_PROVIDED",  "TECHNICAL",       null,  "PERIOD");
+        jdbc.update(cSql, idPSSDESEMP, "TIPO_DESEMPLEO_TRABAJADOR","ENGINE_PROVIDED", "TECHNICAL",       null,  "PERIOD");
+        jdbc.update(cSql, idPIRPF,     "TIPO_IRPF",               "ENGINE_PROVIDED",  "TECHNICAL",       null,  "PERIOD");
+        jdbc.update(cSql, id700,       "CC_TRABAJADOR",           "PERCENTAGE",       "DEDUCTION",       "700",  "PERIOD");
+        jdbc.update(cSql, id703,       "DESEMPLEO_TRABAJADOR",    "PERCENTAGE",       "DEDUCTION",       "703",  "PERIOD");
+        jdbc.update(cSql, id800,       "RETENCION_IRPF",          "PERCENTAGE",       "DEDUCTION",       "800",  "PERIOD");
+        jdbc.update(cSql, id970,       "TOTAL_DEVENGOS",          "AGGREGATE",        "TOTAL_EARNING",   "970",  "PERIOD");
+        jdbc.update(cSql, id980,       "TOTAL_DEDUCCIONES",       "AGGREGATE",        "TOTAL_DEDUCTION", "980",  "PERIOD");
+        jdbc.update(cSql, id990,       "LIQUIDO_A_PAGAR",         "AGGREGATE",        "NET_PAY",         "990",  "PERIOD");
 
         String oSql = "insert into payroll_engine.payroll_concept_operand" +
                 " (target_object_id, operand_role, source_object_id, created_at, updated_at)" +
@@ -237,13 +237,13 @@ public class PayrollScenarioFixtures {
         Long idBcc     = objectId(ruleSystemCode, "CONCEPT", "B_CC");
 
         String cSql = "insert into payroll_engine.payroll_concept" +
-                " (object_id, concept_mnemonic, calculation_type, functional_nature, result_composition_mode," +
-                "  payslip_order_code, execution_scope, persist_to_concepts, created_at, updated_at)" +
-                " values (?, ?, ?, ?, ?, null, 'PERIOD', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
-        jdbc.update(cSql, idTopeMax, "TOPE_MAX_COTIZACION",   "ENGINE_PROVIDED", "TECHNICAL", "ACCUMULATE");
-        jdbc.update(cSql, idTopeMin, "TOPE_MIN_COTIZACION",   "ENGINE_PROVIDED", "TECHNICAL", "ACCUMULATE");
-        jdbc.update(cSql, idBccMax,  "BASE_COTIZACION_MAX",   "LEAST",           "BASE",      "REPLACE");
-        jdbc.update(cSql, idBcc,     "BASE_COTIZACION_COTIZ", "GREATEST",        "BASE",      "REPLACE");
+                " (object_id, concept_mnemonic, calculation_type, functional_nature," +
+                "  payslip_order_code, execution_scope, created_at, updated_at)" +
+                " values (?, ?, ?, ?, null, 'PERIOD', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
+        jdbc.update(cSql, idTopeMax, "TOPE_MAX_COTIZACION",   "ENGINE_PROVIDED", "TECHNICAL");
+        jdbc.update(cSql, idTopeMin, "TOPE_MIN_COTIZACION",   "ENGINE_PROVIDED", "TECHNICAL");
+        jdbc.update(cSql, idBccMax,  "BASE_COTIZACION_MAX",   "LEAST",           "BASE");
+        jdbc.update(cSql, idBcc,     "BASE_COTIZACION_COTIZ", "GREATEST",        "BASE");
 
         String oSql = "insert into payroll_engine.payroll_concept_operand" +
                 " (target_object_id, operand_role, source_object_id, created_at, updated_at)" +

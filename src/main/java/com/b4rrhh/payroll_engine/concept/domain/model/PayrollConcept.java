@@ -15,10 +15,8 @@ public class PayrollConcept {
     private final String conceptMnemonic;
     private final CalculationType calculationType;
     private final FunctionalNature functionalNature;
-    private final ResultCompositionMode resultCompositionMode;
     private final String payslipOrderCode;
     private final ExecutionScope executionScope;
-    private final boolean persistToConcepts;
     private final String summary;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
@@ -28,15 +26,13 @@ public class PayrollConcept {
             String conceptMnemonic,
             CalculationType calculationType,
             FunctionalNature functionalNature,
-            ResultCompositionMode resultCompositionMode,
             String payslipOrderCode,
             ExecutionScope executionScope,
-            boolean persistToConcepts,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
-        this(object, conceptMnemonic, calculationType, functionalNature, resultCompositionMode,
-                payslipOrderCode, executionScope, persistToConcepts, null, createdAt, updatedAt);
+        this(object, conceptMnemonic, calculationType, functionalNature,
+                payslipOrderCode, executionScope, null, createdAt, updatedAt);
     }
 
     public PayrollConcept(
@@ -44,10 +40,8 @@ public class PayrollConcept {
             String conceptMnemonic,
             CalculationType calculationType,
             FunctionalNature functionalNature,
-            ResultCompositionMode resultCompositionMode,
             String payslipOrderCode,
             ExecutionScope executionScope,
-            boolean persistToConcepts,
             String summary,
             LocalDateTime createdAt,
             LocalDateTime updatedAt
@@ -70,9 +64,6 @@ public class PayrollConcept {
         if (functionalNature == null) {
             throw new IllegalArgumentException("functionalNature is required");
         }
-        if (resultCompositionMode == null) {
-            throw new IllegalArgumentException("resultCompositionMode is required");
-        }
         if (executionScope == null) {
             throw new IllegalArgumentException("executionScope is required");
         }
@@ -80,10 +71,8 @@ public class PayrollConcept {
         this.conceptMnemonic = conceptMnemonic;
         this.calculationType = calculationType;
         this.functionalNature = functionalNature;
-        this.resultCompositionMode = resultCompositionMode;
         this.payslipOrderCode = payslipOrderCode;
         this.executionScope = executionScope;
-        this.persistToConcepts = persistToConcepts;
         this.summary = summary;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -113,20 +102,12 @@ public class PayrollConcept {
         return functionalNature;
     }
 
-    public ResultCompositionMode getResultCompositionMode() {
-        return resultCompositionMode;
-    }
-
     public String getPayslipOrderCode() {
         return payslipOrderCode;
     }
 
     public ExecutionScope getExecutionScope() {
         return executionScope;
-    }
-
-    public boolean isPersistToConcepts() {
-        return persistToConcepts;
     }
 
     public String getSummary() {

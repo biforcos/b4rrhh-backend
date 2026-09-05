@@ -7,7 +7,6 @@ import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
-import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraph;
@@ -171,7 +170,7 @@ class ConceptDependencyGraphServiceTest {
         PayrollObject object = new PayrollObject(id, ruleSystemCode, PayrollObjectTypeCode.CONCEPT,
                 conceptCode, null, null);
         return new PayrollConcept(object, conceptCode, calculationType, nature,
-                ResultCompositionMode.REPLACE, null, ExecutionScope.SEGMENT, true, null, null);
+                null, ExecutionScope.SEGMENT, null, null);
     }
 
     private static PayrollConceptFeedRelation feedRelation(PayrollConcept source, PayrollConcept target) {

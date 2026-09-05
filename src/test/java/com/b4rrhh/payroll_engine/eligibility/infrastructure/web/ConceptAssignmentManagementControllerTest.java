@@ -59,10 +59,9 @@ class ConceptAssignmentManagementControllerTest {
         );
         jdbc.update("insert into payroll_engine.payroll_concept "
                         + "(object_id, concept_mnemonic, calculation_type, functional_nature, "
-                        + "result_composition_mode, payslip_order_code, execution_scope, "
-                        + "persist_to_concepts, created_at, updated_at) "
-                        + "values (?, 'SB', 'DIRECT_AMOUNT', 'EARNING', 'REPLACE', '101', 'PERIOD', "
-                        + "true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                        + "payslip_order_code, execution_scope, created_at, updated_at) "
+                        + "values (?, 'SB', 'DIRECT_AMOUNT', 'EARNING', '101', 'PERIOD', "
+                        + "CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 objectId);
     }
 

@@ -6,7 +6,6 @@ import com.b4rrhh.payroll_engine.concept.domain.model.FeedMode;
 import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
-import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
 import com.b4rrhh.payroll_engine.dependency.domain.exception.ConceptDependencyCycleException;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
@@ -33,10 +32,8 @@ class ConceptDependencyGraphTest {
                 code + "_MNE",
                 CalculationType.DIRECT_AMOUNT,
                 FunctionalNature.EARNING,
-                ResultCompositionMode.REPLACE,
                 null,
                 ExecutionScope.SEGMENT,
-                true,
                 null, null
         );
     }

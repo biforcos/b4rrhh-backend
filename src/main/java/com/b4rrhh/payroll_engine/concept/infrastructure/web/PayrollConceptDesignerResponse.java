@@ -6,10 +6,8 @@ public record PayrollConceptDesignerResponse(
         String conceptMnemonic,
         String calculationType,
         String functionalNature,
-        String resultCompositionMode,
         String executionScope,
         String payslipOrderCode,
-        boolean persistToConcepts,
         String summary
 ) {
 }

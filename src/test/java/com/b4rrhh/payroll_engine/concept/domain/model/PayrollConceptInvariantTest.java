@@ -25,10 +25,8 @@ class PayrollConceptInvariantTest {
                         "TABLA_MNE",
                         CalculationType.DIRECT_AMOUNT,
                         FunctionalNature.BASE,
-                        ResultCompositionMode.REPLACE,
                         null,
                         ExecutionScope.SEGMENT,
-                        true,
                         null, null
                 ));
 
@@ -43,10 +41,8 @@ class PayrollConceptInvariantTest {
                 "SAL_BASE",
                 CalculationType.DIRECT_AMOUNT,
                 FunctionalNature.EARNING,
-                ResultCompositionMode.REPLACE,
                 null,
                 ExecutionScope.SEGMENT,
-                true,
                 null, null
         );
     }

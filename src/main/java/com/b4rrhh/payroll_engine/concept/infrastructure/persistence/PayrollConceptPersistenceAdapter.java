@@ -4,7 +4,6 @@ import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
 import com.b4rrhh.payroll_engine.concept.domain.model.ExecutionScope;
 import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
-import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptRepository;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
@@ -93,10 +92,8 @@ public class PayrollConceptPersistenceAdapter implements PayrollConceptRepositor
         entity.setConceptMnemonic(domain.getConceptMnemonic());
         entity.setCalculationType(domain.getCalculationType().name());
         entity.setFunctionalNature(domain.getFunctionalNature().name());
-        entity.setResultCompositionMode(domain.getResultCompositionMode().name());
         entity.setPayslipOrderCode(domain.getPayslipOrderCode());
         entity.setExecutionScope(domain.getExecutionScope().name());
-        entity.setPersistToConcepts(domain.isPersistToConcepts());
         entity.setSummary(domain.getSummary());
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
@@ -118,10 +115,8 @@ public class PayrollConceptPersistenceAdapter implements PayrollConceptRepositor
                 entity.getConceptMnemonic(),
                 CalculationType.valueOf(entity.getCalculationType()),
                 FunctionalNature.valueOf(entity.getFunctionalNature()),
-                ResultCompositionMode.valueOf(entity.getResultCompositionMode()),
                 entity.getPayslipOrderCode(),
                 ExecutionScope.valueOf(entity.getExecutionScope()),
-                entity.isPersistToConcepts(),
                 entity.getSummary(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()

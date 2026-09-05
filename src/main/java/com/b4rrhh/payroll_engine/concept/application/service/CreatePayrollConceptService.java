@@ -54,10 +54,8 @@ public class CreatePayrollConceptService implements CreatePayrollConceptUseCase 
                 command.conceptMnemonic(),
                 command.calculationType(),
                 command.functionalNature(),
-                command.resultCompositionMode(),
                 command.payslipOrderCode(),
                 command.executionScope(),
-                command.persistToConcepts(),
                 command.summary(),
                 now,
                 now

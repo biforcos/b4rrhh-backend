@@ -7,10 +7,8 @@ public record CreatePayrollConceptRequest(
         @NotBlank String conceptMnemonic,
         @NotBlank String calculationType,
         @NotBlank String functionalNature,
-        @NotBlank String resultCompositionMode,
         @NotBlank String executionScope,
         String payslipOrderCode,
-        Boolean persistToConcepts,
         String summary
 ) {
 }

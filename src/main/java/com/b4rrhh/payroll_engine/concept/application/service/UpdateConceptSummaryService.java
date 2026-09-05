@@ -30,10 +30,8 @@ public class UpdateConceptSummaryService implements UpdateConceptSummaryUseCase 
                 existing.getConceptMnemonic(),
                 existing.getCalculationType(),
                 existing.getFunctionalNature(),
-                existing.getResultCompositionMode(),
                 existing.getPayslipOrderCode(),
                 existing.getExecutionScope(),
-                existing.isPersistToConcepts(),
                 command.summary(),
                 existing.getCreatedAt(),
                 null

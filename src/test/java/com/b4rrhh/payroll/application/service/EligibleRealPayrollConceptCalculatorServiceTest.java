@@ -10,7 +10,6 @@ import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
-import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptRepository;
@@ -89,10 +88,8 @@ class PayrollConceptGraphCalculatorServiceTest {
                 conceptCode,
                 calculationType,
                 FunctionalNature.EARNING,
-                ResultCompositionMode.REPLACE,
                 conceptCode,
                 ExecutionScope.PERIOD,
-                true,
                 null,
                 null
         );

@@ -65,10 +65,9 @@ class DemoCountsQueryIntegrationTest {
                 Long.class);
         jdbcTemplate.update("insert into payroll_engine.payroll_concept "
                         + "(object_id, concept_mnemonic, calculation_type, functional_nature, "
-                        + "result_composition_mode, payslip_order_code, execution_scope, "
-                        + "persist_to_concepts, created_at, updated_at) "
-                        + "values (?, 'DEMO_COUNTS_TEST', 'DIRECT_AMOUNT', 'EARNING', 'REPLACE', "
-                        + "'DEMO_COUNTS_TEST', 'PERIOD', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                        + "payslip_order_code, execution_scope, created_at, updated_at) "
+                        + "values (?, 'DEMO_COUNTS_TEST', 'DIRECT_AMOUNT', 'EARNING', "
+                        + "'DEMO_COUNTS_TEST', 'PERIOD', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 objectId);
     }
 }

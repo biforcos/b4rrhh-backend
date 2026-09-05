@@ -28,7 +28,7 @@ class PayrollConceptPersistenceAdapterTest {
         PayrollObjectEntity objectEntity = saveObject("ESP", "CONCEPT", "SALBASE");
 
         PayrollConceptEntity conceptEntity = buildConceptEntity(
-                objectEntity, "SAL_BASE", "DIRECT_AMOUNT", "EARNING", "REPLACE", null, "SEGMENT"
+                objectEntity, "SAL_BASE", "DIRECT_AMOUNT", "EARNING", null, "SEGMENT"
         );
         conceptRepository.saveAndFlush(conceptEntity);
 
@@ -39,7 +39,6 @@ class PayrollConceptPersistenceAdapterTest {
         assertEquals("SAL_BASE", found.get().getConceptMnemonic());
         assertEquals("DIRECT_AMOUNT", found.get().getCalculationType());
         assertEquals("EARNING", found.get().getFunctionalNature());
-        assertEquals("REPLACE", found.get().getResultCompositionMode());
         assertEquals("SEGMENT", found.get().getExecutionScope());
     }
 
@@ -48,7 +47,7 @@ class PayrollConceptPersistenceAdapterTest {
         PayrollObjectEntity objectEntity = saveObject("ESP", "CONCEPT", "IRPF");
 
         PayrollConceptEntity conceptEntity = buildConceptEntity(
-                objectEntity, "IRPF_RET", "PERCENTAGE", "DEDUCTION", "REPLACE", "200", "PERIOD"
+                objectEntity, "IRPF_RET", "PERCENTAGE", "DEDUCTION", "200", "PERIOD"
         );
         conceptRepository.saveAndFlush(conceptEntity);
 
@@ -68,7 +67,6 @@ class PayrollConceptPersistenceAdapterTest {
         orphanConcept.setConceptMnemonic("ORPHAN");
         orphanConcept.setCalculationType("DIRECT_AMOUNT");
         orphanConcept.setFunctionalNature("EARNING");
-        orphanConcept.setResultCompositionMode("REPLACE");
         orphanConcept.setExecutionScope("SEGMENT");
 
         assertThrows(Exception.class, () -> conceptRepository.saveAndFlush(orphanConcept));
@@ -87,7 +85,6 @@ class PayrollConceptPersistenceAdapterTest {
             String mnemonic,
             String calculationType,
             String functionalNature,
-            String resultCompositionMode,
             String payslipOrderCode,
             String executionScope
     ) {
@@ -96,7 +93,6 @@ class PayrollConceptPersistenceAdapterTest {
         entity.setConceptMnemonic(mnemonic);
         entity.setCalculationType(calculationType);
         entity.setFunctionalNature(functionalNature);
-        entity.setResultCompositionMode(resultCompositionMode);
         entity.setPayslipOrderCode(payslipOrderCode);
         entity.setExecutionScope(executionScope);
         return entity;

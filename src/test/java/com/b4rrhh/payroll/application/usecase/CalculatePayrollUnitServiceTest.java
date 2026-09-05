@@ -23,7 +23,6 @@ import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
 import com.b4rrhh.payroll_engine.concept.domain.model.ExecutionScope;
 import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
-import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
 import com.b4rrhh.payroll_engine.execution.application.service.AccrualDaysConceptCalculator;
 import com.b4rrhh.payroll_engine.execution.application.service.DefaultSegmentExecutionEngine;
@@ -155,7 +154,7 @@ class CalculatePayrollUnitServiceTest {
         com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept engineConcept101 =
                 new com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept(
                         obj101, "SALARIO_BASE", CalculationType.DIRECT_AMOUNT, FunctionalNature.EARNING,
-                        ResultCompositionMode.REPLACE, "101", ExecutionScope.PERIOD, true, null, null);
+                        "101", ExecutionScope.PERIOD, null, null);
         ConceptExecutionPlanEntry entry101 = new ConceptExecutionPlanEntry(
                 new ConceptNodeIdentity("ESP", "101"), CalculationType.DIRECT_AMOUNT);
         EligibleExecutionPlanResult planResult = new EligibleExecutionPlanResult(
@@ -420,8 +419,8 @@ class CalculatePayrollUnitServiceTest {
     ) {
         return new com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept(
                 new PayrollObject(objectId, "ESP", PayrollObjectTypeCode.CONCEPT, code, null, null),
-                mnemonic, calculationType, nature, ResultCompositionMode.REPLACE,
-                payslipOrderCode, scope, true, null, null);
+                mnemonic, calculationType, nature,
+                payslipOrderCode, scope, null, null);
     }
 
     private Payroll payroll() {

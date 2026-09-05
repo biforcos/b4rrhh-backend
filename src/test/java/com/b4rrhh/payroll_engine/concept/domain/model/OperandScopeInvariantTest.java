@@ -62,6 +62,6 @@ class OperandScopeInvariantTest {
         LocalDateTime now = LocalDateTime.now();
         PayrollObject object = new PayrollObject(id, "ESP", PayrollObjectTypeCode.CONCEPT, code, now, now);
         return new PayrollConcept(object, mnemonic, CalculationType.DIRECT_AMOUNT,
-                FunctionalNature.TECHNICAL, ResultCompositionMode.REPLACE, null, scope, true, now, now);
+                FunctionalNature.TECHNICAL, null, scope, now, now);
     }
 }

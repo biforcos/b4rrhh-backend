@@ -6,7 +6,6 @@ import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
 import com.b4rrhh.payroll_engine.concept.domain.model.ExecutionScope;
 import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
-import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptRepository;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
@@ -44,7 +43,7 @@ class CreatePayrollConceptServiceTest {
         CreatePayrollConceptCommand command = new CreatePayrollConceptCommand(
                 "ES", "201", "PLUS_TRANSPORTE",
                 CalculationType.RATE_BY_QUANTITY, FunctionalNature.EARNING,
-                ResultCompositionMode.ACCUMULATE, ExecutionScope.SEGMENT, "20", true, null
+                ExecutionScope.SEGMENT, "20", null
         );
         when(conceptRepository.existsByBusinessKey("ES", "201")).thenReturn(false);
         when(objectRepository.save(any(PayrollObject.class))).thenAnswer(invocation -> {
@@ -77,7 +76,6 @@ class CreatePayrollConceptServiceTest {
         assertThat(savedConcept.getConceptMnemonic()).isEqualTo("PLUS_TRANSPORTE");
         assertThat(savedConcept.getCalculationType()).isEqualTo(CalculationType.RATE_BY_QUANTITY);
         assertThat(savedConcept.getFunctionalNature()).isEqualTo(FunctionalNature.EARNING);
-        assertThat(savedConcept.getResultCompositionMode()).isEqualTo(ResultCompositionMode.ACCUMULATE);
         assertThat(savedConcept.getExecutionScope()).isEqualTo(ExecutionScope.SEGMENT);
         assertThat(savedConcept.getPayslipOrderCode()).isEqualTo("20");
         assertThat(savedConcept.getObject().getId()).isEqualTo(42L);
@@ -90,7 +88,7 @@ class CreatePayrollConceptServiceTest {
         CreatePayrollConceptCommand command = new CreatePayrollConceptCommand(
                 "ES", "101", "SALARIO_BASE",
                 CalculationType.DIRECT_AMOUNT, FunctionalNature.EARNING,
-                ResultCompositionMode.REPLACE, ExecutionScope.PERIOD, "10", true, null
+                ExecutionScope.PERIOD, "10", null
         );
         when(conceptRepository.existsByBusinessKey("ES", "101")).thenReturn(true);
 

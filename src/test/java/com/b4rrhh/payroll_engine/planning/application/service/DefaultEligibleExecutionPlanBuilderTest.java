@@ -6,7 +6,6 @@ import com.b4rrhh.payroll_engine.concept.domain.model.FeedMode;
 import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
-import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository;
@@ -386,8 +385,8 @@ class DefaultEligibleExecutionPlanBuilderTest {
     private PayrollConcept concept(long id, String code, CalculationType type) {
         PayrollObject obj = new PayrollObject(id, RS, PayrollObjectTypeCode.CONCEPT, code, NOW, NOW);
         return new PayrollConcept(obj, code, type,
-                FunctionalNature.INFORMATIONAL, ResultCompositionMode.REPLACE,
-                null, ExecutionScope.SEGMENT, true, NOW, NOW);
+                FunctionalNature.INFORMATIONAL,
+                null, ExecutionScope.SEGMENT, NOW, NOW);
     }
 
     private PayrollConceptFeedRelation feedRel(PayrollConcept source, PayrollConcept target) {

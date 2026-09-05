@@ -54,7 +54,6 @@ class PayrollConceptManagementControllerTest {
         request.put("conceptMnemonic", "PLUS_TRANSPORTE");
         request.put("calculationType", "RATE_BY_QUANTITY");
         request.put("functionalNature", "EARNING");
-        request.put("resultCompositionMode", "ACCUMULATE");
         request.put("executionScope", "SEGMENT");
 
         mockMvc.perform(post("/payroll-engine/{ruleSystemCode}/concepts", RULE_SYSTEM_CODE)
@@ -73,7 +72,6 @@ class PayrollConceptManagementControllerTest {
         request.put("conceptMnemonic", "DUPLICATE");
         request.put("calculationType", "DIRECT_AMOUNT");
         request.put("functionalNature", "TECHNICAL");
-        request.put("resultCompositionMode", "REPLACE");
         request.put("executionScope", "SEGMENT");
 
         mockMvc.perform(post("/payroll-engine/{ruleSystemCode}/concepts", RULE_SYSTEM_CODE)

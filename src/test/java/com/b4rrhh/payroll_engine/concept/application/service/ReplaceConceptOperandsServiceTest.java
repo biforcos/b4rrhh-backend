@@ -9,7 +9,6 @@ import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
-import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptRepository;
 import com.b4rrhh.payroll_engine.object.domain.exception.PayrollObjectNotFoundException;
@@ -139,6 +138,6 @@ class ReplaceConceptOperandsServiceTest {
         LocalDateTime now = LocalDateTime.now();
         PayrollObject object = new PayrollObject(id, RS, PayrollObjectTypeCode.CONCEPT, code, now, now);
         return new PayrollConcept(object, mnemonic, CalculationType.DIRECT_AMOUNT,
-                FunctionalNature.TECHNICAL, ResultCompositionMode.REPLACE, null, scope, true, now, now);
+                FunctionalNature.TECHNICAL, null, scope, now, now);
     }
 }

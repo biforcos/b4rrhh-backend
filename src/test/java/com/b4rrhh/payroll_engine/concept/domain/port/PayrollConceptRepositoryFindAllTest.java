@@ -5,7 +5,6 @@ import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
 import com.b4rrhh.payroll_engine.concept.domain.model.ExecutionScope;
 import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
-import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import com.b4rrhh.payroll_engine.object.infrastructure.persistence.PayrollObjectEntity;
@@ -108,10 +107,8 @@ class PayrollConceptRepositoryFindAllTest {
                 mnemonic,
                 CalculationType.DIRECT_AMOUNT,
                 FunctionalNature.EARNING,
-                ResultCompositionMode.REPLACE,
                 null,
                 ExecutionScope.PERIOD,
-                true,
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );

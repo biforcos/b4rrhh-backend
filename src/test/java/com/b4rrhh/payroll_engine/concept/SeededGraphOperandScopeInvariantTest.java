@@ -127,10 +127,9 @@ class SeededGraphOperandScopeInvariantTest {
                 RULE_SYSTEM_CODE, objectCode);
         jdbc.update("insert into payroll_engine.payroll_concept "
                         + "(object_id, concept_mnemonic, calculation_type, functional_nature, "
-                        + "result_composition_mode, payslip_order_code, execution_scope, "
-                        + "persist_to_concepts, created_at, updated_at) "
-                        + "select id, ?, 'DIRECT_AMOUNT', 'TECHNICAL', 'REPLACE', null, 'SEGMENT', "
-                        + "true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP "
+                        + "payslip_order_code, execution_scope, created_at, updated_at) "
+                        + "select id, ?, 'DIRECT_AMOUNT', 'TECHNICAL', null, 'SEGMENT', "
+                        + "CURRENT_TIMESTAMP, CURRENT_TIMESTAMP "
                         + "from payroll_engine.payroll_object "
                         + "where rule_system_code = ? and object_type_code = 'CONCEPT' and object_code = ?",
                 mnemonic, RULE_SYSTEM_CODE, objectCode);

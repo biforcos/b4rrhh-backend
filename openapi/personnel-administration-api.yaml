@@ -9728,7 +9728,7 @@ components:
 
     CreatePayrollConceptRequest:
       type: object
-      required: [conceptCode, conceptMnemonic, calculationType, functionalNature, resultCompositionMode, executionScope]
+      required: [conceptCode, conceptMnemonic, calculationType, functionalNature, executionScope]
       properties:
         conceptCode:
           type: string
@@ -9742,25 +9742,19 @@ components:
         functionalNature:
           type: string
           enum: [EARNING, DEDUCTION, BASE, INFORMATIONAL, TECHNICAL, TOTAL_EARNING, TOTAL_DEDUCTION, NET_PAY]
-        resultCompositionMode:
-          type: string
-          enum: [REPLACE, ACCUMULATE]
         executionScope:
           type: string
           enum: [SEGMENT, PERIOD]
         payslipOrderCode:
           type: string
           nullable: true
-        persistToConcepts:
-          type: boolean
-          default: true
         summary:
           type: string
           nullable: true
 
     PayrollConceptDesignerResponse:
       type: object
-      required: [ruleSystemCode, conceptCode, conceptMnemonic, calculationType, functionalNature, resultCompositionMode, executionScope, persistToConcepts]
+      required: [ruleSystemCode, conceptCode, conceptMnemonic, calculationType, functionalNature, executionScope]
       properties:
         ruleSystemCode:
           type: string
@@ -9772,15 +9766,11 @@ components:
           type: string
         functionalNature:
           type: string
-        resultCompositionMode:
-          type: string
         executionScope:
           type: string
         payslipOrderCode:
           type: string
           nullable: true
-        persistToConcepts:
-          type: boolean
         summary:
           type: string
           nullable: true

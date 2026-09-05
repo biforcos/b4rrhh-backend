@@ -5,7 +5,6 @@ import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
 import com.b4rrhh.payroll_engine.concept.domain.model.ExecutionScope;
 import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
-import com.b4rrhh.payroll_engine.concept.domain.model.ResultCompositionMode;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -18,10 +17,8 @@ public class PayrollConceptManagementAssembler {
                 concept.getConceptMnemonic(),
                 concept.getCalculationType().name(),
                 concept.getFunctionalNature().name(),
-                concept.getResultCompositionMode().name(),
                 concept.getExecutionScope().name(),
                 concept.getPayslipOrderCode(),
-                concept.isPersistToConcepts(),
                 concept.getSummary()
         );
     }
@@ -33,10 +30,8 @@ public class PayrollConceptManagementAssembler {
                 request.conceptMnemonic(),
                 parseEnum(CalculationType.class, request.calculationType(), "calculationType"),
                 parseEnum(FunctionalNature.class, request.functionalNature(), "functionalNature"),
-                parseEnum(ResultCompositionMode.class, request.resultCompositionMode(), "resultCompositionMode"),
                 parseEnum(ExecutionScope.class, request.executionScope(), "executionScope"),
                 request.payslipOrderCode(),
-                request.persistToConcepts() != null ? request.persistToConcepts() : true,
                 request.summary()
         );
     }

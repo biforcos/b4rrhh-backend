@@ -53,7 +53,7 @@ com.b4rrhh.payroll_engine
 │
 ├── concept/                       ← Definición semántica de conceptos
 │   ├── domain/model/              PayrollConcept, CalculationType, FunctionalNature,
-│   │                              ResultCompositionMode, ExecutionScope, FeedMode,
+│   │                              ExecutionScope, FeedMode,
 │   │                              PayrollConceptFeedRelation, PayrollConceptOperand, OperandRole
 │   ├── domain/port/               PayrollConceptRepository, PayrollConceptFeedRelationRepository,
 │   │                              PayrollConceptOperandRepository
@@ -137,7 +137,6 @@ PayrollConcept
   conceptMnemonic      String            (etiqueta técnica legible)
   calculationType      CalculationType
   functionalNature     FunctionalNature
-  resultCompositionMode ResultCompositionMode
   payslipOrderCode     String (nullable)
   executionScope       ExecutionScope
 ```
@@ -165,15 +164,6 @@ Clasifica el concepto según su rol económico:
 `PERIOD` no es «evalúalo una vez porque es más barato»: un tope o un suelo aplicados por quincenas dan
 otro número que aplicados al mes. Ningún operando (`qty`, `rate`, `base`, `pct`, `left`, `right`) cruza
 de un concepto `SEGMENT` a uno `PERIOD`; los feeds sí, porque sumar está definido (ADR-058).
-
-### `ResultCompositionMode`
-
-| Valor | Comportamiento al combinar resultados multi-segmento |
-|---|---|
-| `REPLACE` | El resultado del último segmento reemplaza al anterior |
-| `ACCUMULATE` | Los resultados de todos los segmentos se suman |
-
-> Inerte desde backend#64: la composición es siempre suma por regla (ADR-058). Se retira en backend#60.
 
 ### `PayrollConceptFeedRelation`
 
@@ -687,7 +677,6 @@ payroll_engine.payroll_concept
   concept_mnemonic        VARCHAR(50)
   calculation_type        VARCHAR(30)
   functional_nature       VARCHAR(30)
-  result_composition_mode VARCHAR(30)
   payslip_order_code      VARCHAR(30) nullable
   execution_scope         VARCHAR(30)
 
