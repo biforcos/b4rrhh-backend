@@ -905,11 +905,124 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AddressErrorResponse"
+    delete:
+      operationId: deleteAddressByBusinessKey
+      summary: Remove an address
+      description: >-
+        Removing the last address of its type reopens the previous one of the
+        same type up to where the removed one ended (ADR-057). Removing one in
+        the middle of the domicile would leave the presence uncovered and is
+        rejected: the error names the neighbours the user could stretch first.
+        In an optional type the gap is legal and the removal is accepted.
+      tags:
+        - Employee Address
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: addressNumber
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "204":
+          description: Address removed
+        "404":
+          description: Rule system, employee, or address not found
+        "409":
+          description: >-
+            ADDRESS_COVERAGE_GAP: removing it would leave the presence without a
+            domicile; details.gaps and details.stretchCandidates say where and
+            what to stretch.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddressErrorResponse"
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/addresses/plan:
+    post:
+      operationId: planAddressChangeByBusinessKey
+      summary: Plan a change to an address series without applying it
+      description: >-
+        Answers what adding, removing or correcting an address would do to the
+        series of its type (ADR-057): what would be closed or reopened, what gap
+        or overlap would appear, and the series as it would be. Nothing is
+        written. A rejected plan is still a 200: the rejection and its reasons
+        are in the body, so the screen can show them before the user confirms.
+        An ADD names the series by addressTypeCode; a REMOVE or a CORRECT takes
+        it from the address they are about.
+      tags:
+        - Employee Address
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlanAddressChangeRequest"
+      responses:
+        "200":
+          description: The plan, accepted or rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddressPlanResponse"
+        "400":
+          description: Invalid request
+        "404":
+          description: Employee or address not found
+        "409":
+          description: ADDRESS_TYPE_COVERAGE_NOT_DECLARED for a type the catalog gives no coverage to.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddressErrorResponse"
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/addresses/{addressNumber}/close:
     post:
       operationId: closeAddressByBusinessKey
       summary: Close employee address by business key
+      deprecated: true
+      description: >-
+        Kept while the current screen still closes an address before adding the
+        next one. To be removed once the screen is migrated: adding an address
+        already closes the one of the same type in force the day before
+        (ADR-057).
       tags:
         - Employee Address
       parameters:
@@ -7548,6 +7661,121 @@ components:
           type: string
           format: date
           nullable: true
+    PlanAddressChangeRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - operation
+      properties:
+        operation:
+          type: string
+          enum: [ADD, REMOVE, CORRECT]
+          description: >-
+            ADD plans a new address of addressTypeCode from startDate to endDate;
+            REMOVE plans removing addressNumber; CORRECT plans giving
+            addressNumber the dates startDate to endDate.
+        addressTypeCode:
+          type: string
+          maxLength: 30
+          description: >-
+            Required for ADD: the series the address goes into. Optional for
+            REMOVE and CORRECT, whose series is the type of addressNumber; if
+            given it has to match.
+        addressNumber:
+          type: integer
+          format: int32
+          description: Required for REMOVE and CORRECT.
+        startDate:
+          type: string
+          format: date
+          description: Required for ADD and CORRECT.
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: Omit it for an address that stays open.
+    AddressPlanAdjustment:
+      type: object
+      description: The one existing address the plan would move on its own. Only its end date changes.
+      required:
+        - addressNumber
+        - before
+        - after
+      properties:
+        addressNumber:
+          type: integer
+          format: int32
+        before:
+          $ref: "#/components/schemas/AddressPeriod"
+        after:
+          $ref: "#/components/schemas/AddressPeriod"
+    AddressPlanResponse:
+      type: object
+      required:
+        - operation
+        - accepted
+        - addressTypeCode
+        - occurrence
+        - overlaps
+        - gaps
+        - stretchCandidates
+        - projected
+      properties:
+        operation:
+          type: string
+          enum: [ADD, REMOVE, CORRECT]
+        accepted:
+          type: boolean
+        rejection:
+          type: string
+          nullable: true
+          enum: [OVERLAP, GAP_NOT_ALLOWED, IS_A_CORRECTION]
+          description: >-
+            Why the plan cannot be applied. Null when accepted. An address
+            series may outlive the presence, so OUTSIDE_PRESENCE never occurs
+            here. IS_A_CORRECTION means the plan is not the operation it was
+            asked for: an ADD whose start date is the start date of an existing
+            address of the same type is the correction of that one (named in
+            correctedOccurrence) and has to be asked for as a CORRECT.
+        addressTypeCode:
+          type: string
+          description: The series the plan is about. Addresses of other types are never in it.
+        occurrence:
+          $ref: "#/components/schemas/AddressOccurrence"
+        correctedOccurrence:
+          nullable: true
+          description: >-
+            On a correction, the address as it stands today, the one occurrence
+            replaces. Null on an add and on a removal.
+          allOf:
+            - $ref: "#/components/schemas/AddressOccurrence"
+        adjustedOccurrence:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/AddressPlanAdjustment"
+        overlaps:
+          type: array
+          description: Dates two addresses of the type would share.
+          items:
+            $ref: "#/components/schemas/AddressPeriod"
+        gaps:
+          type: array
+          description: >-
+            Stretches of the presence the resulting series would leave without
+            an address of the type. Legal, and still reported, when the type is
+            optional.
+          items:
+            $ref: "#/components/schemas/AddressPeriod"
+        stretchCandidates:
+          type: array
+          description: The neighbours of the gaps, which the user could stretch. Named, never moved.
+          items:
+            $ref: "#/components/schemas/AddressOccurrence"
+        projected:
+          type: array
+          description: The series of the type as it would be, accepted or not.
+          items:
+            $ref: "#/components/schemas/AddressOccurrence"
     AddressResponse:
       type: object
       required:

@@ -4,19 +4,26 @@ import com.b4rrhh.employee.address.application.usecase.CloseAddressCommand;
 import com.b4rrhh.employee.address.application.usecase.CloseAddressUseCase;
 import com.b4rrhh.employee.address.application.usecase.CreateAddressCommand;
 import com.b4rrhh.employee.address.application.usecase.CreateAddressUseCase;
+import com.b4rrhh.employee.address.application.usecase.DeleteAddressCommand;
+import com.b4rrhh.employee.address.application.usecase.DeleteAddressUseCase;
 import com.b4rrhh.employee.address.application.usecase.GetAddressByBusinessKeyUseCase;
 import com.b4rrhh.employee.address.application.usecase.ListEmployeeAddressesUseCase;
+import com.b4rrhh.employee.address.application.usecase.PlanAddressChangeCommand;
+import com.b4rrhh.employee.address.application.usecase.PlanAddressChangeUseCase;
 import com.b4rrhh.employee.address.application.usecase.UpdateAddressCommand;
 import com.b4rrhh.employee.address.application.usecase.UpdateAddressUseCase;
 import com.b4rrhh.employee.address.domain.model.Address;
 import com.b4rrhh.employee.address.infrastructure.web.assembler.AddressResponseAssembler;
+import com.b4rrhh.employee.address.infrastructure.web.dto.AddressPlanResponse;
 import com.b4rrhh.employee.address.infrastructure.web.dto.AddressResponse;
 import com.b4rrhh.employee.address.infrastructure.web.dto.CloseAddressRequest;
 import com.b4rrhh.employee.address.infrastructure.web.dto.CreateAddressRequest;
+import com.b4rrhh.employee.address.infrastructure.web.dto.PlanAddressChangeRequest;
 import com.b4rrhh.employee.address.infrastructure.web.dto.UpdateAddressRequest;
 import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,23 +42,29 @@ public class AddressBusinessKeyController {
     private final CloseAddressUseCase closeAddressUseCase;
     private final GetAddressByBusinessKeyUseCase getAddressByBusinessKeyUseCase;
     private final ListEmployeeAddressesUseCase listEmployeeAddressesUseCase;
-        private final UpdateAddressUseCase updateAddressUseCase;
-        private final AddressResponseAssembler addressResponseAssembler;
+    private final UpdateAddressUseCase updateAddressUseCase;
+    private final DeleteAddressUseCase deleteAddressUseCase;
+    private final PlanAddressChangeUseCase planAddressChangeUseCase;
+    private final AddressResponseAssembler addressResponseAssembler;
 
     public AddressBusinessKeyController(
             CreateAddressUseCase createAddressUseCase,
             CloseAddressUseCase closeAddressUseCase,
             GetAddressByBusinessKeyUseCase getAddressByBusinessKeyUseCase,
-                        ListEmployeeAddressesUseCase listEmployeeAddressesUseCase,
-                        UpdateAddressUseCase updateAddressUseCase,
-                        AddressResponseAssembler addressResponseAssembler
+            ListEmployeeAddressesUseCase listEmployeeAddressesUseCase,
+            UpdateAddressUseCase updateAddressUseCase,
+            DeleteAddressUseCase deleteAddressUseCase,
+            PlanAddressChangeUseCase planAddressChangeUseCase,
+            AddressResponseAssembler addressResponseAssembler
     ) {
         this.createAddressUseCase = createAddressUseCase;
         this.closeAddressUseCase = closeAddressUseCase;
         this.getAddressByBusinessKeyUseCase = getAddressByBusinessKeyUseCase;
         this.listEmployeeAddressesUseCase = listEmployeeAddressesUseCase;
-                this.updateAddressUseCase = updateAddressUseCase;
-                this.addressResponseAssembler = addressResponseAssembler;
+        this.updateAddressUseCase = updateAddressUseCase;
+        this.deleteAddressUseCase = deleteAddressUseCase;
+        this.planAddressChangeUseCase = planAddressChangeUseCase;
+        this.addressResponseAssembler = addressResponseAssembler;
     }
 
     @PostMapping
@@ -143,6 +156,50 @@ public class AddressBusinessKeyController {
         return ResponseEntity.ok(addressResponseAssembler.toResponse(ruleSystemCode, updated, language));
     }
 
+    @DeleteMapping("/{addressNumber}")
+    public ResponseEntity<Void> delete(
+            @PathVariable String ruleSystemCode,
+            @PathVariable String employeeTypeCode,
+            @PathVariable String employeeNumber,
+            @PathVariable Integer addressNumber
+    ) {
+        deleteAddressUseCase.delete(
+                new DeleteAddressCommand(ruleSystemCode, employeeTypeCode, employeeNumber, addressNumber)
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * What the change would do to the series of that type, without applying
+     * it (ADR-057). It is what the screen shows before the user confirms.
+     */
+    @PostMapping("/plan")
+    public ResponseEntity<AddressPlanResponse> plan(
+            @PathVariable String ruleSystemCode,
+            @PathVariable String employeeTypeCode,
+            @PathVariable String employeeNumber,
+            @RequestBody PlanAddressChangeRequest request
+    ) {
+        return ResponseEntity.ok(addressResponseAssembler.toPlanResponse(
+                planAddressChangeUseCase.plan(new PlanAddressChangeCommand(
+                        ruleSystemCode,
+                        employeeTypeCode,
+                        employeeNumber,
+                        request.operation(),
+                        request.addressTypeCode(),
+                        request.addressNumber(),
+                        request.startDate(),
+                        request.endDate()
+                ))
+        ));
+    }
+
+    /**
+     * Kept while the current screen still closes an address before adding the
+     * next one. To be removed once the screen is migrated to add-with-dates:
+     * adding already closes the previous one of the type (ADR-057).
+     */
     @PostMapping("/{addressNumber}/close")
     public ResponseEntity<AddressResponse> close(
             @PathVariable String ruleSystemCode,

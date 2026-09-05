@@ -1,12 +1,20 @@
 package com.b4rrhh.employee.address.infrastructure.web;
 
+import com.b4rrhh.employee.address.application.model.AddressPlan;
+import com.b4rrhh.employee.address.application.model.AddressPlanAdjustment;
 import com.b4rrhh.employee.address.application.usecase.CloseAddressCommand;
 import com.b4rrhh.employee.address.application.usecase.CloseAddressUseCase;
 import com.b4rrhh.employee.address.application.usecase.CreateAddressUseCase;
+import com.b4rrhh.employee.address.application.usecase.DeleteAddressCommand;
+import com.b4rrhh.employee.address.application.usecase.DeleteAddressUseCase;
 import com.b4rrhh.employee.address.application.usecase.GetAddressByBusinessKeyUseCase;
 import com.b4rrhh.employee.address.application.usecase.ListEmployeeAddressesUseCase;
+import com.b4rrhh.employee.address.application.usecase.PlanAddressChangeCommand;
+import com.b4rrhh.employee.address.application.usecase.PlanAddressChangeUseCase;
 import com.b4rrhh.employee.address.application.usecase.UpdateAddressCommand;
 import com.b4rrhh.employee.address.application.usecase.UpdateAddressUseCase;
+import com.b4rrhh.employee.temporal.support.TimelineOperation;
+import com.b4rrhh.employee.temporal.support.TimelineRejection;
 import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
 import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguageArgumentResolver;
 import com.b4rrhh.employee.address.domain.exception.AddressCatalogValueInvalidException;
@@ -35,8 +43,12 @@ import java.util.Optional;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -57,8 +69,12 @@ class AddressBusinessKeyControllerHttpTest {
     private ListEmployeeAddressesUseCase listEmployeeAddressesUseCase;
     @Mock
     private UpdateAddressUseCase updateAddressUseCase;
-        @Mock
-        private RuleEntityLabelResolver ruleEntityLabelResolver;
+    @Mock
+    private DeleteAddressUseCase deleteAddressUseCase;
+    @Mock
+    private PlanAddressChangeUseCase planAddressChangeUseCase;
+    @Mock
+    private RuleEntityLabelResolver ruleEntityLabelResolver;
 
     private MockMvc mockMvc;
 
@@ -70,6 +86,8 @@ class AddressBusinessKeyControllerHttpTest {
                 getAddressByBusinessKeyUseCase,
                 listEmployeeAddressesUseCase,
                 updateAddressUseCase,
+                deleteAddressUseCase,
+                planAddressChangeUseCase,
                 new AddressResponseAssembler(ruleEntityLabelResolver)
         );
 
@@ -212,6 +230,141 @@ class AddressBusinessKeyControllerHttpTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("ADDRESS_IS_A_CORRECTION"))
                 .andExpect(jsonPath("$.details.correctedOccurrence.addressNumber").value(1));
+    }
+
+    @Test
+    void deleteMapsPathToCommandAndAnswersNoContent() throws Exception {
+        mockMvc.perform(delete("/employees/ESP/INTERNAL/EMP001/addresses/2"))
+                .andExpect(status().isNoContent());
+
+        ArgumentCaptor<DeleteAddressCommand> captor = ArgumentCaptor.forClass(DeleteAddressCommand.class);
+        verify(deleteAddressUseCase).delete(captor.capture());
+        assertEquals("ESP", captor.getValue().ruleSystemCode());
+        assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
+        assertEquals("EMP001", captor.getValue().employeeNumber());
+        assertEquals(2, captor.getValue().addressNumber());
+    }
+
+    @Test
+    void deleteMapsACoverageGapToHttp409NamingTheNeighboursToStretch() throws Exception {
+        doThrow(new AddressCoverageGapException(
+                "ESP", "INTERNAL", "EMP001", "HOME",
+                List.of(new AddressPeriod(LocalDate.of(2026, 1, 16), LocalDate.of(2026, 1, 31))),
+                List.of(
+                        new AddressOccurrence(1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)),
+                        new AddressOccurrence(3, LocalDate.of(2026, 2, 1), null)
+                )
+        )).when(deleteAddressUseCase).delete(any(DeleteAddressCommand.class));
+
+        mockMvc.perform(delete("/employees/ESP/INTERNAL/EMP001/addresses/2"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ADDRESS_COVERAGE_GAP"))
+                .andExpect(jsonPath("$.details.stretchCandidates[0].addressNumber").value(1))
+                .andExpect(jsonPath("$.details.stretchCandidates[1].addressNumber").value(3));
+    }
+
+    @Test
+    void planMapsTheRequestToTheCommandAndReturnsThePlanWithoutApplyingIt() throws Exception {
+        when(planAddressChangeUseCase.plan(any(PlanAddressChangeCommand.class)))
+                .thenReturn(new AddressPlan(
+                        TimelineOperation.ADD,
+                        null,
+                        "HOME",
+                        new AddressOccurrence(null, LocalDate.of(2026, 1, 16), null),
+                        null,
+                        new AddressPlanAdjustment(
+                                1,
+                                new AddressPeriod(LocalDate.of(2026, 1, 1), null),
+                                new AddressPeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15))
+                        ),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(
+                                new AddressOccurrence(1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)),
+                                new AddressOccurrence(null, LocalDate.of(2026, 1, 16), null)
+                        )
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/addresses/plan")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "operation": "ADD",
+                                  "addressTypeCode": "HOME",
+                                  "startDate": "2026-01-16"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.operation").value("ADD"))
+                .andExpect(jsonPath("$.accepted").value(true))
+                .andExpect(jsonPath("$.rejection").doesNotExist())
+                .andExpect(jsonPath("$.addressTypeCode").value("HOME"))
+                .andExpect(jsonPath("$.occurrence.addressNumber").doesNotExist())
+                .andExpect(jsonPath("$.adjustedOccurrence.addressNumber").value(1))
+                .andExpect(jsonPath("$.adjustedOccurrence.after.endDate[2]").value(15))
+                .andExpect(jsonPath("$.projected[0].addressNumber").value(1))
+                .andExpect(jsonPath("$.projected[1].addressNumber").doesNotExist());
+
+        ArgumentCaptor<PlanAddressChangeCommand> captor = ArgumentCaptor.forClass(PlanAddressChangeCommand.class);
+        verify(planAddressChangeUseCase).plan(captor.capture());
+        assertEquals(TimelineOperation.ADD, captor.getValue().operation());
+        assertEquals("HOME", captor.getValue().addressTypeCode());
+        assertEquals(LocalDate.of(2026, 1, 16), captor.getValue().startDate());
+        assertNull(captor.getValue().endDate());
+        assertNull(captor.getValue().addressNumber());
+        verify(createAddressUseCase, never()).create(any());
+    }
+
+    @Test
+    void aRejectedPlanIsStillHttp200WithTheGapNamed() throws Exception {
+        when(planAddressChangeUseCase.plan(any(PlanAddressChangeCommand.class)))
+                .thenReturn(new AddressPlan(
+                        TimelineOperation.REMOVE,
+                        TimelineRejection.GAP_NOT_ALLOWED,
+                        "HOME",
+                        new AddressOccurrence(2, LocalDate.of(2026, 1, 16), LocalDate.of(2026, 1, 31)),
+                        null,
+                        null,
+                        List.of(),
+                        List.of(new AddressPeriod(LocalDate.of(2026, 1, 16), LocalDate.of(2026, 1, 31))),
+                        List.of(new AddressOccurrence(1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15))),
+                        List.of(new AddressOccurrence(1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)))
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/addresses/plan")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "operation": "REMOVE",
+                                  "addressNumber": 2
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accepted").value(false))
+                .andExpect(jsonPath("$.rejection").value("GAP_NOT_ALLOWED"))
+                .andExpect(jsonPath("$.gaps[0].startDate[2]").value(16))
+                .andExpect(jsonPath("$.stretchCandidates[0].addressNumber").value(1));
+
+        ArgumentCaptor<PlanAddressChangeCommand> captor = ArgumentCaptor.forClass(PlanAddressChangeCommand.class);
+        verify(planAddressChangeUseCase).plan(captor.capture());
+        assertEquals(TimelineOperation.REMOVE, captor.getValue().operation());
+        assertEquals(2, captor.getValue().addressNumber());
+    }
+
+    @Test
+    void planRejectsAnUnknownOperation() throws Exception {
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/addresses/plan")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "operation": "REPLACE",
+                                  "startDate": "2026-01-16"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+
+        verify(planAddressChangeUseCase, never()).plan(any());
     }
 
     @Test

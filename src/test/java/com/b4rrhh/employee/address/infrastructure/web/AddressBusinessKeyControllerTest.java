@@ -4,8 +4,10 @@ import com.b4rrhh.employee.address.application.usecase.CloseAddressCommand;
 import com.b4rrhh.employee.address.application.usecase.CloseAddressUseCase;
 import com.b4rrhh.employee.address.application.usecase.CreateAddressCommand;
 import com.b4rrhh.employee.address.application.usecase.CreateAddressUseCase;
+import com.b4rrhh.employee.address.application.usecase.DeleteAddressUseCase;
 import com.b4rrhh.employee.address.application.usecase.GetAddressByBusinessKeyUseCase;
 import com.b4rrhh.employee.address.application.usecase.ListEmployeeAddressesUseCase;
+import com.b4rrhh.employee.address.application.usecase.PlanAddressChangeUseCase;
 import com.b4rrhh.employee.address.application.usecase.UpdateAddressCommand;
 import com.b4rrhh.employee.address.application.usecase.UpdateAddressUseCase;
 import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
@@ -51,6 +53,10 @@ class AddressBusinessKeyControllerTest {
     @Mock
     private UpdateAddressUseCase updateAddressUseCase;
     @Mock
+    private DeleteAddressUseCase deleteAddressUseCase;
+    @Mock
+    private PlanAddressChangeUseCase planAddressChangeUseCase;
+    @Mock
     private RuleEntityLabelResolver ruleEntityLabelResolver;
 
     private AddressBusinessKeyController controller;
@@ -63,6 +69,8 @@ class AddressBusinessKeyControllerTest {
                 getAddressByBusinessKeyUseCase,
                 listEmployeeAddressesUseCase,
                 updateAddressUseCase,
+                deleteAddressUseCase,
+                planAddressChangeUseCase,
                 new AddressResponseAssembler(ruleEntityLabelResolver)
         );
     }
