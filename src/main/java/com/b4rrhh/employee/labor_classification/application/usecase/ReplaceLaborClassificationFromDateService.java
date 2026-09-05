@@ -1,52 +1,59 @@
 package com.b4rrhh.employee.labor_classification.application.usecase;
 
 import com.b4rrhh.employee.labor_classification.application.command.ReplaceLaborClassificationFromDateCommand;
+import com.b4rrhh.employee.labor_classification.application.model.LaborClassificationPlan;
 import com.b4rrhh.employee.labor_classification.application.port.EmployeeLaborClassificationContext;
 import com.b4rrhh.employee.labor_classification.application.port.EmployeeLaborClassificationLookupPort;
 import com.b4rrhh.employee.labor_classification.application.service.AgreementCategoryRelationValidator;
 import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationCatalogValidator;
-import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationPresenceCoverageValidator;
+import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationTimelineService;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationEmployeeNotFoundException;
-import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationOverlapException;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.labor_classification.domain.port.LaborClassificationRepository;
 import com.b4rrhh.employee.temporal.support.DateRange;
-import com.b4rrhh.employee.temporal.support.ReplaceMode;
-import com.b4rrhh.employee.temporal.support.StrongTimelineReplacePlan;
-import com.b4rrhh.employee.temporal.support.StrongTimelineReplacePlanner;
-import com.b4rrhh.employee.temporal.support.TemporalDates;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
+/**
+ * Adapter kept for the screen and the loader that still call
+ * {@code replace-from-date}. It is an add with the end date the old
+ * {@code ReplaceMode} used to derive: the tail of the occurrence in force on
+ * the effective date, or open when none is. The component then does what
+ * the old planner did: closes the covering occurrence the day before
+ * ({@code SPLIT}), or inserts when nothing covers ({@code NO_COVERING}). What
+ * changes is {@code EXACT_START}: starting on the very start date of an
+ * existing occurrence no longer replaces it silently, it is rejected as its
+ * correction (backend#52) and the correction is asked for as such (PUT).
+ *
+ * @deprecated ADR-057 retires {@code Replace…FromDate} as a model. Adding a
+ *     labor classification already closes the one in force. To be removed
+ *     once the screen has migrated to add-with-dates.
+ */
+@Deprecated
 @Service
 public class ReplaceLaborClassificationFromDateService implements ReplaceLaborClassificationFromDateUseCase {
-
-    private static final StrongTimelineReplacePlanner STRONG_TIMELINE_REPLACE_PLANNER =
-            new StrongTimelineReplacePlanner();
 
     private final LaborClassificationRepository laborClassificationRepository;
     private final EmployeeLaborClassificationLookupPort employeeLaborClassificationLookupPort;
     private final LaborClassificationCatalogValidator laborClassificationCatalogValidator;
     private final AgreementCategoryRelationValidator agreementCategoryRelationValidator;
-    private final LaborClassificationPresenceCoverageValidator laborClassificationPresenceCoverageValidator;
+    private final LaborClassificationTimelineService laborClassificationTimelineService;
 
     public ReplaceLaborClassificationFromDateService(
             LaborClassificationRepository laborClassificationRepository,
             EmployeeLaborClassificationLookupPort employeeLaborClassificationLookupPort,
             LaborClassificationCatalogValidator laborClassificationCatalogValidator,
             AgreementCategoryRelationValidator agreementCategoryRelationValidator,
-            LaborClassificationPresenceCoverageValidator laborClassificationPresenceCoverageValidator
+            LaborClassificationTimelineService laborClassificationTimelineService
     ) {
         this.laborClassificationRepository = laborClassificationRepository;
         this.employeeLaborClassificationLookupPort = employeeLaborClassificationLookupPort;
         this.laborClassificationCatalogValidator = laborClassificationCatalogValidator;
         this.agreementCategoryRelationValidator = agreementCategoryRelationValidator;
-        this.laborClassificationPresenceCoverageValidator = laborClassificationPresenceCoverageValidator;
+        this.laborClassificationTimelineService = laborClassificationTimelineService;
     }
 
     @Override
@@ -91,170 +98,55 @@ public class ReplaceLaborClassificationFromDateService implements ReplaceLaborCl
                 normalizedEffectiveDate
         );
 
-        List<LaborClassification> currentHistory = laborClassificationRepository
-                .findByEmployeeIdOrderByStartDate(employee.employeeId())
-                .stream()
-                .sorted(Comparator.comparing(LaborClassification::getStartDate))
-                .toList();
-
-        ReplacementPlan replacementPlan = buildReplacementPlan(
-                employee.employeeId(),
-                currentHistory,
-                normalizedEffectiveDate,
-                normalizedAgreementCode,
-                normalizedAgreementCategoryCode
-        );
-
-        validateNoOverlap(
-                replacementPlan.projectedHistory(),
-                normalizedRuleSystemCode,
-                normalizedEmployeeTypeCode,
-                normalizedEmployeeNumber
-        );
-
-        laborClassificationPresenceCoverageValidator.validateFullCoverage(
-                employee.employeeId(),
-                replacementPlan.projectedHistory(),
-                normalizedRuleSystemCode,
-                normalizedEmployeeTypeCode,
-                normalizedEmployeeNumber
-        );
-
-        if (replacementPlan.periodToUpdate() != null) {
-            laborClassificationRepository.update(replacementPlan.periodToUpdate(), replacementPlan.periodToUpdate().getStartDate());
-        }
-        if (replacementPlan.periodToSave() != null) {
-            laborClassificationRepository.save(replacementPlan.periodToSave());
-        }
-
-        return replacementPlan.resultPeriod();
-    }
-
-    private ReplacementPlan buildReplacementPlan(
-            Long employeeId,
-            List<LaborClassification> currentHistory,
-            LocalDate effectiveDate,
-            String agreementCode,
-            String agreementCategoryCode
-    ) {
-        StrongTimelineReplacePlan timelinePlan = STRONG_TIMELINE_REPLACE_PLANNER.plan(
-            toDateRanges(currentHistory),
-            effectiveDate
-        );
-
-        if (timelinePlan.mode() == ReplaceMode.NO_COVERING) {
-            DateRange insertRange = timelinePlan.periodToInsert();
-            LaborClassification newPeriod = new LaborClassification(
-                    employeeId,
-                    agreementCode,
-                    agreementCategoryCode,
-                insertRange.startDate(),
-                insertRange.endDate()
-            );
-
-            List<LaborClassification> projected = new ArrayList<>(currentHistory);
-            projected.add(newPeriod);
-            projected.sort(Comparator.comparing(LaborClassification::getStartDate));
-
-            return new ReplacementPlan(null, newPeriod, newPeriod, projected);
-        }
-
-            if (timelinePlan.mode() == ReplaceMode.EXACT_START) {
-                DateRange updateRange = timelinePlan.periodToUpdate();
-            LaborClassification replaced = new LaborClassification(
-                    employeeId,
-                    agreementCode,
-                    agreementCategoryCode,
-                    updateRange.startDate(),
-                    updateRange.endDate()
-            );
-
-            List<LaborClassification> projected = replaceByStartDate(currentHistory, replaced);
-            return new ReplacementPlan(replaced, null, replaced, projected);
-        }
-
-            LaborClassification coveringPeriod = getPeriodByIndex(currentHistory, timelinePlan.coveringPeriodIndex());
-            DateRange updateRange = timelinePlan.periodToUpdate();
-            DateRange insertRange = timelinePlan.periodToInsert();
-
-        LaborClassification adjustedExisting = new LaborClassification(
-                employeeId,
-                coveringPeriod.getAgreementCode(),
-                coveringPeriod.getAgreementCategoryCode(),
-                updateRange.startDate(),
-                updateRange.endDate()
-        );
-
+        // The old planner gave the replacement the tail of the occurrence in force on
+        // the effective date (SPLIT) or left it open when nothing covered it
+        // (NO_COVERING). The end date is all that is derived here; the rest is the
+        // component's judgement.
         LaborClassification replacement = new LaborClassification(
-                employeeId,
-                agreementCode,
-                agreementCategoryCode,
-                insertRange.startDate(),
-                insertRange.endDate()
+                employee.employeeId(),
+                normalizedAgreementCode,
+                normalizedAgreementCategoryCode,
+                normalizedEffectiveDate,
+                endDateOfOccurrenceInForceOn(employee.employeeId(), normalizedEffectiveDate)
         );
 
-        List<LaborClassification> projected = replaceByStartDate(currentHistory, adjustedExisting);
-        projected.add(replacement);
-        projected.sort(Comparator.comparing(LaborClassification::getStartDate));
+        LaborClassificationPlan plan = laborClassificationTimelineService.planAdd(
+                employee.employeeId(),
+                new DateRange(replacement.getStartDate(), replacement.getEndDate())
+        );
+        laborClassificationTimelineService.requireAccepted(
+                plan,
+                normalizedRuleSystemCode,
+                normalizedEmployeeTypeCode,
+                normalizedEmployeeNumber
+        );
 
-        return new ReplacementPlan(adjustedExisting, replacement, replacement, projected);
-    }
-
-    private List<DateRange> toDateRanges(List<LaborClassification> history) {
-        return history.stream()
-                .map(period -> new DateRange(period.getStartDate(), period.getEndDate()))
-                .toList();
-    }
-
-    private LaborClassification getPeriodByIndex(List<LaborClassification> history, Integer index) {
-        if (index == null || index < 0 || index >= history.size()) {
-            throw new IllegalStateException("Invalid covering period index in replacement plan");
+        if (plan.adjustsAnOccurrence()) {
+            LocalDate coveringStartDate = plan.adjustedOccurrence().before().startDate();
+            LaborClassification covering = laborClassificationRepository
+                    .findByEmployeeIdAndStartDate(employee.employeeId(), coveringStartDate)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Planned labor classification vanished: startDate=" + coveringStartDate
+                    ));
+            LaborClassification closed = covering.adjustEndDate(plan.adjustedOccurrence().after().endDate());
+            laborClassificationRepository.update(closed, closed.getStartDate());
         }
 
-        return history.get(index);
+        laborClassificationRepository.save(replacement);
+        return replacement;
     }
 
-    private List<LaborClassification> replaceByStartDate(
-            List<LaborClassification> history,
-            LaborClassification updated
-    ) {
-        List<LaborClassification> projected = new ArrayList<>(history.size());
-        for (LaborClassification laborClassification : history) {
-            if (laborClassification.getStartDate().equals(updated.getStartDate())) {
-                projected.add(updated);
-            } else {
-                projected.add(laborClassification);
+    private LocalDate endDateOfOccurrenceInForceOn(Long employeeId, LocalDate date) {
+        List<LaborClassification> history = laborClassificationRepository.findByEmployeeIdOrderByStartDate(employeeId);
+        for (LaborClassification occurrence : history) {
+            boolean startsOnOrBefore = !occurrence.getStartDate().isAfter(date);
+            boolean reaches = occurrence.getEndDate() == null || !occurrence.getEndDate().isBefore(date);
+            if (startsOnOrBefore && reaches) {
+                return occurrence.getEndDate();
             }
         }
 
-        return projected;
-    }
-
-    private void validateNoOverlap(
-            List<LaborClassification> projectedHistory,
-            String ruleSystemCode,
-            String employeeTypeCode,
-            String employeeNumber
-    ) {
-        List<LaborClassification> sorted = projectedHistory.stream()
-                .sorted(Comparator.comparing(LaborClassification::getStartDate))
-                .toList();
-
-        for (int index = 1; index < sorted.size(); index++) {
-            LaborClassification previous = sorted.get(index - 1);
-            LaborClassification current = sorted.get(index);
-            LocalDate previousEnd = TemporalDates.effectiveEnd(previous.getEndDate());
-
-            if (!current.getStartDate().isAfter(previousEnd)) {
-                throw new LaborClassificationOverlapException(
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        employeeNumber,
-                        current.getStartDate(),
-                        current.getEndDate()
-                );
-            }
-        }
+        return null;
     }
 
     private String normalizeRuleSystemCode(String ruleSystemCode) {
@@ -287,13 +179,5 @@ public class ReplaceLaborClassificationFromDateService implements ReplaceLaborCl
         }
 
         return effectiveDate;
-    }
-
-    private record ReplacementPlan(
-            LaborClassification periodToUpdate,
-            LaborClassification periodToSave,
-            LaborClassification resultPeriod,
-            List<LaborClassification> projectedHistory
-    ) {
     }
 }

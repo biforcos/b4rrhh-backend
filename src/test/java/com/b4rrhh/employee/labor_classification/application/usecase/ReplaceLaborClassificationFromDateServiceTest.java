@@ -3,15 +3,19 @@ package com.b4rrhh.employee.labor_classification.application.usecase;
 import com.b4rrhh.employee.labor_classification.application.command.ReplaceLaborClassificationFromDateCommand;
 import com.b4rrhh.employee.labor_classification.application.port.EmployeeLaborClassificationContext;
 import com.b4rrhh.employee.labor_classification.application.port.EmployeeLaborClassificationLookupPort;
+import com.b4rrhh.employee.labor_classification.application.port.LaborClassificationPresenceConsistencyPort;
+import com.b4rrhh.employee.labor_classification.application.port.PresencePeriod;
 import com.b4rrhh.employee.labor_classification.application.service.AgreementCategoryRelationValidator;
 import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationCatalogValidator;
-import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationPresenceCoverageValidator;
+import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationTimelineService;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationAgreementCategoryRelationInvalidException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationCoverageIncompleteException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationEmployeeNotFoundException;
+import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationIsACorrectionException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationOutsidePresencePeriodException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationOverlapException;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
+import com.b4rrhh.employee.labor_classification.domain.model.LaborClassificationPeriod;
 import com.b4rrhh.employee.labor_classification.domain.port.LaborClassificationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,10 +25,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -33,6 +35,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * The deprecated {@code replace-from-date} as an adapter over the temporal
+ * component (ADR-057). The behaviour the old {@code ReplaceMode} gave the
+ * screen is kept where the ADR keeps it: SPLIT inside an open or a closed
+ * occurrence, insertion when nothing covers. EXACT_START is the one that
+ * changes: it is no longer a silent replacement but a rejected plan that
+ * names the occurrence to correct (backend#52).
+ */
 @ExtendWith(MockitoExtension.class)
 class ReplaceLaborClassificationFromDateServiceTest {
 
@@ -44,24 +54,24 @@ class ReplaceLaborClassificationFromDateServiceTest {
     private LaborClassificationRepository laborClassificationRepository;
     @Mock
     private EmployeeLaborClassificationLookupPort employeeLaborClassificationLookupPort;
+    @Mock
+    private LaborClassificationPresenceConsistencyPort presencePort;
 
     private TestLaborClassificationCatalogValidator laborClassificationCatalogValidator;
     private TestAgreementCategoryRelationValidator agreementCategoryRelationValidator;
-    private TestLaborClassificationPresenceCoverageValidator laborClassificationPresenceCoverageValidator;
     private ReplaceLaborClassificationFromDateService service;
 
     @BeforeEach
     void setUp() {
         laborClassificationCatalogValidator = new TestLaborClassificationCatalogValidator();
         agreementCategoryRelationValidator = new TestAgreementCategoryRelationValidator();
-        laborClassificationPresenceCoverageValidator = new TestLaborClassificationPresenceCoverageValidator();
 
         service = new ReplaceLaborClassificationFromDateService(
                 laborClassificationRepository,
                 employeeLaborClassificationLookupPort,
                 laborClassificationCatalogValidator,
                 agreementCategoryRelationValidator,
-                laborClassificationPresenceCoverageValidator
+                new LaborClassificationTimelineService(laborClassificationRepository, presencePort)
         );
     }
 
@@ -75,8 +85,9 @@ class ReplaceLaborClassificationFromDateServiceTest {
                 null
         );
 
-        whenEmployeeExists();
-        when(laborClassificationRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(existing));
+        givenEmployeePresent(LocalDate.of(2026, 1, 1), null, existing);
+        when(laborClassificationRepository.findByEmployeeIdAndStartDate(10L, LocalDate.of(2026, 1, 1)))
+                .thenReturn(Optional.of(existing));
 
         LaborClassification replaced = service.replaceFromDate(command(
                 LocalDate.of(2026, 3, 1),
@@ -103,8 +114,6 @@ class ReplaceLaborClassificationFromDateServiceTest {
         assertEquals("CAT_TECH_1", savedCaptor.getValue().getAgreementCategoryCode());
         assertEquals(LocalDate.of(2026, 3, 1), savedCaptor.getValue().getStartDate());
         assertEquals(null, savedCaptor.getValue().getEndDate());
-
-        assertEquals(2, laborClassificationPresenceCoverageValidator.lastProjectedHistory.size());
     }
 
     @Test
@@ -117,8 +126,10 @@ class ReplaceLaborClassificationFromDateServiceTest {
                 LocalDate.of(2026, 3, 31)
         );
 
-        whenEmployeeExists();
-        when(laborClassificationRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(existing));
+        // The employee left on the same day the occurrence ends: no gap after it.
+        givenEmployeePresent(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), existing);
+        when(laborClassificationRepository.findByEmployeeIdAndStartDate(10L, LocalDate.of(2026, 1, 1)))
+                .thenReturn(Optional.of(existing));
 
         LaborClassification replaced = service.replaceFromDate(command(
                 LocalDate.of(2026, 3, 1),
@@ -138,8 +149,12 @@ class ReplaceLaborClassificationFromDateServiceTest {
         assertEquals(LocalDate.of(2026, 3, 31), savedCaptor.getValue().getEndDate());
     }
 
+    // Was replaceAtExactStartDateUpdatesWithoutDuplicateIdentityRow: the old
+    // EXACT_START replaced the codes silently. ADR-057 §6 keeps what the user
+    // wanted (no second row on the same start) but says it out loud: the plan
+    // is a correction, it is rejected as such, and nothing is written.
     @Test
-    void replaceAtExactStartDateUpdatesWithoutDuplicateIdentityRow() {
+    void replaceAtExactStartDateIsRejectedAsACorrectionAndWritesNoDuplicateIdentityRow() {
         LaborClassification existing = new LaborClassification(
                 10L,
                 "AGR_OFFICE",
@@ -148,19 +163,15 @@ class ReplaceLaborClassificationFromDateServiceTest {
                 null
         );
 
-        whenEmployeeExists();
-        when(laborClassificationRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(existing));
+        givenEmployeePresent(LocalDate.of(2026, 3, 1), null, existing);
 
-        LaborClassification replaced = service.replaceFromDate(command(
-                LocalDate.of(2026, 3, 1),
-                "AGR_TECH",
-                "CAT_TECH_1"
-        ));
+        LaborClassificationIsACorrectionException ex = assertThrows(
+                LaborClassificationIsACorrectionException.class,
+                () -> service.replaceFromDate(command(LocalDate.of(2026, 3, 1), "AGR_TECH", "CAT_TECH_1"))
+        );
 
-        assertEquals(LocalDate.of(2026, 3, 1), replaced.getStartDate());
-        assertEquals("AGR_TECH", replaced.getAgreementCode());
-
-        verify(laborClassificationRepository).update(any(LaborClassification.class), any(LocalDate.class));
+        assertEquals(new LaborClassificationPeriod(LocalDate.of(2026, 3, 1), null), ex.correctedOccurrence());
+        verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
         verify(laborClassificationRepository, never()).save(any(LaborClassification.class));
     }
 
@@ -196,23 +207,25 @@ class ReplaceLaborClassificationFromDateServiceTest {
 
     @Test
     void rejectsWhenReplacementBreaksPresenceCoverage() {
-        LaborClassification existing = new LaborClassification(
+        LaborClassification closedInJanuary = new LaborClassification(
                 10L,
                 "AGR_OFFICE",
                 "CAT_ADMIN",
                 LocalDate.of(2026, 1, 1),
-                null
+                LocalDate.of(2026, 1, 31)
         );
 
-        laborClassificationPresenceCoverageValidator.setIncompleteCoverage(true);
-        whenEmployeeExists();
-        when(laborClassificationRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(existing));
+        givenEmployeePresent(LocalDate.of(2026, 1, 1), null, closedInJanuary);
 
-        assertThrows(
+        LaborClassificationCoverageIncompleteException ex = assertThrows(
                 LaborClassificationCoverageIncompleteException.class,
                 () -> service.replaceFromDate(command(LocalDate.of(2026, 3, 1), "AGR_TECH", "CAT_TECH_1"))
         );
 
+        assertEquals(
+                List.of(new LaborClassificationPeriod(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28))),
+                ex.gaps()
+        );
         verify(laborClassificationRepository, never()).save(any(LaborClassification.class));
         verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
     }
@@ -227,13 +240,11 @@ class ReplaceLaborClassificationFromDateServiceTest {
                 null
         );
 
-        laborClassificationPresenceCoverageValidator.setOutsidePresence(true);
-        whenEmployeeExists();
-        when(laborClassificationRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(existing));
+        givenEmployeePresent(LocalDate.of(2026, 1, 1), null, existing);
 
         assertThrows(
                 LaborClassificationOutsidePresencePeriodException.class,
-                () -> service.replaceFromDate(command(LocalDate.of(2026, 3, 1), "AGR_TECH", "CAT_TECH_1"))
+                () -> service.replaceFromDate(command(LocalDate.of(2025, 12, 1), "AGR_TECH", "CAT_TECH_1"))
         );
 
         verify(laborClassificationRepository, never()).save(any(LaborClassification.class));
@@ -250,8 +261,7 @@ class ReplaceLaborClassificationFromDateServiceTest {
                 null
         );
 
-        whenEmployeeExists();
-        when(laborClassificationRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(futureOpen));
+        givenEmployeePresent(LocalDate.of(2026, 1, 1), null, futureOpen);
 
         assertThrows(
                 LaborClassificationOverlapException.class,
@@ -264,8 +274,7 @@ class ReplaceLaborClassificationFromDateServiceTest {
 
     @Test
     void createsNewPeriodWhenNoCoveringAndProjectedTimelineIsValid() {
-        whenEmployeeExists();
-        when(laborClassificationRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
+        givenEmployeePresent(LocalDate.of(2026, 3, 1), null);
 
         LaborClassification replaced = service.replaceFromDate(command(
                 LocalDate.of(2026, 3, 1),
@@ -278,6 +287,13 @@ class ReplaceLaborClassificationFromDateServiceTest {
 
         verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
         verify(laborClassificationRepository).save(any(LaborClassification.class));
+    }
+
+    private void givenEmployeePresent(LocalDate presenceStart, LocalDate presenceEnd, LaborClassification... occurrences) {
+        whenEmployeeExists();
+        when(laborClassificationRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(occurrences));
+        when(presencePort.findPresencePeriodsByEmployeeIdOrderByStartDate(10L))
+                .thenReturn(List.of(new PresencePeriod(presenceStart, presenceEnd)));
     }
 
     private void whenEmployeeExists() {
@@ -310,9 +326,6 @@ class ReplaceLaborClassificationFromDateServiceTest {
 
     private static final class TestLaborClassificationCatalogValidator extends LaborClassificationCatalogValidator {
 
-        private final Set<String> invalidAgreementCodes = new HashSet<>();
-        private final Set<String> invalidCategoryCodes = new HashSet<>();
-
         private TestLaborClassificationCatalogValidator() {
             super(null);
         }
@@ -328,9 +341,7 @@ class ReplaceLaborClassificationFromDateServiceTest {
 
         @Override
         public void validateAgreementCode(String ruleSystemCode, String agreementCode, LocalDate referenceDate) {
-            if (invalidAgreementCodes.contains(agreementCode)) {
-                throw new IllegalArgumentException("agreementCode is invalid");
-            }
+            // Always valid in these tests.
         }
 
         @Override
@@ -339,9 +350,7 @@ class ReplaceLaborClassificationFromDateServiceTest {
                 String agreementCategoryCode,
                 LocalDate referenceDate
         ) {
-            if (invalidCategoryCodes.contains(agreementCategoryCode)) {
-                throw new IllegalArgumentException("agreementCategoryCode is invalid");
-            }
+            // Always valid in these tests.
         }
     }
 
@@ -370,56 +379,6 @@ class ReplaceLaborClassificationFromDateServiceTest {
                         agreementCode,
                         agreementCategoryCode,
                         referenceDate
-                );
-            }
-        }
-    }
-
-    private static final class TestLaborClassificationPresenceCoverageValidator
-            extends LaborClassificationPresenceCoverageValidator {
-
-        private boolean outsidePresence;
-        private boolean incompleteCoverage;
-        private List<LaborClassification> lastProjectedHistory = List.of();
-
-        private TestLaborClassificationPresenceCoverageValidator() {
-            super(null);
-        }
-
-        void setOutsidePresence(boolean outsidePresence) {
-            this.outsidePresence = outsidePresence;
-        }
-
-        void setIncompleteCoverage(boolean incompleteCoverage) {
-            this.incompleteCoverage = incompleteCoverage;
-        }
-
-        @Override
-        public void validateFullCoverage(
-                Long employeeId,
-                List<LaborClassification> projectedLaborClassificationHistory,
-                String ruleSystemCode,
-                String employeeTypeCode,
-                String employeeNumber
-        ) {
-            lastProjectedHistory = projectedLaborClassificationHistory;
-            if (outsidePresence) {
-                LaborClassification sample = projectedLaborClassificationHistory.isEmpty()
-                        ? null
-                        : projectedLaborClassificationHistory.get(0);
-                throw new LaborClassificationOutsidePresencePeriodException(
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        employeeNumber,
-                        sample == null ? null : sample.getStartDate(),
-                        sample == null ? null : sample.getEndDate()
-                );
-            }
-            if (incompleteCoverage) {
-                throw new LaborClassificationCoverageIncompleteException(
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        employeeNumber
                 );
             }
         }

@@ -1,36 +1,49 @@
 package com.b4rrhh.employee.labor_classification.application.usecase;
 
 import com.b4rrhh.employee.labor_classification.application.command.CloseLaborClassificationCommand;
+import com.b4rrhh.employee.labor_classification.application.model.LaborClassificationPlan;
 import com.b4rrhh.employee.labor_classification.application.port.EmployeeLaborClassificationContext;
 import com.b4rrhh.employee.labor_classification.application.port.EmployeeLaborClassificationLookupPort;
-import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationPresenceCoverageValidator;
+import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationTimelineService;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationAlreadyClosedException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationEmployeeNotFoundException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationNotFoundException;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.labor_classification.domain.port.LaborClassificationRepository;
+import com.b4rrhh.employee.temporal.support.DateRange;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
 
+/**
+ * Closes an open labor classification on a date. Through the component it is
+ * a correction of the end date, judged like any other (ADR-057): closing the
+ * occurrence in force while the presence goes on leaves a gap and is
+ * rejected naming it. The termination flow closes the presence first, so
+ * closing on the termination date leaves none.
+ *
+ * @deprecated ADR-057 retires {@code close} as an operation of the API:
+ *     adding the next occurrence already closes the one in force, and any
+ *     other end date is a correction (PUT). Kept for the termination
+ *     participant and the screen until they migrate.
+ */
+@Deprecated
 @Service
 public class CloseLaborClassificationService implements CloseLaborClassificationUseCase {
 
     private final LaborClassificationRepository laborClassificationRepository;
     private final EmployeeLaborClassificationLookupPort employeeLaborClassificationLookupPort;
-    private final LaborClassificationPresenceCoverageValidator laborClassificationPresenceCoverageValidator;
+    private final LaborClassificationTimelineService laborClassificationTimelineService;
 
     public CloseLaborClassificationService(
             LaborClassificationRepository laborClassificationRepository,
             EmployeeLaborClassificationLookupPort employeeLaborClassificationLookupPort,
-            LaborClassificationPresenceCoverageValidator laborClassificationPresenceCoverageValidator
+            LaborClassificationTimelineService laborClassificationTimelineService
     ) {
         this.laborClassificationRepository = laborClassificationRepository;
         this.employeeLaborClassificationLookupPort = employeeLaborClassificationLookupPort;
-        this.laborClassificationPresenceCoverageValidator = laborClassificationPresenceCoverageValidator;
+        this.laborClassificationTimelineService = laborClassificationTimelineService;
     }
 
     @Override
@@ -68,23 +81,13 @@ public class CloseLaborClassificationService implements CloseLaborClassification
 
         LaborClassification closed = existing.close(command.endDate());
 
-        laborClassificationPresenceCoverageValidator.validatePeriodWithinPresence(
+        LaborClassificationPlan plan = laborClassificationTimelineService.planCorrect(
                 employee.employeeId(),
-                closed.getStartDate(),
-                closed.getEndDate(),
-                normalizedRuleSystemCode,
-                normalizedEmployeeTypeCode,
-                normalizedEmployeeNumber
+                existing,
+                new DateRange(closed.getStartDate(), closed.getEndDate())
         );
-
-        List<LaborClassification> projectedHistory = replaceByStartDate(
-                laborClassificationRepository.findByEmployeeIdOrderByStartDate(employee.employeeId()),
-                closed
-        );
-
-        laborClassificationPresenceCoverageValidator.validateFullCoverage(
-                employee.employeeId(),
-                projectedHistory,
+        laborClassificationTimelineService.requireAccepted(
+                plan,
                 normalizedRuleSystemCode,
                 normalizedEmployeeTypeCode,
                 normalizedEmployeeNumber
@@ -92,22 +95,6 @@ public class CloseLaborClassificationService implements CloseLaborClassification
 
         laborClassificationRepository.update(closed, closed.getStartDate());
         return closed;
-    }
-
-    private List<LaborClassification> replaceByStartDate(
-            List<LaborClassification> history,
-            LaborClassification updated
-    ) {
-        List<LaborClassification> projected = new ArrayList<>(history.size());
-        for (LaborClassification laborClassification : history) {
-            if (laborClassification.getStartDate().equals(updated.getStartDate())) {
-                projected.add(updated);
-            } else {
-                projected.add(laborClassification);
-            }
-        }
-
-        return projected;
     }
 
     private String normalizeRuleSystemCode(String ruleSystemCode) {

@@ -2507,6 +2507,15 @@ paths:
     post:
       operationId: replaceLaborClassificationFromDateByBusinessKey
       summary: Replace employee labor classification from effective date by business key
+      deprecated: true
+      description: >-
+        Kept while the labor classification screen and the workforce loader
+        still call it. ADR-057 retires replace-from-date as a model: it is an
+        add (POST) whose end date is the tail of the occurrence in force on the
+        effective date. Starting on the very start date of an existing
+        occurrence is no longer a silent replacement: it is rejected as
+        LABOR_CLASSIFICATION_IS_A_CORRECTION, naming the occurrence, and the
+        correction is asked for as such (PUT).
       tags:
         - Employee Labor Classification
       parameters:
@@ -2760,6 +2769,14 @@ paths:
     post:
       operationId: closeLaborClassificationByBusinessKey
       summary: Close employee labor classification by business key
+      deprecated: true
+      description: >-
+        Kept while the labor classification screen still closes an occurrence
+        before adding the next one. ADR-057 retires close as an operation:
+        adding an occurrence already closes the one in force the day before,
+        and any other end date is a correction (PUT). Judged like a correction:
+        closing the occurrence in force while the presence goes on is rejected
+        as LABOR_CLASSIFICATION_INCOMPLETE_COVERAGE.
       tags:
         - Employee Labor Classification
       parameters:

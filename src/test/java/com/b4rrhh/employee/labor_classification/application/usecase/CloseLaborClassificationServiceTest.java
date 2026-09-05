@@ -3,10 +3,13 @@ package com.b4rrhh.employee.labor_classification.application.usecase;
 import com.b4rrhh.employee.labor_classification.application.command.CloseLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.port.EmployeeLaborClassificationContext;
 import com.b4rrhh.employee.labor_classification.application.port.EmployeeLaborClassificationLookupPort;
-import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationPresenceCoverageValidator;
+import com.b4rrhh.employee.labor_classification.application.port.LaborClassificationPresenceConsistencyPort;
+import com.b4rrhh.employee.labor_classification.application.port.PresencePeriod;
+import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationTimelineService;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationAlreadyClosedException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationCoverageIncompleteException;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
+import com.b4rrhh.employee.labor_classification.domain.model.LaborClassificationPeriod;
 import com.b4rrhh.employee.labor_classification.domain.port.LaborClassificationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +29,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * The deprecated {@code close} as an adapter over the temporal component
+ * (ADR-057): closing is a correction of the end date and the resulting
+ * series decides. The timeline service is real; the repository and the
+ * presence port are mocked.
+ */
 @ExtendWith(MockitoExtension.class)
 class CloseLaborClassificationServiceTest {
 
@@ -37,20 +46,22 @@ class CloseLaborClassificationServiceTest {
     private LaborClassificationRepository laborClassificationRepository;
     @Mock
     private EmployeeLaborClassificationLookupPort employeeLaborClassificationLookupPort;
+    @Mock
+    private LaborClassificationPresenceConsistencyPort presencePort;
 
-    private TestLaborClassificationPresenceCoverageValidator laborClassificationPresenceCoverageValidator;
     private CloseLaborClassificationService service;
 
     @BeforeEach
     void setUp() {
-        laborClassificationPresenceCoverageValidator = new TestLaborClassificationPresenceCoverageValidator();
         service = new CloseLaborClassificationService(
                 laborClassificationRepository,
                 employeeLaborClassificationLookupPort,
-                laborClassificationPresenceCoverageValidator
+                new LaborClassificationTimelineService(laborClassificationRepository, presencePort)
         );
     }
 
+    // The termination flow closes the presence first (order 5), so closing the
+    // labor classification on the same day leaves nothing uncovered.
     @Test
     void closesWhenValid() {
         CloseLaborClassificationCommand command = new CloseLaborClassificationCommand(
@@ -69,10 +80,9 @@ class CloseLaborClassificationServiceTest {
                 null
         );
 
-        whenEmployeeExists();
+        givenEmployeePresent(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31), existing);
         when(laborClassificationRepository.findByEmployeeIdAndStartDate(10L, LocalDate.of(2026, 1, 1)))
                 .thenReturn(Optional.of(existing));
-        when(laborClassificationRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(existing));
 
         LaborClassification closed = service.close(command);
 
@@ -127,14 +137,24 @@ class CloseLaborClassificationServiceTest {
                 null
         );
 
-        laborClassificationPresenceCoverageValidator.setIncompleteCoverage(true);
-        whenEmployeeExists();
+        givenEmployeePresent(LocalDate.of(2026, 1, 1), null, existing);
         when(laborClassificationRepository.findByEmployeeIdAndStartDate(10L, LocalDate.of(2026, 1, 1)))
                 .thenReturn(Optional.of(existing));
-        when(laborClassificationRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(existing));
 
-        assertThrows(LaborClassificationCoverageIncompleteException.class, () -> service.close(command));
+        LaborClassificationCoverageIncompleteException ex = assertThrows(
+                LaborClassificationCoverageIncompleteException.class,
+                () -> service.close(command)
+        );
+
+        assertEquals(List.of(new LaborClassificationPeriod(LocalDate.of(2026, 1, 16), null)), ex.gaps());
         verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
+    }
+
+    private void givenEmployeePresent(LocalDate presenceStart, LocalDate presenceEnd, LaborClassification... occurrences) {
+        whenEmployeeExists();
+        when(laborClassificationRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(occurrences));
+        when(presencePort.findPresencePeriodsByEmployeeIdOrderByStartDate(10L))
+                .thenReturn(List.of(new PresencePeriod(presenceStart, presenceEnd)));
     }
 
     private void whenEmployeeExists() {
@@ -148,48 +168,5 @@ class CloseLaborClassificationServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER
         )));
-    }
-
-    private static final class TestLaborClassificationPresenceCoverageValidator
-            extends LaborClassificationPresenceCoverageValidator {
-
-        private boolean incompleteCoverage;
-
-        private TestLaborClassificationPresenceCoverageValidator() {
-            super(null);
-        }
-
-        void setIncompleteCoverage(boolean incompleteCoverage) {
-            this.incompleteCoverage = incompleteCoverage;
-        }
-
-        @Override
-        public void validatePeriodWithinPresence(
-                Long employeeId,
-                LocalDate startDate,
-                LocalDate endDate,
-                String ruleSystemCode,
-                String employeeTypeCode,
-                String employeeNumber
-        ) {
-            // Always valid in these tests.
-        }
-
-        @Override
-        public void validateFullCoverage(
-                Long employeeId,
-                List<LaborClassification> projectedLaborClassificationHistory,
-                String ruleSystemCode,
-                String employeeTypeCode,
-                String employeeNumber
-        ) {
-            if (incompleteCoverage) {
-                throw new LaborClassificationCoverageIncompleteException(
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        employeeNumber
-                );
-            }
-        }
     }
 }

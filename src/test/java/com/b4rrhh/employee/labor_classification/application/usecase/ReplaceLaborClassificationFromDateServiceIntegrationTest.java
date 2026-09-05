@@ -7,10 +7,13 @@ import com.b4rrhh.employee.labor_classification.application.port.EmployeeLaborCl
 import com.b4rrhh.employee.labor_classification.application.port.EmployeeLaborClassificationLookupPort;
 import com.b4rrhh.employee.labor_classification.application.service.AgreementCategoryRelationValidator;
 import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationCatalogValidator;
-import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationPresenceCoverageValidator;
+import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationTimelineService;
+import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationIsACorrectionException;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
+import com.b4rrhh.employee.labor_classification.domain.model.LaborClassificationPeriod;
 import com.b4rrhh.employee.labor_classification.infrastructure.persistence.LaborClassificationEntity;
 import com.b4rrhh.employee.labor_classification.infrastructure.persistence.LaborClassificationPersistenceAdapter;
+import com.b4rrhh.employee.labor_classification.infrastructure.persistence.LaborClassificationPresenceConsistencyAdapter;
 import com.b4rrhh.employee.labor_classification.infrastructure.persistence.SpringDataLaborClassificationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +46,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 })
 @Import({
         LaborClassificationPersistenceAdapter.class,
+        LaborClassificationPresenceConsistencyAdapter.class,
+        LaborClassificationTimelineService.class,
         ReplaceLaborClassificationFromDateService.class,
         ReplaceLaborClassificationFromDateServiceIntegrationTest.ReplaceLaborClassificationTestConfig.class
 })
@@ -75,6 +80,9 @@ class ReplaceLaborClassificationFromDateServiceIntegrationTest {
     @BeforeEach
     void setUpDatos() {
         employeeId = DatosDePrueba.empleado(jdbcTemplate);
+        // Present from the day the first occurrence starts, and still present: the
+        // component judges the series against the real presence (ADR-057).
+        DatosDePrueba.presencia(jdbcTemplate, employeeId, 1, LocalDate.of(2026, 1, 1), null);
 
         insertLaborClassification(
                 employeeId,
@@ -113,33 +121,32 @@ class ReplaceLaborClassificationFromDateServiceIntegrationTest {
         assertEquals("CAT_TECH_1", rows.get(1).getAgreementCategoryCode());
     }
 
+    // Was replaceAtExactStartDateUpdatesSingleExistingRowWithoutDuplicate: the
+    // old EXACT_START replaced the codes of the existing row silently. Under
+    // ADR-057 it is rejected as the correction it is, naming the occurrence,
+    // and the single row stays exactly as it was (backend#52).
     @Test
-    void replaceAtExactStartDateUpdatesSingleExistingRowWithoutDuplicate() {
-        jdbcTemplate.update("delete from employee.labor_classification where employee_id = ?", employeeId);
-        insertLaborClassification(
-                employeeId,
-                "AGR_OFFICE",
-                "CAT_ADMIN",
-                LocalDate.of(2026, 3, 1),
-                null
+    void replaceAtExactStartDateIsRejectedAsACorrectionAndLeavesTheSingleRowUntouched() {
+        LaborClassificationIsACorrectionException ex = assertThrows(
+                LaborClassificationIsACorrectionException.class,
+                () -> service.replaceFromDate(new ReplaceLaborClassificationFromDateCommand(
+                        RULE_SYSTEM_CODE,
+                        EMPLOYEE_TYPE_CODE,
+                        EMPLOYEE_NUMBER,
+                        LocalDate.of(2026, 1, 1),
+                        "AGR_TECH",
+                        "CAT_TECH_1"
+                ))
         );
 
-        LaborClassification replaced = service.replaceFromDate(new ReplaceLaborClassificationFromDateCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                LocalDate.of(2026, 3, 1),
-                "AGR_TECH",
-                "CAT_TECH_1"
-        ));
-
-        assertEquals(LocalDate.of(2026, 3, 1), replaced.getStartDate());
+        assertEquals(new LaborClassificationPeriod(LocalDate.of(2026, 1, 1), null), ex.correctedOccurrence());
 
         List<LaborClassificationEntity> rows = repository.findByEmployeeIdOrderByStartDateAsc(employeeId);
         assertEquals(1, rows.size());
-        assertEquals(LocalDate.of(2026, 3, 1), rows.get(0).getStartDate());
-        assertEquals("AGR_TECH", rows.get(0).getAgreementCode());
-        assertEquals("CAT_TECH_1", rows.get(0).getAgreementCategoryCode());
+        assertEquals(LocalDate.of(2026, 1, 1), rows.get(0).getStartDate());
+        assertNull(rows.get(0).getEndDate());
+        assertEquals("AGR_OFFICE", rows.get(0).getAgreementCode());
+        assertEquals("CAT_ADMIN", rows.get(0).getAgreementCategoryCode());
     }
 
     // Este test comprueba que el servicio deshace SU transaccion cuando el
@@ -300,22 +307,6 @@ class ReplaceLaborClassificationFromDateServiceIntegrationTest {
                         LocalDate referenceDate
                 ) {
                     // Always valid in this integration test.
-                }
-            };
-        }
-
-        @Bean
-        LaborClassificationPresenceCoverageValidator laborClassificationPresenceCoverageValidator() {
-            return new LaborClassificationPresenceCoverageValidator(null) {
-                @Override
-                public void validateFullCoverage(
-                        Long employeeId,
-                        List<LaborClassification> projectedLaborClassificationHistory,
-                        String ruleSystemCode,
-                        String employeeTypeCode,
-                        String employeeNumber
-                ) {
-                    // No-op for persistence-focused integration scenarios.
                 }
             };
         }

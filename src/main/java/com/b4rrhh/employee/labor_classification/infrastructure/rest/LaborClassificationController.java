@@ -165,6 +165,13 @@ public class LaborClassificationController {
         return ResponseEntity.ok(laborClassificationResponseAssembler.toResponse(ruleSystemCode, updated, language));
     }
 
+    /**
+     * Kept while the labor classification screen still closes an occurrence
+     * before adding the next one. To be removed once the screen has migrated:
+     * adding an occurrence already closes the one in force the day before
+     * (ADR-057).
+     */
+    @Deprecated
     @PostMapping("/{startDate}/close")
     public ResponseEntity<LaborClassificationResponse> close(
             @PathVariable String ruleSystemCode,
@@ -187,6 +194,13 @@ public class LaborClassificationController {
         return ResponseEntity.ok(laborClassificationResponseAssembler.toResponse(ruleSystemCode, closed, language));
     }
 
+    /**
+     * Kept while the labor classification screen and the workforce loader
+     * still call it. ADR-057 retires replace-from-date as a model: it is an add
+     * whose end date is the tail of the occurrence in force on the effective
+     * date.
+     */
+    @Deprecated
     @PostMapping("/replace-from-date")
     public ResponseEntity<LaborClassificationResponse> replaceFromDate(
             @PathVariable String ruleSystemCode,

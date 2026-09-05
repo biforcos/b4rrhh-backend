@@ -40,9 +40,11 @@ import com.b4rrhh.employee.journey.infrastructure.persistence.JourneyWorkCenterR
 import com.b4rrhh.employee.labor_classification.application.service.AgreementCategoryRelationValidator;
 import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationCatalogValidator;
 import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationTimelineService;
+import com.b4rrhh.employee.labor_classification.application.usecase.CloseLaborClassificationService;
 import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationService;
 import com.b4rrhh.employee.labor_classification.application.usecase.DeleteLaborClassificationService;
 import com.b4rrhh.employee.labor_classification.application.usecase.PlanLaborClassificationChangeService;
+import com.b4rrhh.employee.labor_classification.application.usecase.ReplaceLaborClassificationFromDateService;
 import com.b4rrhh.employee.labor_classification.application.usecase.UpdateLaborClassificationService;
 import com.b4rrhh.employee.labor_classification.infrastructure.persistence.AgreementCategoryRelationLookupAdapter;
 import com.b4rrhh.employee.labor_classification.infrastructure.persistence.EmployeeLaborClassificationLookupAdapter;
@@ -158,6 +160,8 @@ import java.lang.annotation.Target;
         UpdateLaborClassificationService.class,
         DeleteLaborClassificationService.class,
         PlanLaborClassificationChangeService.class,
+        CloseLaborClassificationService.class,
+        ReplaceLaborClassificationFromDateService.class,
         LaborClassificationTimelineService.class,
         LaborClassificationCatalogValidator.class,
         AgreementCategoryRelationValidator.class,
