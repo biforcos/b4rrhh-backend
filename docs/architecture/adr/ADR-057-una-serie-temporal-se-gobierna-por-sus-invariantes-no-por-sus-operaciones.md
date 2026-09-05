@@ -48,9 +48,37 @@ Y lo que el inventario no vio a la primera: **la abstracción ya existe a medias
 `employee/temporal/support` están `DateRange`, `TemporalDates`, `TimelineCoverageValidator` — con
 `isContained` («ninguna ocurrencia fuera de la presencia») e `isFullyCovered` («sin huecos dentro de
 ella») — y `StrongTimelineReplacePlanner`, cuyo `ReplaceMode {NO_COVERING, EXACT_START, SPLIT}` ya
-contempla la inserción en medio. La usan `contract` y `labor_classification`. Nadie más.
+contempla la inserción en medio. La usan `contract`, `labor_classification` y `workcenter` —tres de las
+seis—, y dos de ellas se apoyan además en `ReplaceMode.EXACT_START` para que empezar el mismo día que
+una ocurrencia existente la **sustituya**. Ese comportamiento no sobrevive a la decisión 2 de este ADR
+y hay que decidirlo expresamente antes de migrarlas.
 
 ## Decisión
+
+### 0. Antes que nada: cuál es la unidad de la serie
+
+Una serie temporal no siempre va por empleado. Antes de aplicarle invariante alguno hay que
+responder **de qué es serie**, porque de eso depende sobre qué conjunto se juzgan el solape y el
+hueco:
+
+- **Por empleado**: `working_time`, `contract`, `labor_classification`, `workcenter`. Una vigente
+  cada vez, y punto.
+- **Por empleado y un discriminante**: `address`, que va por **tipo de dirección** — domicilio,
+  fiscal, notificaciones—. Son series independientes que conviven, y cada una puede tener su propia
+  cobertura.
+- **Por empleado, pero con la ocurrencia compuesta**: `cost_center`, donde una ocurrencia no es una
+  fila sino **un conjunto de líneas que suman 100** en un tramo de fechas. El invariante se aplica al
+  tramo, no a la línea.
+
+Esta pregunta faltaba en la primera versión del ADR y costó un issue: `address` se planteó como una
+serie por empleado y habría bloqueado a 253 de mil empleados desde el primer día, además de borrar
+del dominio que alguien tenga domicilio y dirección fiscal a la vez.
+
+**Qué discriminante marca la cobertura obligatoria no se codifica en Java.** Qué tipo de dirección es
+«el domicilio» es una propiedad del catálogo `EMPLOYEE_ADDRESS_TYPE`, no una constante `HOME` en el
+código: el metamodelo es donde vive la semántica en este producto (ADR-054), y otro `rule_system`
+puede marcar un tipo distinto. Con una guarda que compruebe que hay exactamente uno marcado por
+sistema de reglas.
 
 ### 1. El tipo A se define por sus invariantes, no por su juego de operaciones
 
@@ -63,6 +91,16 @@ Dos, y son separables:
 
 Cada vertical declara si su cobertura es obligatoria. El planificador ya se llama `Strong`: la
 variante débil estaba prevista y aquí se nombra.
+
+Y hay un tercer eje declarable que salió al migrar `address`: **si las ocurrencias pueden sobrevivir
+a la presencia**. La jornada no —fuera de la presencia no hay jornada que valga—, pero una dirección
+sí: alguien que causa baja sigue teniendo un domicilio al que enviarle un certificado, y en la base
+local hay 779 direcciones abiertas tras un cese que son correctas. Leer la presencia para exigir que
+el domicilio la cubra **no es lo mismo que no poder salir de ella**, y confundir las dos cosas habría
+congelado esas 779: seguirían ahí, pero corregir una la habría vuelto a juzgar y la habría rechazado.
+
+Así que una serie declara tres cosas, y las tres son independientes: **de qué es serie** (decisión 0),
+**si su cobertura es obligatoria**, y **si sus ocurrencias pueden sobrevivir a la presencia**.
 
 Esto es el ADR-055 un paso más allá. Allí se decidió que la integridad de los códigos vive en la
 aplicación y no en una clave ajena; aquí se decide que la integridad de una serie vive en **el
@@ -110,6 +148,23 @@ temporal; las cuatro que lo tienen se reconducen a él.
 quiera y ve qué le va a pasar a la línea temporal —qué se cierra, qué hueco aparece— antes de
 confirmar. Es lo que permite que la escritura sea libre sin que la consecuencia sea una sorpresa.
 
+Y el plan es también donde se resuelve el caso que la decisión 2 dejaría fuera. Hoy, en `contract` y
+`labor_classification`, añadir una ocurrencia que empieza **exactamente** el mismo día que otra la
+**sustituye** (`ReplaceMode.EXACT_START`): si el contrato ya empezaba el 1 de marzo y el error fue el
+tipo, lo que se quiere es corregir ese contrato, no meter uno de cero días en el histórico. Ese
+comportamiento se conserva, pero deja de ser una adivinanza: el plan responde «esto no añade nada,
+**corrige la ocurrencia del 1 de marzo**» y el usuario confirma una corrección. La sustitución
+silenciosa es lo que se retira; la comodidad, no.
+
+Con un matiz que costó una regresión aprenderlo: **decir que algo es una corrección no es lo mismo
+que aceptarlo como alta**. El primer intento devolvió ese plan como aceptado, y el caso de uso de
+alta —que no miraba la operación resultante— guardó una segunda ocurrencia con el mismo inicio. Así
+que el plan lleva **la intención con la que se pidió** además de la operación que resultó ser, y uno
+que no coincide nace rechazado: la información del §6 está toda ahí —qué ocurrencia corrige, cómo
+quedaría—, pero aplicarlo como alta es imposible por construcción y no por disciplina de cada
+vertical. Es la misma lección que el resto del ADR: una regla que hay que acordarse de comprobar
+sólo protege a quien se acuerda.
+
 ## Consecuencias
 
 **Seis verticales pasan a tener la misma forma**, y las pantallas dejan de necesitar saberse el orden
@@ -126,8 +181,18 @@ datos reales de clientes.
    `payroll_context_snapshot` deja saber qué jornada usó cada nómina, así que la trazabilidad está
    cubierta; lo que falta es que el cambio *avise* de qué nóminas quedan desactualizadas. Es el ciclo
    de nómina y tendrá su propia serie de ADRs.
-2. **Si `address` es de cobertura obligatoria u opcional.** Aquí se asume opcional; es una decisión
-   de negocio y hay que confirmarla.
+2. ~~Si `address` es de cobertura obligatoria u opcional.~~ **Decidido: el domicilio es de cobertura
+   obligatoria; los demás tipos de dirección, opcionales.** Un empleado está legalmente obligado a
+   declarar domicilio, pero puede tener a la vez domicilio y dirección fiscal, así que la serie de
+   direcciones **no es una por empleado, es una por empleado y tipo** (ver la decisión 0).
+
+   La primera versión de esta decisión decía «obligatoria» a secas y citaba «cero períodos con
+   hueco» de una comprobación previa. Esa comprobación medía la cobertura agregando todos los tipos
+   con `range_agg` y contando sólo huecos: no podía ver solapes, y al agregar los tipos escondía
+   justo el problema. Con la serie por empleado, **253 de mil empleados tienen hoy domicilio y
+   dirección fiscal a la vez y quedarían bloqueados para toda escritura**. Con la serie por
+   `(empleado, tipo)`, los datos pasan limpios: cero huecos por tipo y cero solapes dentro del mismo
+   tipo.
 3. **Cómo se crean las verticales que nacen de un flujo.** `contract` y `labor_classification` se
    crean al contratar, y este ADR no toca los flujos de ciclo de vida.
 
