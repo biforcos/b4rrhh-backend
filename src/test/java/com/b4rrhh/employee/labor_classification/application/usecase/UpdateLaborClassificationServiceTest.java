@@ -3,12 +3,18 @@ package com.b4rrhh.employee.labor_classification.application.usecase;
 import com.b4rrhh.employee.labor_classification.application.command.UpdateLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.port.EmployeeLaborClassificationContext;
 import com.b4rrhh.employee.labor_classification.application.port.EmployeeLaborClassificationLookupPort;
+import com.b4rrhh.employee.labor_classification.application.port.LaborClassificationPresenceConsistencyPort;
+import com.b4rrhh.employee.labor_classification.application.port.PresencePeriod;
 import com.b4rrhh.employee.labor_classification.application.service.AgreementCategoryRelationValidator;
 import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationCatalogValidator;
-import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationPresenceCoverageValidator;
+import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationTimelineService;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationAgreementCategoryRelationInvalidException;
-import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationAlreadyClosedException;
+import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationCoverageIncompleteException;
+import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationNotFoundException;
+import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationOutsidePresencePeriodException;
+import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationOverlapException;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
+import com.b4rrhh.employee.labor_classification.domain.model.LaborClassificationPeriod;
 import com.b4rrhh.employee.labor_classification.domain.port.LaborClassificationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,15 +27,21 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Correcting a labor classification moves only the corrected one (ADR-057,
+ * decision 3). The timeline service is real and the repository and presence
+ * port are mocked; each test says from when the employee is present.
+ */
 @ExtendWith(MockitoExtension.class)
 class UpdateLaborClassificationServiceTest {
 
@@ -41,248 +53,194 @@ class UpdateLaborClassificationServiceTest {
     private LaborClassificationRepository laborClassificationRepository;
     @Mock
     private EmployeeLaborClassificationLookupPort employeeLaborClassificationLookupPort;
+    @Mock
+    private LaborClassificationPresenceConsistencyPort presencePort;
 
     private TestLaborClassificationCatalogValidator laborClassificationCatalogValidator;
     private TestAgreementCategoryRelationValidator agreementCategoryRelationValidator;
-    private TestLaborClassificationPresenceCoverageValidator laborClassificationPresenceCoverageValidator;
     private UpdateLaborClassificationService service;
 
     @BeforeEach
     void setUp() {
         laborClassificationCatalogValidator = new TestLaborClassificationCatalogValidator();
         agreementCategoryRelationValidator = new TestAgreementCategoryRelationValidator();
-        laborClassificationPresenceCoverageValidator = new TestLaborClassificationPresenceCoverageValidator();
 
         service = new UpdateLaborClassificationService(
                 laborClassificationRepository,
                 employeeLaborClassificationLookupPort,
                 laborClassificationCatalogValidator,
                 agreementCategoryRelationValidator,
-                laborClassificationPresenceCoverageValidator
+                new LaborClassificationTimelineService(laborClassificationRepository, presencePort)
         );
     }
 
     @Test
-    void updatesWhenValid() {
-        UpdateLaborClassificationCommand command = new UpdateLaborClassificationCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                LocalDate.of(2026, 1, 1),
-                null,
-                "AGR_TECH",
-                "CAT_TECH_1"
-        );
+    void correctsTheCodesKeepingTheDates() {
+        LaborClassification existing = occurrence("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null);
+        givenEmployeePresentFrom(LocalDate.of(2026, 1, 1), existing);
+        whenOccurrenceExists(existing);
 
-        LaborClassification existing = new LaborClassification(
-                10L,
-                "AGR_OFFICE",
-                "CAT_ADMIN",
-                LocalDate.of(2026, 1, 1),
-                null
-        );
-
-        whenEmployeeExists();
-        when(laborClassificationRepository.findByEmployeeIdAndStartDate(10L, LocalDate.of(2026, 1, 1)))
-                .thenReturn(Optional.of(existing));
-        when(laborClassificationRepository.existsOverlappingPeriod(
-                10L,
-                LocalDate.of(2026, 1, 1),
-                null,
-                LocalDate.of(2026, 1, 1)
-        )).thenReturn(false);
-        when(laborClassificationRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(existing));
-
-        LaborClassification updated = service.update(command);
+        LaborClassification updated = service.update(
+                command(LocalDate.of(2026, 1, 1), null, null, "AGR_TECH", "CAT_TECH_1"));
 
         assertEquals("AGR_TECH", updated.getAgreementCode());
         assertEquals("CAT_TECH_1", updated.getAgreementCategoryCode());
+        assertEquals(LocalDate.of(2026, 1, 1), updated.getStartDate());
+        assertNull(updated.getEndDate());
 
         ArgumentCaptor<LaborClassification> captor = ArgumentCaptor.forClass(LaborClassification.class);
-        verify(laborClassificationRepository).update(captor.capture(), any(LocalDate.class));
+        verify(laborClassificationRepository).update(captor.capture(), eq(LocalDate.of(2026, 1, 1)));
         assertEquals("AGR_TECH", captor.getValue().getAgreementCode());
         assertEquals("CAT_TECH_1", captor.getValue().getAgreementCategoryCode());
     }
 
+    // Before ADR-057 a closed occurrence could not be corrected. What identifies
+    // it is the day it starts, and a wrong category on a past one is still
+    // wrong: the resulting series decides, not whether it is open.
     @Test
-    void rejectsUpdateWhenRecordIsClosed() {
-        UpdateLaborClassificationCommand command = new UpdateLaborClassificationCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                LocalDate.of(2026, 1, 1),
-                null,
-                "AGR_TECH",
-                "CAT_TECH_1"
-        );
+    void correctsAClosedOccurrenceStretchingItOverTheGapItLeft() {
+        LaborClassification closedTooEarly = occurrence(
+                "AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31));
+        givenEmployeePresentFrom(LocalDate.of(2026, 1, 1), closedTooEarly);
+        whenOccurrenceExists(closedTooEarly);
 
-        LaborClassification closed = new LaborClassification(
-                10L,
-                "AGR_OFFICE",
-                "CAT_ADMIN",
-                LocalDate.of(2026, 1, 1),
-                LocalDate.of(2026, 1, 31)
-        );
+        LaborClassification updated = service.update(
+                command(LocalDate.of(2026, 1, 1), null, null, "AGR_TECH", "CAT_TECH_1"));
 
-        whenEmployeeExists();
-        when(laborClassificationRepository.findByEmployeeIdAndStartDate(10L, LocalDate.of(2026, 1, 1)))
-                .thenReturn(Optional.of(closed));
-
-        assertThrows(LaborClassificationAlreadyClosedException.class, () -> service.update(command));
-        verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
+        assertNull(updated.getEndDate());
+        assertEquals("AGR_TECH", updated.getAgreementCode());
+        verify(laborClassificationRepository).update(any(LaborClassification.class), eq(LocalDate.of(2026, 1, 1)));
     }
 
     @Test
     void rejectsUpdateWhenAgreementCategoryRelationIsInvalid() {
-        UpdateLaborClassificationCommand command = new UpdateLaborClassificationCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                LocalDate.of(2026, 1, 1),
-                null,
-                "AGR_TECH",
-                "CAT_TECH_1"
-        );
-
-        LaborClassification existing = new LaborClassification(
-                10L,
-                "AGR_OFFICE",
-                "CAT_ADMIN",
-                LocalDate.of(2026, 1, 1),
-                null
-        );
-
+        LaborClassification existing = occurrence("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null);
         agreementCategoryRelationValidator.setInvalidRelation(true);
         whenEmployeeExists();
-        when(laborClassificationRepository.findByEmployeeIdAndStartDate(10L, LocalDate.of(2026, 1, 1)))
-                .thenReturn(Optional.of(existing));
+        whenOccurrenceExists(existing);
 
         assertThrows(
                 LaborClassificationAgreementCategoryRelationInvalidException.class,
-                () -> service.update(command)
+                () -> service.update(command(LocalDate.of(2026, 1, 1), null, null, "AGR_TECH", "CAT_TECH_1"))
+        );
+        verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
+    }
+
+    // The old cascade (the predecessor followed the new start on its own) is
+    // what ADR-057 decision 3 retires: stretching a neighbour is the user's
+    // act. The plan rejects the gap and names the predecessor to stretch.
+    @Test
+    void movingTheStartLaterDoesNotStretchThePredecessorButNamesIt() {
+        LaborClassification predecessor = occurrence(
+                "AGR_TECH", "CAT_TECH_1", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31));
+        LaborClassification current = occurrence("AGR_TECH", "CAT_TECH_1", LocalDate.of(2025, 1, 1), null);
+        givenEmployeePresentFrom(LocalDate.of(2024, 1, 1), predecessor, current);
+        whenOccurrenceExists(current);
+
+        LaborClassificationCoverageIncompleteException ex = assertThrows(
+                LaborClassificationCoverageIncompleteException.class,
+                () -> service.update(command(
+                        LocalDate.of(2025, 1, 1), LocalDate.of(2025, 2, 1), null, "AGR_TECH", "CAT_TECH_1"))
+        );
+
+        assertEquals(
+                List.of(new LaborClassificationPeriod(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31))),
+                ex.gaps()
+        );
+        assertTrue(ex.stretchCandidates().contains(
+                new LaborClassificationPeriod(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31))));
+        verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
+    }
+
+    @Test
+    void movingTheStartEarlierOverAnUncoveredStretchUpdatesOnlyTheCorrectedOne() {
+        LaborClassification current = occurrence("AGR_TECH", "CAT_TECH_1", LocalDate.of(2025, 1, 1), null);
+        givenEmployeePresentFrom(LocalDate.of(2024, 12, 1), current);
+        whenOccurrenceExists(current);
+
+        service.update(command(LocalDate.of(2025, 1, 1), LocalDate.of(2024, 12, 1), null, "AGR_TECH", "CAT_TECH_1"));
+
+        ArgumentCaptor<LaborClassification> captor = ArgumentCaptor.forClass(LaborClassification.class);
+        verify(laborClassificationRepository).update(captor.capture(), eq(LocalDate.of(2025, 1, 1)));
+        assertEquals(LocalDate.of(2024, 12, 1), captor.getValue().getStartDate());
+    }
+
+    @Test
+    void movingTheStartEarlierIntoThePredecessorIsRejectedAsAnOverlap() {
+        LaborClassification predecessor = occurrence(
+                "AGR_TECH", "CAT_TECH_1", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31));
+        LaborClassification current = occurrence("AGR_TECH", "CAT_TECH_1", LocalDate.of(2025, 1, 1), null);
+        givenEmployeePresentFrom(LocalDate.of(2024, 1, 1), predecessor, current);
+        whenOccurrenceExists(current);
+
+        LaborClassificationOverlapException ex = assertThrows(
+                LaborClassificationOverlapException.class,
+                () -> service.update(command(
+                        LocalDate.of(2025, 1, 1), LocalDate.of(2024, 12, 15), null, "AGR_TECH", "CAT_TECH_1"))
+        );
+
+        assertEquals(
+                List.of(new LaborClassificationPeriod(LocalDate.of(2024, 12, 15), LocalDate.of(2024, 12, 31))),
+                ex.overlaps()
         );
         verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
     }
 
     @Test
-    void whenNewStartDateDiffers_predecessorEndDateIsCascaded() {
-        LocalDate predecessorStart = LocalDate.of(2024, 1, 1);
-        LocalDate predecessorEnd   = LocalDate.of(2024, 12, 31);
-        LocalDate currentStart     = LocalDate.of(2025, 1, 1);
-        LocalDate newStart         = LocalDate.of(2025, 2, 1);
+    void movingBeforeThePresenceIsRejected() {
+        LaborClassification current = occurrence("AGR_TECH", "CAT_TECH_1", LocalDate.of(2025, 1, 1), null);
+        givenEmployeePresentFrom(LocalDate.of(2025, 1, 1), current);
+        whenOccurrenceExists(current);
 
-        LaborClassification predecessor = new LaborClassification(
-                10L, "AGR_TECH", "CAT_TECH_1", predecessorStart, predecessorEnd
+        assertThrows(
+                LaborClassificationOutsidePresencePeriodException.class,
+                () -> service.update(command(
+                        LocalDate.of(2025, 1, 1), LocalDate.of(2024, 12, 1), null, "AGR_TECH", "CAT_TECH_1"))
         );
-        LaborClassification current = new LaborClassification(
-                10L, "AGR_TECH", "CAT_TECH_1", currentStart, null
-        );
-
-        UpdateLaborClassificationCommand command = new UpdateLaborClassificationCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                currentStart,
-                newStart,
-                "AGR_TECH",
-                "CAT_TECH_1"
-        );
-
-        whenEmployeeExists();
-        when(laborClassificationRepository.findByEmployeeIdAndStartDate(10L, currentStart))
-                .thenReturn(Optional.of(current));
-        when(laborClassificationRepository.existsOverlappingPeriod(any(), any(), any(), any()))
-                .thenReturn(false);
-        when(laborClassificationRepository.findByEmployeeIdOrderByStartDate(10L))
-                .thenReturn(List.of(predecessor, current));
-
-        service.update(command);
-
-        ArgumentCaptor<LaborClassification> captor = ArgumentCaptor.forClass(LaborClassification.class);
-        verify(laborClassificationRepository, times(2)).update(captor.capture(), any(LocalDate.class));
-
-        List<LaborClassification> saved = captor.getAllValues();
-        LaborClassification savedPredecessor = saved.get(0);
-        LaborClassification savedCurrent     = saved.get(1);
-
-        assertEquals(predecessorStart,               savedPredecessor.getStartDate());
-        assertEquals(newStart.minusDays(1),          savedPredecessor.getEndDate());
-        assertEquals(newStart,                       savedCurrent.getStartDate());
+        verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
     }
 
     @Test
-    void whenNewStartDateDiffers_andNoPredecessor_onlyCurrentIsUpdated() {
-        LocalDate currentStart = LocalDate.of(2025, 1, 1);
-        LocalDate newStart     = LocalDate.of(2025, 2, 1);
+    void rejectsWhenTheOccurrenceDoesNotExist() {
+        whenEmployeeExists();
+        when(laborClassificationRepository.findByEmployeeIdAndStartDate(10L, LocalDate.of(2026, 1, 1)))
+                .thenReturn(Optional.empty());
 
-        LaborClassification current = new LaborClassification(
-                10L, "AGR_TECH", "CAT_TECH_1", currentStart, null
+        assertThrows(
+                LaborClassificationNotFoundException.class,
+                () -> service.update(command(LocalDate.of(2026, 1, 1), null, null, "AGR_TECH", "CAT_TECH_1"))
         );
+    }
 
-        UpdateLaborClassificationCommand command = new UpdateLaborClassificationCommand(
+    private UpdateLaborClassificationCommand command(
+            LocalDate startDate,
+            LocalDate newStartDate,
+            LocalDate endDate,
+            String agreementCode,
+            String agreementCategoryCode
+    ) {
+        return new UpdateLaborClassificationCommand(
                 RULE_SYSTEM_CODE,
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER,
-                currentStart,
-                newStart,
-                "AGR_TECH",
-                "CAT_TECH_1"
+                startDate,
+                newStartDate,
+                endDate,
+                agreementCode,
+                agreementCategoryCode
         );
-
-        whenEmployeeExists();
-        when(laborClassificationRepository.findByEmployeeIdAndStartDate(10L, currentStart))
-                .thenReturn(Optional.of(current));
-        when(laborClassificationRepository.existsOverlappingPeriod(any(), any(), any(), any()))
-                .thenReturn(false);
-        when(laborClassificationRepository.findByEmployeeIdOrderByStartDate(10L))
-                .thenReturn(List.of(current));
-
-        service.update(command);
-
-        ArgumentCaptor<LaborClassification> captor = ArgumentCaptor.forClass(LaborClassification.class);
-        verify(laborClassificationRepository).update(captor.capture(), any(LocalDate.class));
-        assertThat(captor.getValue().getStartDate()).isEqualTo(LocalDate.of(2025, 2, 1));
     }
 
-    @Test
-    void whenNewStartDateIsEarlier_predecessorEndDateIsCascadedBackward() {
-        LaborClassification predecessor = new LaborClassification(
-                10L, "AGR_TECH", "CAT_TECH_1",
-                LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)
-        );
-        LaborClassification current = new LaborClassification(
-                10L, "AGR_TECH", "CAT_TECH_1",
-                LocalDate.of(2025, 1, 1), null
-        );
-
+    private void givenEmployeePresentFrom(LocalDate presenceStart, LaborClassification... occurrences) {
         whenEmployeeExists();
-        when(laborClassificationRepository.findByEmployeeIdAndStartDate(10L, LocalDate.of(2025, 1, 1)))
-                .thenReturn(Optional.of(current));
-        when(laborClassificationRepository.findByEmployeeIdOrderByStartDate(10L))
-                .thenReturn(List.of(predecessor, current));
-        when(laborClassificationRepository.existsOverlappingPeriod(any(), any(), any(), any()))
-                .thenReturn(false);
+        when(laborClassificationRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(occurrences));
+        when(presencePort.findPresencePeriodsByEmployeeIdOrderByStartDate(10L))
+                .thenReturn(List.of(new PresencePeriod(presenceStart, null)));
+    }
 
-        UpdateLaborClassificationCommand command = new UpdateLaborClassificationCommand(
-                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER,
-                LocalDate.of(2025, 1, 1),    // path key
-                LocalDate.of(2024, 12, 15),  // newStartDate — earlier
-                "AGR_TECH", "CAT_TECH_1"
-        );
-
-        service.update(command);
-
-        ArgumentCaptor<LaborClassification> captor = ArgumentCaptor.forClass(LaborClassification.class);
-        verify(laborClassificationRepository, times(2)).update(captor.capture(), any(LocalDate.class));
-        List<LaborClassification> saved = captor.getAllValues();
-        LaborClassification savedPredecessor = saved.stream()
-                .filter(c -> c.getStartDate().equals(LocalDate.of(2024, 1, 1)))
-                .findFirst().orElseThrow();
-        LaborClassification savedCurrent = saved.stream()
-                .filter(c -> c.getStartDate().equals(LocalDate.of(2024, 12, 15)))
-                .findFirst().orElseThrow();
-        assertThat(savedPredecessor.getEndDate()).isEqualTo(LocalDate.of(2024, 12, 14));
-        assertThat(savedCurrent.getStartDate()).isEqualTo(LocalDate.of(2024, 12, 15));
+    private void whenOccurrenceExists(LaborClassification existing) {
+        when(laborClassificationRepository.findByEmployeeIdAndStartDate(10L, existing.getStartDate()))
+                .thenReturn(Optional.of(existing));
     }
 
     private void whenEmployeeExists() {
@@ -296,6 +254,10 @@ class UpdateLaborClassificationServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER
         )));
+    }
+
+    private static LaborClassification occurrence(String agreement, String category, LocalDate startDate, LocalDate endDate) {
+        return new LaborClassification(10L, agreement, category, startDate, endDate);
     }
 
     private static final class TestLaborClassificationCatalogValidator extends LaborClassificationCatalogValidator {
@@ -351,37 +313,6 @@ class UpdateLaborClassificationServiceTest {
                         referenceDate
                 );
             }
-        }
-    }
-
-    private static final class TestLaborClassificationPresenceCoverageValidator
-            extends LaborClassificationPresenceCoverageValidator {
-
-        private TestLaborClassificationPresenceCoverageValidator() {
-            super(null);
-        }
-
-        @Override
-        public void validatePeriodWithinPresence(
-                Long employeeId,
-                LocalDate startDate,
-                LocalDate endDate,
-                String ruleSystemCode,
-                String employeeTypeCode,
-                String employeeNumber
-        ) {
-            // Always valid in these tests.
-        }
-
-        @Override
-        public void validateFullCoverage(
-                Long employeeId,
-                List<LaborClassification> projectedLaborClassificationHistory,
-                String ruleSystemCode,
-                String employeeTypeCode,
-                String employeeNumber
-        ) {
-            // Always valid in these tests.
         }
     }
 }

@@ -12,10 +12,14 @@ import com.b4rrhh.employee.labor_classification.application.usecase.GetLaborClas
 import com.b4rrhh.employee.labor_classification.application.usecase.ListEmployeeLaborClassificationsUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.ReplaceLaborClassificationFromDateUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.UpdateLaborClassificationUseCase;
+import com.b4rrhh.employee.labor_classification.application.command.UpdateLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationAgreementInvalidException;
+import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationCoverageIncompleteException;
+import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationIsACorrectionException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationNotFoundException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationOverlapException;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
+import com.b4rrhh.employee.labor_classification.domain.model.LaborClassificationPeriod;
 import com.b4rrhh.employee.labor_classification.infrastructure.rest.assembler.LaborClassificationResponseAssembler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +38,7 @@ import java.util.Optional;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -314,6 +319,85 @@ class LaborClassificationControllerHttpTest {
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("LABOR_CLASSIFICATION_OVERLAP"));
+    }
+
+    @Test
+    void updateCarriesBothDatesAndTheCodesToTheCommand() throws Exception {
+        when(updateLaborClassificationUseCase.update(any()))
+                .thenReturn(laborClassification("AGR_TECH", "CAT_TECH_1", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30)));
+
+        mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/labor-classifications/2026-01-01")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "endDate": "2026-06-30",
+                                  "agreementCode": "AGR_TECH",
+                                  "agreementCategoryCode": "CAT_TECH_1"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<UpdateLaborClassificationCommand> captor =
+                ArgumentCaptor.forClass(UpdateLaborClassificationCommand.class);
+        verify(updateLaborClassificationUseCase).update(captor.capture());
+        assertEquals(LocalDate.of(2026, 1, 1), captor.getValue().startDate());
+        assertNull(captor.getValue().newStartDate());
+        assertEquals(LocalDate.of(2026, 6, 30), captor.getValue().endDate());
+        assertEquals("AGR_TECH", captor.getValue().agreementCode());
+    }
+
+    @Test
+    void createMapsACoverageGapToHttp409SayingWhichGapAndWhatToStretch() throws Exception {
+        when(createLaborClassificationUseCase.create(any(CreateLaborClassificationCommand.class)))
+                .thenThrow(new LaborClassificationCoverageIncompleteException(
+                        "ESP", "INTERNAL", "EMP001",
+                        List.of(new LaborClassificationPeriod(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28))),
+                        List.of(
+                                new LaborClassificationPeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31)),
+                                new LaborClassificationPeriod(LocalDate.of(2026, 3, 1), null)
+                        )
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/labor-classifications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "agreementCode": "AGR_OFFICE",
+                                  "agreementCategoryCode": "CAT_ADMIN",
+                                  "startDate": "2026-03-01"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("LABOR_CLASSIFICATION_INCOMPLETE_COVERAGE"))
+                .andExpect(jsonPath("$.details.gaps[0].startDate[1]").value(2))
+                .andExpect(jsonPath("$.details.gaps[0].endDate[2]").value(28))
+                .andExpect(jsonPath("$.details.stretchCandidates[0].startDate[1]").value(1))
+                .andExpect(jsonPath("$.details.stretchCandidates[1].endDate").doesNotExist());
+    }
+
+    @Test
+    void createMapsACorrectionAskedForAsAnAddToHttp409NamingTheOccurrenceToCorrect() throws Exception {
+        when(createLaborClassificationUseCase.create(any(CreateLaborClassificationCommand.class)))
+                .thenThrow(new LaborClassificationIsACorrectionException(
+                        "ESP", "INTERNAL", "EMP001",
+                        new LaborClassificationPeriod(LocalDate.of(2026, 1, 1), null),
+                        new LaborClassificationPeriod(LocalDate.of(2026, 1, 1), null)
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/labor-classifications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "agreementCode": "AGR_TECH",
+                                  "agreementCategoryCode": "CAT_TECH_1",
+                                  "startDate": "2026-01-01"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("LABOR_CLASSIFICATION_IS_A_CORRECTION"))
+                .andExpect(jsonPath("$.message", containsString("corrige")))
+                .andExpect(jsonPath("$.details.correctedOccurrence.startDate[0]").value(2026))
+                .andExpect(jsonPath("$.details.correctedOccurrence.endDate").doesNotExist());
     }
 
     @Test

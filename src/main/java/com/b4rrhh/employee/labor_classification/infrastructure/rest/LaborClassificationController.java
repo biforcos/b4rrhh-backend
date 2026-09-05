@@ -143,6 +143,7 @@ public class LaborClassificationController {
                         employeeNumber,
                         startDate,
                         request.startDate(),
+                        request.endDate(),
                         request.agreementCode(),
                         request.agreementCategoryCode()
                 )

@@ -7,15 +7,19 @@ import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassifica
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationCategoryInvalidException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationCoverageIncompleteException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationEmployeeNotFoundException;
+import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationIsACorrectionException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationNotFoundException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationOutsidePresencePeriodException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationOverlapException;
+import com.b4rrhh.employee.labor_classification.domain.model.LaborClassificationPeriod;
 import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.LaborClassificationErrorResponse;
+import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.LaborClassificationPeriodResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.List;
 import java.util.Map;
 
 @RestControllerAdvice(assignableTypes = {
@@ -81,18 +85,33 @@ public class LaborClassificationExceptionHandler {
         );
     }
 
+    /**
+     * A plan rejection says what it ran into (ADR-057): the shared dates, the
+     * gap and the neighbours to stretch, or the occurrence an add would
+     * correct instead of adding a second one.
+     */
     @ExceptionHandler({
             LaborClassificationOverlapException.class,
             LaborClassificationOutsidePresencePeriodException.class,
             LaborClassificationCoverageIncompleteException.class,
+            LaborClassificationIsACorrectionException.class,
             LaborClassificationAlreadyClosedException.class
     })
     public ResponseEntity<LaborClassificationErrorResponse> handleConflict(RuntimeException ex) {
-        if (ex instanceof LaborClassificationOverlapException) {
+        if (ex instanceof LaborClassificationIsACorrectionException correction) {
+            LaborClassificationPeriod corrected = correction.correctedOccurrence();
+            return conflict(
+                    "LABOR_CLASSIFICATION_IS_A_CORRECTION",
+                    "La fecha de inicio coincide con la de la clasificación laboral del " + corrected.startDate()
+                            + ": esto no añade una clasificación, corrige esa. Confírmalo como corrección.",
+                    Map.of("correctedOccurrence", toPeriod(corrected))
+            );
+        }
+        if (ex instanceof LaborClassificationOverlapException overlap) {
             return conflict(
                     "LABOR_CLASSIFICATION_OVERLAP",
                     "El periodo informado se solapa con otra clasificación laboral del empleado.",
-                    null
+                    overlap.overlaps().isEmpty() ? null : Map.of("overlaps", toPeriods(overlap.overlaps()))
             );
         }
         if (ex instanceof LaborClassificationOutsidePresencePeriodException) {
@@ -102,11 +121,14 @@ public class LaborClassificationExceptionHandler {
                     null
             );
         }
-        if (ex instanceof LaborClassificationCoverageIncompleteException) {
+        if (ex instanceof LaborClassificationCoverageIncompleteException gap) {
             return conflict(
                     "LABOR_CLASSIFICATION_INCOMPLETE_COVERAGE",
                     "La operación dejaría huecos en la cobertura de clasificación laboral frente a presence.",
-                    null
+                    Map.of(
+                            "gaps", toPeriods(gap.gaps()),
+                            "stretchCandidates", toPeriods(gap.stretchCandidates())
+                    )
             );
         }
 
@@ -115,6 +137,14 @@ public class LaborClassificationExceptionHandler {
                 "La clasificación laboral ya estaba cerrada y no puede cerrarse nuevamente.",
                 null
         );
+    }
+
+    private static LaborClassificationPeriodResponse toPeriod(LaborClassificationPeriod period) {
+        return new LaborClassificationPeriodResponse(period.startDate(), period.endDate());
+    }
+
+    private static List<LaborClassificationPeriodResponse> toPeriods(List<LaborClassificationPeriod> periods) {
+        return periods.stream().map(LaborClassificationExceptionHandler::toPeriod).toList();
     }
 
     private ResponseEntity<LaborClassificationErrorResponse> notFound(
