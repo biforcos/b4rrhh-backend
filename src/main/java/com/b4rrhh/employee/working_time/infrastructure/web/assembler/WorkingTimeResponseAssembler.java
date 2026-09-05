@@ -41,6 +41,7 @@ public class WorkingTimeResponseAssembler {
                 plan.isAccepted(),
                 plan.rejection() == null ? null : plan.rejection().name(),
                 toOccurrence(plan.occurrence()),
+                plan.correctedOccurrence() == null ? null : toOccurrence(plan.correctedOccurrence()),
                 toAdjustment(plan.adjustedOccurrence()),
                 plan.overlaps().stream().map(this::toPeriod).toList(),
                 plan.gaps().stream().map(this::toPeriod).toList(),

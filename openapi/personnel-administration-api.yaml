@@ -1316,7 +1316,10 @@ paths:
             WORKING_TIME_COVERAGE_GAP (details.gaps names the uncovered stretches
             of the presence and details.stretchCandidates the neighbouring
             working times the user could stretch), WORKING_TIME_OUTSIDE_PRESENCE,
-            or WORKING_TIME_NUMBER_CONFLICT.
+            WORKING_TIME_IS_A_CORRECTION (the new working time starts on the
+            start date of an existing one, named in details.correctedOccurrence:
+            it would correct that one, not add a second one, and has to be asked
+            for as a correction), or WORKING_TIME_NUMBER_CONFLICT.
     get:
       operationId: listEmployeeWorkingTimesByBusinessKey
       summary: List employee working times by business key
@@ -7875,10 +7878,22 @@ components:
         rejection:
           type: string
           nullable: true
-          enum: [OUTSIDE_PRESENCE, OVERLAP, GAP_NOT_ALLOWED]
-          description: Why the plan cannot be applied. Null when accepted.
+          enum: [OUTSIDE_PRESENCE, OVERLAP, GAP_NOT_ALLOWED, IS_A_CORRECTION]
+          description: >-
+            Why the plan cannot be applied. Null when accepted. IS_A_CORRECTION
+            means the plan is not the operation it was asked for: an ADD whose
+            start date is the start date of an existing working time is the
+            correction of that one (named in correctedOccurrence) and has to be
+            asked for as a CORRECT.
         occurrence:
           $ref: "#/components/schemas/WorkingTimeOccurrence"
+        correctedOccurrence:
+          nullable: true
+          description: >-
+            On a correction, the working time as it stands today, the one
+            occurrence replaces. Null on an add and on a removal.
+          allOf:
+            - $ref: "#/components/schemas/WorkingTimeOccurrence"
         adjustedOccurrence:
           nullable: true
           allOf:

@@ -7,6 +7,7 @@ import com.b4rrhh.employee.working_time.application.model.WorkingTimePlan;
 import com.b4rrhh.employee.working_time.application.model.WorkingTimePlanAdjustment;
 import com.b4rrhh.employee.working_time.application.port.WorkingTimePresenceConsistencyPort;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeCoverageGapException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeIsACorrectionException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOutsidePresencePeriodException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOverlapException;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
@@ -171,6 +172,41 @@ class WorkingTimeTimelineServiceTest {
                 ),
                 plan.projected()
         );
+    }
+
+    @Test
+    void addingOnTheStartDateOfAnExistingOneIsRejectedAsItsCorrectionAndNamesItByNumber() {
+        givenSeries(FIRST, SECOND);
+
+        WorkingTimePlan plan = service.planAdd(EMPLOYEE_ID, range(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 3, 31)));
+
+        assertFalse(plan.isAccepted());
+        assertEquals(TimelineRejection.IS_A_CORRECTION, plan.rejection());
+        assertEquals(TimelineOperation.CORRECT, plan.operation());
+        assertEquals(new WorkingTimeOccurrence(2, LocalDate.of(2026, 2, 1), null), plan.correctedOccurrence());
+        assertEquals(new WorkingTimeOccurrence(2, LocalDate.of(2026, 2, 1), LocalDate.of(2026, 3, 31)), plan.occurrence());
+        assertNull(plan.adjustedOccurrence());
+        assertEquals(
+                List.of(
+                        new WorkingTimeOccurrence(1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31)),
+                        new WorkingTimeOccurrence(2, LocalDate.of(2026, 2, 1), LocalDate.of(2026, 3, 31))
+                ),
+                plan.projected()
+        );
+    }
+
+    @Test
+    void aPlanRejectedAsACorrectionBecomesTheIsACorrectionExceptionNamingTheWorkingTimeToCorrect() {
+        givenSeries(FIRST, SECOND);
+        WorkingTimePlan plan = service.planAdd(EMPLOYEE_ID, range(LocalDate.of(2026, 2, 1), null));
+
+        WorkingTimeIsACorrectionException ex = assertThrows(
+                WorkingTimeIsACorrectionException.class,
+                () -> service.requireAccepted(plan, "ESP", "INTERNAL", "EMP001")
+        );
+
+        assertEquals(new WorkingTimeOccurrence(2, LocalDate.of(2026, 2, 1), null), ex.correctedOccurrence());
+        assertEquals(new WorkingTimePeriod(LocalDate.of(2026, 2, 1), null), ex.requested());
     }
 
     @Test

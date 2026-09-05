@@ -20,6 +20,7 @@ import com.b4rrhh.employee.working_time.application.usecase.UpdateWorkingTimeCom
 import com.b4rrhh.employee.working_time.application.usecase.UpdateWorkingTimeUseCase;
 import com.b4rrhh.employee.working_time.application.service.StandardWorkingTimeDerivationPolicy;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeCoverageGapException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeIsACorrectionException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOverlapException;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
@@ -319,6 +320,7 @@ class WorkingTimeControllerHttpTest {
                         TimelineOperation.ADD,
                         null,
                         new WorkingTimeOccurrence(null, LocalDate.of(2026, 1, 16), null),
+                        null,
                         new WorkingTimePlanAdjustment(
                                 1,
                                 new WorkingTimePeriod(LocalDate.of(2026, 1, 1), null),
@@ -368,6 +370,7 @@ class WorkingTimeControllerHttpTest {
                         TimelineRejection.GAP_NOT_ALLOWED,
                         new WorkingTimeOccurrence(2, LocalDate.of(2026, 1, 16), LocalDate.of(2026, 1, 31)),
                         null,
+                        null,
                         List.of(),
                         List.of(new WorkingTimePeriod(LocalDate.of(2026, 1, 16), LocalDate.of(2026, 1, 31))),
                         List.of(new WorkingTimeOccurrence(1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15))),
@@ -392,6 +395,64 @@ class WorkingTimeControllerHttpTest {
         verify(planWorkingTimeChangeUseCase).plan(captor.capture());
         assertEquals(TimelineOperation.REMOVE, captor.getValue().operation());
         assertEquals(2, captor.getValue().workingTimeNumber());
+    }
+
+    @Test
+    void createMapsACorrectionAskedForAsAnAddToHttp409NamingTheWorkingTimeToCorrect() throws Exception {
+        when(createWorkingTimeUseCase.create(any(CreateWorkingTimeCommand.class)))
+                .thenThrow(new WorkingTimeIsACorrectionException(
+                        "ESP", "INTERNAL", "EMP001",
+                        new WorkingTimeOccurrence(1, LocalDate.of(2026, 1, 1), null),
+                        new WorkingTimePeriod(LocalDate.of(2026, 1, 1), null)
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/working-times")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "startDate": "2026-01-01",
+                                  "workingTimePercentage": 50
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("WORKING_TIME_IS_A_CORRECTION"))
+                .andExpect(jsonPath("$.message", containsString("corrige")))
+                .andExpect(jsonPath("$.details.correctedOccurrence.workingTimeNumber").value(1))
+                .andExpect(jsonPath("$.details.correctedOccurrence.startDate[0]").value(2026));
+    }
+
+    @Test
+    void planTellsTheScreenAnAddOnAnExistingStartDateIsACorrectionOfThatWorkingTime() throws Exception {
+        when(planWorkingTimeChangeUseCase.plan(any(PlanWorkingTimeChangeCommand.class)))
+                .thenReturn(new WorkingTimePlan(
+                        TimelineOperation.CORRECT,
+                        TimelineRejection.IS_A_CORRECTION,
+                        new WorkingTimeOccurrence(1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)),
+                        new WorkingTimeOccurrence(1, LocalDate.of(2026, 1, 1), null),
+                        null,
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(new WorkingTimeOccurrence(1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)))
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/working-times/plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "operation": "ADD",
+                                  "startDate": "2026-01-01",
+                                  "endDate": "2026-01-15"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.operation").value("CORRECT"))
+                .andExpect(jsonPath("$.accepted").value(false))
+                .andExpect(jsonPath("$.rejection").value("IS_A_CORRECTION"))
+                .andExpect(jsonPath("$.correctedOccurrence.workingTimeNumber").value(1))
+                .andExpect(jsonPath("$.correctedOccurrence.endDate").doesNotExist())
+                .andExpect(jsonPath("$.occurrence.workingTimeNumber").value(1))
+                .andExpect(jsonPath("$.occurrence.endDate[2]").value(15));
     }
 
     @Test

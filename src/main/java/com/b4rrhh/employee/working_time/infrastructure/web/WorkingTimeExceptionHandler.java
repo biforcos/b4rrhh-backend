@@ -5,6 +5,7 @@ import com.b4rrhh.employee.working_time.domain.exception.InvalidWorkingTimePerce
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeAlreadyClosedException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeCoverageGapException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeEmployeeNotFoundException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeIsACorrectionException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeNotFoundException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeNumberConflictException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOutsidePresencePeriodException;
@@ -69,11 +70,21 @@ public class WorkingTimeExceptionHandler {
     @ExceptionHandler({
             WorkingTimeOverlapException.class,
             WorkingTimeCoverageGapException.class,
+            WorkingTimeIsACorrectionException.class,
             WorkingTimeOutsidePresencePeriodException.class,
             WorkingTimeAlreadyClosedException.class,
             WorkingTimeNumberConflictException.class
     })
     public ResponseEntity<WorkingTimeErrorResponse> handleConflict(RuntimeException ex) {
+        if (ex instanceof WorkingTimeIsACorrectionException correction) {
+            WorkingTimeOccurrence corrected = correction.correctedOccurrence();
+            return conflict(
+                    "WORKING_TIME_IS_A_CORRECTION",
+                    "La fecha de inicio coincide con la de la jornada n.º " + corrected.workingTimeNumber()
+                            + ": esto no añade una jornada, corrige esa. Confírmalo como corrección.",
+                    Map.of("correctedOccurrence", occurrences(List.of(corrected)).get(0))
+            );
+        }
         if (ex instanceof WorkingTimeOverlapException overlap) {
             return conflict(
                     "WORKING_TIME_OVERLAP",

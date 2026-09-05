@@ -16,6 +16,11 @@ import java.util.List;
  * <ul>
  *   <li>{@link #occurrence()} is the one added, removed or corrected; on an
  *       add it has no number yet.</li>
+ *   <li>{@link #correctedOccurrence()} is, on a correction, the working time
+ *       as it stands today, the one {@link #occurrence()} replaces. It is
+ *       also how the plan tells the screen that an add on an existing start
+ *       date is the correction of that working time (backend#58). {@code null}
+ *       on an add and on a removal.</li>
  *   <li>{@link #adjustedOccurrence()} is the only automatic consequence, or
  *       {@code null} when nothing else moves.</li>
  *   <li>{@link #stretchCandidates()} are the neighbours of the gaps: the
@@ -27,6 +32,7 @@ public record WorkingTimePlan(
         TimelineOperation operation,
         TimelineRejection rejection,
         WorkingTimeOccurrence occurrence,
+        WorkingTimeOccurrence correctedOccurrence,
         WorkingTimePlanAdjustment adjustedOccurrence,
         List<WorkingTimePeriod> overlaps,
         List<WorkingTimePeriod> gaps,

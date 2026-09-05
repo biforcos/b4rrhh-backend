@@ -9,6 +9,7 @@ import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeLook
 import com.b4rrhh.employee.working_time.application.port.WorkingTimePresenceConsistencyPort;
 import com.b4rrhh.employee.working_time.application.service.WorkingTimeTimelineService;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeCoverageGapException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeIsACorrectionException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeNumberConflictException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOutsidePresencePeriodException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOverlapException;
@@ -200,6 +201,25 @@ class CreateWorkingTimeServiceTest {
                 List.of(new WorkingTimePeriod(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 10))),
                 ex.overlaps()
         );
+        verify(workingTimeRepository, never()).save(any(WorkingTime.class));
+    }
+
+    @Test
+    void rejectsAWorkingTimeStartingOnTheSameDayAsAnExistingOneAsACorrectionNotAnAdd() {
+        WorkingTime first = workingTime(1, PRESENCE_START, LocalDate.of(2026, 1, 31));
+        WorkingTime second = workingTime(2, LocalDate.of(2026, 2, 1), null);
+        LocalDate sameStart = LocalDate.of(2026, 2, 1);
+        givenEmployeeWithSeries(first, second);
+        stubAgreementResolution(sameStart);
+        stubDerivedHours(new BigDecimal("80"));
+        when(workingTimeRepository.findMaxWorkingTimeNumberByEmployeeId(10L)).thenReturn(Optional.of(2));
+
+        WorkingTimeIsACorrectionException ex = assertThrows(
+                WorkingTimeIsACorrectionException.class,
+                () -> service.create(command(sameStart, null, new BigDecimal("80")))
+        );
+
+        assertEquals(new WorkingTimeOccurrence(2, LocalDate.of(2026, 2, 1), null), ex.correctedOccurrence());
         verify(workingTimeRepository, never()).save(any(WorkingTime.class));
     }
 

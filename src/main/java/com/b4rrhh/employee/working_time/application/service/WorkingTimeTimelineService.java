@@ -10,6 +10,7 @@ import com.b4rrhh.employee.working_time.application.model.WorkingTimePlan;
 import com.b4rrhh.employee.working_time.application.model.WorkingTimePlanAdjustment;
 import com.b4rrhh.employee.working_time.application.port.WorkingTimePresenceConsistencyPort;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeCoverageGapException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeIsACorrectionException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOutsidePresencePeriodException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOverlapException;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
@@ -57,7 +58,7 @@ public class WorkingTimeTimelineService {
         Series series = load(employeeId);
         TimelinePlan plan = timelinePlanner.planAdd(series.timeline(), occurrence);
 
-        return toPlan(plan, series, null, null);
+        return toPlan(plan, series, null);
     }
 
     public WorkingTimePlan planRemove(Long employeeId, WorkingTime occurrence) {
@@ -65,7 +66,7 @@ public class WorkingTimeTimelineService {
         DateRange removed = rangeOf(occurrence);
         TimelinePlan plan = timelinePlanner.planRemove(series.timeline(), removed);
 
-        return toPlan(plan, series, occurrence.getWorkingTimeNumber(), removed);
+        return toPlan(plan, series, occurrence.getWorkingTimeNumber());
     }
 
     public WorkingTimePlan planCorrect(Long employeeId, WorkingTime occurrence, DateRange corrected) {
@@ -73,12 +74,14 @@ public class WorkingTimeTimelineService {
         DateRange existing = rangeOf(occurrence);
         TimelinePlan plan = timelinePlanner.planCorrect(series.timeline(), existing, corrected);
 
-        return toPlan(plan, series, occurrence.getWorkingTimeNumber(), existing);
+        return toPlan(plan, series, occurrence.getWorkingTimeNumber());
     }
 
     /**
      * Throws the business exception a rejected plan stands for. Accepted
-     * plans pass through.
+     * plans pass through. The switch is an expression on purpose: a rejection
+     * the component adds and this vertical does not translate stops compiling
+     * instead of slipping through (backend#58).
      */
     public void requireAccepted(
             WorkingTimePlan plan,
@@ -91,15 +94,15 @@ public class WorkingTimeTimelineService {
         }
 
         WorkingTimeOccurrence occurrence = plan.occurrence();
-        switch (plan.rejection()) {
-            case OUTSIDE_PRESENCE -> throw new WorkingTimeOutsidePresencePeriodException(
+        throw switch (plan.rejection()) {
+            case OUTSIDE_PRESENCE -> new WorkingTimeOutsidePresencePeriodException(
                     ruleSystemCode,
                     employeeTypeCode,
                     employeeNumber,
                     occurrence.startDate(),
                     occurrence.endDate()
             );
-            case OVERLAP -> throw new WorkingTimeOverlapException(
+            case OVERLAP -> new WorkingTimeOverlapException(
                     ruleSystemCode,
                     employeeTypeCode,
                     employeeNumber,
@@ -107,14 +110,21 @@ public class WorkingTimeTimelineService {
                     occurrence.endDate(),
                     plan.overlaps()
             );
-            case GAP_NOT_ALLOWED -> throw new WorkingTimeCoverageGapException(
+            case GAP_NOT_ALLOWED -> new WorkingTimeCoverageGapException(
                     ruleSystemCode,
                     employeeTypeCode,
                     employeeNumber,
                     plan.gaps(),
                     plan.stretchCandidates()
             );
-        }
+            case IS_A_CORRECTION -> new WorkingTimeIsACorrectionException(
+                    ruleSystemCode,
+                    employeeTypeCode,
+                    employeeNumber,
+                    plan.correctedOccurrence(),
+                    new WorkingTimePeriod(occurrence.startDate(), occurrence.endDate())
+            );
+        };
     }
 
     private Series load(Long employeeId) {
@@ -136,8 +146,14 @@ public class WorkingTimeTimelineService {
      * ranges: an adjusted or corrected occurrence keeps its number under its
      * new dates, a removed one gives it up, and the one an add would create
      * is the only range left without one.
+     *
+     * <p>{@code subjectNumber} is the number of the occurrence the caller
+     * asked about, when it asked about one. An add asks about none: if the
+     * component answers that the add is a correction, the corrected
+     * occurrence is the one whose start date it landed on, and its number is
+     * found here (backend#58).
      */
-    private WorkingTimePlan toPlan(TimelinePlan plan, Series series, Integer subjectNumber, DateRange subjectBefore) {
+    private WorkingTimePlan toPlan(TimelinePlan plan, Series series, Integer subjectNumber) {
         Map<DateRange, Deque<Integer>> numbers = series.numbersByRange();
 
         WorkingTimePlanAdjustment adjustment = null;
@@ -150,11 +166,18 @@ public class WorkingTimeTimelineService {
         }
 
         if (plan.operation() == TimelineOperation.REMOVE) {
-            take(numbers, subjectBefore);
+            take(numbers, plan.occurrence());
         }
+
+        WorkingTimeOccurrence correctedOccurrence = null;
         if (plan.operation() == TimelineOperation.CORRECT) {
-            take(numbers, subjectBefore);
+            DateRange before = plan.correctedOccurrence();
+            Integer numberUnderThoseDates = take(numbers, before);
+            if (subjectNumber == null) {
+                subjectNumber = numberUnderThoseDates;
+            }
             give(numbers, plan.occurrence(), subjectNumber);
+            correctedOccurrence = new WorkingTimeOccurrence(subjectNumber, before.startDate(), before.endDate());
         }
 
         List<WorkingTimeOccurrence> projected = new ArrayList<>();
@@ -173,6 +196,7 @@ public class WorkingTimeTimelineService {
                 plan.operation(),
                 plan.rejection(),
                 new WorkingTimeOccurrence(subjectNumber, plan.occurrence().startDate(), plan.occurrence().endDate()),
+                correctedOccurrence,
                 adjustment,
                 plan.overlaps().stream().map(WorkingTimeTimelineService::toPeriod).toList(),
                 plan.gaps().stream().map(WorkingTimeTimelineService::toPeriod).toList(),

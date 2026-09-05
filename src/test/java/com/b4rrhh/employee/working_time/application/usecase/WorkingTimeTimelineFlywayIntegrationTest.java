@@ -1,8 +1,10 @@
 package com.b4rrhh.employee.working_time.application.usecase;
 
 import com.b4rrhh.employee.temporal.support.TimelineOperation;
+import com.b4rrhh.employee.temporal.support.TimelineRejection;
 import com.b4rrhh.employee.working_time.application.model.WorkingTimePlan;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeCoverageGapException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeIsACorrectionException;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTimeOccurrence;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTimePeriod;
@@ -20,6 +22,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -172,6 +175,40 @@ class WorkingTimeTimelineFlywayIntegrationTest {
     }
 
     @Test
+    void addingOnTheStartDateOfTheExistingOneIsRejectedAsItsCorrectionAndPersistsNothing() {
+        createService.create(create(DAY_1, null, FULL_TIME));
+
+        WorkingTimeIsACorrectionException ex = assertThrows(
+                WorkingTimeIsACorrectionException.class,
+                () -> createService.create(create(DAY_1, null, HALF_TIME))
+        );
+        entityManager.flush();
+
+        assertEquals(new WorkingTimeOccurrence(1, DAY_1, null), ex.correctedOccurrence());
+        assertTrue(ex.getMessage().contains("correct"), ex.getMessage());
+        assertEquals(1, persistedCount());
+        assertEquals(new BigDecimal("100.00"), persistedPercentage(1));
+    }
+
+    @Test
+    void thePlanSaysAnAddOnAnExistingStartDateIsACorrectionOfThatWorkingTime() {
+        createService.create(create(DAY_1, null, FULL_TIME));
+
+        WorkingTimePlan plan = planService.plan(new PlanWorkingTimeChangeCommand(
+                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, TimelineOperation.ADD, null, DAY_1, DAY_15
+        ));
+        entityManager.flush();
+
+        assertFalse(plan.isAccepted());
+        assertEquals(TimelineRejection.IS_A_CORRECTION, plan.rejection());
+        assertEquals(TimelineOperation.CORRECT, plan.operation());
+        assertEquals(new WorkingTimeOccurrence(1, DAY_1, null), plan.correctedOccurrence());
+        assertEquals(List.of(new WorkingTimeOccurrence(1, DAY_1, DAY_15)), plan.projected());
+        assertEquals(1, persistedCount());
+        assertNull(persistedEndDate(1));
+    }
+
+    @Test
     void twoWorkingTimesCannotStartOnTheSameDayEvenIfEveryOtherGuardFails() {
         insertWorkingTimeBypassingTheUseCase(1, DAY_1, DAY_15);
 
@@ -212,6 +249,15 @@ class WorkingTimeTimelineFlywayIntegrationTest {
         return jdbcTemplate.queryForObject(
                 "select end_date from employee.working_time where employee_id = ? and working_time_number = ?",
                 LocalDate.class,
+                employeeId,
+                workingTimeNumber
+        );
+    }
+
+    private BigDecimal persistedPercentage(int workingTimeNumber) {
+        return jdbcTemplate.queryForObject(
+                "select working_time_percentage from employee.working_time where employee_id = ? and working_time_number = ?",
+                BigDecimal.class,
                 employeeId,
                 workingTimeNumber
         );
