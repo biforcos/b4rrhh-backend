@@ -8,6 +8,14 @@ import java.util.List;
  * the occurrences reads it and applies it, or shows it and waits.
  *
  * <ul>
+ *   <li>{@link #intent()} is the operation the plan was asked for and
+ *       {@link #operation()} the one it turned out to be. They differ in one
+ *       case only: an add that lands on the start date of an existing
+ *       occurrence is a correction of it. A plan that is not what was asked
+ *       for is never accepted: it is rejected as
+ *       {@link TimelineRejection#IS_A_CORRECTION}, and the record refuses to
+ *       be built otherwise, so no vertical has to remember to check it
+ *       (backend#58).</li>
  *   <li>{@link #occurrence()} is the one the operation is about: the added or
  *       removed one, or the corrected one under its new dates.</li>
  *   <li>{@link #correctedOccurrence()} is, on {@link TimelineOperation#CORRECT},
@@ -33,6 +41,7 @@ import java.util.List;
  * </ul>
  */
 public record TimelinePlan(
+        TimelineOperation intent,
         TimelineOperation operation,
         DateRange occurrence,
         DateRange correctedOccurrence,
@@ -45,8 +54,14 @@ public record TimelinePlan(
 ) {
 
     public TimelinePlan {
+        if (intent == null) {
+            throw new IllegalArgumentException("intent is required");
+        }
         if (operation == null) {
             throw new IllegalArgumentException("operation is required");
+        }
+        if ((intent != operation) != (rejection == TimelineRejection.IS_A_CORRECTION)) {
+            throw new IllegalArgumentException("a plan that is not the operation asked for is rejected as IS_A_CORRECTION");
         }
         if (occurrence == null) {
             throw new IllegalArgumentException("occurrence is required");

@@ -13,5 +13,13 @@ public enum TimelineRejection {
     OVERLAP,
 
     /** A gap would appear inside the presence period and the coverage is mandatory. */
-    GAP_NOT_ALLOWED
+    GAP_NOT_ALLOWED,
+
+    /**
+     * The plan is not the operation it was asked for. Asked for as an add, the
+     * occurrence starts on the start date of an existing one: it would correct
+     * that one, named in {@link TimelinePlan#correctedOccurrence()}, and a
+     * correction has to be asked for as a correction (backend#58).
+     */
+    IS_A_CORRECTION
 }

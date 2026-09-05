@@ -22,10 +22,13 @@ import java.util.List;
  * <p>There is one add that is not an add. An occurrence is identified by the
  * day it starts, so a new one that starts on the very start date of an
  * existing one is a correction of that one, whatever its end date: the plan
- * comes back as a {@link TimelineOperation#CORRECT} that names it, judged
- * exactly as {@link #planCorrect} would judge it, and the caller decides
- * whether that is what the user meant. This keeps what the old
- * {@code ReplaceMode.EXACT_START} did for the user without doing it silently.
+ * comes back as a {@link TimelineOperation#CORRECT} that names it, carrying
+ * what {@link #planCorrect} would find, and rejected as
+ * {@link TimelineRejection#IS_A_CORRECTION} because it is not the operation
+ * that was asked for. The user reads what it is and asks for it as a
+ * correction. This keeps what the old {@code ReplaceMode.EXACT_START} did
+ * for the user without doing it silently, and without any vertical having to
+ * notice on its own (backend#58).
  *
  * <p><b>Removing</b> the last occurrence reopens the previous one, up to where
  * the removed one ended, provided the previous one was closed right where the
@@ -51,7 +54,7 @@ public final class TimelinePlanner {
 
         DateRange startingOnTheSameDay = occurrenceStartingOn(timeline.occurrences(), occurrence.startDate());
         if (startingOnTheSameDay != null) {
-            return planCorrect(timeline, startingOnTheSameDay, occurrence);
+            return correct(TimelineOperation.ADD, timeline, startingOnTheSameDay, occurrence);
         }
 
         boolean insidePresence = timelineCoverageValidator.isContained(List.of(occurrence), timeline.presence());
@@ -67,7 +70,7 @@ public final class TimelinePlanner {
         projected.add(occurrence);
         projected.sort(Comparator.comparing(DateRange::startDate));
 
-        return judge(TimelineOperation.ADD, occurrence, null, closing, projected, timeline, insidePresence);
+        return judge(TimelineOperation.ADD, TimelineOperation.ADD, occurrence, null, closing, projected, timeline, insidePresence);
     }
 
     public TimelinePlan planRemove(Timeline timeline, DateRange occurrence) {
@@ -92,7 +95,7 @@ public final class TimelinePlanner {
             projected.set(index - 1, reopening.after());
         }
 
-        return judge(TimelineOperation.REMOVE, occurrence, null, reopening, projected, timeline, true);
+        return judge(TimelineOperation.REMOVE, TimelineOperation.REMOVE, occurrence, null, reopening, projected, timeline, true);
     }
 
     public TimelinePlan planCorrect(Timeline timeline, DateRange existing, DateRange corrected) {
@@ -104,6 +107,10 @@ public final class TimelinePlanner {
             throw new IllegalArgumentException("corrected is required");
         }
 
+        return correct(TimelineOperation.CORRECT, timeline, existing, corrected);
+    }
+
+    private TimelinePlan correct(TimelineOperation intent, Timeline timeline, DateRange existing, DateRange corrected) {
         int index = timeline.occurrences().indexOf(existing);
         if (index < 0) {
             throw new IllegalArgumentException("occurrence is not in the series: " + existing);
@@ -115,10 +122,17 @@ public final class TimelinePlanner {
         projected.set(index, corrected);
         projected.sort(Comparator.comparing(DateRange::startDate));
 
-        return judge(TimelineOperation.CORRECT, corrected, existing, null, projected, timeline, insidePresence);
+        return judge(intent, TimelineOperation.CORRECT, corrected, existing, null, projected, timeline, insidePresence);
     }
 
+    /**
+     * Judges the projected series against the invariants. A plan that is not
+     * the operation it was asked for is rejected before anything else: what it
+     * would run into is still reported, but the first thing the user has to
+     * know is what the plan is.
+     */
     private TimelinePlan judge(
+            TimelineOperation intent,
             TimelineOperation operation,
             DateRange occurrence,
             DateRange correctedOccurrence,
@@ -132,7 +146,9 @@ public final class TimelinePlanner {
         List<DateRange> stretchCandidates = neighboursOf(gaps, projected);
 
         TimelineRejection rejection = null;
-        if (!insidePresence) {
+        if (operation != intent) {
+            rejection = TimelineRejection.IS_A_CORRECTION;
+        } else if (!insidePresence) {
             rejection = TimelineRejection.OUTSIDE_PRESENCE;
         } else if (!overlaps.isEmpty()) {
             rejection = TimelineRejection.OVERLAP;
@@ -141,6 +157,7 @@ public final class TimelinePlanner {
         }
 
         return new TimelinePlan(
+                intent,
                 operation,
                 occurrence,
                 correctedOccurrence,
