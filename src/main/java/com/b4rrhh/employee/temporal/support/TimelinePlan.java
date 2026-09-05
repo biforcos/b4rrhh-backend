@@ -8,6 +8,15 @@ import java.util.List;
  * the occurrences reads it and applies it, or shows it and waits.
  *
  * <ul>
+ *   <li>{@link #occurrence()} is the one the operation is about: the added or
+ *       removed one, or the corrected one under its new dates.</li>
+ *   <li>{@link #correctedOccurrence()} is, on {@link TimelineOperation#CORRECT},
+ *       the occurrence as it stands today, the one {@link #occurrence()}
+ *       replaces. What identifies it is the day it starts: a plan asked for as
+ *       an add whose start falls on the start of an existing occurrence comes
+ *       back as the correction of that one, and this is where the plan names
+ *       it. {@code null} on {@link TimelineOperation#ADD} and
+ *       {@link TimelineOperation#REMOVE}.</li>
  *   <li>{@link #adjustedOccurrence()} is the one automatic consequence: on
  *       {@link TimelineOperation#ADD} the occurrence the new one starts inside
  *       of, closed the day before; on {@link TimelineOperation#REMOVE} the
@@ -26,6 +35,7 @@ import java.util.List;
 public record TimelinePlan(
         TimelineOperation operation,
         DateRange occurrence,
+        DateRange correctedOccurrence,
         TimelineRejection rejection,
         OccurrenceAdjustment adjustedOccurrence,
         List<DateRange> overlaps,
@@ -40,6 +50,9 @@ public record TimelinePlan(
         }
         if (occurrence == null) {
             throw new IllegalArgumentException("occurrence is required");
+        }
+        if ((operation == TimelineOperation.CORRECT) != (correctedOccurrence != null)) {
+            throw new IllegalArgumentException("correctedOccurrence is required on CORRECT and only there");
         }
         overlaps = requiredList(overlaps, "overlaps");
         gaps = requiredList(gaps, "gaps");

@@ -19,6 +19,14 @@ import java.util.List;
  * occurrence would collide with is an overlap and the plan is rejected:
  * nothing else moves on its own.
  *
+ * <p>There is one add that is not an add. An occurrence is identified by the
+ * day it starts, so a new one that starts on the very start date of an
+ * existing one is a correction of that one, whatever its end date: the plan
+ * comes back as a {@link TimelineOperation#CORRECT} that names it, judged
+ * exactly as {@link #planCorrect} would judge it, and the caller decides
+ * whether that is what the user meant. This keeps what the old
+ * {@code ReplaceMode.EXACT_START} did for the user without doing it silently.
+ *
  * <p><b>Removing</b> the last occurrence reopens the previous one, up to where
  * the removed one ended, provided the previous one was closed right where the
  * removed one started. Removing any other occurrence leaves its dates
@@ -41,6 +49,11 @@ public final class TimelinePlanner {
             throw new IllegalArgumentException("occurrence is required");
         }
 
+        DateRange startingOnTheSameDay = occurrenceStartingOn(timeline.occurrences(), occurrence.startDate());
+        if (startingOnTheSameDay != null) {
+            return planCorrect(timeline, startingOnTheSameDay, occurrence);
+        }
+
         boolean insidePresence = timelineCoverageValidator.isContained(List.of(occurrence), timeline.presence());
 
         OccurrenceAdjustment closing = insidePresence
@@ -54,7 +67,7 @@ public final class TimelinePlanner {
         projected.add(occurrence);
         projected.sort(Comparator.comparing(DateRange::startDate));
 
-        return judge(TimelineOperation.ADD, occurrence, closing, projected, timeline, insidePresence);
+        return judge(TimelineOperation.ADD, occurrence, null, closing, projected, timeline, insidePresence);
     }
 
     public TimelinePlan planRemove(Timeline timeline, DateRange occurrence) {
@@ -79,7 +92,7 @@ public final class TimelinePlanner {
             projected.set(index - 1, reopening.after());
         }
 
-        return judge(TimelineOperation.REMOVE, occurrence, reopening, projected, timeline, true);
+        return judge(TimelineOperation.REMOVE, occurrence, null, reopening, projected, timeline, true);
     }
 
     public TimelinePlan planCorrect(Timeline timeline, DateRange existing, DateRange corrected) {
@@ -102,12 +115,13 @@ public final class TimelinePlanner {
         projected.set(index, corrected);
         projected.sort(Comparator.comparing(DateRange::startDate));
 
-        return judge(TimelineOperation.CORRECT, corrected, null, projected, timeline, insidePresence);
+        return judge(TimelineOperation.CORRECT, corrected, existing, null, projected, timeline, insidePresence);
     }
 
     private TimelinePlan judge(
             TimelineOperation operation,
             DateRange occurrence,
+            DateRange correctedOccurrence,
             OccurrenceAdjustment adjustment,
             List<DateRange> projected,
             Timeline timeline,
@@ -129,6 +143,7 @@ public final class TimelinePlanner {
         return new TimelinePlan(
                 operation,
                 occurrence,
+                correctedOccurrence,
                 rejection,
                 adjustment,
                 overlaps,
@@ -138,10 +153,21 @@ public final class TimelinePlanner {
         );
     }
 
+    /** The occurrence that starts exactly on that day, if there is one. */
+    private static DateRange occurrenceStartingOn(List<DateRange> occurrences, LocalDate startDate) {
+        for (DateRange existing : occurrences) {
+            if (existing.startDate().equals(startDate)) {
+                return existing;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * The occurrence that is in force on the new start date, closed the day
-     * before it. An occurrence that starts on that very day cannot be closed
-     * before its own start: it is left alone and the overlap rejects the plan.
+     * before it. An occurrence that starts on that very day never gets here:
+     * adding on its start date is planned as its correction.
      */
     private static OccurrenceAdjustment closeCoveringOccurrence(List<DateRange> occurrences, LocalDate newStart) {
         for (DateRange existing : occurrences) {

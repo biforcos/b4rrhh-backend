@@ -43,6 +43,7 @@ class TimelinePlannerTest {
             assertTrue(plan.isAccepted());
             assertEquals(TimelineOperation.ADD, plan.operation());
             assertEquals(added, plan.occurrence());
+            assertNull(plan.correctedOccurrence());
             assertEquals(
                     new OccurrenceAdjustment(LAST, range(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 9, 30))),
                     plan.adjustedOccurrence()
@@ -133,17 +134,6 @@ class TimelinePlannerTest {
         }
 
         @Test
-        void startingOnTheSameDayAsAnExistingOneIsAnOverlapNotAReplacement() {
-            DateRange added = range(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 6, 30));
-
-            TimelinePlan plan = planner.planAdd(mandatory(FIRST, SECOND, LAST), added);
-
-            assertFalse(plan.isAccepted());
-            assertEquals(TimelineRejection.OVERLAP, plan.rejection());
-            assertNull(plan.adjustedOccurrence());
-        }
-
-        @Test
         void beforeTheFirstOneWithoutTouchingItIsAccepted() {
             DateRange earlyPresence = range(LocalDate.of(2025, 1, 1), null);
             DateRange added = range(LocalDate.of(2025, 6, 1), LocalDate.of(2025, 12, 31));
@@ -169,6 +159,98 @@ class TimelinePlannerTest {
         }
     }
 
+    /**
+     * An occurrence is identified by the day it starts. Adding one that starts
+     * on that very day is not an add: it is the correction of the existing
+     * one, and the plan says so instead of rejecting it as an overlap.
+     */
+    @Nested
+    class AddingOnTheStartDateOfAnExistingOccurrence {
+
+        @Test
+        void withADifferentEndIsACorrectionOfThatOccurrenceNotAnAdd() {
+            DateRange added = range(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 5, 31));
+
+            TimelinePlan plan = planner.planAdd(optional(FIRST, SECOND, LAST), added);
+
+            assertTrue(plan.isAccepted());
+            assertEquals(TimelineOperation.CORRECT, plan.operation());
+            assertEquals(SECOND, plan.correctedOccurrence());
+            assertEquals(added, plan.occurrence());
+            assertNull(plan.adjustedOccurrence());
+            assertEquals(List.of(range(LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30))), plan.gaps());
+            assertEquals(List.of(FIRST, added, LAST), plan.projected());
+        }
+
+        @Test
+        void isJudgedExactlyAsTheCorrectionWouldBe() {
+            Timeline timeline = mandatory(FIRST, SECOND, LAST);
+            DateRange added = range(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 5, 31));
+
+            TimelinePlan plan = planner.planAdd(timeline, added);
+
+            assertFalse(plan.isAccepted());
+            assertEquals(TimelineRejection.GAP_NOT_ALLOWED, plan.rejection());
+            assertEquals(TimelineOperation.CORRECT, plan.operation());
+            assertEquals(SECOND, plan.correctedOccurrence());
+            assertEquals(planner.planCorrect(timeline, SECOND, added), plan);
+        }
+
+        @Test
+        void ofTheOpenLastOneCorrectsItsEnd() {
+            DateRange closedPresence = range(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31));
+            DateRange added = range(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 12, 31));
+
+            TimelinePlan plan = planner.planAdd(
+                    new Timeline(TimelineCoverage.MANDATORY, List.of(closedPresence), List.of(FIRST, SECOND, LAST)),
+                    added
+            );
+
+            assertTrue(plan.isAccepted());
+            assertEquals(TimelineOperation.CORRECT, plan.operation());
+            assertEquals(LAST, plan.correctedOccurrence());
+            assertNull(plan.adjustedOccurrence());
+            assertTrue(plan.gaps().isEmpty());
+            assertEquals(List.of(FIRST, SECOND, added), plan.projected());
+        }
+
+        @Test
+        void oneDayLaterIsStillAnAddThatClosesTheDayBefore() {
+            DateRange added = range(LocalDate.of(2026, 7, 2), null);
+
+            TimelinePlan plan = planner.planAdd(mandatory(FIRST, SECOND, LAST), added);
+
+            assertTrue(plan.isAccepted());
+            assertEquals(TimelineOperation.ADD, plan.operation());
+            assertNull(plan.correctedOccurrence());
+            assertEquals(
+                    new OccurrenceAdjustment(LAST, range(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 1))),
+                    plan.adjustedOccurrence()
+            );
+            assertEquals(
+                    List.of(FIRST, SECOND, range(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 1)), added),
+                    plan.projected()
+            );
+        }
+
+        @Test
+        void oneDayEarlierIsStillAnAddJudgedAsSuch() {
+            DateRange added = range(LocalDate.of(2026, 6, 30), null);
+
+            TimelinePlan plan = planner.planAdd(mandatory(FIRST, SECOND, LAST), added);
+
+            assertFalse(plan.isAccepted());
+            assertEquals(TimelineRejection.OVERLAP, plan.rejection());
+            assertEquals(TimelineOperation.ADD, plan.operation());
+            assertNull(plan.correctedOccurrence());
+            assertEquals(
+                    new OccurrenceAdjustment(SECOND, range(LocalDate.of(2026, 4, 1), LocalDate.of(2026, 6, 29))),
+                    plan.adjustedOccurrence()
+            );
+            assertEquals(List.of(LAST), plan.overlaps());
+        }
+    }
+
     @Nested
     class RemovingAnOccurrence {
 
@@ -179,6 +261,7 @@ class TimelinePlannerTest {
             assertTrue(plan.isAccepted());
             assertEquals(TimelineOperation.REMOVE, plan.operation());
             assertEquals(LAST, plan.occurrence());
+            assertNull(plan.correctedOccurrence());
             assertEquals(
                     new OccurrenceAdjustment(SECOND, range(LocalDate.of(2026, 4, 1), null)),
                     plan.adjustedOccurrence()
@@ -275,6 +358,7 @@ class TimelinePlannerTest {
             assertTrue(plan.isAccepted());
             assertEquals(TimelineOperation.CORRECT, plan.operation());
             assertEquals(corrected, plan.occurrence());
+            assertEquals(shortSecond, plan.correctedOccurrence());
             assertNull(plan.adjustedOccurrence());
             assertTrue(plan.gaps().isEmpty());
             assertEquals(List.of(FIRST, corrected, LAST), plan.projected());
