@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll_engine.concept.infrastructure.web;
 
+import com.b4rrhh.payroll_engine.concept.domain.exception.OperandCrossesSegmentToPeriodException;
 import com.b4rrhh.payroll_engine.concept.domain.exception.PayrollConceptAlreadyExistsException;
 import com.b4rrhh.payroll_engine.concept.domain.exception.PayrollConceptNotFoundException;
 import com.b4rrhh.payroll_engine.object.domain.exception.PayrollObjectNotFoundException;
@@ -30,6 +31,17 @@ public class PayrollConceptManagementExceptionHandler {
      */
     @ExceptionHandler(PayrollObjectNotFoundException.class)
     public ResponseEntity<PayrollConceptErrorResponse> handlePayrollObjectNotFound(PayrollObjectNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(new PayrollConceptErrorResponse(ex.getMessage()));
+    }
+
+    /**
+     * An operand edge that crosses from SEGMENT to PERIOD (ADR-058) is a well-formed
+     * request the graph cannot accept: 422, with the operand and both concepts named.
+     */
+    @ExceptionHandler(OperandCrossesSegmentToPeriodException.class)
+    public ResponseEntity<PayrollConceptErrorResponse> handleOperandCrossesSegmentToPeriod(
+            OperandCrossesSegmentToPeriodException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(new PayrollConceptErrorResponse(ex.getMessage()));
     }

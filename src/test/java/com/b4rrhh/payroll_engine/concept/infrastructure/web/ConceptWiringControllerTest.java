@@ -14,6 +14,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -28,6 +30,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 // objetos de este test (SALARIO_BASE, T_DIAS_PRESENCIA, T_PRECIO_DIA como
 // object_code) no los siembra nadie: los conceptos reales van por numero (101,
 // 700, ...) y SALARIO_BASE es solo el mnemonico del 101.
+//
+// Los ambitos no son decorativos: SALARIO_BASE es SEGMENT y lee una cantidad
+// SEGMENT (los dias de presencia) y un precio PERIOD. Al reves —un concepto
+// PERIOD leyendo un operando SEGMENT— es la arista que ADR-058 prohibe, y el
+// ultimo test de operandos comprueba que el PUT la rechaza.
 @TestWebSobreEsquemaReal
 class ConceptWiringControllerTest {
 
@@ -48,7 +55,7 @@ class ConceptWiringControllerTest {
     @BeforeEach
     void seed() {
         seedConcept(TARGET_CONCEPT_CODE, "SALARIO_BASE", "RATE_BY_QUANTITY",
-                "EARNING", "REPLACE", "PERIOD");
+                "EARNING", "REPLACE", "SEGMENT");
         seedConcept(SOURCE_QUANTITY_CODE, "T_DIAS_PRESENCIA", "DIRECT_AMOUNT",
                 "TECHNICAL", "REPLACE", "SEGMENT");
         seedConcept(SOURCE_RATE_CODE, "T_PRECIO_DIA", "DIRECT_AMOUNT",
@@ -175,6 +182,35 @@ class ConceptWiringControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void putOperands_returns422WhenPeriodConceptReadsSegmentOperand() throws Exception {
+        // T_PRECIO_DIA es PERIOD; T_DIAS_PRESENCIA es SEGMENT. Un precio del mes no
+        // puede leer "los dias del tramo": no es un numero (ADR-058).
+        Map<String, Object> segmentQuantity = new LinkedHashMap<>();
+        segmentQuantity.put("operandRole", "QUANTITY");
+        segmentQuantity.put("sourceObjectCode", SOURCE_QUANTITY_CODE);
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("operands", List.of(segmentQuantity));
+
+        mockMvc.perform(put("/payroll-engine/{rs}/concepts/{c}/operands",
+                        RULE_SYSTEM_CODE, SOURCE_RATE_CODE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value(allOf(
+                        containsString("QUANTITY"),
+                        containsString("ESP/" + SOURCE_RATE_CODE),
+                        containsString("ESP/" + SOURCE_QUANTITY_CODE))));
+
+        // La arista prohibida no se ha guardado
+        mockMvc.perform(get("/payroll-engine/{rs}/concepts/{c}/operands",
+                        RULE_SYSTEM_CODE, SOURCE_RATE_CODE))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
     }
 
     @Test
