@@ -6,8 +6,8 @@ import java.util.List;
 
 /**
  * A temporal series of an employee as the planner sees it (ADR-057): the
- * coverage the vertical declares, the presence periods the series must stay
- * inside, and the occurrences currently in it.
+ * coverage and the containment the vertical declares, the presence periods
+ * that frame the series, and the occurrences currently in it.
  *
  * <p>Occurrences and presence periods are sorted by start date on
  * construction: the order of a series is derived from its dates and nothing
@@ -16,6 +16,7 @@ import java.util.List;
  */
 public record Timeline(
         TimelineCoverage coverage,
+        TimelineContainment containment,
         List<DateRange> presence,
         List<DateRange> occurrences
 ) {
@@ -24,8 +25,16 @@ public record Timeline(
         if (coverage == null) {
             throw new IllegalArgumentException("coverage is required");
         }
+        if (containment == null) {
+            throw new IllegalArgumentException("containment is required");
+        }
         presence = sortedCopy(presence, "presence");
         occurrences = sortedCopy(occurrences, "occurrences");
+    }
+
+    /** A series whose occurrences must stay inside the presence: the common case. */
+    public Timeline(TimelineCoverage coverage, List<DateRange> presence, List<DateRange> occurrences) {
+        this(coverage, TimelineContainment.WITHIN_PRESENCE, presence, occurrences);
     }
 
     private static List<DateRange> sortedCopy(List<DateRange> periods, String name) {

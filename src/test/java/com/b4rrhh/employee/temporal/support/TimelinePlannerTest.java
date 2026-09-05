@@ -461,6 +461,104 @@ class TimelinePlannerTest {
         }
     }
 
+    /**
+     * A series of facts of the person, not of the employment (backend#53): an
+     * address does not expire because the employee leaves. It declares that it
+     * may outlive the presence, so being outside it is never a fault, while a
+     * mandatory coverage still demands that the presence itself be covered.
+     */
+    @Nested
+    class ASeriesThatMayOutliveThePresence {
+
+        private static final DateRange CLOSED_PRESENCE = range(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 6, 30));
+
+        @Test
+        void addingBeforeThePresenceStartsIsAccepted() {
+            DateRange added = range(LocalDate.of(2025, 12, 1), LocalDate.of(2025, 12, 31));
+
+            TimelinePlan plan = planner.planAdd(mandatoryOutliving(FIRST, SECOND, LAST), added);
+
+            assertTrue(plan.isAccepted());
+            assertNull(plan.rejection());
+            assertEquals(List.of(added, FIRST, SECOND, LAST), plan.projected());
+        }
+
+        @Test
+        void addingAfterTheEmployeeLeftClosesTheOpenOneAndIsAccepted() {
+            DateRange added = range(LocalDate.of(2026, 9, 1), null);
+
+            TimelinePlan plan = planner.planAdd(
+                    new Timeline(
+                            TimelineCoverage.MANDATORY,
+                            TimelineContainment.MAY_OUTLIVE_PRESENCE,
+                            List.of(CLOSED_PRESENCE),
+                            List.of(FIRST, SECOND, LAST)
+                    ),
+                    added
+            );
+
+            assertTrue(plan.isAccepted());
+            assertEquals(
+                    new OccurrenceAdjustment(LAST, range(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 8, 31))),
+                    plan.adjustedOccurrence()
+            );
+        }
+
+        @Test
+        void correctingAnOccurrenceThatOutlivesTheTerminationIsAccepted() {
+            DateRange stretched = range(LocalDate.of(2026, 7, 1), LocalDate.of(2027, 12, 31));
+
+            TimelinePlan plan = planner.planCorrect(
+                    new Timeline(
+                            TimelineCoverage.MANDATORY,
+                            TimelineContainment.MAY_OUTLIVE_PRESENCE,
+                            List.of(CLOSED_PRESENCE),
+                            List.of(FIRST, SECOND, LAST)
+                    ),
+                    LAST,
+                    stretched
+            );
+
+            assertTrue(plan.isAccepted());
+            assertEquals(List.of(FIRST, SECOND, stretched), plan.projected());
+        }
+
+        @Test
+        void aGapInsideThePresenceIsStillRejectedWhenCoverageIsMandatory() {
+            DateRange added = range(LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 15));
+
+            TimelinePlan plan = planner.planAdd(mandatoryOutliving(FIRST, SECOND, LAST), added);
+
+            assertFalse(plan.isAccepted());
+            assertEquals(TimelineRejection.GAP_NOT_ALLOWED, plan.rejection());
+            assertEquals(List.of(range(LocalDate.of(2026, 5, 16), LocalDate.of(2026, 6, 30))), plan.gaps());
+        }
+
+        @Test
+        void anOverlapIsStillRejected() {
+            DateRange added = range(LocalDate.of(2025, 12, 1), LocalDate.of(2026, 1, 15));
+
+            TimelinePlan plan = planner.planAdd(mandatoryOutliving(FIRST, SECOND, LAST), added);
+
+            assertFalse(plan.isAccepted());
+            assertEquals(TimelineRejection.OVERLAP, plan.rejection());
+        }
+
+        @Test
+        void theThreeArgumentTimelineStaysWithinThePresence() {
+            assertEquals(TimelineContainment.WITHIN_PRESENCE, mandatory(FIRST).containment());
+        }
+
+        private static Timeline mandatoryOutliving(DateRange... occurrences) {
+            return new Timeline(
+                    TimelineCoverage.MANDATORY,
+                    TimelineContainment.MAY_OUTLIVE_PRESENCE,
+                    List.of(PRESENCE),
+                    List.of(occurrences)
+            );
+        }
+    }
+
     @Nested
     class PlanningWithoutApplying {
 

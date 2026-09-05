@@ -39,6 +39,12 @@ import java.util.List;
  * <p><b>Correcting</b> an occurrence replaces its dates with the ones the
  * user gives and moves nothing else: whatever gap or overlap the new dates
  * leave is judged like any other resulting state.
+ *
+ * <p>Whether the added or corrected occurrence has to fall inside the presence
+ * is what the series declares as its {@link TimelineContainment}: a series
+ * that may outlive the presence is never rejected as
+ * {@link TimelineRejection#OUTSIDE_PRESENCE}, and its presence periods only
+ * frame the gap invariant (backend#53).
  */
 public final class TimelinePlanner {
 
@@ -57,7 +63,7 @@ public final class TimelinePlanner {
             return correct(TimelineOperation.ADD, timeline, startingOnTheSameDay, occurrence);
         }
 
-        boolean insidePresence = timelineCoverageValidator.isContained(List.of(occurrence), timeline.presence());
+        boolean insidePresence = containmentHolds(timeline, occurrence);
 
         OccurrenceAdjustment closing = insidePresence
                 ? closeCoveringOccurrence(timeline.occurrences(), occurrence.startDate())
@@ -116,7 +122,7 @@ public final class TimelinePlanner {
             throw new IllegalArgumentException("occurrence is not in the series: " + existing);
         }
 
-        boolean insidePresence = timelineCoverageValidator.isContained(List.of(corrected), timeline.presence());
+        boolean insidePresence = containmentHolds(timeline, corrected);
 
         List<DateRange> projected = new ArrayList<>(timeline.occurrences());
         projected.set(index, corrected);
@@ -168,6 +174,19 @@ public final class TimelinePlanner {
                 stretchCandidates,
                 projected
         );
+    }
+
+    /**
+     * Whether the occurrence being written satisfies the containment the series
+     * declares. A series that may outlive the presence always passes: for it,
+     * the presence frames the gap invariant and nothing else.
+     */
+    private boolean containmentHolds(Timeline timeline, DateRange occurrence) {
+        if (!timeline.containment().requiresContainment()) {
+            return true;
+        }
+
+        return timelineCoverageValidator.isContained(List.of(occurrence), timeline.presence());
     }
 
     /** The occurrence that starts exactly on that day, if there is one. */
