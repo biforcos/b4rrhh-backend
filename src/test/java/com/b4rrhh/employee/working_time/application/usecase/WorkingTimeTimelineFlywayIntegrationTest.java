@@ -12,6 +12,7 @@ import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
@@ -168,6 +169,31 @@ class WorkingTimeTimelineFlywayIntegrationTest {
         );
         assertEquals(1, persistedCount());
         assertNull(persistedEndDate(1));
+    }
+
+    @Test
+    void twoWorkingTimesCannotStartOnTheSameDayEvenIfEveryOtherGuardFails() {
+        insertWorkingTimeBypassingTheUseCase(1, DAY_1, DAY_15);
+
+        assertThrows(
+                DuplicateKeyException.class,
+                () -> insertWorkingTimeBypassingTheUseCase(2, DAY_1, null)
+        );
+    }
+
+    private void insertWorkingTimeBypassingTheUseCase(int workingTimeNumber, LocalDate startDate, LocalDate endDate) {
+        jdbcTemplate.update(
+                """
+                insert into employee.working_time (
+                    employee_id, working_time_number, start_date, end_date,
+                    working_time_percentage, weekly_hours, daily_hours, monthly_hours
+                ) values (?, ?, ?, ?, 100, 40, 8, 173.33)
+                """,
+                employeeId,
+                workingTimeNumber,
+                startDate,
+                endDate
+        );
     }
 
     private CreateWorkingTimeCommand create(LocalDate startDate, LocalDate endDate, BigDecimal percentage) {
