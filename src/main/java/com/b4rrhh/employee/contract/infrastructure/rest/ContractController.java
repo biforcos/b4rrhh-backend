@@ -2,27 +2,34 @@ package com.b4rrhh.employee.contract.infrastructure.rest;
 
 import com.b4rrhh.employee.contract.application.command.CloseContractCommand;
 import com.b4rrhh.employee.contract.application.command.CreateContractCommand;
+import com.b4rrhh.employee.contract.application.command.DeleteContractCommand;
 import com.b4rrhh.employee.contract.application.command.GetContractByBusinessKeyCommand;
 import com.b4rrhh.employee.contract.application.command.ListEmployeeContractsCommand;
+import com.b4rrhh.employee.contract.application.command.PlanContractChangeCommand;
 import com.b4rrhh.employee.contract.application.command.ReplaceContractFromDateCommand;
 import com.b4rrhh.employee.contract.application.command.UpdateContractCommand;
 import com.b4rrhh.employee.contract.application.usecase.CloseContractUseCase;
 import com.b4rrhh.employee.contract.application.usecase.CreateContractUseCase;
+import com.b4rrhh.employee.contract.application.usecase.DeleteContractUseCase;
 import com.b4rrhh.employee.contract.application.usecase.GetContractByBusinessKeyUseCase;
 import com.b4rrhh.employee.contract.application.usecase.ListEmployeeContractsUseCase;
+import com.b4rrhh.employee.contract.application.usecase.PlanContractChangeUseCase;
 import com.b4rrhh.employee.contract.application.usecase.ReplaceContractFromDateUseCase;
 import com.b4rrhh.employee.contract.application.usecase.UpdateContractUseCase;
 import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.contract.infrastructure.rest.assembler.ContractResponseAssembler;
 import com.b4rrhh.employee.contract.infrastructure.rest.dto.CloseContractRequest;
+import com.b4rrhh.employee.contract.infrastructure.rest.dto.ContractPlanResponse;
 import com.b4rrhh.employee.contract.infrastructure.rest.dto.CreateContractRequest;
 import com.b4rrhh.employee.contract.infrastructure.rest.dto.ContractResponse;
+import com.b4rrhh.employee.contract.infrastructure.rest.dto.PlanContractChangeRequest;
 import com.b4rrhh.employee.contract.infrastructure.rest.dto.ReplaceContractFromDateRequest;
 import com.b4rrhh.employee.contract.infrastructure.rest.dto.UpdateContractRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -43,25 +50,31 @@ public class ContractController {
     private final GetContractByBusinessKeyUseCase getContractByBusinessKeyUseCase;
     private final UpdateContractUseCase updateContractUseCase;
     private final CloseContractUseCase closeContractUseCase;
-        private final ReplaceContractFromDateUseCase replaceContractFromDateUseCase;
-        private final ContractResponseAssembler contractResponseAssembler;
+    private final ReplaceContractFromDateUseCase replaceContractFromDateUseCase;
+    private final DeleteContractUseCase deleteContractUseCase;
+    private final PlanContractChangeUseCase planContractChangeUseCase;
+    private final ContractResponseAssembler contractResponseAssembler;
 
     public ContractController(
             CreateContractUseCase createContractUseCase,
             ListEmployeeContractsUseCase listEmployeeContractsUseCase,
             GetContractByBusinessKeyUseCase getContractByBusinessKeyUseCase,
             UpdateContractUseCase updateContractUseCase,
-                        CloseContractUseCase closeContractUseCase,
-                        ReplaceContractFromDateUseCase replaceContractFromDateUseCase,
-                        ContractResponseAssembler contractResponseAssembler
+            CloseContractUseCase closeContractUseCase,
+            ReplaceContractFromDateUseCase replaceContractFromDateUseCase,
+            DeleteContractUseCase deleteContractUseCase,
+            PlanContractChangeUseCase planContractChangeUseCase,
+            ContractResponseAssembler contractResponseAssembler
     ) {
         this.createContractUseCase = createContractUseCase;
         this.listEmployeeContractsUseCase = listEmployeeContractsUseCase;
         this.getContractByBusinessKeyUseCase = getContractByBusinessKeyUseCase;
         this.updateContractUseCase = updateContractUseCase;
         this.closeContractUseCase = closeContractUseCase;
-                this.replaceContractFromDateUseCase = replaceContractFromDateUseCase;
-                this.contractResponseAssembler = contractResponseAssembler;
+        this.replaceContractFromDateUseCase = replaceContractFromDateUseCase;
+        this.deleteContractUseCase = deleteContractUseCase;
+        this.planContractChangeUseCase = planContractChangeUseCase;
+        this.contractResponseAssembler = contractResponseAssembler;
     }
 
     @PostMapping
@@ -196,7 +209,50 @@ public class ContractController {
                 return ResponseEntity.ok(toResponse(ruleSystemCode, replaced, language));
     }
 
-        private ContractResponse toResponse(String ruleSystemCode, Contract contract, ResponseLanguage language) {
-                return contractResponseAssembler.toResponse(ruleSystemCode, contract, language);
+    /**
+     * What the change would do to the series, without applying it (ADR-057).
+     * It is what the screen shows before the user confirms.
+     */
+    @PostMapping("/plan")
+    public ResponseEntity<ContractPlanResponse> plan(
+            @PathVariable String ruleSystemCode,
+            @PathVariable String employeeTypeCode,
+            @PathVariable String employeeNumber,
+            @RequestBody PlanContractChangeRequest request
+    ) {
+        return ResponseEntity.ok(contractResponseAssembler.toPlanResponse(
+                planContractChangeUseCase.plan(new PlanContractChangeCommand(
+                        ruleSystemCode,
+                        employeeTypeCode,
+                        employeeNumber,
+                        request.operation(),
+                        request.contractStartDate(),
+                        request.startDate(),
+                        request.endDate()
+                ))
+        ));
+    }
+
+    @DeleteMapping("/{startDate}")
+    public ResponseEntity<Void> delete(
+            @PathVariable String ruleSystemCode,
+            @PathVariable String employeeTypeCode,
+            @PathVariable String employeeNumber,
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate
+    ) {
+        deleteContractUseCase.delete(
+                new DeleteContractCommand(
+                        ruleSystemCode,
+                        employeeTypeCode,
+                        employeeNumber,
+                        startDate
+                )
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    private ContractResponse toResponse(String ruleSystemCode, Contract contract, ResponseLanguage language) {
+        return contractResponseAssembler.toResponse(ruleSystemCode, contract, language);
     }
 }

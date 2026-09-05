@@ -2,16 +2,24 @@ package com.b4rrhh.employee.contract.infrastructure.rest;
 
 import com.b4rrhh.employee.contract.application.command.CloseContractCommand;
 import com.b4rrhh.employee.contract.application.command.CreateContractCommand;
+import com.b4rrhh.employee.contract.application.command.DeleteContractCommand;
 import com.b4rrhh.employee.contract.application.command.GetContractByBusinessKeyCommand;
 import com.b4rrhh.employee.contract.application.command.ListEmployeeContractsCommand;
+import com.b4rrhh.employee.contract.application.command.PlanContractChangeCommand;
 import com.b4rrhh.employee.contract.application.command.ReplaceContractFromDateCommand;
 import com.b4rrhh.employee.contract.application.command.UpdateContractCommand;
+import com.b4rrhh.employee.contract.application.model.ContractPlan;
+import com.b4rrhh.employee.contract.application.model.ContractPlanAdjustment;
 import com.b4rrhh.employee.contract.application.usecase.CloseContractUseCase;
 import com.b4rrhh.employee.contract.application.usecase.CreateContractUseCase;
+import com.b4rrhh.employee.contract.application.usecase.DeleteContractUseCase;
 import com.b4rrhh.employee.contract.application.usecase.GetContractByBusinessKeyUseCase;
 import com.b4rrhh.employee.contract.application.usecase.ListEmployeeContractsUseCase;
+import com.b4rrhh.employee.contract.application.usecase.PlanContractChangeUseCase;
 import com.b4rrhh.employee.contract.application.usecase.ReplaceContractFromDateUseCase;
 import com.b4rrhh.employee.contract.application.usecase.UpdateContractUseCase;
+import com.b4rrhh.employee.temporal.support.TimelineOperation;
+import com.b4rrhh.employee.temporal.support.TimelineRejection;
 import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
 import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguageArgumentResolver;
 import com.b4rrhh.employee.contract.domain.exception.ContractCoverageIncompleteException;
@@ -44,9 +52,11 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -66,10 +76,14 @@ class ContractControllerHttpTest {
     private UpdateContractUseCase updateContractUseCase;
     @Mock
     private CloseContractUseCase closeContractUseCase;
-        @Mock
-        private ReplaceContractFromDateUseCase replaceContractFromDateUseCase;
-        @Mock
-        private RuleEntityLabelResolver ruleEntityLabelResolver;
+    @Mock
+    private ReplaceContractFromDateUseCase replaceContractFromDateUseCase;
+    @Mock
+    private DeleteContractUseCase deleteContractUseCase;
+    @Mock
+    private PlanContractChangeUseCase planContractChangeUseCase;
+    @Mock
+    private RuleEntityLabelResolver ruleEntityLabelResolver;
 
     private MockMvc mockMvc;
 
@@ -82,6 +96,8 @@ class ContractControllerHttpTest {
                 updateContractUseCase,
                 closeContractUseCase,
                 replaceContractFromDateUseCase,
+                deleteContractUseCase,
+                planContractChangeUseCase,
                 new ContractResponseAssembler(ruleEntityLabelResolver)
         );
 
@@ -443,6 +459,164 @@ class ContractControllerHttpTest {
 
         mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/contracts/2026-01-01"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deleteMapsPathToCommandAndAnswersNoContent() throws Exception {
+        mockMvc.perform(delete("/employees/ESP/INTERNAL/EMP001/contracts/2026-01-16"))
+                .andExpect(status().isNoContent());
+
+        ArgumentCaptor<DeleteContractCommand> captor = ArgumentCaptor.forClass(DeleteContractCommand.class);
+        verify(deleteContractUseCase).delete(captor.capture());
+        assertEquals("ESP", captor.getValue().ruleSystemCode());
+        assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
+        assertEquals("EMP001", captor.getValue().employeeNumber());
+        assertEquals(LocalDate.of(2026, 1, 16), captor.getValue().startDate());
+    }
+
+    @Test
+    void deleteMapsACoverageGapToHttp409NamingTheNeighboursToStretch() throws Exception {
+        doThrow(new ContractCoverageIncompleteException(
+                "ESP", "INTERNAL", "EMP001",
+                List.of(new ContractPeriod(LocalDate.of(2026, 1, 16), LocalDate.of(2026, 1, 31))),
+                List.of(
+                        new ContractPeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)),
+                        new ContractPeriod(LocalDate.of(2026, 2, 1), null)
+                )
+        )).when(deleteContractUseCase).delete(any(DeleteContractCommand.class));
+
+        mockMvc.perform(delete("/employees/ESP/INTERNAL/EMP001/contracts/2026-01-16"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONTRACT_COVERAGE_GAP"))
+                .andExpect(jsonPath("$.details.stretchCandidates[0].startDate[2]").value(1))
+                .andExpect(jsonPath("$.details.stretchCandidates[1].startDate[1]").value(2));
+    }
+
+    @Test
+    void planMapsTheRequestToTheCommandAndReturnsThePlanWithoutApplyingIt() throws Exception {
+        when(planContractChangeUseCase.plan(any(PlanContractChangeCommand.class)))
+                .thenReturn(new ContractPlan(
+                        TimelineOperation.ADD,
+                        null,
+                        new ContractPeriod(LocalDate.of(2026, 1, 16), null),
+                        null,
+                        new ContractPlanAdjustment(
+                                new ContractPeriod(LocalDate.of(2026, 1, 1), null),
+                                new ContractPeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15))
+                        ),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(
+                                new ContractPeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)),
+                                new ContractPeriod(LocalDate.of(2026, 1, 16), null)
+                        )
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/contracts/plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "operation": "ADD",
+                                  "startDate": "2026-01-16"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.operation").value("ADD"))
+                .andExpect(jsonPath("$.accepted").value(true))
+                .andExpect(jsonPath("$.rejection").doesNotExist())
+                .andExpect(jsonPath("$.adjustedOccurrence.before.endDate").doesNotExist())
+                .andExpect(jsonPath("$.adjustedOccurrence.after.endDate[2]").value(15))
+                .andExpect(jsonPath("$.projected[1].startDate[2]").value(16));
+
+        ArgumentCaptor<PlanContractChangeCommand> captor = ArgumentCaptor.forClass(PlanContractChangeCommand.class);
+        verify(planContractChangeUseCase).plan(captor.capture());
+        assertEquals(TimelineOperation.ADD, captor.getValue().operation());
+        assertEquals(LocalDate.of(2026, 1, 16), captor.getValue().startDate());
+        assertNull(captor.getValue().endDate());
+        assertNull(captor.getValue().contractStartDate());
+        verify(createContractUseCase, org.mockito.Mockito.never()).create(any());
+    }
+
+    @Test
+    void planTellsTheScreenAnAddOnAnExistingStartDateIsACorrectionOfThatContract() throws Exception {
+        when(planContractChangeUseCase.plan(any(PlanContractChangeCommand.class)))
+                .thenReturn(new ContractPlan(
+                        TimelineOperation.CORRECT,
+                        TimelineRejection.IS_A_CORRECTION,
+                        new ContractPeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)),
+                        new ContractPeriod(LocalDate.of(2026, 1, 1), null),
+                        null,
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(new ContractPeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)))
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/contracts/plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "operation": "ADD",
+                                  "startDate": "2026-01-01",
+                                  "endDate": "2026-01-15"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.operation").value("CORRECT"))
+                .andExpect(jsonPath("$.accepted").value(false))
+                .andExpect(jsonPath("$.rejection").value("IS_A_CORRECTION"))
+                .andExpect(jsonPath("$.correctedOccurrence.startDate[0]").value(2026))
+                .andExpect(jsonPath("$.correctedOccurrence.endDate").doesNotExist())
+                .andExpect(jsonPath("$.occurrence.endDate[2]").value(15));
+    }
+
+    @Test
+    void planIdentifiesTheContractToRemoveByItsStartDate() throws Exception {
+        when(planContractChangeUseCase.plan(any(PlanContractChangeCommand.class)))
+                .thenReturn(new ContractPlan(
+                        TimelineOperation.REMOVE,
+                        TimelineRejection.GAP_NOT_ALLOWED,
+                        new ContractPeriod(LocalDate.of(2026, 1, 16), LocalDate.of(2026, 1, 31)),
+                        null,
+                        null,
+                        List.of(),
+                        List.of(new ContractPeriod(LocalDate.of(2026, 1, 16), LocalDate.of(2026, 1, 31))),
+                        List.of(new ContractPeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15))),
+                        List.of(new ContractPeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)))
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/contracts/plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "operation": "REMOVE",
+                                  "contractStartDate": "2026-01-16"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accepted").value(false))
+                .andExpect(jsonPath("$.rejection").value("GAP_NOT_ALLOWED"))
+                .andExpect(jsonPath("$.gaps[0].startDate[2]").value(16))
+                .andExpect(jsonPath("$.stretchCandidates[0].startDate[2]").value(1));
+
+        ArgumentCaptor<PlanContractChangeCommand> captor = ArgumentCaptor.forClass(PlanContractChangeCommand.class);
+        verify(planContractChangeUseCase).plan(captor.capture());
+        assertEquals(TimelineOperation.REMOVE, captor.getValue().operation());
+        assertEquals(LocalDate.of(2026, 1, 16), captor.getValue().contractStartDate());
+    }
+
+    @Test
+    void planRejectsAnUnknownOperation() throws Exception {
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/contracts/plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "operation": "REPLACE",
+                                  "startDate": "2026-01-16"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

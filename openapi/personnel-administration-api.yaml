@@ -2232,6 +2232,106 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ContractErrorResponse"
+    delete:
+      operationId: deleteContractByBusinessKey
+      summary: Remove a contract
+      description: >-
+        Removing the last contract reopens the previous one up to where the
+        removed one ended (ADR-057). Removing one in the middle would leave the
+        presence uncovered and is rejected: the error names the neighbours the
+        user could stretch first.
+      tags:
+        - Employee Contract
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+        - in: path
+          name: startDate
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "204":
+          description: Contract removed
+        "404":
+          description: Employee or contract not found
+        "409":
+          description: >-
+            CONTRACT_COVERAGE_GAP: removing it would leave the presence
+            uncovered; details.gaps and details.stretchCandidates say where and
+            what to stretch.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractErrorResponse"
+
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts/plan:
+    post:
+      operationId: planContractChangeByBusinessKey
+      summary: Plan a change to the contract series without applying it
+      description: >-
+        Answers what adding, removing or correcting a contract would do to the
+        series (ADR-057): what would be closed or reopened, what gap or overlap
+        would appear, and the series as it would be. Nothing is written. A
+        rejected plan is still a 200: the rejection and its reasons are in the
+        body, so the screen can show them before the user confirms. An ADD on
+        the start date of an existing contract comes back as a CORRECT of that
+        contract, rejected as IS_A_CORRECTION.
+      tags:
+        - Employee Contract
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlanContractChangeRequest"
+      responses:
+        "200":
+          description: The plan, accepted or rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractPlanResponse"
+        "400":
+          description: Invalid request
+        "404":
+          description: Employee or contract not found
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts/{startDate}/close:
     post:
@@ -8471,6 +8571,104 @@ components:
             carries correctedOccurrence (ContractPeriod), the contract the add
             would correct. Null when the error has nothing to name.
           additionalProperties: true
+    PlanContractChangeRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - operation
+      properties:
+        operation:
+          type: string
+          enum: [ADD, REMOVE, CORRECT]
+          description: >-
+            ADD plans a new contract from startDate to endDate; REMOVE plans
+            removing the contract that starts on contractStartDate; CORRECT
+            plans giving that contract the dates startDate to endDate.
+        contractStartDate:
+          type: string
+          format: date
+          description: >-
+            Identifies the contract to remove or correct: a contract is
+            identified by the day it starts. Required for REMOVE and CORRECT.
+        startDate:
+          type: string
+          format: date
+          description: Required for ADD and CORRECT.
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: Omit it for a contract that stays open.
+    ContractPlanAdjustment:
+      type: object
+      description: The one existing contract the plan would move on its own. Only its end date changes.
+      required:
+        - before
+        - after
+      properties:
+        before:
+          $ref: "#/components/schemas/ContractPeriod"
+        after:
+          $ref: "#/components/schemas/ContractPeriod"
+    ContractPlanResponse:
+      type: object
+      required:
+        - operation
+        - accepted
+        - occurrence
+        - overlaps
+        - gaps
+        - stretchCandidates
+        - projected
+      properties:
+        operation:
+          type: string
+          enum: [ADD, REMOVE, CORRECT]
+        accepted:
+          type: boolean
+        rejection:
+          type: string
+          nullable: true
+          enum: [OUTSIDE_PRESENCE, OVERLAP, GAP_NOT_ALLOWED, IS_A_CORRECTION]
+          description: >-
+            Why the plan cannot be applied. Null when accepted. IS_A_CORRECTION
+            means the plan is not the operation it was asked for: an ADD whose
+            start date is the start date of an existing contract is the
+            correction of that one (named in correctedOccurrence) and has to be
+            asked for as a CORRECT.
+        occurrence:
+          $ref: "#/components/schemas/ContractPeriod"
+        correctedOccurrence:
+          nullable: true
+          description: >-
+            On a correction, the contract as it stands today, the one
+            occurrence replaces. Null on an add and on a removal.
+          allOf:
+            - $ref: "#/components/schemas/ContractPeriod"
+        adjustedOccurrence:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ContractPlanAdjustment"
+        overlaps:
+          type: array
+          description: Dates two contracts would share.
+          items:
+            $ref: "#/components/schemas/ContractPeriod"
+        gaps:
+          type: array
+          description: Stretches of the presence the resulting series would leave uncovered.
+          items:
+            $ref: "#/components/schemas/ContractPeriod"
+        stretchCandidates:
+          type: array
+          description: The neighbours of the gaps, which the user could stretch. Named, never moved.
+          items:
+            $ref: "#/components/schemas/ContractPeriod"
+        projected:
+          type: array
+          description: The series as it would be, accepted or not.
+          items:
+            $ref: "#/components/schemas/ContractPeriod"
     CreateLaborClassificationRequest:
       type: object
       additionalProperties: false
