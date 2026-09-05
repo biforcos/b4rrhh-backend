@@ -38,6 +38,7 @@ import com.b4rrhh.payroll_engine.table.infrastructure.persistence.PayrollTableRo
 import com.b4rrhh.rulesystem.agreementprofile.infrastructure.persistence.AgreementCatalogLookupAdapter;
 import com.b4rrhh.rulesystem.agreementprofile.infrastructure.persistence.AgreementProfilePersistenceAdapter;
 import com.b4rrhh.rulesystem.application.usecase.DeleteRuleEntityService;
+import com.b4rrhh.rulesystem.employeeaddresstypeprofile.infrastructure.persistence.EmployeeAddressTypeProfilePersistenceAdapter;
 import com.b4rrhh.rulesystem.infrastructure.persistence.RuleEntityPersistenceAdapter;
 import com.b4rrhh.rulesystem.infrastructure.persistence.RuleEntityUsageCheckAdapter;
 import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
@@ -123,6 +124,8 @@ import java.lang.annotation.Target;
         GetRuleEntityTranslationCoverageService.class,
         // rulesystem: perfil de convenio (#2)
         AgreementProfilePersistenceAdapter.class,
+        // rulesystem: cobertura de cada tipo de direccion (backend#53)
+        EmployeeAddressTypeProfilePersistenceAdapter.class,
         // rulesystem: borrado de codigos (backend#26)
         DeleteRuleEntityService.class,
         RuleEntityUsageCheckAdapter.class,
