@@ -1,8 +1,16 @@
 package com.b4rrhh.employee.workcenter.infrastructure.web.assembler;
 
+import com.b4rrhh.employee.workcenter.application.model.WorkCenterPlan;
+import com.b4rrhh.employee.workcenter.application.model.WorkCenterPlanAdjustment;
 import com.b4rrhh.employee.workcenter.application.usecase.WorkCenterRuleEntityTypeCodes;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
+import com.b4rrhh.employee.workcenter.domain.model.WorkCenterOccurrence;
+import com.b4rrhh.employee.workcenter.domain.model.WorkCenterPeriod;
 import com.b4rrhh.employee.workcenter.domain.port.WorkCenterCompanyLookupPort;
+import com.b4rrhh.employee.workcenter.infrastructure.web.dto.WorkCenterOccurrenceResponse;
+import com.b4rrhh.employee.workcenter.infrastructure.web.dto.WorkCenterPeriodResponse;
+import com.b4rrhh.employee.workcenter.infrastructure.web.dto.WorkCenterPlanAdjustmentResponse;
+import com.b4rrhh.employee.workcenter.infrastructure.web.dto.WorkCenterPlanResponse;
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.WorkCenterResponse;
 import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
 import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
@@ -53,5 +61,44 @@ public class WorkCenterResponseAssembler {
         return workCenters.stream()
                 .map(workCenter -> toResponse(ruleSystemCode, workCenter, language))
                 .toList();
+    }
+
+    public WorkCenterPlanResponse toPlanResponse(WorkCenterPlan plan) {
+        return new WorkCenterPlanResponse(
+                plan.operation().name(),
+                plan.isAccepted(),
+                plan.rejection() == null ? null : plan.rejection().name(),
+                toOccurrence(plan.occurrence()),
+                plan.correctedOccurrence() == null ? null : toOccurrence(plan.correctedOccurrence()),
+                toAdjustment(plan.adjustedOccurrence()),
+                plan.overlaps().stream().map(this::toPeriod).toList(),
+                plan.gaps().stream().map(this::toPeriod).toList(),
+                plan.stretchCandidates().stream().map(this::toOccurrence).toList(),
+                plan.projected().stream().map(this::toOccurrence).toList()
+        );
+    }
+
+    private WorkCenterPlanAdjustmentResponse toAdjustment(WorkCenterPlanAdjustment adjustment) {
+        if (adjustment == null) {
+            return null;
+        }
+
+        return new WorkCenterPlanAdjustmentResponse(
+                adjustment.workCenterAssignmentNumber(),
+                toPeriod(adjustment.before()),
+                toPeriod(adjustment.after())
+        );
+    }
+
+    private WorkCenterOccurrenceResponse toOccurrence(WorkCenterOccurrence occurrence) {
+        return new WorkCenterOccurrenceResponse(
+                occurrence.workCenterAssignmentNumber(),
+                occurrence.startDate(),
+                occurrence.endDate()
+        );
+    }
+
+    private WorkCenterPeriodResponse toPeriod(WorkCenterPeriod period) {
+        return new WorkCenterPeriodResponse(period.startDate(), period.endDate());
     }
 }

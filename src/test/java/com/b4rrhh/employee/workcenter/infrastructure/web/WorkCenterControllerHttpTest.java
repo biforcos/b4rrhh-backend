@@ -13,6 +13,12 @@ import com.b4rrhh.employee.workcenter.application.usecase.DeleteWorkCenterComman
 import com.b4rrhh.employee.workcenter.application.usecase.DeleteWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.GetWorkCenterByBusinessKeyUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
+import com.b4rrhh.employee.workcenter.application.usecase.PlanWorkCenterChangeCommand;
+import com.b4rrhh.employee.workcenter.application.usecase.PlanWorkCenterChangeUseCase;
+import com.b4rrhh.employee.workcenter.application.model.WorkCenterPlan;
+import com.b4rrhh.employee.workcenter.application.model.WorkCenterPlanAdjustment;
+import com.b4rrhh.employee.temporal.support.TimelineOperation;
+import com.b4rrhh.employee.temporal.support.TimelineRejection;
 import com.b4rrhh.employee.workcenter.application.usecase.ReplaceWorkCenterFromDateCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.ReplaceWorkCenterFromDateUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterCommand;
@@ -84,6 +90,8 @@ class WorkCenterControllerHttpTest {
         private ReplaceWorkCenterFromDateUseCase replaceWorkCenterFromDateUseCase;
         @Mock
         private UpdateWorkCenterUseCase updateWorkCenterUseCase;
+    @Mock
+    private PlanWorkCenterChangeUseCase planWorkCenterChangeUseCase;
         @Mock
         private RuleEntityLabelResolver ruleEntityLabelResolver;
     @Mock
@@ -104,6 +112,7 @@ class WorkCenterControllerHttpTest {
                 listEmployeeWorkCentersUseCase,
                 replaceWorkCenterFromDateUseCase,
                 updateWorkCenterUseCase,
+                planWorkCenterChangeUseCase,
                 workCenterResponseAssembler
         );
 
@@ -503,6 +512,132 @@ class WorkCenterControllerHttpTest {
                 .andExpect(jsonPath("$.code").value("WORK_CENTER_COVERAGE_GAP"))
                 .andExpect(jsonPath("$.details.gaps[0].startDate[2]").value(10))
                 .andExpect(jsonPath("$.details.stretchCandidates[0].workCenterAssignmentNumber").value(2));
+    }
+
+    // ADR-057 §6: the plan is asked for and shown; nothing is applied.
+    @Test
+    void planMapsTheRequestToTheCommandAndReturnsThePlanWithoutApplyingIt() throws Exception {
+        when(planWorkCenterChangeUseCase.plan(any(PlanWorkCenterChangeCommand.class)))
+                .thenReturn(new WorkCenterPlan(
+                        TimelineOperation.ADD,
+                        null,
+                        new WorkCenterOccurrence(null, LocalDate.of(2026, 2, 1), null),
+                        null,
+                        new WorkCenterPlanAdjustment(
+                                1,
+                                new WorkCenterPeriod(LocalDate.of(2026, 1, 1), null),
+                                new WorkCenterPeriod(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31))
+                        ),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(
+                                new WorkCenterOccurrence(1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31)),
+                                new WorkCenterOccurrence(null, LocalDate.of(2026, 2, 1), null)
+                        )
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/work-centers/plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "operation": "ADD",
+                                  "startDate": "2026-02-01"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.operation").value("ADD"))
+                .andExpect(jsonPath("$.accepted").value(true))
+                .andExpect(jsonPath("$.rejection").doesNotExist())
+                .andExpect(jsonPath("$.adjustedOccurrence.workCenterAssignmentNumber").value(1))
+                .andExpect(jsonPath("$.adjustedOccurrence.after.endDate[2]").value(31))
+                .andExpect(jsonPath("$.projected.length()").value(2))
+                .andExpect(jsonPath("$.projected[1].workCenterAssignmentNumber").doesNotExist());
+
+        ArgumentCaptor<PlanWorkCenterChangeCommand> captor = ArgumentCaptor.forClass(PlanWorkCenterChangeCommand.class);
+        verify(planWorkCenterChangeUseCase).plan(captor.capture());
+        assertEquals("ESP", captor.getValue().ruleSystemCode());
+        assertEquals("EMP001", captor.getValue().employeeNumber());
+        assertEquals(TimelineOperation.ADD, captor.getValue().operation());
+        assertEquals(LocalDate.of(2026, 2, 1), captor.getValue().startDate());
+        verify(createWorkCenterUseCase, org.mockito.Mockito.never()).create(any());
+    }
+
+    @Test
+    void planTellsTheScreenAnAddOnAnExistingStartDateIsACorrectionOfThatAssignment() throws Exception {
+        when(planWorkCenterChangeUseCase.plan(any(PlanWorkCenterChangeCommand.class)))
+                .thenReturn(new WorkCenterPlan(
+                        TimelineOperation.CORRECT,
+                        TimelineRejection.IS_A_CORRECTION,
+                        new WorkCenterOccurrence(1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)),
+                        new WorkCenterOccurrence(1, LocalDate.of(2026, 1, 1), null),
+                        null,
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(new WorkCenterOccurrence(1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 15)))
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/work-centers/plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "operation": "ADD",
+                                  "startDate": "2026-01-01",
+                                  "endDate": "2026-01-15"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.operation").value("CORRECT"))
+                .andExpect(jsonPath("$.accepted").value(false))
+                .andExpect(jsonPath("$.rejection").value("IS_A_CORRECTION"))
+                .andExpect(jsonPath("$.correctedOccurrence.workCenterAssignmentNumber").value(1))
+                .andExpect(jsonPath("$.correctedOccurrence.endDate").doesNotExist());
+    }
+
+    @Test
+    void planIdentifiesTheAssignmentToRemoveByItsNumber() throws Exception {
+        when(planWorkCenterChangeUseCase.plan(any(PlanWorkCenterChangeCommand.class)))
+                .thenReturn(new WorkCenterPlan(
+                        TimelineOperation.REMOVE,
+                        null,
+                        new WorkCenterOccurrence(2, LocalDate.of(2026, 2, 1), null),
+                        null,
+                        null,
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(new WorkCenterOccurrence(1, LocalDate.of(2026, 1, 1), null))
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/work-centers/plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "operation": "REMOVE",
+                                  "workCenterAssignmentNumber": 2
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.operation").value("REMOVE"))
+                .andExpect(jsonPath("$.occurrence.workCenterAssignmentNumber").value(2));
+
+        ArgumentCaptor<PlanWorkCenterChangeCommand> captor = ArgumentCaptor.forClass(PlanWorkCenterChangeCommand.class);
+        verify(planWorkCenterChangeUseCase).plan(captor.capture());
+        assertEquals(TimelineOperation.REMOVE, captor.getValue().operation());
+        assertEquals(2, captor.getValue().workCenterAssignmentNumber());
+    }
+
+    @Test
+    void planRejectsAnUnknownOperation() throws Exception {
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/work-centers/plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "operation": "REPLACE"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

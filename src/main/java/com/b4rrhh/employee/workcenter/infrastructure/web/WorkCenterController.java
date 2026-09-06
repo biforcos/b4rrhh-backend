@@ -8,6 +8,8 @@ import com.b4rrhh.employee.workcenter.application.usecase.DeleteWorkCenterComman
 import com.b4rrhh.employee.workcenter.application.usecase.DeleteWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.GetWorkCenterByBusinessKeyUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
+import com.b4rrhh.employee.workcenter.application.usecase.PlanWorkCenterChangeCommand;
+import com.b4rrhh.employee.workcenter.application.usecase.PlanWorkCenterChangeUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ReplaceWorkCenterFromDateCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.ReplaceWorkCenterFromDateUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterCommand;
@@ -16,8 +18,10 @@ import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
 import com.b4rrhh.employee.workcenter.infrastructure.web.assembler.WorkCenterResponseAssembler;
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.CloseWorkCenterRequest;
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.CreateWorkCenterRequest;
+import com.b4rrhh.employee.workcenter.infrastructure.web.dto.PlanWorkCenterChangeRequest;
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.ReplaceWorkCenterFromDateRequest;
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.UpdateWorkCenterRequest;
+import com.b4rrhh.employee.workcenter.infrastructure.web.dto.WorkCenterPlanResponse;
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.WorkCenterResponse;
 import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.http.HttpStatus;
@@ -39,12 +43,13 @@ public class WorkCenterController {
 
     private final CreateWorkCenterUseCase createWorkCenterUseCase;
     private final CloseWorkCenterUseCase closeWorkCenterUseCase;
-        private final DeleteWorkCenterUseCase deleteWorkCenterUseCase;
+    private final DeleteWorkCenterUseCase deleteWorkCenterUseCase;
     private final GetWorkCenterByBusinessKeyUseCase getWorkCenterByBusinessKeyUseCase;
     private final ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase;
-        private final ReplaceWorkCenterFromDateUseCase replaceWorkCenterFromDateUseCase;
-        private final UpdateWorkCenterUseCase updateWorkCenterUseCase;
-        private final WorkCenterResponseAssembler workCenterResponseAssembler;
+    private final ReplaceWorkCenterFromDateUseCase replaceWorkCenterFromDateUseCase;
+    private final UpdateWorkCenterUseCase updateWorkCenterUseCase;
+    private final PlanWorkCenterChangeUseCase planWorkCenterChangeUseCase;
+    private final WorkCenterResponseAssembler workCenterResponseAssembler;
 
     public WorkCenterController(
             CreateWorkCenterUseCase createWorkCenterUseCase,
@@ -54,7 +59,8 @@ public class WorkCenterController {
             ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase,
             ReplaceWorkCenterFromDateUseCase replaceWorkCenterFromDateUseCase,
             UpdateWorkCenterUseCase updateWorkCenterUseCase,
-                        WorkCenterResponseAssembler workCenterResponseAssembler
+            PlanWorkCenterChangeUseCase planWorkCenterChangeUseCase,
+            WorkCenterResponseAssembler workCenterResponseAssembler
     ) {
         this.createWorkCenterUseCase = createWorkCenterUseCase;
         this.closeWorkCenterUseCase = closeWorkCenterUseCase;
@@ -63,7 +69,8 @@ public class WorkCenterController {
         this.listEmployeeWorkCentersUseCase = listEmployeeWorkCentersUseCase;
         this.replaceWorkCenterFromDateUseCase = replaceWorkCenterFromDateUseCase;
         this.updateWorkCenterUseCase = updateWorkCenterUseCase;
-                this.workCenterResponseAssembler = workCenterResponseAssembler;
+        this.planWorkCenterChangeUseCase = planWorkCenterChangeUseCase;
+        this.workCenterResponseAssembler = workCenterResponseAssembler;
     }
 
     @PostMapping
@@ -189,6 +196,35 @@ public class WorkCenterController {
         return ResponseEntity.ok(workCenterResponseAssembler.toResponse(ruleSystemCode, closed, language));
     }
 
+    /**
+     * What the change would do to the series, without applying it (ADR-057).
+     * It is what the screen shows before the user confirms.
+     */
+    @PostMapping("/plan")
+    public ResponseEntity<WorkCenterPlanResponse> plan(
+            @PathVariable String ruleSystemCode,
+            @PathVariable String employeeTypeCode,
+            @PathVariable String employeeNumber,
+            @RequestBody PlanWorkCenterChangeRequest request
+    ) {
+        return ResponseEntity.ok(workCenterResponseAssembler.toPlanResponse(
+                planWorkCenterChangeUseCase.plan(new PlanWorkCenterChangeCommand(
+                        ruleSystemCode,
+                        employeeTypeCode,
+                        employeeNumber,
+                        request.operation(),
+                        request.workCenterAssignmentNumber(),
+                        request.startDate(),
+                        request.endDate()
+                ))
+        ));
+    }
+
+    /**
+     * Bounded by the invariants (ADR-057 §3): the last assignment goes and
+     * reopens the previous one; one in the middle is rejected naming the
+     * neighbours to stretch.
+     */
     @DeleteMapping("/{workCenterAssignmentNumber}")
     public ResponseEntity<Void> delete(
             @PathVariable String ruleSystemCode,

@@ -1226,6 +1226,58 @@ paths:
             are not fully contained within employee presence history,
             or leave a required presence coverage gap.
 
+  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers/plan:
+    post:
+      operationId: planWorkCenterChangeByBusinessKey
+      summary: Plan a change to the work center series without applying it
+      description: >-
+        Answers what adding, removing or correcting a work center assignment
+        would do to the series (ADR-057): what would be closed or reopened,
+        what gap or overlap would appear, and the series as it would be.
+        Nothing is written. A rejected plan is still a 200: the rejection and
+        its reasons are in the body, so the screen can show them before the
+        user confirms. An ADD on the start date of an existing assignment
+        comes back as a CORRECT of that assignment, rejected as
+        IS_A_CORRECTION.
+      tags:
+        - Employee Work Center
+      parameters:
+        - in: path
+          name: ruleSystemCode
+          required: true
+          schema:
+            type: string
+            maxLength: 5
+        - in: path
+          name: employeeTypeCode
+          required: true
+          schema:
+            type: string
+            maxLength: 30
+        - in: path
+          name: employeeNumber
+          required: true
+          schema:
+            type: string
+            maxLength: 15
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlanWorkCenterChangeRequest"
+      responses:
+        "200":
+          description: The plan, accepted or rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeWorkCenterPlanResponse"
+        "400":
+          description: Invalid request
+        "404":
+          description: Employee or work center assignment not found
+
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers/{workCenterAssignmentNumber}:
     get:
       operationId: getWorkCenterByBusinessKey
@@ -1338,11 +1390,13 @@ paths:
       tags:
         - Employee Work Center
       description: >-
-        Administrative deletion of a specific work center assignment occurrence identified by
-        business keys. This operation does not represent a workflow transition and does not
-        replace close. Deletion is forbidden when the assignment startDate exactly matches the
-        startDate of any presence for the same employee; in that case the occurrence must be
-        corrected instead of deleted.
+        Removes a work center assignment, bounded by the invariants of the
+        series (ADR-057 §3). Removing the last one reopens the previous one,
+        up to where the removed one ended. Removing one in the middle would
+        leave a stretch of the presence uncovered and is rejected as
+        WORK_CENTER_COVERAGE_GAP, naming the gap and the neighbours the user
+        could stretch first. The assignment that starts a presence is one
+        such case: it never goes without leaving a gap.
       parameters:
         - in: path
           name: ruleSystemCode
@@ -1375,8 +1429,13 @@ paths:
           description: Rule system, employee, or work center assignment not found
         "409":
           description: >-
-            Deletion is not allowed because the assignment startDate matches the startDate of
-            an employee presence. The occurrence must be corrected instead of deleted.
+            WORK_CENTER_COVERAGE_GAP: removing it would leave a stretch of the
+            presence without a work center; details.gaps names it and
+            details.stretchCandidates the neighbours the user could stretch.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeWorkCenterErrorResponse"
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers/{workCenterAssignmentNumber}/close:
     post:
@@ -8286,6 +8345,106 @@ components:
             assignment the add would correct. Catalog errors carry field. Null
             when the error has nothing to name.
           additionalProperties: true
+    PlanWorkCenterChangeRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - operation
+      properties:
+        operation:
+          type: string
+          enum: [ADD, REMOVE, CORRECT]
+          description: >-
+            ADD plans a new assignment from startDate to endDate; REMOVE plans
+            removing workCenterAssignmentNumber; CORRECT plans giving
+            workCenterAssignmentNumber the dates startDate to endDate.
+        workCenterAssignmentNumber:
+          type: integer
+          format: int32
+          description: Required for REMOVE and CORRECT.
+        startDate:
+          type: string
+          format: date
+          description: Required for ADD and CORRECT.
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: Omit it for an assignment that stays open.
+    EmployeeWorkCenterPlanAdjustment:
+      type: object
+      description: The one existing assignment the plan would move on its own. Only its end date changes.
+      required:
+        - workCenterAssignmentNumber
+        - before
+        - after
+      properties:
+        workCenterAssignmentNumber:
+          type: integer
+          format: int32
+        before:
+          $ref: "#/components/schemas/EmployeeWorkCenterPeriod"
+        after:
+          $ref: "#/components/schemas/EmployeeWorkCenterPeriod"
+    EmployeeWorkCenterPlanResponse:
+      type: object
+      required:
+        - operation
+        - accepted
+        - occurrence
+        - overlaps
+        - gaps
+        - stretchCandidates
+        - projected
+      properties:
+        operation:
+          type: string
+          enum: [ADD, REMOVE, CORRECT]
+        accepted:
+          type: boolean
+        rejection:
+          type: string
+          nullable: true
+          enum: [OUTSIDE_PRESENCE, OVERLAP, GAP_NOT_ALLOWED, IS_A_CORRECTION]
+          description: >-
+            Why the plan cannot be applied. Null when accepted. IS_A_CORRECTION
+            means the plan is not the operation it was asked for: an ADD whose
+            start date is the start date of an existing assignment is the
+            correction of that one (named in correctedOccurrence) and has to
+            be asked for as a CORRECT.
+        occurrence:
+          $ref: "#/components/schemas/EmployeeWorkCenterOccurrence"
+        correctedOccurrence:
+          nullable: true
+          description: >-
+            On a correction, the assignment as it stands today, the one
+            occurrence replaces. Null on an add and on a removal.
+          allOf:
+            - $ref: "#/components/schemas/EmployeeWorkCenterOccurrence"
+        adjustedOccurrence:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/EmployeeWorkCenterPlanAdjustment"
+        overlaps:
+          type: array
+          description: Dates two assignments would share.
+          items:
+            $ref: "#/components/schemas/EmployeeWorkCenterPeriod"
+        gaps:
+          type: array
+          description: Stretches of the presence the resulting series would leave uncovered.
+          items:
+            $ref: "#/components/schemas/EmployeeWorkCenterPeriod"
+        stretchCandidates:
+          type: array
+          description: The neighbours of the gaps, which the user could stretch. Named, never moved.
+          items:
+            $ref: "#/components/schemas/EmployeeWorkCenterOccurrence"
+        projected:
+          type: array
+          description: The series as it would be, accepted or not.
+          items:
+            $ref: "#/components/schemas/EmployeeWorkCenterOccurrence"
     CostCenterDistributionItemRequest:
       type: object
       additionalProperties: false
