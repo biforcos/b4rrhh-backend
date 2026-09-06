@@ -1,7 +1,7 @@
 # ADR Bundle
 
 > Fichero generado automáticamente. No editar a mano.
-> Fecha de generación: 2026-09-06 10:43:35
+> Fecha de generación: 2026-09-06 18:03:17
 
 ---
 
@@ -14772,6 +14772,24 @@ Dos, y son separables:
 Cada vertical declara si su cobertura es obligatoria. El planificador ya se llama `Strong`: la
 variante débil estaba prevista y aquí se nombra.
 
+**Y la cobertura de cada una se decide aquí, no en el issue que la migre.** Cada línea lleva su
+motivo, porque sin motivo la siguiente persona la deduce, y deducirla mal es fácil:
+
+| Vertical | Cobertura | Por qué |
+|---|---|---|
+| `contract` | obligatoria | un empleado presente sin contrato no es un estado válido |
+| `working_time` | obligatoria | sin jornada no hay nada que prorratear |
+| `labor_classification` | obligatoria | de ella salen las tablas de convenio que el cálculo necesita |
+| `address` (domicilio) | obligatoria | obligación legal de declarar domicilio |
+| `address` (fiscal, notificaciones) | opcional | se tienen si se declaran |
+| `workcenter` | obligatoria | comprobado sobre mil empleados: los datos ya la cumplían |
+| `cost_center` | **opcional** | es imputación analítica, no un requisito legal ni del cálculo |
+
+La última costó aprenderla. Se dio por obligatoria en una tabla de un issue, sin justificarla, y la
+comprobación previa devolvió **1000 de 1003 empleados sin reparto**: el producto llevaba funcionando
+así desde siempre. Una regla que el 99,7 % de los datos incumple no es una regla del dominio, es una
+regla inventada — y el aviso estaba en los datos antes de escribir una línea de código.
+
 Y hay un tercer eje declarable que salió al migrar `address`: **si las ocurrencias pueden sobrevivir
 a la presencia**. La jornada no —fuera de la presencia no hay jornada que valga—, pero una dirección
 sí: alguien que causa baja sigue teniendo un domicilio al que enviarle un certificado, y en la base
@@ -14804,8 +14822,10 @@ Nunca el sistema. De ahí sale la regla del borrado, que es donde estaba la preg
 controles porque el dato es el núcleo, contra «me equivoqué, era día 4 y no día 3»:
 
 - **Borrar la última** reabre la anterior. Es el «ups» y es seguro.
-- **Borrar una de en medio** lo rechaza el invariante de huecos. Si de verdad hay que tapar el
-  agujero, se estira una vecina, explícitamente.
+- **Borrar una de en medio** lo rechaza el invariante de huecos en las series de cobertura
+  obligatoria. Si de verdad hay que tapar el agujero, se estira una vecina, explícitamente. En una
+  serie de cobertura opcional (`cost_center`) el hueco es un estado legal, así que el borrado se
+  acepta y lo deja; el plan lo nombra igualmente (`backend#54`).
 
 La línea no está en prohibir el cambio: está en que **reescribir un histórico sea un acto
 deliberado y no el efecto colateral de un borrado**.

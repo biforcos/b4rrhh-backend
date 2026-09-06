@@ -142,8 +142,10 @@ Nunca el sistema. De ahí sale la regla del borrado, que es donde estaba la preg
 controles porque el dato es el núcleo, contra «me equivoqué, era día 4 y no día 3»:
 
 - **Borrar la última** reabre la anterior. Es el «ups» y es seguro.
-- **Borrar una de en medio** lo rechaza el invariante de huecos. Si de verdad hay que tapar el
-  agujero, se estira una vecina, explícitamente.
+- **Borrar una de en medio** lo rechaza el invariante de huecos en las series de cobertura
+  obligatoria. Si de verdad hay que tapar el agujero, se estira una vecina, explícitamente. En una
+  serie de cobertura opcional (`cost_center`) el hueco es un estado legal, así que el borrado se
+  acepta y lo deja; el plan lo nombra igualmente (`backend#54`).
 
 La línea no está en prohibir el cambio: está en que **reescribir un histórico sea un acto
 deliberado y no el efecto colateral de un borrado**.
