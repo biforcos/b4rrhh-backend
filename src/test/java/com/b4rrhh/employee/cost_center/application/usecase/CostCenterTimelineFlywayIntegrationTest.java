@@ -1,8 +1,8 @@
 package com.b4rrhh.employee.cost_center.application.usecase;
 
 import com.b4rrhh.employee.cost_center.application.model.CostCenterDistributionPlan;
-import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionCoverageGapException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionIsACorrectionException;
+import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionOverlapException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterOutsidePresencePeriodException;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionPeriod;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow;
@@ -34,6 +34,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * the real schema: the cost center series is written through the temporal
  * component and the invariants of ADR-057 decide. The occurrence is the
  * window, so every case that moves a window is checked line by line. The
+ * series declares optional coverage (ADR-057, decision 1; backend#54), so
+ * the cases the other verticals reject for a gap are accepted here and the
+ * gap stays; the overlap invariant does not depend on the coverage. The
  * catalog is the seeded one: CC_ADMIN, CC_HR and CC_IT are active in ESP
  * (V50).
  */
@@ -118,19 +121,47 @@ class CostCenterTimelineFlywayIntegrationTest {
         assertEquals(0, persistedCount());
     }
 
+    // Optional coverage (backend#54): the add closes the window in force the day before, and the
+    // stretch after the new window stays uncovered. That is a legal state for this series.
     @Test
-    void addingOneThatLeavesAGapIsRejectedSayingWhichGap() {
+    void addingOneThatLeavesAGapIsAcceptedAndTheGapStays() {
         createService.create(create(DAY_1, null, Map.of("CC_ADMIN", 100)));
 
-        CostCenterDistributionCoverageGapException ex = assertThrows(
-                CostCenterDistributionCoverageGapException.class,
-                () -> createService.create(create(FEB_1, LocalDate.of(2026, 2, 28), Map.of("CC_HR", 100)))
-        );
+        createService.create(create(FEB_1, LocalDate.of(2026, 2, 28), Map.of("CC_HR", 100)));
         entityManager.flush();
 
-        assertEquals(List.of(new CostCenterDistributionPeriod(LocalDate.of(2026, 3, 1), null)), ex.gaps());
+        assertEquals(2, persistedCount());
+        assertEquals(List.of(JAN_31), persistedEndDates(DAY_1));
+        assertEquals(List.of(LocalDate.of(2026, 2, 28)), persistedEndDates(FEB_1));
+    }
+
+    // backend#54: an employee without a distribution may start one later than the hire date. The
+    // thousand employees the old seed left without a distribution are this case.
+    @Test
+    void anEmployeeWithoutADistributionCanStartOneAfterTheHireDate() {
+        CostCenterDistributionWindow first = createService.create(create(DAY_16, null, Map.of("CC_ADMIN", 100)));
+        entityManager.flush();
+
+        assertEquals(DAY_16, first.getStartDate());
+        assertNull(first.getEndDate());
         assertEquals(1, persistedCount());
-        assertEquals(Arrays.asList((LocalDate) null), persistedEndDates(DAY_1));
+        assertEquals(Arrays.asList((LocalDate) null), persistedEndDates(DAY_16));
+    }
+
+    // The plan shows the gap without holding it against the add: the screen can say what the
+    // series will look like, and the user decides.
+    @Test
+    void thePlanNamesTheGapAnAddWouldLeaveWithoutRejectingIt() {
+        CostCenterDistributionPlan plan = planService.plan(new PlanCostCenterDistributionChangeCommand(
+                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, TimelineOperation.ADD, null, DAY_16, null
+        ));
+        entityManager.flush();
+
+        assertTrue(plan.isAccepted());
+        assertNull(plan.rejection());
+        assertEquals(List.of(new CostCenterDistributionPeriod(DAY_1, DAY_15)), plan.gaps());
+        assertEquals(List.of(new CostCenterDistributionPeriod(DAY_16, null)), plan.stretchCandidates());
+        assertEquals(0, persistedCount());
     }
 
     // backend#52: an add on the start date of the existing window is its correction, not a
@@ -179,21 +210,40 @@ class CostCenterTimelineFlywayIntegrationTest {
         assertEquals(List.of("CC_HR", "CC_IT"), persistedCodes(DAY_1));
     }
 
+    // Optional coverage: moving the second window forward leaves DAY_16..JAN_31 uncovered, and the
+    // correction goes through. Nothing else moves: the first window keeps its end (decision 3).
     @Test
-    void correctingTheDatesIsJudgedByTheSameInvariants() {
+    void correctingTheDatesThatLeaveAGapIsAcceptedAndNothingElseMoves() {
         createService.create(create(DAY_1, null, Map.of("CC_ADMIN", 100)));
         createService.create(create(DAY_16, null, Map.of("CC_HR", 100)));
 
-        CostCenterDistributionCoverageGapException ex = assertThrows(
-                CostCenterDistributionCoverageGapException.class,
-                () -> updateService.update(update(DAY_16, FEB_1, null, Map.of("CC_HR", 100)))
+        updateService.update(update(DAY_16, FEB_1, null, Map.of("CC_HR", 100)));
+        entityManager.flush();
+
+        assertEquals(2, persistedCount());
+        assertEquals(List.of(DAY_15), persistedEndDates(DAY_1));
+        assertEquals(List.of(), persistedCodes(DAY_16));
+        assertEquals(List.of("CC_HR"), persistedCodes(FEB_1));
+        assertEquals(Arrays.asList((LocalDate) null), persistedEndDates(FEB_1));
+    }
+
+    // The overlap invariant does not depend on the coverage: it still rejects, naming the shared
+    // dates, and persists nothing.
+    @Test
+    void correctingTheDatesOntoAnotherWindowIsRejectedAsAnOverlapAndPersistsNothing() {
+        createService.create(create(DAY_1, null, Map.of("CC_ADMIN", 100)));
+        createService.create(create(DAY_16, null, Map.of("CC_HR", 100)));
+
+        CostCenterDistributionOverlapException ex = assertThrows(
+                CostCenterDistributionOverlapException.class,
+                () -> updateService.update(update(DAY_16, LocalDate.of(2026, 1, 10), null, Map.of("CC_HR", 100)))
         );
         entityManager.flush();
 
-        assertEquals(List.of(new CostCenterDistributionPeriod(DAY_16, JAN_31)), ex.gaps());
-        assertTrue(ex.stretchCandidates().contains(new CostCenterDistributionPeriod(DAY_1, DAY_15)));
+        assertEquals(List.of(new CostCenterDistributionPeriod(LocalDate.of(2026, 1, 10), DAY_15)), ex.overlaps());
         assertEquals(2, persistedCount());
         assertEquals(List.of("CC_HR"), persistedCodes(DAY_16));
+        assertEquals(List.of(DAY_15), persistedEndDates(DAY_1));
     }
 
     // backend#48, case 4: deleting the last window reopens the previous one, every line of it.
@@ -209,41 +259,41 @@ class CostCenterTimelineFlywayIntegrationTest {
         assertEquals(Arrays.asList(null, null), persistedEndDates(DAY_1));
     }
 
-    // backend#48, case 5: deleting a window in the middle is rejected naming the neighbours.
+    // backend#48, case 5, read the other way here (backend#54): the series declares optional
+    // coverage, so removing a window in the middle goes through and leaves the gap between its
+    // neighbours. Nothing else moves: the first window keeps its end and the last stays open. The
+    // component sees the gap afterwards: the next add names it.
     @Test
-    void deletingAWindowInTheMiddleIsRejectedSayingWhichNeighbourToStretch() {
+    void deletingAWindowInTheMiddleIsAcceptedAndLeavesTheGapBetweenItsNeighbours() {
         createService.create(create(DAY_1, null, Map.of("CC_ADMIN", 100)));
         createService.create(create(DAY_16, null, Map.of("CC_HR", 100)));
         createService.create(create(FEB_1, null, Map.of("CC_IT", 100)));
 
-        CostCenterDistributionCoverageGapException ex = assertThrows(
-                CostCenterDistributionCoverageGapException.class,
-                () -> deleteService.delete(new DeleteCostCenterDistributionCommand(
-                        RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_16))
-        );
+        deleteService.delete(new DeleteCostCenterDistributionCommand(
+                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_16));
         entityManager.flush();
 
-        assertEquals(List.of(new CostCenterDistributionPeriod(DAY_16, JAN_31)), ex.gaps());
-        assertEquals(
-                List.of(new CostCenterDistributionPeriod(DAY_1, DAY_15), new CostCenterDistributionPeriod(FEB_1, null)),
-                ex.stretchCandidates()
-        );
-        assertEquals(3, persistedCount());
+        assertEquals(2, persistedCount());
+        assertEquals(List.of(DAY_15), persistedEndDates(DAY_1));
+        assertEquals(List.of(), persistedCodes(DAY_16));
+        assertEquals(Arrays.asList((LocalDate) null), persistedEndDates(FEB_1));
+
+        CostCenterDistributionPlan next = planService.plan(new PlanCostCenterDistributionChangeCommand(
+                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, TimelineOperation.ADD, null, LocalDate.of(2026, 3, 1), null
+        ));
+        assertTrue(next.isAccepted());
+        assertEquals(List.of(new CostCenterDistributionPeriod(DAY_16, JAN_31)), next.gaps());
     }
 
     @Test
-    void deletingTheOnlyWindowIsRejectedAsAGap() {
+    void deletingTheOnlyWindowLeavesTheEmployeeWithoutADistribution() {
         createService.create(create(DAY_1, null, Map.of("CC_ADMIN", 100)));
 
-        CostCenterDistributionCoverageGapException ex = assertThrows(
-                CostCenterDistributionCoverageGapException.class,
-                () -> deleteService.delete(new DeleteCostCenterDistributionCommand(
-                        RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_1))
-        );
+        deleteService.delete(new DeleteCostCenterDistributionCommand(
+                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_1));
         entityManager.flush();
 
-        assertEquals(List.of(new CostCenterDistributionPeriod(DAY_1, null)), ex.gaps());
-        assertEquals(1, persistedCount());
+        assertEquals(0, persistedCount());
     }
 
     @Test
@@ -299,19 +349,17 @@ class CostCenterTimelineFlywayIntegrationTest {
         assertEquals(List.of(JAN_31, JAN_31), persistedEndDates(DAY_1));
     }
 
+    // Optional coverage: the deprecated close on a date inside an open presence leaves the rest of
+    // it uncovered, and that is legal here.
     @Test
-    void closingTheOpenWindowWhileThePresenceGoesOnIsRejectedAsAGap() {
+    void closingTheOpenWindowWhileThePresenceGoesOnIsAcceptedAndLeavesTheGap() {
         createService.create(create(DAY_1, null, Map.of("CC_ADMIN", 100)));
 
-        CostCenterDistributionCoverageGapException ex = assertThrows(
-                CostCenterDistributionCoverageGapException.class,
-                () -> closeService.close(new CloseCostCenterDistributionCommand(
-                        RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_1, DAY_15))
-        );
+        closeService.close(new CloseCostCenterDistributionCommand(
+                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_1, DAY_15));
         entityManager.flush();
 
-        assertEquals(List.of(new CostCenterDistributionPeriod(DAY_16, null)), ex.gaps());
-        assertEquals(Arrays.asList((LocalDate) null), persistedEndDates(DAY_1));
+        assertEquals(List.of(DAY_15), persistedEndDates(DAY_1));
     }
 
     // The deprecated replace-from-date, as the loader calls it: an add that closes the window in force.

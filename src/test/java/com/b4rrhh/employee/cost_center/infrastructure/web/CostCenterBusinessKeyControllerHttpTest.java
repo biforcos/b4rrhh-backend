@@ -189,6 +189,8 @@ class CostCenterBusinessKeyControllerHttpTest {
         assertEquals(2, captor.getValue().items().size());
     }
 
+    // The handler keeps the translation of the component's gap rejection (backend#58). This series
+    // declares optional coverage (ADR-057), so no endpoint produces it today; the mapping is what is tested.
     @Test
     void updateMapsACoverageGapToHttp409NamingTheGapAndTheNeighboursToStretch() throws Exception {
         when(updateCostCenterDistributionUseCase.update(any(UpdateCostCenterDistributionCommand.class)))
@@ -233,22 +235,6 @@ class CostCenterBusinessKeyControllerHttpTest {
         mockMvc.perform(delete("/employees/ESP/INTERNAL/EMP001/cost-centers/distributions/2026-01-16"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("COST_CENTER_DISTRIBUTION_NOT_FOUND"));
-    }
-
-    // ADR-057 §3: the delete is bounded by the gap invariant.
-    @Test
-    void deleteMapsACoverageGapToHttp409() throws Exception {
-        doThrow(new CostCenterDistributionCoverageGapException(
-                "ESP", "INTERNAL", "EMP001",
-                List.of(new CostCenterDistributionPeriod(JAN_1, null)),
-                List.of()
-        )).when(deleteCostCenterDistributionUseCase).delete(any(DeleteCostCenterDistributionCommand.class));
-
-        mockMvc.perform(delete("/employees/ESP/INTERNAL/EMP001/cost-centers/distributions/2026-01-01"))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("COST_CENTER_COVERAGE_GAP"))
-                .andExpect(jsonPath("$.details.gaps[0].startDate").exists())
-                .andExpect(jsonPath("$.details.stretchCandidates").isEmpty());
     }
 
     // ADR-057 §6: the plan is asked for and shown; nothing is applied.

@@ -5,13 +5,11 @@ import com.b4rrhh.employee.cost_center.application.port.EmployeeCostCenterContex
 import com.b4rrhh.employee.cost_center.application.port.EmployeeCostCenterLookupPort;
 import com.b4rrhh.employee.cost_center.application.port.PresencePeriod;
 import com.b4rrhh.employee.cost_center.application.service.CostCenterTimelineService;
-import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionCoverageGapException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionInvalidException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionNotFoundException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterEmployeeNotFoundException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterOutsidePresencePeriodException;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterAllocation;
-import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionPeriod;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow;
 import com.b4rrhh.employee.cost_center.domain.port.CostCenterRepository;
 import com.b4rrhh.employee.cost_center.domain.service.CostCenterDistributionWindowGrouper;
@@ -95,9 +93,10 @@ class CloseCostCenterDistributionServiceTest {
         verify(costCenterRepository).adjustWindowEndDate(EMPLOYEE_ID, WINDOW_START, END_DATE);
     }
 
-    // ADR-057: closing the window in force while the presence goes on leaves a gap.
+    // ADR-057: closing the window in force while the presence goes on leaves a gap. This series
+    // declares optional coverage (decision 1; backend#54), so the gap is legal and the close goes through.
     @Test
-    void closingWhileThePresenceGoesOnIsRejectedNamingTheGap() {
+    void closingWhileThePresenceGoesOnIsAcceptedAndLeavesTheGap() {
         CostCenterAllocation line = new CostCenterAllocation(
                 EMPLOYEE_ID, "CC_A", new BigDecimal("100"), WINDOW_START, null
         );
@@ -105,13 +104,10 @@ class CloseCostCenterDistributionServiceTest {
         when(costCenterRepository.findByEmployeeIdAndStartDate(EMPLOYEE_ID, WINDOW_START))
                 .thenReturn(List.of(line));
 
-        CostCenterDistributionCoverageGapException ex = assertThrows(
-                CostCenterDistributionCoverageGapException.class,
-                () -> service.close(command(WINDOW_START, END_DATE))
-        );
+        CostCenterDistributionWindow result = service.close(command(WINDOW_START, END_DATE));
 
-        assertEquals(List.of(new CostCenterDistributionPeriod(END_DATE.plusDays(1), null)), ex.gaps());
-        verify(costCenterRepository, never()).adjustWindowEndDate(any(), any(), any());
+        assertEquals(END_DATE, result.getEndDate());
+        verify(costCenterRepository).adjustWindowEndDate(EMPLOYEE_ID, WINDOW_START, END_DATE);
     }
 
     @Test

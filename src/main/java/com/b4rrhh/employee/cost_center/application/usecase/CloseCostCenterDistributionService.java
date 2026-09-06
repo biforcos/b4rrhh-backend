@@ -21,9 +21,10 @@ import java.util.List;
  * Closes a distribution window on a date, every line of it. Through the
  * component it is a correction of the end date, judged like any other
  * (ADR-057): closing the window in force while the presence goes on leaves a
- * gap and is rejected naming it; closing it after the presence ends is
- * outside the presence. The termination flow closes the presence first, so
- * closing on the termination date leaves none.
+ * gap, which this series allows (optional coverage, decision 1); closing it
+ * after the presence ends is outside the presence and is rejected. The
+ * termination flow closes the presence first, so closing on the termination
+ * date leaves no gap at all.
  *
  * @deprecated ADR-057 retires {@code close} as an operation of the API:
  *     adding the next window already closes the one in force, and any other

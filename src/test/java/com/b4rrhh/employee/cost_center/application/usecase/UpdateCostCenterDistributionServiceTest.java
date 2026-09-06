@@ -7,7 +7,6 @@ import com.b4rrhh.employee.cost_center.application.port.PresencePeriod;
 import com.b4rrhh.employee.cost_center.application.service.CostCenterCatalogValidator;
 import com.b4rrhh.employee.cost_center.application.service.CostCenterTimelineService;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterCatalogValueInvalidException;
-import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionCoverageGapException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionInvalidException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionNotFoundException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionOverlapException;
@@ -120,24 +119,24 @@ class UpdateCostCenterDistributionServiceTest {
         assertNull(saved.getValue().get(0).getEndDate());
     }
 
+    // Optional coverage (ADR-057, decision 1; backend#54): the gap the corrected dates leave is
+    // legal, so the correction goes through and nothing else moves (decision 3): the previous
+    // window keeps its end.
     @Test
-    void correctedDatesThatLeaveAGapAreRejectedNamingTheNeighbourToStretchAndNothingIsWritten() {
+    void correctedDatesThatLeaveAGapAreAcceptedAndTheGapStays() {
         CostCenterAllocation hr = line("CC_HR", 100, FEB_1, null);
         givenEmployeeWithSeries(line("CC_ADMIN", 100, JAN_1, JAN_31), hr);
         when(costCenterRepository.findByEmployeeIdAndStartDate(EMPLOYEE_ID, FEB_1)).thenReturn(List.of(hr));
 
-        CostCenterDistributionCoverageGapException ex = assertThrows(
-                CostCenterDistributionCoverageGapException.class,
-                () -> service.update(command(FEB_1, LocalDate.of(2026, 3, 1), null, List.of(item("CC_HR", 100))))
-        );
+        CostCenterDistributionWindow corrected = service.update(command(FEB_1, LocalDate.of(2026, 3, 1), null, List.of(item("CC_HR", 100))));
 
-        assertEquals(List.of(new CostCenterDistributionPeriod(FEB_1, LocalDate.of(2026, 2, 28))), ex.gaps());
-        assertEquals(
-                List.of(new CostCenterDistributionPeriod(JAN_1, JAN_31), new CostCenterDistributionPeriod(LocalDate.of(2026, 3, 1), null)),
-                ex.stretchCandidates()
-        );
-        verify(costCenterRepository, never()).deleteAllForWindow(any(), any());
-        verify(costCenterRepository, never()).saveAll(any());
+        assertEquals(LocalDate.of(2026, 3, 1), corrected.getStartDate());
+        assertNull(corrected.getEndDate());
+        verify(costCenterRepository).deleteAllForWindow(EMPLOYEE_ID, FEB_1);
+        ArgumentCaptor<List<CostCenterAllocation>> saved = ArgumentCaptor.forClass(List.class);
+        verify(costCenterRepository).saveAll(saved.capture());
+        assertEquals(LocalDate.of(2026, 3, 1), saved.getValue().get(0).getStartDate());
+        verify(costCenterRepository, never()).adjustWindowEndDate(any(), any(), any());
     }
 
     @Test

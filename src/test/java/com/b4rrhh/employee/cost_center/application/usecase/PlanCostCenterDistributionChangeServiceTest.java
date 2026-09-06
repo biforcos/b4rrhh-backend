@@ -27,6 +27,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -115,17 +116,23 @@ class PlanCostCenterDistributionChangeServiceTest {
         verify(costCenterRepository, never()).deleteAllForWindow(any(), any());
     }
 
+    // Optional coverage (ADR-057, decision 1; backend#54): the gap does not reject the plan, but
+    // the plan still shows it, so the screen can say what the correction leaves behind.
     @Test
-    void aCorrectionThatLeavesAGapComesBackRejectedNamingTheGap() {
+    void aCorrectionThatLeavesAGapComesBackAcceptedAndStillNamesTheGap() {
         CostCenterAllocation second = line("CC_HR", 100, FEB_1, null);
         givenEmployeeWithSeries(line("CC_ADMIN", 100, JAN_1, JAN_31), second);
         when(costCenterRepository.findByEmployeeIdAndStartDate(EMPLOYEE_ID, FEB_1)).thenReturn(List.of(second));
 
         CostCenterDistributionPlan plan = service.plan(command(TimelineOperation.CORRECT, FEB_1, LocalDate.of(2026, 3, 1), null));
 
-        assertFalse(plan.isAccepted());
-        assertEquals(TimelineRejection.GAP_NOT_ALLOWED, plan.rejection());
+        assertTrue(plan.isAccepted());
+        assertNull(plan.rejection());
         assertEquals(List.of(new CostCenterDistributionPeriod(FEB_1, LocalDate.of(2026, 2, 28))), plan.gaps());
+        assertEquals(
+                List.of(new CostCenterDistributionPeriod(JAN_1, JAN_31), new CostCenterDistributionPeriod(LocalDate.of(2026, 3, 1), null)),
+                plan.projected()
+        );
         verify(costCenterRepository, never()).saveAll(any());
     }
 

@@ -25,9 +25,9 @@ import java.util.List;
  * Corrects a distribution window: its lines, its dates, or both. Correcting a
  * line is correcting the set (ADR-057, decision 0): the window is replaced
  * whole, under the same start date unless the correction moves it. Nothing
- * else moves (decision 3): if the corrected dates leave a gap or an overlap,
- * the plan rejects them and names what the user would have to stretch
- * instead.
+ * else moves (decision 3): if the corrected dates overlap another window the
+ * plan rejects them naming the shared dates; a gap they leave is legal here
+ * (optional coverage, decision 1) and the plan only names it.
  */
 @Service
 public class UpdateCostCenterDistributionService implements UpdateCostCenterDistributionUseCase {

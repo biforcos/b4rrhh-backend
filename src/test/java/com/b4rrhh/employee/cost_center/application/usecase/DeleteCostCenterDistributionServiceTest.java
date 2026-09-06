@@ -5,10 +5,8 @@ import com.b4rrhh.employee.cost_center.application.port.EmployeeCostCenterContex
 import com.b4rrhh.employee.cost_center.application.port.EmployeeCostCenterLookupPort;
 import com.b4rrhh.employee.cost_center.application.port.PresencePeriod;
 import com.b4rrhh.employee.cost_center.application.service.CostCenterTimelineService;
-import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionCoverageGapException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionNotFoundException;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterAllocation;
-import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionPeriod;
 import com.b4rrhh.employee.cost_center.domain.port.CostCenterRepository;
 import com.b4rrhh.employee.cost_center.domain.service.CostCenterDistributionWindowGrouper;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +20,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -31,9 +28,11 @@ import static org.mockito.Mockito.when;
 
 /**
  * Removing a distribution window (ADR-057, decision 3): the delete is
- * bounded by the invariants and moves the window whole. The timeline service
- * is real; the repository and the presence port are mocked. The employee is
- * present from 2026-01-01 onwards.
+ * bounded by the invariants and moves the window whole. The series declares
+ * optional coverage (decision 1; backend#54), so the gap a removal leaves is
+ * legal here and only the last removal moves anything else. The timeline
+ * service is real; the repository and the presence port are mocked. The
+ * employee is present from 2026-01-01 onwards.
  */
 @ExtendWith(MockitoExtension.class)
 class DeleteCostCenterDistributionServiceTest {
@@ -82,42 +81,33 @@ class DeleteCostCenterDistributionServiceTest {
         verify(costCenterRepository).deleteAllForWindow(EMPLOYEE_ID, DAY_16);
     }
 
-    // The only window starts the presence: removing it uncovers the presence.
+    // The only window starts the presence: removing it leaves the employee without a distribution,
+    // which optional coverage allows (ADR-057, decision 1).
     @Test
-    void deletingTheOnlyWindowIsRejectedBecauseThePresenceWouldBeUncovered() {
+    void deletingTheOnlyWindowLeavesTheEmployeeWithoutADistribution() {
         CostCenterAllocation only = line("CC_ADMIN", 100, JAN_1, null);
         givenEmployeeWithSeries(only);
         when(costCenterRepository.findByEmployeeIdAndStartDate(EMPLOYEE_ID, JAN_1)).thenReturn(List.of(only));
 
-        CostCenterDistributionCoverageGapException ex = assertThrows(
-                CostCenterDistributionCoverageGapException.class,
-                () -> service.delete(command(JAN_1))
-        );
+        service.delete(command(JAN_1));
 
-        assertEquals(List.of(new CostCenterDistributionPeriod(JAN_1, null)), ex.gaps());
-        verify(costCenterRepository, never()).deleteAllForWindow(any(), any());
+        verify(costCenterRepository).deleteAllForWindow(EMPLOYEE_ID, JAN_1);
         verify(costCenterRepository, never()).adjustWindowEndDate(any(), any(), any());
     }
 
+    // backend#48, case 5, read the other way here (backend#54): the gap between the neighbours is
+    // legal, so the removal goes through and the neighbours keep their dates.
     @Test
-    void deletingAWindowInTheMiddleIsRejectedNamingTheNeighboursToStretch() {
+    void deletingAWindowInTheMiddleIsAcceptedAndLeavesTheGapBetweenItsNeighbours() {
         CostCenterAllocation first = line("CC_ADMIN", 100, JAN_1, DAY_15);
         CostCenterAllocation middle = line("CC_HR", 100, DAY_16, JAN_31);
         CostCenterAllocation last = line("CC_IT", 100, FEB_1, null);
         givenEmployeeWithSeries(first, middle, last);
         when(costCenterRepository.findByEmployeeIdAndStartDate(EMPLOYEE_ID, DAY_16)).thenReturn(List.of(middle));
 
-        CostCenterDistributionCoverageGapException ex = assertThrows(
-                CostCenterDistributionCoverageGapException.class,
-                () -> service.delete(command(DAY_16))
-        );
+        service.delete(command(DAY_16));
 
-        assertEquals(List.of(new CostCenterDistributionPeriod(DAY_16, JAN_31)), ex.gaps());
-        assertEquals(
-                List.of(new CostCenterDistributionPeriod(JAN_1, DAY_15), new CostCenterDistributionPeriod(FEB_1, null)),
-                ex.stretchCandidates()
-        );
-        verify(costCenterRepository, never()).deleteAllForWindow(any(), any());
+        verify(costCenterRepository).deleteAllForWindow(EMPLOYEE_ID, DAY_16);
         verify(costCenterRepository, never()).adjustWindowEndDate(any(), any(), any());
     }
 

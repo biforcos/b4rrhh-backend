@@ -7,7 +7,6 @@ import com.b4rrhh.employee.cost_center.application.port.PresencePeriod;
 import com.b4rrhh.employee.cost_center.application.service.CostCenterCatalogValidator;
 import com.b4rrhh.employee.cost_center.application.service.CostCenterTimelineService;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterCatalogValueInvalidException;
-import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionCoverageGapException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionInvalidException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionIsACorrectionException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterEmployeeNotFoundException;
@@ -157,21 +156,21 @@ class ReplaceCostCenterDistributionFromDateServiceTest {
         verify(costCenterRepository, never()).adjustWindowEndDate(any(), any(), any());
     }
 
-    // What used to be "no active distribution before effectiveDate" is now the invariant's
-    // call: with nothing in force, the add leaves the presence uncovered before it.
+    // What used to be "no active distribution before effectiveDate" (404) is now the invariant's
+    // call: with nothing in force, the add leaves the presence uncovered before it, and that is
+    // legal for this series (optional coverage, ADR-057 decision 1; backend#54). An open window is written.
     @Test
-    void replacingWhereNothingIsInForceIsJudgedByTheInvariantsAndWritesNothing() {
+    void replacingWhereNothingIsInForceAddsAnOpenWindowAndLeavesTheGapBeforeIt() {
         givenEmployeeWithSeries();
 
-        CostCenterDistributionCoverageGapException ex = assertThrows(
-                CostCenterDistributionCoverageGapException.class,
-                () -> service.replaceFromDate(command(
-                        List.of(new CostCenterDistributionItem("CC_A", new BigDecimal("100")))
-                ))
-        );
+        CostCenterDistributionWindow result = service.replaceFromDate(command(
+                List.of(new CostCenterDistributionItem("CC_A", new BigDecimal("100")))
+        ));
 
-        assertEquals(List.of(new CostCenterDistributionPeriod(ORIGINAL_START, EFFECTIVE_DATE.minusDays(1))), ex.gaps());
-        verify(costCenterRepository, never()).saveAll(any());
+        assertEquals(EFFECTIVE_DATE, result.getStartDate());
+        assertNull(result.getEndDate());
+        verify(costCenterRepository).saveAll(any());
+        verify(costCenterRepository, never()).adjustWindowEndDate(any(), any(), any());
     }
 
     @Test

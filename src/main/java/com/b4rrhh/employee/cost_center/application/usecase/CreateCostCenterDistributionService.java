@@ -20,8 +20,9 @@ import java.util.List;
 
 /**
  * Adds a distribution window to the series. The add is planned against the
- * invariants of the series (ADR-057): inside the presence, no overlap, no
- * gap. The one automatic consequence is closing the window in force on the
+ * invariants of the series (ADR-057): inside the presence and no overlap. A
+ * gap it leaves is legal here, because the series declares optional coverage
+ * (decision 1). The one automatic consequence is closing the window in force on the
  * new start date the day before it, every line of it at once. An add that
  * starts on the start date of an existing window is not an add and is
  * rejected as its correction (backend#52). What the lines add up to is the

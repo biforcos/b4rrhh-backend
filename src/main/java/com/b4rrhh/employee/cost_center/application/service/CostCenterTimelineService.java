@@ -23,9 +23,18 @@ import java.util.List;
 
 /**
  * Where the cost center series meets the temporal component (ADR-057). It
- * declares the coverage of the series as mandatory, builds the timeline from
+ * declares the coverage of the series as optional, builds the timeline from
  * the persisted lines and the employee's presence, asks the planner what an
  * operation would do, and gives the answer back in the vertical's own terms.
+ *
+ * <p>Optional coverage (ADR-057, decision 1) is what sets this series apart
+ * from contract, working time, labor classification and work center: a
+ * distribution is an analytical allocation, not a legal requirement nor
+ * something the payroll needs, and an employee may simply not have one.
+ * Overlaps are rejected as everywhere; a gap inside the presence is a legal
+ * state, so a plan that leaves one comes back accepted and still names the
+ * gap for the screen to show. It is the first series to use the weak
+ * variant (backend#54).
  *
  * <p>What makes this series different from the others (ADR-057, decision 0)
  * is what an occurrence is: not a line but a <b>distribution window</b>, the
@@ -40,7 +49,7 @@ import java.util.List;
 @Component
 public class CostCenterTimelineService {
 
-    private static final TimelineCoverage COVERAGE = TimelineCoverage.MANDATORY;
+    private static final TimelineCoverage COVERAGE = TimelineCoverage.OPTIONAL;
 
     private final CostCenterRepository costCenterRepository;
     private final CostCenterPresenceConsistencyPort costCenterPresenceConsistencyPort;
@@ -77,7 +86,10 @@ public class CostCenterTimelineService {
      * Throws the business exception a rejected plan stands for. Accepted
      * plans pass through. The switch is an expression on purpose: a rejection
      * the component adds and this vertical does not translate stops compiling
-     * instead of slipping through (backend#58).
+     * instead of slipping through (backend#58). With optional coverage the
+     * planner never rejects for a gap, so the {@code GAP_NOT_ALLOWED} branch
+     * is not reached from here today; it stays because the switch is
+     * exhaustive and the translation is this vertical's to keep.
      */
     public void requireAccepted(
             CostCenterDistributionPlan plan,

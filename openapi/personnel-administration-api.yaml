@@ -1995,10 +1995,10 @@ paths:
         "409":
           description: >-
             The resulting series would break an invariant (ADR-057):
-            COST_CENTER_OVERLAP (details.overlaps), COST_CENTER_COVERAGE_GAP
-            (details.gaps and details.stretchCandidates), COST_CENTER_OUTSIDE_PRESENCE,
+            COST_CENTER_OVERLAP (details.overlaps), COST_CENTER_OUTSIDE_PRESENCE,
             or COST_CENTER_IS_A_CORRECTION (details.correctedOccurrence names the
-            window the add would correct).
+            window the add would correct). A gap the add leaves is not an
+            error: the series declares optional coverage.
           content:
             application/json:
               schema:
@@ -2132,9 +2132,9 @@ paths:
         "409":
           description: >-
             The corrected dates would break an invariant (ADR-057):
-            COST_CENTER_OVERLAP (details.overlaps), COST_CENTER_COVERAGE_GAP
-            (details.gaps and details.stretchCandidates name the gap and the
-            neighbour to stretch) or COST_CENTER_OUTSIDE_PRESENCE.
+            COST_CENTER_OVERLAP (details.overlaps) or COST_CENTER_OUTSIDE_PRESENCE.
+            A gap the corrected dates leave is not an error: the series
+            declares optional coverage.
           content:
             application/json:
               schema:
@@ -2145,13 +2145,12 @@ paths:
       tags:
         - Employee Cost Center
       description: >-
-        Removes a distribution window, every line of it, bounded by the
-        invariants of the series (ADR-057 §3). Removing the last one reopens
-        the previous one, up to where the removed one ended. Removing one in
-        the middle would leave a stretch of the presence uncovered and is
-        rejected as COST_CENTER_COVERAGE_GAP, naming the gap and the neighbours
-        the user could stretch first. The only window, which starts the
-        presence, is one such case.
+        Removes a distribution window, every line of it (ADR-057 §3).
+        Removing the last one reopens the previous one, up to where the
+        removed one ended. Removing one in the middle leaves a stretch of the
+        presence without a distribution, and that is accepted: the series
+        declares optional coverage, so the gap is a legal state and nothing
+        else moves. Ask POST /plan first to see the gap it would leave.
       parameters:
         - in: path
           name: ruleSystemCode
@@ -2187,12 +2186,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CostCenterErrorResponse"
-        "409":
-          description: Removing the window would leave a gap inside the presence (COST_CENTER_COVERAGE_GAP)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CostCenterErrorResponse"
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/replace-from-date:
     post:
@@ -2208,7 +2201,9 @@ paths:
         end date is the tail of the window in force on that date (open when
         none is), judged by the same invariants: an effective date on the
         start date of an existing window is rejected as
-        COST_CENTER_IS_A_CORRECTION, and a resulting gap or overlap is named.
+        COST_CENTER_IS_A_CORRECTION and a resulting overlap as
+        COST_CENTER_OVERLAP. A gap it leaves is legal: the series declares
+        optional coverage.
       parameters:
         - in: path
           name: ruleSystemCode
@@ -2256,7 +2251,7 @@ paths:
         "409":
           description: >-
             The resulting series would break an invariant (ADR-057):
-            COST_CENTER_OVERLAP, COST_CENTER_COVERAGE_GAP, COST_CENTER_OUTSIDE_PRESENCE
+            COST_CENTER_OVERLAP, COST_CENTER_OUTSIDE_PRESENCE
             or COST_CENTER_IS_A_CORRECTION.
           content:
             application/json:
@@ -2275,8 +2270,9 @@ paths:
         force, and any other end date is a correction (PUT). Kept while the
         screen still calls it. Every line of the window takes endDate, and the
         result is judged by the invariants: closing the window in force while
-        the presence goes on leaves a gap (COST_CENTER_COVERAGE_GAP); an end
-        date past the presence is COST_CENTER_OUTSIDE_PRESENCE.
+        the presence goes on leaves a gap, which is legal here (the series
+        declares optional coverage); an end date past the presence is
+        COST_CENTER_OUTSIDE_PRESENCE.
       parameters:
         - in: path
           name: ruleSystemCode
@@ -2329,7 +2325,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/CostCenterErrorResponse"
         "409":
-          description: The resulting series would break an invariant (COST_CENTER_COVERAGE_GAP, COST_CENTER_OUTSIDE_PRESENCE, COST_CENTER_OVERLAP)
+          description: The resulting series would break an invariant (COST_CENTER_OUTSIDE_PRESENCE, COST_CENTER_OVERLAP)
           content:
             application/json:
               schema:
@@ -8914,8 +8910,9 @@ components:
           description: >-
             What a plan rejection names (ADR-057). COST_CENTER_OVERLAP carries
             overlaps (CostCenterDistributionPeriod[]); COST_CENTER_COVERAGE_GAP
-            carries gaps and stretchCandidates (CostCenterDistributionPeriod[]);
-            COST_CENTER_IS_A_CORRECTION carries correctedOccurrence
+            carries gaps and stretchCandidates (CostCenterDistributionPeriod[]),
+            though no operation produces it while the series declares optional
+            coverage; COST_CENTER_IS_A_CORRECTION carries correctedOccurrence
             (CostCenterDistributionPeriod), the window the add would correct.
             Catalog errors carry field. Null when the error has nothing to name.
           additionalProperties: true

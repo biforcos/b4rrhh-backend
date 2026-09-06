@@ -7,7 +7,6 @@ import com.b4rrhh.employee.cost_center.application.port.PresencePeriod;
 import com.b4rrhh.employee.cost_center.application.service.CostCenterCatalogValidator;
 import com.b4rrhh.employee.cost_center.application.service.CostCenterTimelineService;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterCatalogValueInvalidException;
-import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionCoverageGapException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionInvalidException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionIsACorrectionException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionPercentageExceededException;
@@ -148,19 +147,35 @@ class CreateCostCenterDistributionServiceTest {
         verify(costCenterRepository, never()).adjustWindowEndDate(any(), any(), any());
     }
 
+    // Optional coverage (ADR-057, decision 1; backend#54): the rest of the presence stays uncovered
+    // and that is legal here. The window in force still closes the day before, as in any add.
     @Test
-    void addingAClosedWindowThatLeavesTheRestOfThePresenceUncoveredIsRejectedNamingTheGap() {
+    void addingAClosedWindowThatLeavesTheRestOfThePresenceUncoveredIsAccepted() {
         givenEmployeeFound();
         givenSeriesWithPresenceFromStart(line("CC_X", 100, START, null));
 
-        CostCenterDistributionCoverageGapException ex = assertThrows(
-                CostCenterDistributionCoverageGapException.class,
-                () -> service.create(command(START.plusDays(15), START.plusDays(30),
-                        List.of(item("CC_A", new BigDecimal("100")))))
-        );
+        CostCenterDistributionWindow window = service.create(command(START.plusDays(15), START.plusDays(30),
+                List.of(item("CC_A", new BigDecimal("100")))));
 
-        assertEquals(List.of(new CostCenterDistributionPeriod(START.plusDays(31), null)), ex.gaps());
-        verify(costCenterRepository, never()).saveAll(any());
+        assertEquals(START.plusDays(15), window.getStartDate());
+        assertEquals(START.plusDays(30), window.getEndDate());
+        verify(costCenterRepository).adjustWindowEndDate(EMPLOYEE_ID, START, START.plusDays(14));
+        verify(costCenterRepository).saveAll(any());
+    }
+
+    // backend#54: an employee without a distribution may start one later than the hire date. The
+    // stretch before it is a gap, and a gap is legal for this series.
+    @Test
+    void anEmployeeWithoutADistributionCanStartOneAfterTheHireDate() {
+        givenEmployeeFound();
+        givenEmptySeriesWithPresenceFromStart();
+
+        CostCenterDistributionWindow window = service.create(command(START.plusDays(15),
+                List.of(item("CC_A", new BigDecimal("100")))));
+
+        assertEquals(START.plusDays(15), window.getStartDate());
+        assertNull(window.getEndDate());
+        verify(costCenterRepository).saveAll(any());
         verify(costCenterRepository, never()).adjustWindowEndDate(any(), any(), any());
     }
 

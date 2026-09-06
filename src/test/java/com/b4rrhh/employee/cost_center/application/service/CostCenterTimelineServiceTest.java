@@ -27,6 +27,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -39,6 +40,8 @@ import static org.mockito.Mockito.when;
  * and has two distribution windows, the second still open and split between
  * two cost centers. The occurrence the planner sees is the window, so the
  * two lines of the second one are one range, not two (ADR-057, decision 0).
+ * The series declares optional coverage (decision 1; backend#54): a gap is
+ * named, never rejected; an overlap is rejected as everywhere.
  *
  * <pre>
  *   2026-01-01 .. 2026-01-31   CC_ADMIN 100
@@ -144,19 +147,25 @@ class CostCenterTimelineServiceTest {
         );
     }
 
+    // Optional coverage (ADR-057, decision 1): the gap is legal, so the plan is accepted. It still
+    // names the gap and the neighbours, because the screen shows them; it just does not stop on them.
     @Test
-    void addingThatLeavesAGapNamesTheGapAndTheNeighbours() {
+    void addingThatLeavesAGapIsAcceptedAndStillNamesTheGapAndTheNeighbours() {
         givenSeries(line("CC_ADMIN", 100, JAN_1, JAN_31), line("CC_HR", 100, FEB_1, LocalDate.of(2026, 2, 28)));
 
         CostCenterDistributionPlan plan = service.planAdd(EMPLOYEE_ID, range(LocalDate.of(2026, 4, 1), null));
 
-        assertFalse(plan.isAccepted());
-        assertEquals(TimelineRejection.GAP_NOT_ALLOWED, plan.rejection());
+        assertTrue(plan.isAccepted());
+        assertNull(plan.rejection());
         assertNull(plan.adjustedOccurrence());
         assertEquals(List.of(period(LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31))), plan.gaps());
         assertEquals(
                 List.of(period(FEB_1, LocalDate.of(2026, 2, 28)), period(LocalDate.of(2026, 4, 1), null)),
                 plan.stretchCandidates()
+        );
+        assertEquals(
+                List.of(period(JAN_1, JAN_31), period(FEB_1, LocalDate.of(2026, 2, 28)), period(LocalDate.of(2026, 4, 1), null)),
+                plan.projected()
         );
     }
 
@@ -179,8 +188,10 @@ class CostCenterTimelineServiceTest {
         assertEquals(List.of(period(JAN_1, null)), plan.projected());
     }
 
+    // The case only this series has (backend#54): removing a window in the middle leaves the gap
+    // and is accepted. Nothing else moves: the neighbours keep their dates.
     @Test
-    void removingAWindowInTheMiddleIsRejectedNamingTheNeighboursToStretch() {
+    void removingAWindowInTheMiddleIsAcceptedAndLeavesTheGapItNames() {
         givenSeries(
                 line("CC_ADMIN", 100, JAN_1, JAN_31),
                 line("CC_HR", 100, FEB_1, LocalDate.of(2026, 2, 28)),
@@ -192,13 +203,15 @@ class CostCenterTimelineServiceTest {
                 window(FEB_1, LocalDate.of(2026, 2, 28), line("CC_HR", 100, FEB_1, LocalDate.of(2026, 2, 28)))
         );
 
-        assertFalse(plan.isAccepted());
-        assertEquals(TimelineRejection.GAP_NOT_ALLOWED, plan.rejection());
+        assertTrue(plan.isAccepted());
+        assertNull(plan.rejection());
+        assertNull(plan.adjustedOccurrence());
         assertEquals(List.of(period(FEB_1, LocalDate.of(2026, 2, 28))), plan.gaps());
         assertEquals(
                 List.of(period(JAN_1, JAN_31), period(LocalDate.of(2026, 3, 1), null)),
                 plan.stretchCandidates()
         );
+        assertEquals(List.of(period(JAN_1, JAN_31), period(LocalDate.of(2026, 3, 1), null)), plan.projected());
     }
 
     @Test
@@ -251,9 +264,29 @@ class CostCenterTimelineServiceTest {
     }
 
     @Test
-    void aRejectedPlanForAGapBecomesTheCoverageGapException() {
+    void aPlanThatLeavesAGapPassesRequireAcceptedBecauseTheCoverageIsOptional() {
         givenSeries(line("CC_ADMIN", 100, JAN_1, JAN_31), line("CC_HR", 100, FEB_1, LocalDate.of(2026, 2, 28)));
         CostCenterDistributionPlan plan = service.planAdd(EMPLOYEE_ID, range(LocalDate.of(2026, 4, 1), null));
+
+        assertFalse(plan.gaps().isEmpty());
+        assertDoesNotThrow(() -> service.requireAccepted(plan, "ESP", "INTERNAL", "EMP001"));
+    }
+
+    // The planner never rejects this series for a gap, but the translation stays because the switch
+    // over the component's rejections is exhaustive (backend#58). The plan is built by hand on purpose.
+    @Test
+    void aPlanRejectedForAGapWouldStillBecomeTheCoverageGapException() {
+        CostCenterDistributionPlan plan = new CostCenterDistributionPlan(
+                TimelineOperation.ADD,
+                TimelineRejection.GAP_NOT_ALLOWED,
+                period(LocalDate.of(2026, 4, 1), null),
+                null,
+                null,
+                List.of(),
+                List.of(period(LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31))),
+                List.of(period(FEB_1, LocalDate.of(2026, 2, 28)), period(LocalDate.of(2026, 4, 1), null)),
+                List.of(period(JAN_1, JAN_31), period(FEB_1, LocalDate.of(2026, 2, 28)), period(LocalDate.of(2026, 4, 1), null))
+        );
 
         CostCenterDistributionCoverageGapException ex = assertThrows(
                 CostCenterDistributionCoverageGapException.class,

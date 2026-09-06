@@ -16,8 +16,11 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Removes a distribution window, every line of it (ADR-057, decision 3).
  * Removing the last one reopens the previous one: it is the "oops" and it is
- * safe. Removing one in the middle would leave a gap, and the invariant
- * rejects it naming the neighbours the user would have to stretch first.
+ * safe. Removing one in the middle leaves a gap between its neighbours, and
+ * here that is accepted: the series declares optional coverage (decision 1),
+ * so a stretch of the presence without a distribution is a legal state and
+ * nothing else moves. It is the only vertical where that removal goes
+ * through (backend#54).
  */
 @Service
 public class DeleteCostCenterDistributionService implements DeleteCostCenterDistributionUseCase {
