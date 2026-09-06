@@ -1,8 +1,10 @@
 package com.b4rrhh.employee.workcenter.application.usecase;
 
+import com.b4rrhh.employee.temporal.support.DateRange;
+import com.b4rrhh.employee.workcenter.application.model.WorkCenterPlan;
 import com.b4rrhh.employee.workcenter.application.port.EmployeeWorkCenterContext;
 import com.b4rrhh.employee.workcenter.application.port.EmployeeWorkCenterLookupPort;
-import com.b4rrhh.employee.workcenter.application.service.WorkCenterPresenceConsistencyValidator;
+import com.b4rrhh.employee.workcenter.application.service.WorkCenterTimelineService;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterEmployeeNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterRuleSystemNotFoundException;
@@ -12,27 +14,37 @@ import com.b4rrhh.rulesystem.domain.port.RuleSystemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-
+/**
+ * Closes an open work center assignment on a date. Through the component it
+ * is a correction of the end date, judged like any other (ADR-057): closing
+ * the assignment in force while the presence goes on leaves a gap and is
+ * rejected naming it. The termination flow closes the presence first, so
+ * closing on the termination date leaves none.
+ *
+ * @deprecated ADR-057 retires {@code close} as an operation of the API:
+ *     adding the next assignment already closes the one in force, and any
+ *     other end date is a correction (PUT). Kept for the termination
+ *     participant and the screen until they migrate.
+ */
+@Deprecated
 @Service
 public class CloseWorkCenterService implements CloseWorkCenterUseCase {
 
     private final WorkCenterRepository workCenterRepository;
     private final EmployeeWorkCenterLookupPort employeeWorkCenterLookupPort;
     private final RuleSystemRepository ruleSystemRepository;
-    private final WorkCenterPresenceConsistencyValidator workCenterPresenceConsistencyValidator;
+    private final WorkCenterTimelineService workCenterTimelineService;
 
     public CloseWorkCenterService(
             WorkCenterRepository workCenterRepository,
             EmployeeWorkCenterLookupPort employeeWorkCenterLookupPort,
             RuleSystemRepository ruleSystemRepository,
-            WorkCenterPresenceConsistencyValidator workCenterPresenceConsistencyValidator
+            WorkCenterTimelineService workCenterTimelineService
     ) {
         this.workCenterRepository = workCenterRepository;
         this.employeeWorkCenterLookupPort = employeeWorkCenterLookupPort;
         this.ruleSystemRepository = ruleSystemRepository;
-        this.workCenterPresenceConsistencyValidator = workCenterPresenceConsistencyValidator;
+        this.workCenterTimelineService = workCenterTimelineService;
     }
 
     @Override
@@ -69,42 +81,19 @@ public class CloseWorkCenterService implements CloseWorkCenterUseCase {
 
         WorkCenter closed = existing.close(command.endDate());
 
-        workCenterPresenceConsistencyValidator.validatePeriodWithinPresence(
+        WorkCenterPlan plan = workCenterTimelineService.planCorrect(
                 employee.employeeId(),
-                closed.getStartDate(),
-                closed.getEndDate(),
-                normalizedRuleSystemCode,
-                normalizedEmployeeTypeCode,
-                normalizedEmployeeNumber
+                existing,
+                new DateRange(closed.getStartDate(), closed.getEndDate())
         );
-
-        List<WorkCenter> projectedHistory = replaceWithClosedVersion(
-                workCenterRepository.findByEmployeeIdOrderByStartDate(employee.employeeId()),
-                closed
-        );
-
-        workCenterPresenceConsistencyValidator.validatePresenceCoverageIfRequired(
-                employee.employeeId(),
-                projectedHistory,
+        workCenterTimelineService.requireAccepted(
+                plan,
                 normalizedRuleSystemCode,
                 normalizedEmployeeTypeCode,
                 normalizedEmployeeNumber
         );
 
         return workCenterRepository.save(closed);
-    }
-
-    private List<WorkCenter> replaceWithClosedVersion(List<WorkCenter> history, WorkCenter closed) {
-        List<WorkCenter> projected = new ArrayList<>(history.size());
-        for (WorkCenter item : history) {
-            if (item.getWorkCenterAssignmentNumber().equals(closed.getWorkCenterAssignmentNumber())) {
-                projected.add(closed);
-            } else {
-                projected.add(item);
-            }
-        }
-
-        return projected;
     }
 
     private String normalizeRuleSystemCode(String ruleSystemCode) {

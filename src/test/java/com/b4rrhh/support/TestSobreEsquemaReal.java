@@ -54,9 +54,11 @@ import com.b4rrhh.employee.labor_classification.infrastructure.persistence.Labor
 import com.b4rrhh.employee.presence.infrastructure.persistence.PresenceRuleEntityUsageParticipant;
 import com.b4rrhh.employee.workcenter.application.service.WorkCenterCatalogValidator;
 import com.b4rrhh.employee.workcenter.application.service.WorkCenterTimelineService;
+import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterService;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterService;
 import com.b4rrhh.employee.workcenter.application.usecase.DeleteWorkCenterService;
 import com.b4rrhh.employee.workcenter.application.usecase.PlanWorkCenterChangeService;
+import com.b4rrhh.employee.workcenter.application.usecase.ReplaceWorkCenterFromDateService;
 import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterService;
 import com.b4rrhh.employee.workcenter.domain.service.WorkCenterEmployeeCompanyDomainService;
 import com.b4rrhh.employee.workcenter.infrastructure.persistence.EmployeeWorkCenterLookupAdapter;
@@ -185,6 +187,8 @@ import java.lang.annotation.Target;
         UpdateWorkCenterService.class,
         DeleteWorkCenterService.class,
         PlanWorkCenterChangeService.class,
+        CloseWorkCenterService.class,
+        ReplaceWorkCenterFromDateService.class,
         WorkCenterTimelineService.class,
         WorkCenterCatalogValidator.class,
         WorkCenterEmployeeCompanyDomainService.class,

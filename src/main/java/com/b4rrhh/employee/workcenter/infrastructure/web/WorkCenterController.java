@@ -96,6 +96,13 @@ public class WorkCenterController {
                 .body(workCenterResponseAssembler.toResponse(ruleSystemCode, created, language));
     }
 
+    /**
+     * Kept while the workforce loader still calls it (the screen never did:
+     * it adds). ADR-057 retires replace-from-date as a model: it is an add
+     * whose end date is the tail of the assignment in force on the effective
+     * date.
+     */
+    @Deprecated
     @PostMapping("/replace-from-date")
     public ResponseEntity<WorkCenterResponse> replaceFromDate(
             @PathVariable String ruleSystemCode,
@@ -174,6 +181,12 @@ public class WorkCenterController {
         return ResponseEntity.ok(workCenterResponseAssembler.toResponse(ruleSystemCode, updated, language));
     }
 
+    /**
+     * Kept while the work center screen and the termination flow still close
+     * an assignment. To be removed once they have migrated: adding an
+     * assignment already closes the one in force the day before (ADR-057).
+     */
+    @Deprecated
     @PostMapping("/{workCenterAssignmentNumber}/close")
     public ResponseEntity<WorkCenterResponse> close(
             @PathVariable String ruleSystemCode,

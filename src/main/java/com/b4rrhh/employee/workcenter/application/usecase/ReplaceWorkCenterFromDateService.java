@@ -1,16 +1,12 @@
 package com.b4rrhh.employee.workcenter.application.usecase;
 
 import com.b4rrhh.employee.temporal.support.DateRange;
-import com.b4rrhh.employee.temporal.support.ReplaceMode;
-import com.b4rrhh.employee.temporal.support.StrongTimelineReplacePlan;
-import com.b4rrhh.employee.temporal.support.StrongTimelineReplacePlanner;
-import com.b4rrhh.employee.temporal.support.TemporalDates;
+import com.b4rrhh.employee.workcenter.application.model.WorkCenterPlan;
 import com.b4rrhh.employee.workcenter.application.port.EmployeeWorkCenterContext;
 import com.b4rrhh.employee.workcenter.application.port.EmployeeWorkCenterLookupPort;
 import com.b4rrhh.employee.workcenter.application.service.WorkCenterCatalogValidator;
-import com.b4rrhh.employee.workcenter.application.service.WorkCenterPresenceConsistencyValidator;
+import com.b4rrhh.employee.workcenter.application.service.WorkCenterTimelineService;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterEmployeeNotFoundException;
-import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOverlapException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterRuleSystemNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
 import com.b4rrhh.employee.workcenter.domain.port.WorkCenterRepository;
@@ -20,21 +16,33 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
+/**
+ * Adapter kept for the workforce loader, which still calls
+ * {@code replace-from-date} (the screen never did: it calls the add). It is
+ * an add with the end date the old planner used to derive: the tail of the
+ * assignment in force on the effective date, or open when none is. The
+ * component then does what the old planner did: closes the covering
+ * assignment the day before ({@code SPLIT}), or inserts when nothing covers
+ * ({@code NO_COVERING}). What changes is {@code EXACT_START}: starting on the
+ * very start date of an existing assignment no longer replaces it silently,
+ * it is rejected as its correction (backend#52) and the correction is asked
+ * for as such (PUT).
+ *
+ * @deprecated ADR-057 retires {@code Replace…FromDate} as a model. Adding a
+ *     work center assignment already closes the one in force. To be removed
+ *     once the loader has migrated to add-with-dates.
+ */
+@Deprecated
 @Service
 public class ReplaceWorkCenterFromDateService implements ReplaceWorkCenterFromDateUseCase {
-
-    private static final StrongTimelineReplacePlanner STRONG_TIMELINE_REPLACE_PLANNER =
-            new StrongTimelineReplacePlanner();
 
     private final WorkCenterRepository workCenterRepository;
     private final EmployeeWorkCenterLookupPort employeeWorkCenterLookupPort;
     private final RuleSystemRepository ruleSystemRepository;
     private final WorkCenterCatalogValidator workCenterCatalogValidator;
-    private final WorkCenterPresenceConsistencyValidator workCenterPresenceConsistencyValidator;
+    private final WorkCenterTimelineService workCenterTimelineService;
     private final WorkCenterEmployeeCompanyDomainService workCenterEmployeeCompanyDomainService;
 
     public ReplaceWorkCenterFromDateService(
@@ -42,14 +50,14 @@ public class ReplaceWorkCenterFromDateService implements ReplaceWorkCenterFromDa
             EmployeeWorkCenterLookupPort employeeWorkCenterLookupPort,
             RuleSystemRepository ruleSystemRepository,
             WorkCenterCatalogValidator workCenterCatalogValidator,
-            WorkCenterPresenceConsistencyValidator workCenterPresenceConsistencyValidator,
-                WorkCenterEmployeeCompanyDomainService workCenterEmployeeCompanyDomainService
+            WorkCenterTimelineService workCenterTimelineService,
+            WorkCenterEmployeeCompanyDomainService workCenterEmployeeCompanyDomainService
     ) {
         this.workCenterRepository = workCenterRepository;
         this.employeeWorkCenterLookupPort = employeeWorkCenterLookupPort;
         this.ruleSystemRepository = ruleSystemRepository;
         this.workCenterCatalogValidator = workCenterCatalogValidator;
-        this.workCenterPresenceConsistencyValidator = workCenterPresenceConsistencyValidator;
+        this.workCenterTimelineService = workCenterTimelineService;
         this.workCenterEmployeeCompanyDomainService = workCenterEmployeeCompanyDomainService;
     }
 
@@ -84,29 +92,6 @@ public class ReplaceWorkCenterFromDateService implements ReplaceWorkCenterFromDa
                 normalizedEffectiveDate
         );
 
-        List<WorkCenter> currentHistory = workCenterRepository
-                .findByEmployeeIdOrderByStartDate(employee.employeeId())
-                .stream()
-                .sorted(Comparator.comparing(WorkCenter::getStartDate))
-                .toList();
-
-        ReplacementPlan replacementPlan = buildReplacementPlan(
-                employee.employeeId(),
-                currentHistory,
-                normalizedEffectiveDate,
-                normalizedWorkCenterCode,
-                nextAssignmentNumber(employee.employeeId())
-        );
-
-        workCenterPresenceConsistencyValidator.validatePeriodWithinPresence(
-                employee.employeeId(),
-                replacementPlan.resultPeriod().getStartDate(),
-                replacementPlan.resultPeriod().getEndDate(),
-                normalizedRuleSystemCode,
-                normalizedEmployeeTypeCode,
-                normalizedEmployeeNumber
-        );
-
         workCenterEmployeeCompanyDomainService.validateWorkCenterBelongsToEmployeeCompany(
                 employee.employeeId(),
                 normalizedRuleSystemCode,
@@ -116,112 +101,42 @@ public class ReplaceWorkCenterFromDateService implements ReplaceWorkCenterFromDa
                 normalizedEffectiveDate
         );
 
-        validateNoOverlap(
-                replacementPlan.projectedHistory(),
-                normalizedRuleSystemCode,
-                normalizedEmployeeTypeCode,
-                normalizedEmployeeNumber
-        );
-
-        workCenterPresenceConsistencyValidator.validatePresenceCoverageIfRequired(
-                employee.employeeId(),
-                replacementPlan.projectedHistory(),
-                normalizedRuleSystemCode,
-                normalizedEmployeeTypeCode,
-                normalizedEmployeeNumber
-        );
-
-        if (replacementPlan.periodToUpdate() != null) {
-            workCenterRepository.save(replacementPlan.periodToUpdate());
-        }
-        if (replacementPlan.periodToSave() != null) {
-            workCenterRepository.save(replacementPlan.periodToSave());
-        }
-
-        return replacementPlan.resultPeriod();
-    }
-
-    private ReplacementPlan buildReplacementPlan(
-            Long employeeId,
-            List<WorkCenter> currentHistory,
-            LocalDate effectiveDate,
-            String workCenterCode,
-            int nextAssignmentNumber
-    ) {
-        StrongTimelineReplacePlan timelinePlan = STRONG_TIMELINE_REPLACE_PLANNER.plan(
-                toDateRanges(currentHistory),
-                effectiveDate
-        );
-
-        if (timelinePlan.mode() == ReplaceMode.NO_COVERING) {
-            DateRange insertRange = timelinePlan.periodToInsert();
-            WorkCenter replacement = new WorkCenter(
-                    null,
-                    employeeId,
-                    nextAssignmentNumber,
-                    workCenterCode,
-                    insertRange.startDate(),
-                    insertRange.endDate(),
-                    null,
-                    null
-            );
-
-            List<WorkCenter> projected = new ArrayList<>(currentHistory);
-            projected.add(replacement);
-            projected.sort(Comparator.comparing(WorkCenter::getStartDate));
-
-            return new ReplacementPlan(null, replacement, replacement, projected);
-        }
-
-        WorkCenter coveringPeriod = getPeriodByIndex(currentHistory, timelinePlan.coveringPeriodIndex());
-
-        if (timelinePlan.mode() == ReplaceMode.EXACT_START) {
-            DateRange updateRange = timelinePlan.periodToUpdate();
-            WorkCenter replaced = new WorkCenter(
-                    coveringPeriod.getId(),
-                    employeeId,
-                    coveringPeriod.getWorkCenterAssignmentNumber(),
-                    workCenterCode,
-                    updateRange.startDate(),
-                    updateRange.endDate(),
-                    coveringPeriod.getCreatedAt(),
-                    coveringPeriod.getUpdatedAt()
-            );
-
-            List<WorkCenter> projected = replaceByAssignmentNumber(currentHistory, replaced);
-            return new ReplacementPlan(replaced, null, replaced, projected);
-        }
-
-        DateRange updateRange = timelinePlan.periodToUpdate();
-        DateRange insertRange = timelinePlan.periodToInsert();
-
-        WorkCenter adjustedExisting = new WorkCenter(
-                coveringPeriod.getId(),
-                employeeId,
-                coveringPeriod.getWorkCenterAssignmentNumber(),
-                coveringPeriod.getWorkCenterCode(),
-                updateRange.startDate(),
-                updateRange.endDate(),
-                coveringPeriod.getCreatedAt(),
-                coveringPeriod.getUpdatedAt()
-        );
-
+        // The old planner gave the replacement the tail of the assignment in force on the
+        // effective date (SPLIT) or left it open when nothing covered it (NO_COVERING). The
+        // end date is all that is derived here; the rest is the component's judgement.
         WorkCenter replacement = new WorkCenter(
                 null,
-                employeeId,
-                nextAssignmentNumber,
-                workCenterCode,
-                insertRange.startDate(),
-                insertRange.endDate(),
+                employee.employeeId(),
+                nextAssignmentNumber(employee.employeeId()),
+                normalizedWorkCenterCode,
+                normalizedEffectiveDate,
+                endDateOfAssignmentInForceOn(employee.employeeId(), normalizedEffectiveDate),
                 null,
                 null
         );
 
-        List<WorkCenter> projected = replaceByAssignmentNumber(currentHistory, adjustedExisting);
-        projected.add(replacement);
-        projected.sort(Comparator.comparing(WorkCenter::getStartDate));
+        WorkCenterPlan plan = workCenterTimelineService.planAdd(
+                employee.employeeId(),
+                new DateRange(replacement.getStartDate(), replacement.getEndDate())
+        );
+        workCenterTimelineService.requireAccepted(
+                plan,
+                normalizedRuleSystemCode,
+                normalizedEmployeeTypeCode,
+                normalizedEmployeeNumber
+        );
 
-        return new ReplacementPlan(adjustedExisting, replacement, replacement, projected);
+        if (plan.adjustsAnOccurrence()) {
+            Integer coveringNumber = plan.adjustedOccurrence().workCenterAssignmentNumber();
+            WorkCenter covering = workCenterRepository
+                    .findByEmployeeIdAndWorkCenterAssignmentNumber(employee.employeeId(), coveringNumber)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Planned work center assignment vanished: workCenterAssignmentNumber=" + coveringNumber
+                    ));
+            workCenterRepository.save(covering.adjustEndDate(plan.adjustedOccurrence().after().endDate()));
+        }
+
+        return workCenterRepository.save(replacement);
     }
 
     private int nextAssignmentNumber(Long employeeId) {
@@ -230,59 +145,17 @@ public class ReplaceWorkCenterFromDateService implements ReplaceWorkCenterFromDa
                 .orElse(1);
     }
 
-    private List<DateRange> toDateRanges(List<WorkCenter> history) {
-        return history.stream()
-                .map(period -> new DateRange(period.getStartDate(), period.getEndDate()))
-                .toList();
-    }
-
-    private WorkCenter getPeriodByIndex(List<WorkCenter> history, Integer index) {
-        if (index == null || index < 0 || index >= history.size()) {
-            throw new IllegalStateException("Invalid covering period index in replacement plan");
-        }
-
-        return history.get(index);
-    }
-
-    private List<WorkCenter> replaceByAssignmentNumber(
-            List<WorkCenter> history,
-            WorkCenter updated
-    ) {
-        List<WorkCenter> projected = new ArrayList<>(history.size());
-        for (WorkCenter workCenter : history) {
-            if (workCenter.getWorkCenterAssignmentNumber().equals(updated.getWorkCenterAssignmentNumber())) {
-                projected.add(updated);
-            } else {
-                projected.add(workCenter);
+    private LocalDate endDateOfAssignmentInForceOn(Long employeeId, LocalDate date) {
+        List<WorkCenter> history = workCenterRepository.findByEmployeeIdOrderByStartDate(employeeId);
+        for (WorkCenter assignment : history) {
+            boolean startsOnOrBefore = !assignment.getStartDate().isAfter(date);
+            boolean reaches = assignment.getEndDate() == null || !assignment.getEndDate().isBefore(date);
+            if (startsOnOrBefore && reaches) {
+                return assignment.getEndDate();
             }
         }
 
-        return projected;
-    }
-
-    private void validateNoOverlap(
-            List<WorkCenter> projectedHistory,
-            String ruleSystemCode,
-            String employeeTypeCode,
-            String employeeNumber
-    ) {
-        List<WorkCenter> sorted = projectedHistory.stream()
-                .sorted(Comparator.comparing(WorkCenter::getStartDate))
-                .toList();
-
-        for (int index = 1; index < sorted.size(); index++) {
-            WorkCenter previous = sorted.get(index - 1);
-            WorkCenter current = sorted.get(index);
-            LocalDate previousEnd = TemporalDates.effectiveEnd(previous.getEndDate());
-
-            if (!current.getStartDate().isAfter(previousEnd)) {
-                throw new WorkCenterOverlapException(
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        employeeNumber
-                );
-            }
-        }
+        return null;
     }
 
     private String normalizeRuleSystemCode(String ruleSystemCode) {
@@ -315,13 +188,5 @@ public class ReplaceWorkCenterFromDateService implements ReplaceWorkCenterFromDa
         }
 
         return effectiveDate;
-    }
-
-    private record ReplacementPlan(
-            WorkCenter periodToUpdate,
-            WorkCenter periodToSave,
-            WorkCenter resultPeriod,
-            List<WorkCenter> projectedHistory
-    ) {
     }
 }

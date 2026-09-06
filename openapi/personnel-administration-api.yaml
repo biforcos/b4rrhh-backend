@@ -1175,13 +1175,19 @@ paths:
     post:
       operationId: replaceWorkCenterFromDateByBusinessKey
       summary: Replace employee work center assignment from effective date by business key
+      deprecated: true
       tags:
         - Employee Work Center
       description: >-
-        Canonical business operation to change employee work center assignment from an effective date.
-        If an assignment covers effectiveDate, it is closed at effectiveDate - 1 and a new assignment
-        starts at effectiveDate. If no assignment covers effectiveDate, a new assignment is created
-        directly when the temporal context is valid.
+        Kept while the workforce loader still calls it (the screen never did:
+        it adds). ADR-057 retires replace-from-date as a model: it is an add
+        (POST) whose end date is the tail of the assignment in force on the
+        effective date. If an assignment covers effectiveDate, it is closed at
+        effectiveDate - 1 and the new one starts at effectiveDate; if none
+        does, the new one is inserted. Starting on the very start date of an
+        existing assignment is no longer a silent replacement: it is rejected
+        as WORK_CENTER_IS_A_CORRECTION, naming the assignment, and the
+        correction is asked for as such (PUT).
       parameters:
         - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
@@ -1221,10 +1227,14 @@ paths:
           description: Rule system, employee, or catalog not found
         "409":
           description: >-
-            Work center replacement conflicts with temporal rules.
-            Resulting periods overlap another assignment for this employee,
-            are not fully contained within employee presence history,
-            or leave a required presence coverage gap.
+            The resulting series would break an invariant (ADR-057):
+            WORK_CENTER_OVERLAP, WORK_CENTER_COVERAGE_GAP,
+            WORK_CENTER_OUTSIDE_PRESENCE, WORK_CENTER_IS_A_CORRECTION or
+            WORK_CENTER_COMPANY_MISMATCH.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeWorkCenterErrorResponse"
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers/plan:
     post:
@@ -1441,6 +1451,14 @@ paths:
     post:
       operationId: closeWorkCenterByBusinessKey
       summary: Close employee work center assignment by business key
+      deprecated: true
+      description: >-
+        Kept while the work center screen and the termination flow still
+        close an assignment. ADR-057 retires close as an operation: adding an
+        assignment already closes the one in force the day before, and any
+        other end date is a correction (PUT). Judged like a correction:
+        closing the assignment in force while the presence goes on is
+        rejected as WORK_CENTER_COVERAGE_GAP.
       tags:
         - Employee Work Center
       parameters:
@@ -1488,8 +1506,13 @@ paths:
           description: Rule system, employee, or work center assignment not found
         "409":
           description: >-
-            The work center assignment is already closed, or the resulting closed period
-            is not fully contained within any of the employee's active presence periods.
+            WORK_CENTER_ALREADY_CLOSED, or the closed period would break an
+            invariant (ADR-057): WORK_CENTER_COVERAGE_GAP (details name the gap
+            it would leave) or WORK_CENTER_OUTSIDE_PRESENCE.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeWorkCenterErrorResponse"
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/working-times:
     post:
