@@ -181,4 +181,11 @@ Si aparecen variaciones significativas:
 
 ## 11. Estado
 
-Patrón activo y recomendado.
+**Sustituido por el ADR-057.** El `replaceFromDate` deja de ser el modelo de escritura de
+una serie temporal: se escribe añadiendo una ocurrencia y el componente temporal
+(`TimelinePlanner`) juzga el resultado contra los invariantes. Con `contract`,
+`labor_classification` y `workcenter` reconducidas al componente, el planner de este ADR
+(`StrongTimelineReplacePlanner`, `StrongTimelineReplacePlan` y `ReplaceMode`) se quedó sin
+consumidores y se retiró del árbol en el `backend#57`. Lo que aquí era `SPLIT` es hoy la única
+consecuencia automática de un alta; lo que era `EXACT_START` es un plan rechazado que nombra
+la ocurrencia a corregir. Se conserva como registro de por qué existió.
