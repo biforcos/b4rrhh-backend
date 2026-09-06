@@ -32,6 +32,8 @@ import com.b4rrhh.employee.contract.infrastructure.persistence.EmployeeContractL
 import com.b4rrhh.employee.cost_center.application.service.CostCenterCatalogValidator;
 import com.b4rrhh.employee.cost_center.application.service.CostCenterTimelineService;
 import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistributionService;
+import com.b4rrhh.employee.cost_center.application.usecase.DeleteCostCenterDistributionService;
+import com.b4rrhh.employee.cost_center.application.usecase.PlanCostCenterDistributionChangeService;
 import com.b4rrhh.employee.cost_center.application.usecase.UpdateCostCenterDistributionService;
 import com.b4rrhh.employee.cost_center.domain.service.CostCenterDistributionTimelineValidator;
 import com.b4rrhh.employee.cost_center.domain.service.CostCenterDistributionWindowGrouper;
@@ -208,6 +210,8 @@ import java.lang.annotation.Target;
         // cost_center: la serie por empleado con la ocurrencia compuesta (backend#54)
         CreateCostCenterDistributionService.class,
         UpdateCostCenterDistributionService.class,
+        DeleteCostCenterDistributionService.class,
+        PlanCostCenterDistributionChangeService.class,
         CostCenterTimelineService.class,
         CostCenterCatalogValidator.class,
         CostCenterDistributionTimelineValidator.class,

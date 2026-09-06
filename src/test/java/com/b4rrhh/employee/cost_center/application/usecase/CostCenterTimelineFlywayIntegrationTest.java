@@ -1,10 +1,13 @@
 package com.b4rrhh.employee.cost_center.application.usecase;
 
+import com.b4rrhh.employee.cost_center.application.model.CostCenterDistributionPlan;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionCoverageGapException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionIsACorrectionException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterOutsidePresencePeriodException;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionPeriod;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow;
+import com.b4rrhh.employee.temporal.support.TimelineOperation;
+import com.b4rrhh.employee.temporal.support.TimelineRejection;
 import com.b4rrhh.support.DatosDePrueba;
 import com.b4rrhh.support.TestSobreEsquemaReal;
 import jakarta.persistence.EntityManager;
@@ -20,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -48,6 +52,10 @@ class CostCenterTimelineFlywayIntegrationTest {
     private CreateCostCenterDistributionService createService;
     @Autowired
     private UpdateCostCenterDistributionService updateService;
+    @Autowired
+    private DeleteCostCenterDistributionService deleteService;
+    @Autowired
+    private PlanCostCenterDistributionChangeService planService;
     @Autowired
     private JdbcTemplate jdbcTemplate;
     @Autowired
@@ -182,6 +190,93 @@ class CostCenterTimelineFlywayIntegrationTest {
         assertTrue(ex.stretchCandidates().contains(new CostCenterDistributionPeriod(DAY_1, DAY_15)));
         assertEquals(2, persistedCount());
         assertEquals(List.of("CC_HR"), persistedCodes(DAY_16));
+    }
+
+    // backend#48, case 4: deleting the last window reopens the previous one, every line of it.
+    @Test
+    void deletingTheLastWindowReopensEveryLineOfThePreviousOne() {
+        createService.create(create(DAY_1, null, Map.of("CC_ADMIN", 60, "CC_HR", 40)));
+        createService.create(create(DAY_16, null, Map.of("CC_IT", 100)));
+
+        deleteService.delete(new DeleteCostCenterDistributionCommand(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_16));
+        entityManager.flush();
+
+        assertEquals(2, persistedCount());
+        assertEquals(Arrays.asList(null, null), persistedEndDates(DAY_1));
+    }
+
+    // backend#48, case 5: deleting a window in the middle is rejected naming the neighbours.
+    @Test
+    void deletingAWindowInTheMiddleIsRejectedSayingWhichNeighbourToStretch() {
+        createService.create(create(DAY_1, null, Map.of("CC_ADMIN", 100)));
+        createService.create(create(DAY_16, null, Map.of("CC_HR", 100)));
+        createService.create(create(FEB_1, null, Map.of("CC_IT", 100)));
+
+        CostCenterDistributionCoverageGapException ex = assertThrows(
+                CostCenterDistributionCoverageGapException.class,
+                () -> deleteService.delete(new DeleteCostCenterDistributionCommand(
+                        RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_16))
+        );
+        entityManager.flush();
+
+        assertEquals(List.of(new CostCenterDistributionPeriod(DAY_16, JAN_31)), ex.gaps());
+        assertEquals(
+                List.of(new CostCenterDistributionPeriod(DAY_1, DAY_15), new CostCenterDistributionPeriod(FEB_1, null)),
+                ex.stretchCandidates()
+        );
+        assertEquals(3, persistedCount());
+    }
+
+    @Test
+    void deletingTheOnlyWindowIsRejectedAsAGap() {
+        createService.create(create(DAY_1, null, Map.of("CC_ADMIN", 100)));
+
+        CostCenterDistributionCoverageGapException ex = assertThrows(
+                CostCenterDistributionCoverageGapException.class,
+                () -> deleteService.delete(new DeleteCostCenterDistributionCommand(
+                        RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_1))
+        );
+        entityManager.flush();
+
+        assertEquals(List.of(new CostCenterDistributionPeriod(DAY_1, null)), ex.gaps());
+        assertEquals(1, persistedCount());
+    }
+
+    @Test
+    void thePlanCanBeAskedForWithoutApplyingIt() {
+        createService.create(create(DAY_1, null, Map.of("CC_ADMIN", 60, "CC_HR", 40)));
+
+        CostCenterDistributionPlan plan = planService.plan(new PlanCostCenterDistributionChangeCommand(
+                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, TimelineOperation.ADD, null, DAY_16, null
+        ));
+        entityManager.flush();
+
+        assertTrue(plan.isAccepted());
+        assertEquals(new CostCenterDistributionPeriod(DAY_1, DAY_15), plan.adjustedOccurrence().after());
+        assertEquals(
+                List.of(new CostCenterDistributionPeriod(DAY_1, DAY_15), new CostCenterDistributionPeriod(DAY_16, null)),
+                plan.projected()
+        );
+        assertEquals(2, persistedCount());
+        assertEquals(Arrays.asList(null, null), persistedEndDates(DAY_1));
+    }
+
+    @Test
+    void thePlanSaysAnAddOnAnExistingStartDateIsACorrectionOfThatWindow() {
+        createService.create(create(DAY_1, null, Map.of("CC_ADMIN", 100)));
+
+        CostCenterDistributionPlan plan = planService.plan(new PlanCostCenterDistributionChangeCommand(
+                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, TimelineOperation.ADD, null, DAY_1, DAY_15
+        ));
+        entityManager.flush();
+
+        assertFalse(plan.isAccepted());
+        assertEquals(TimelineRejection.IS_A_CORRECTION, plan.rejection());
+        assertEquals(TimelineOperation.CORRECT, plan.operation());
+        assertEquals(new CostCenterDistributionPeriod(DAY_1, null), plan.correctedOccurrence());
+        assertEquals(List.of(new CostCenterDistributionPeriod(DAY_1, DAY_15)), plan.projected());
+        assertEquals(1, persistedCount());
+        assertEquals(Arrays.asList((LocalDate) null), persistedEndDates(DAY_1));
     }
 
     private CreateCostCenterDistributionCommand create(LocalDate startDate, LocalDate endDate, Map<String, Integer> items) {
