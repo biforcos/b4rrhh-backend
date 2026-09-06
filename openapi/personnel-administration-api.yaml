@@ -8564,7 +8564,7 @@ components:
           nullable: true
     EmployeeWorkCenterPeriod:
       type: object
-      description: A stretch of dates named by a plan or an error: a gap, or an overlap.
+      description: "A stretch of dates named by a plan or an error: a gap, or an overlap."
       required:
         - startDate
       properties:
