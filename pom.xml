@@ -92,6 +92,16 @@
             <artifactId>minio</artifactId>
             <version>8.5.9</version>
         </dependency>
+        <!-- Los contratos OpenAPI de openapi/ son la fuente de la que el frontend
+             genera su cliente, y nada del build los leia: un YAML roto pasaba la
+             suite entera y reventaba en el otro repo (issue #67). Este parser es
+             el que los valida en la suite. Solo test: en runtime no se usan. -->
+        <dependency>
+            <groupId>io.swagger.parser.v3</groupId>
+            <artifactId>swagger-parser</artifactId>
+            <version>2.1.31</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
