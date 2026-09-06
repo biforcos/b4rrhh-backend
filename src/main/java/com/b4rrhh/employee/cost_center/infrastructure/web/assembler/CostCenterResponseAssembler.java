@@ -1,11 +1,17 @@
 package com.b4rrhh.employee.cost_center.infrastructure.web.assembler;
 
+import com.b4rrhh.employee.cost_center.application.model.CostCenterDistributionPlan;
+import com.b4rrhh.employee.cost_center.application.model.CostCenterDistributionPlanAdjustment;
 import com.b4rrhh.employee.cost_center.application.usecase.CostCenterDistributionReadModel;
 import com.b4rrhh.employee.cost_center.application.usecase.CostCenterRuleEntityTypeCodes;
+import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionPeriod;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterCurrentDistributionResponse;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionHistoryResponse;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionItemResponse;
+import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionPeriodResponse;
+import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionPlanAdjustmentResponse;
+import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionPlanResponse;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionWindowResponse;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterEmployeeKeyResponse;
 import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
@@ -78,6 +84,33 @@ public class CostCenterResponseAssembler {
                 window.getTotalAllocationPercentage(),
                 items
         );
+    }
+
+    public CostCenterDistributionPlanResponse toPlanResponse(CostCenterDistributionPlan plan) {
+        return new CostCenterDistributionPlanResponse(
+                plan.operation().name(),
+                plan.isAccepted(),
+                plan.rejection() == null ? null : plan.rejection().name(),
+                toPeriod(plan.occurrence()),
+                plan.correctedOccurrence() == null ? null : toPeriod(plan.correctedOccurrence()),
+                toAdjustment(plan.adjustedOccurrence()),
+                plan.overlaps().stream().map(this::toPeriod).toList(),
+                plan.gaps().stream().map(this::toPeriod).toList(),
+                plan.stretchCandidates().stream().map(this::toPeriod).toList(),
+                plan.projected().stream().map(this::toPeriod).toList()
+        );
+    }
+
+    private CostCenterDistributionPlanAdjustmentResponse toAdjustment(CostCenterDistributionPlanAdjustment adjustment) {
+        if (adjustment == null) {
+            return null;
+        }
+
+        return new CostCenterDistributionPlanAdjustmentResponse(toPeriod(adjustment.before()), toPeriod(adjustment.after()));
+    }
+
+    private CostCenterDistributionPeriodResponse toPeriod(CostCenterDistributionPeriod period) {
+        return new CostCenterDistributionPeriodResponse(period.startDate(), period.endDate());
     }
 
     private CostCenterDistributionWindowResponse toWindowResponse(

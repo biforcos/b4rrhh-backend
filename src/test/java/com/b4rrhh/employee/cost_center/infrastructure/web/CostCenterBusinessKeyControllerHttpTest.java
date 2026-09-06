@@ -1,21 +1,41 @@
 package com.b4rrhh.employee.cost_center.infrastructure.web;
 
+import com.b4rrhh.employee.cost_center.application.model.CostCenterDistributionPlan;
+import com.b4rrhh.employee.cost_center.application.model.CostCenterDistributionPlanAdjustment;
 import com.b4rrhh.employee.cost_center.application.usecase.CloseCostCenterDistributionUseCase;
 import com.b4rrhh.employee.cost_center.application.usecase.CostCenterDistributionReadModel;
+import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistributionCommand;
 import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistributionUseCase;
+import com.b4rrhh.employee.cost_center.application.usecase.DeleteCostCenterDistributionCommand;
+import com.b4rrhh.employee.cost_center.application.usecase.DeleteCostCenterDistributionUseCase;
 import com.b4rrhh.employee.cost_center.application.usecase.GetCurrentCostCenterDistributionQuery;
 import com.b4rrhh.employee.cost_center.application.usecase.GetCurrentCostCenterDistributionUseCase;
 import com.b4rrhh.employee.cost_center.application.usecase.ListCostCenterDistributionHistoryQuery;
 import com.b4rrhh.employee.cost_center.application.usecase.ListCostCenterDistributionHistoryUseCase;
+import com.b4rrhh.employee.cost_center.application.usecase.PlanCostCenterDistributionChangeCommand;
+import com.b4rrhh.employee.cost_center.application.usecase.PlanCostCenterDistributionChangeUseCase;
 import com.b4rrhh.employee.cost_center.application.usecase.ReplaceCostCenterDistributionFromDateUseCase;
+import com.b4rrhh.employee.cost_center.application.usecase.UpdateCostCenterDistributionCommand;
+import com.b4rrhh.employee.cost_center.application.usecase.UpdateCostCenterDistributionUseCase;
+import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionCoverageGapException;
+import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionIsACorrectionException;
+import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionNotFoundException;
+import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionOverlapException;
+import com.b4rrhh.employee.cost_center.domain.model.CostCenterAllocation;
+import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionPeriod;
+import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow;
 import com.b4rrhh.employee.cost_center.infrastructure.web.assembler.CostCenterResponseAssembler;
+import com.b4rrhh.employee.temporal.support.TimelineOperation;
+import com.b4rrhh.employee.temporal.support.TimelineRejection;
 import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
 import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguageArgumentResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -24,9 +44,17 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -34,10 +62,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Fija la forma de la respuesta de las lecturas de centro de coste tras backend#27: los
  * mismos campos con los mismos nombres que cuando el literal lo ponía el caso de uso; lo
  * único que cambia es que ahora lo rellena el assembler en la capa web, con el idioma de
- * la respuesta.
+ * la respuesta. Y, desde backend#54, la forma del PUT, el DELETE, el plan y los errores
+ * con {@code code} y {@code details} (ADR-057).
  */
 @ExtendWith(MockitoExtension.class)
 class CostCenterBusinessKeyControllerHttpTest {
+
+    private static final LocalDate JAN_1 = LocalDate.of(2026, 1, 1);
+    private static final LocalDate JAN_15 = LocalDate.of(2026, 1, 15);
+    private static final LocalDate JAN_16 = LocalDate.of(2026, 1, 16);
 
     @Mock
     private CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase;
@@ -49,6 +82,12 @@ class CostCenterBusinessKeyControllerHttpTest {
     private ReplaceCostCenterDistributionFromDateUseCase replaceCostCenterDistributionFromDateUseCase;
     @Mock
     private CloseCostCenterDistributionUseCase closeCostCenterDistributionUseCase;
+    @Mock
+    private UpdateCostCenterDistributionUseCase updateCostCenterDistributionUseCase;
+    @Mock
+    private DeleteCostCenterDistributionUseCase deleteCostCenterDistributionUseCase;
+    @Mock
+    private PlanCostCenterDistributionChangeUseCase planCostCenterDistributionChangeUseCase;
     @Mock
     private RuleEntityLabelResolver ruleEntityLabelResolver;
 
@@ -63,12 +102,235 @@ class CostCenterBusinessKeyControllerHttpTest {
                                 listCostCenterDistributionHistoryUseCase,
                                 replaceCostCenterDistributionFromDateUseCase,
                                 closeCostCenterDistributionUseCase,
+                                updateCostCenterDistributionUseCase,
+                                deleteCostCenterDistributionUseCase,
+                                planCostCenterDistributionChangeUseCase,
                                 new CostCenterResponseAssembler(ruleEntityLabelResolver)
                         )
                 )
                 .setControllerAdvice(new CostCenterExceptionHandler())
                 .setCustomArgumentResolvers(new ResponseLanguageArgumentResolver())
                 .build();
+    }
+
+    @Test
+    void createMapsTheEndDateAndAnAddOnAnExistingStartDateToHttp409NamingTheWindowToCorrect() throws Exception {
+        when(createCostCenterDistributionUseCase.create(any(CreateCostCenterDistributionCommand.class)))
+                .thenThrow(new CostCenterDistributionIsACorrectionException(
+                        "ESP", "INTERNAL", "EMP001",
+                        new CostCenterDistributionPeriod(JAN_1, null),
+                        new CostCenterDistributionPeriod(JAN_1, JAN_15)
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/cost-centers/distributions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"startDate":"2026-01-01","endDate":"2026-01-15",
+                                 "items":[{"costCenterCode":"CC_HR","allocationPercentage":100}]}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("COST_CENTER_IS_A_CORRECTION"))
+                .andExpect(jsonPath("$.message").exists())
+                .andExpect(jsonPath("$.details.correctedOccurrence.startDate").exists())
+                .andExpect(jsonPath("$.details.correctedOccurrence.endDate").isEmpty());
+
+        ArgumentCaptor<CreateCostCenterDistributionCommand> captor =
+                ArgumentCaptor.forClass(CreateCostCenterDistributionCommand.class);
+        verify(createCostCenterDistributionUseCase).create(captor.capture());
+        assertEquals(JAN_1, captor.getValue().startDate());
+        assertEquals(JAN_15, captor.getValue().endDate());
+    }
+
+    @Test
+    void createMapsAnOverlapToHttp409WithTheSharedDates() throws Exception {
+        when(createCostCenterDistributionUseCase.create(any(CreateCostCenterDistributionCommand.class)))
+                .thenThrow(new CostCenterDistributionOverlapException(
+                        "ESP", "INTERNAL", "EMP001", JAN_1, JAN_15,
+                        List.of(new CostCenterDistributionPeriod(JAN_1, JAN_15))
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/cost-centers/distributions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"startDate":"2026-01-01","endDate":"2026-01-15",
+                                 "items":[{"costCenterCode":"CC_HR","allocationPercentage":100}]}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("COST_CENTER_OVERLAP"))
+                .andExpect(jsonPath("$.details.overlaps[0].startDate").exists());
+    }
+
+    // The PUT without dates: the typo is fixed in place; the path's start date identifies the window.
+    @Test
+    void updateMapsThePathAndTheItemsToTheCommandKeepingTheDatesWhenNoneCome() throws Exception {
+        when(updateCostCenterDistributionUseCase.update(any(UpdateCostCenterDistributionCommand.class)))
+                .thenReturn(new CostCenterDistributionWindow(JAN_1, null, List.of(
+                        new CostCenterAllocation(10L, "CC_ADMIN", new BigDecimal("70"), JAN_1, null),
+                        new CostCenterAllocation(10L, "CC_HR", new BigDecimal("30"), JAN_1, null)
+                )));
+
+        mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/cost-centers/distributions/2026-01-01")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"items":[{"costCenterCode":"CC_ADMIN","allocationPercentage":70},
+                                          {"costCenterCode":"CC_HR","allocationPercentage":30}]}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalAllocationPercentage").value(100))
+                .andExpect(jsonPath("$.items[0].costCenterCode").value("CC_ADMIN"))
+                .andExpect(jsonPath("$.items[0].allocationPercentage").value(70));
+
+        ArgumentCaptor<UpdateCostCenterDistributionCommand> captor =
+                ArgumentCaptor.forClass(UpdateCostCenterDistributionCommand.class);
+        verify(updateCostCenterDistributionUseCase).update(captor.capture());
+        assertEquals(JAN_1, captor.getValue().windowStartDate());
+        assertNull(captor.getValue().startDate());
+        assertNull(captor.getValue().endDate());
+        assertEquals(2, captor.getValue().items().size());
+    }
+
+    @Test
+    void updateMapsACoverageGapToHttp409NamingTheGapAndTheNeighboursToStretch() throws Exception {
+        when(updateCostCenterDistributionUseCase.update(any(UpdateCostCenterDistributionCommand.class)))
+                .thenThrow(new CostCenterDistributionCoverageGapException(
+                        "ESP", "INTERNAL", "EMP001",
+                        List.of(new CostCenterDistributionPeriod(JAN_16, LocalDate.of(2026, 1, 31))),
+                        List.of(new CostCenterDistributionPeriod(JAN_1, JAN_15))
+                ));
+
+        mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/cost-centers/distributions/2026-01-16")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"startDate":"2026-02-01",
+                                 "items":[{"costCenterCode":"CC_HR","allocationPercentage":100}]}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("COST_CENTER_COVERAGE_GAP"))
+                .andExpect(jsonPath("$.details.gaps[0].startDate").exists())
+                .andExpect(jsonPath("$.details.stretchCandidates[0].startDate").exists());
+    }
+
+    @Test
+    void deleteMapsThePathToTheCommandAndReturnsHttp204() throws Exception {
+        doNothing().when(deleteCostCenterDistributionUseCase).delete(any(DeleteCostCenterDistributionCommand.class));
+
+        mockMvc.perform(delete("/employees/ESP/INTERNAL/EMP001/cost-centers/distributions/2026-01-16"))
+                .andExpect(status().isNoContent());
+
+        ArgumentCaptor<DeleteCostCenterDistributionCommand> captor =
+                ArgumentCaptor.forClass(DeleteCostCenterDistributionCommand.class);
+        verify(deleteCostCenterDistributionUseCase).delete(captor.capture());
+        assertEquals(JAN_16, captor.getValue().windowStartDate());
+        assertEquals("EMP001", captor.getValue().employeeNumber());
+    }
+
+    @Test
+    void deleteMapsNotFoundToHttp404WithACode() throws Exception {
+        doThrow(new CostCenterDistributionNotFoundException("ESP", "INTERNAL", "EMP001", JAN_16))
+                .when(deleteCostCenterDistributionUseCase)
+                .delete(any(DeleteCostCenterDistributionCommand.class));
+
+        mockMvc.perform(delete("/employees/ESP/INTERNAL/EMP001/cost-centers/distributions/2026-01-16"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("COST_CENTER_DISTRIBUTION_NOT_FOUND"));
+    }
+
+    // ADR-057 §3: the delete is bounded by the gap invariant.
+    @Test
+    void deleteMapsACoverageGapToHttp409() throws Exception {
+        doThrow(new CostCenterDistributionCoverageGapException(
+                "ESP", "INTERNAL", "EMP001",
+                List.of(new CostCenterDistributionPeriod(JAN_1, null)),
+                List.of()
+        )).when(deleteCostCenterDistributionUseCase).delete(any(DeleteCostCenterDistributionCommand.class));
+
+        mockMvc.perform(delete("/employees/ESP/INTERNAL/EMP001/cost-centers/distributions/2026-01-01"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("COST_CENTER_COVERAGE_GAP"))
+                .andExpect(jsonPath("$.details.gaps[0].startDate").exists())
+                .andExpect(jsonPath("$.details.stretchCandidates").isEmpty());
+    }
+
+    // ADR-057 §6: the plan is asked for and shown; nothing is applied.
+    @Test
+    void planMapsTheRequestToTheCommandAndReturnsThePlanWithoutApplyingIt() throws Exception {
+        when(planCostCenterDistributionChangeUseCase.plan(any(PlanCostCenterDistributionChangeCommand.class)))
+                .thenReturn(new CostCenterDistributionPlan(
+                        TimelineOperation.ADD,
+                        null,
+                        new CostCenterDistributionPeriod(JAN_16, null),
+                        null,
+                        new CostCenterDistributionPlanAdjustment(
+                                new CostCenterDistributionPeriod(JAN_1, null),
+                                new CostCenterDistributionPeriod(JAN_1, JAN_15)
+                        ),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(new CostCenterDistributionPeriod(JAN_1, JAN_15), new CostCenterDistributionPeriod(JAN_16, null))
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/cost-centers/plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"operation":"ADD","startDate":"2026-01-16"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.operation").value("ADD"))
+                .andExpect(jsonPath("$.accepted").value(true))
+                .andExpect(jsonPath("$.rejection").isEmpty())
+                .andExpect(jsonPath("$.adjustedOccurrence.after.startDate").exists())
+                .andExpect(jsonPath("$.projected.length()").value(2));
+
+        ArgumentCaptor<PlanCostCenterDistributionChangeCommand> captor =
+                ArgumentCaptor.forClass(PlanCostCenterDistributionChangeCommand.class);
+        verify(planCostCenterDistributionChangeUseCase).plan(captor.capture());
+        assertEquals(TimelineOperation.ADD, captor.getValue().operation());
+        assertEquals(JAN_16, captor.getValue().startDate());
+        assertNull(captor.getValue().windowStartDate());
+    }
+
+    @Test
+    void planIdentifiesTheWindowToRemoveByItsStartDateAndTellsTheScreenWhatAnAddWouldCorrect() throws Exception {
+        when(planCostCenterDistributionChangeUseCase.plan(any(PlanCostCenterDistributionChangeCommand.class)))
+                .thenReturn(new CostCenterDistributionPlan(
+                        TimelineOperation.CORRECT,
+                        TimelineRejection.IS_A_CORRECTION,
+                        new CostCenterDistributionPeriod(JAN_1, JAN_15),
+                        new CostCenterDistributionPeriod(JAN_1, null),
+                        null,
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        List.of(new CostCenterDistributionPeriod(JAN_1, JAN_15))
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/cost-centers/plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"operation":"REMOVE","windowStartDate":"2026-01-01"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accepted").value(false))
+                .andExpect(jsonPath("$.rejection").value("IS_A_CORRECTION"))
+                .andExpect(jsonPath("$.operation").value("CORRECT"))
+                .andExpect(jsonPath("$.correctedOccurrence.startDate").exists());
+
+        ArgumentCaptor<PlanCostCenterDistributionChangeCommand> captor =
+                ArgumentCaptor.forClass(PlanCostCenterDistributionChangeCommand.class);
+        verify(planCostCenterDistributionChangeUseCase).plan(captor.capture());
+        assertEquals(TimelineOperation.REMOVE, captor.getValue().operation());
+        assertEquals(JAN_1, captor.getValue().windowStartDate());
+    }
+
+    @Test
+    void planRejectsAnUnknownOperation() throws Exception {
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/cost-centers/plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"operation":"REPLACE","startDate":"2026-01-16"}
+                                """))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

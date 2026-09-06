@@ -6,27 +6,38 @@ import com.b4rrhh.employee.cost_center.application.usecase.CostCenterDistributio
 import com.b4rrhh.employee.cost_center.application.usecase.CostCenterDistributionReadModel;
 import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistributionCommand;
 import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistributionUseCase;
+import com.b4rrhh.employee.cost_center.application.usecase.DeleteCostCenterDistributionCommand;
+import com.b4rrhh.employee.cost_center.application.usecase.DeleteCostCenterDistributionUseCase;
 import com.b4rrhh.employee.cost_center.application.usecase.GetCurrentCostCenterDistributionQuery;
 import com.b4rrhh.employee.cost_center.application.usecase.GetCurrentCostCenterDistributionUseCase;
 import com.b4rrhh.employee.cost_center.application.usecase.ListCostCenterDistributionHistoryQuery;
 import com.b4rrhh.employee.cost_center.application.usecase.ListCostCenterDistributionHistoryUseCase;
+import com.b4rrhh.employee.cost_center.application.usecase.PlanCostCenterDistributionChangeCommand;
+import com.b4rrhh.employee.cost_center.application.usecase.PlanCostCenterDistributionChangeUseCase;
 import com.b4rrhh.employee.cost_center.application.usecase.ReplaceCostCenterDistributionFromDateCommand;
 import com.b4rrhh.employee.cost_center.application.usecase.ReplaceCostCenterDistributionFromDateUseCase;
+import com.b4rrhh.employee.cost_center.application.usecase.UpdateCostCenterDistributionCommand;
+import com.b4rrhh.employee.cost_center.application.usecase.UpdateCostCenterDistributionUseCase;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow;
 import com.b4rrhh.employee.cost_center.infrastructure.web.assembler.CostCenterResponseAssembler;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CloseCostCenterDistributionRequest;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterCurrentDistributionResponse;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionHistoryResponse;
+import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionPlanResponse;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionWindowResponse;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CreateCostCenterDistributionRequest;
+import com.b4rrhh.employee.cost_center.infrastructure.web.dto.PlanCostCenterDistributionChangeRequest;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.ReplaceCostCenterDistributionFromDateRequest;
+import com.b4rrhh.employee.cost_center.infrastructure.web.dto.UpdateCostCenterDistributionRequest;
 import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,6 +54,9 @@ public class CostCenterBusinessKeyController {
     private final ListCostCenterDistributionHistoryUseCase listCostCenterDistributionHistoryUseCase;
     private final ReplaceCostCenterDistributionFromDateUseCase replaceCostCenterDistributionFromDateUseCase;
     private final CloseCostCenterDistributionUseCase closeCostCenterDistributionUseCase;
+    private final UpdateCostCenterDistributionUseCase updateCostCenterDistributionUseCase;
+    private final DeleteCostCenterDistributionUseCase deleteCostCenterDistributionUseCase;
+    private final PlanCostCenterDistributionChangeUseCase planCostCenterDistributionChangeUseCase;
     private final CostCenterResponseAssembler costCenterResponseAssembler;
 
     public CostCenterBusinessKeyController(
@@ -51,6 +65,9 @@ public class CostCenterBusinessKeyController {
             ListCostCenterDistributionHistoryUseCase listCostCenterDistributionHistoryUseCase,
             ReplaceCostCenterDistributionFromDateUseCase replaceCostCenterDistributionFromDateUseCase,
             CloseCostCenterDistributionUseCase closeCostCenterDistributionUseCase,
+            UpdateCostCenterDistributionUseCase updateCostCenterDistributionUseCase,
+            DeleteCostCenterDistributionUseCase deleteCostCenterDistributionUseCase,
+            PlanCostCenterDistributionChangeUseCase planCostCenterDistributionChangeUseCase,
             CostCenterResponseAssembler costCenterResponseAssembler
     ) {
         this.createCostCenterDistributionUseCase = createCostCenterDistributionUseCase;
@@ -58,6 +75,9 @@ public class CostCenterBusinessKeyController {
         this.listCostCenterDistributionHistoryUseCase = listCostCenterDistributionHistoryUseCase;
         this.replaceCostCenterDistributionFromDateUseCase = replaceCostCenterDistributionFromDateUseCase;
         this.closeCostCenterDistributionUseCase = closeCostCenterDistributionUseCase;
+        this.updateCostCenterDistributionUseCase = updateCostCenterDistributionUseCase;
+        this.deleteCostCenterDistributionUseCase = deleteCostCenterDistributionUseCase;
+        this.planCostCenterDistributionChangeUseCase = planCostCenterDistributionChangeUseCase;
         this.costCenterResponseAssembler = costCenterResponseAssembler;
     }
 
@@ -153,6 +173,76 @@ public class CostCenterBusinessKeyController {
         );
 
         return ResponseEntity.ok(costCenterResponseAssembler.toWindowResponse(closed));
+    }
+
+    /**
+     * Corrects the window that starts on {@code startDate} (ADR-057, decision 3):
+     * its lines as a set, and its dates when the body gives them.
+     */
+    @PutMapping("/distributions/{startDate}")
+    public ResponseEntity<CostCenterDistributionWindowResponse> updateDistribution(
+            @PathVariable String ruleSystemCode,
+            @PathVariable String employeeTypeCode,
+            @PathVariable String employeeNumber,
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestBody UpdateCostCenterDistributionRequest request
+    ) {
+        CostCenterDistributionWindow corrected = updateCostCenterDistributionUseCase.update(
+                new UpdateCostCenterDistributionCommand(
+                        ruleSystemCode,
+                        employeeTypeCode,
+                        employeeNumber,
+                        startDate,
+                        request.startDate(),
+                        request.endDate(),
+                        toCommandItems(request.items())
+                )
+        );
+
+        return ResponseEntity.ok(costCenterResponseAssembler.toWindowResponse(corrected));
+    }
+
+    /**
+     * Bounded by the invariants (ADR-057 §3): the last window goes and reopens
+     * the previous one; one in the middle is rejected naming the neighbours to
+     * stretch.
+     */
+    @DeleteMapping("/distributions/{startDate}")
+    public ResponseEntity<Void> deleteDistribution(
+            @PathVariable String ruleSystemCode,
+            @PathVariable String employeeTypeCode,
+            @PathVariable String employeeNumber,
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate
+    ) {
+        deleteCostCenterDistributionUseCase.delete(
+                new DeleteCostCenterDistributionCommand(ruleSystemCode, employeeTypeCode, employeeNumber, startDate)
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * What the change would do to the series, without applying it (ADR-057).
+     * It is what the screen shows before the user confirms.
+     */
+    @PostMapping("/plan")
+    public ResponseEntity<CostCenterDistributionPlanResponse> plan(
+            @PathVariable String ruleSystemCode,
+            @PathVariable String employeeTypeCode,
+            @PathVariable String employeeNumber,
+            @RequestBody PlanCostCenterDistributionChangeRequest request
+    ) {
+        return ResponseEntity.ok(costCenterResponseAssembler.toPlanResponse(
+                planCostCenterDistributionChangeUseCase.plan(new PlanCostCenterDistributionChangeCommand(
+                        ruleSystemCode,
+                        employeeTypeCode,
+                        employeeNumber,
+                        request.operation(),
+                        request.windowStartDate(),
+                        request.startDate(),
+                        request.endDate()
+                ))
+        ));
     }
 
     // ---- mapping helpers ----
