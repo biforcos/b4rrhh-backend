@@ -1,59 +1,52 @@
 package com.b4rrhh.employee.workcenter.application.usecase;
 
+import com.b4rrhh.employee.temporal.support.DateRange;
 import com.b4rrhh.employee.workcenter.application.model.WorkCenterPlan;
 import com.b4rrhh.employee.workcenter.application.port.EmployeeWorkCenterContext;
 import com.b4rrhh.employee.workcenter.application.port.EmployeeWorkCenterLookupPort;
 import com.b4rrhh.employee.workcenter.application.service.WorkCenterTimelineService;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterEmployeeNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterNotFoundException;
-import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterRuleSystemNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
 import com.b4rrhh.employee.workcenter.domain.port.WorkCenterRepository;
-import com.b4rrhh.rulesystem.domain.port.RuleSystemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Removes a work center assignment (ADR-057, decision 3). Removing the last
- * one reopens the previous one: it is the "oops" and it is safe. Removing
- * one in the middle would leave a gap, and the invariant rejects it naming
- * the neighbours the user would have to stretch first. The old rule that
- * forbade deleting the assignment that started a presence is a case of this
- * one: that assignment is never the last one that can go without a gap.
+ * Answers what an add, a removal or a correction would do to the series
+ * without applying it (ADR-057, decision 6). Rejected plans come back as
+ * plans, not as errors: the screen shows the gap, the overlap or the
+ * assignment an add would correct, and the user decides.
  */
 @Service
-public class DeleteWorkCenterService implements DeleteWorkCenterUseCase {
+public class PlanWorkCenterChangeService implements PlanWorkCenterChangeUseCase {
 
     private final WorkCenterRepository workCenterRepository;
     private final EmployeeWorkCenterLookupPort employeeWorkCenterLookupPort;
-    private final RuleSystemRepository ruleSystemRepository;
     private final WorkCenterTimelineService workCenterTimelineService;
 
-    public DeleteWorkCenterService(
+    public PlanWorkCenterChangeService(
             WorkCenterRepository workCenterRepository,
             EmployeeWorkCenterLookupPort employeeWorkCenterLookupPort,
-            RuleSystemRepository ruleSystemRepository,
             WorkCenterTimelineService workCenterTimelineService
     ) {
         this.workCenterRepository = workCenterRepository;
         this.employeeWorkCenterLookupPort = employeeWorkCenterLookupPort;
-        this.ruleSystemRepository = ruleSystemRepository;
         this.workCenterTimelineService = workCenterTimelineService;
     }
 
     @Override
-    @Transactional
-    public void delete(DeleteWorkCenterCommand command) {
+    @Transactional(readOnly = true)
+    public WorkCenterPlan plan(PlanWorkCenterChangeCommand command) {
         String normalizedRuleSystemCode = normalizeRuleSystemCode(command.ruleSystemCode());
         String normalizedEmployeeTypeCode = normalizeEmployeeTypeCode(command.employeeTypeCode());
         String normalizedEmployeeNumber = normalizeEmployeeNumber(command.employeeNumber());
-        Integer normalizedAssignmentNumber = normalizeAssignmentNumber(command.workCenterAssignmentNumber());
-
-        ruleSystemRepository.findByCode(normalizedRuleSystemCode)
-                .orElseThrow(() -> new WorkCenterRuleSystemNotFoundException(normalizedRuleSystemCode));
+        if (command.operation() == null) {
+            throw new IllegalArgumentException("operation is required");
+        }
 
         EmployeeWorkCenterContext employee = employeeWorkCenterLookupPort
-                .findByBusinessKeyForUpdate(
+                .findByBusinessKey(
                         normalizedRuleSystemCode,
                         normalizedEmployeeTypeCode,
                         normalizedEmployeeNumber
@@ -64,34 +57,44 @@ public class DeleteWorkCenterService implements DeleteWorkCenterUseCase {
                         normalizedEmployeeNumber
                 ));
 
-        WorkCenter existing = workCenterRepository
-                .findByEmployeeIdAndWorkCenterAssignmentNumber(employee.employeeId(), normalizedAssignmentNumber)
-                .orElseThrow(() -> new WorkCenterNotFoundException(
-                        normalizedRuleSystemCode,
-                        normalizedEmployeeTypeCode,
-                        normalizedEmployeeNumber,
-                        normalizedAssignmentNumber
-                ));
+        return switch (command.operation()) {
+            case ADD -> workCenterTimelineService.planAdd(
+                    employee.employeeId(),
+                    requireDates(command)
+            );
+            case REMOVE -> workCenterTimelineService.planRemove(
+                    employee.employeeId(),
+                    requireOccurrence(command, employee)
+            );
+            case CORRECT -> workCenterTimelineService.planCorrect(
+                    employee.employeeId(),
+                    requireOccurrence(command, employee),
+                    requireDates(command)
+            );
+        };
+    }
 
-        WorkCenterPlan plan = workCenterTimelineService.planRemove(employee.employeeId(), existing);
-        workCenterTimelineService.requireAccepted(
-                plan,
-                normalizedRuleSystemCode,
-                normalizedEmployeeTypeCode,
-                normalizedEmployeeNumber
-        );
-
-        if (plan.adjustsAnOccurrence()) {
-            Integer previousNumber = plan.adjustedOccurrence().workCenterAssignmentNumber();
-            WorkCenter previous = workCenterRepository
-                    .findByEmployeeIdAndWorkCenterAssignmentNumber(employee.employeeId(), previousNumber)
-                    .orElseThrow(() -> new IllegalStateException(
-                            "Planned work center assignment vanished: workCenterAssignmentNumber=" + previousNumber
-                    ));
-            workCenterRepository.save(previous.adjustEndDate(plan.adjustedOccurrence().after().endDate()));
+    private WorkCenter requireOccurrence(PlanWorkCenterChangeCommand command, EmployeeWorkCenterContext employee) {
+        if (command.workCenterAssignmentNumber() == null || command.workCenterAssignmentNumber() <= 0) {
+            throw new IllegalArgumentException("workCenterAssignmentNumber must be a positive integer");
         }
 
-        workCenterRepository.delete(existing);
+        return workCenterRepository
+                .findByEmployeeIdAndWorkCenterAssignmentNumber(employee.employeeId(), command.workCenterAssignmentNumber())
+                .orElseThrow(() -> new WorkCenterNotFoundException(
+                        employee.ruleSystemCode(),
+                        employee.employeeTypeCode(),
+                        employee.employeeNumber(),
+                        command.workCenterAssignmentNumber()
+                ));
+    }
+
+    private static DateRange requireDates(PlanWorkCenterChangeCommand command) {
+        if (command.startDate() == null) {
+            throw new IllegalArgumentException("startDate is required");
+        }
+
+        return new DateRange(command.startDate(), command.endDate());
     }
 
     private String normalizeRuleSystemCode(String ruleSystemCode) {
@@ -116,13 +119,5 @@ public class DeleteWorkCenterService implements DeleteWorkCenterUseCase {
         }
 
         return employeeNumber.trim();
-    }
-
-    private Integer normalizeAssignmentNumber(Integer workCenterAssignmentNumber) {
-        if (workCenterAssignmentNumber == null || workCenterAssignmentNumber <= 0) {
-            throw new IllegalArgumentException("workCenterAssignmentNumber must be a positive integer");
-        }
-
-        return workCenterAssignmentNumber;
     }
 }

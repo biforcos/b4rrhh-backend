@@ -14,8 +14,6 @@ public interface WorkCenterPresenceConsistencyPort extends EmployeeActiveCompany
             LocalDate endDate
     );
 
-    boolean existsPresenceStartingAt(Long employeeId, LocalDate startDate);
-
     @Override
     Optional<String> findActiveCompanyCode(Long employeeId, LocalDate referenceDate);
 

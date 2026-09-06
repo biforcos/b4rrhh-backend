@@ -49,28 +49,6 @@ public class WorkCenterPresenceConsistencyAdapter implements WorkCenterPresenceC
     }
 
     @Override
-    public boolean existsPresenceStartingAt(Long employeeId, LocalDate startDate) {
-        Object result = entityManager.createNativeQuery("""
-                select case when count(*) > 0 then true else false end
-                from employee.presence p
-                where p.employee_id = :employeeId
-                  and p.start_date = :startDate
-                """)
-                .setParameter("employeeId", employeeId)
-                .setParameter("startDate", startDate)
-                .getSingleResult();
-
-        if (result instanceof Boolean boolResult) {
-            return boolResult;
-        }
-        if (result instanceof Number numberResult) {
-            return numberResult.intValue() > 0;
-        }
-
-        return Boolean.parseBoolean(String.valueOf(result));
-    }
-
-    @Override
     public Optional<String> findActiveCompanyCode(Long employeeId, LocalDate referenceDate) {
         List<?> rows = entityManager.createNativeQuery("""
                 select p.company_code

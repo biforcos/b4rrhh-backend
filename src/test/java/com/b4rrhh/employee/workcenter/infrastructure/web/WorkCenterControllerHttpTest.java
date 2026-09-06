@@ -21,7 +21,6 @@ import com.b4rrhh.employee.workcenter.domain.exception.InvalidWorkCenterDateRang
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterAlreadyClosedException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatchException;
-import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterDeleteForbiddenAtPresenceStartException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterIsACorrectionException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOutsidePresencePeriodException;
@@ -489,20 +488,21 @@ class WorkCenterControllerHttpTest {
                 .andExpect(jsonPath("$.code").value("WORK_CENTER_NOT_FOUND"));
     }
 
+    // ADR-057 §3: the delete is bounded by the gap invariant. The assignment that starts the
+    // presence was the old special case; now it is one more gap, named with its neighbours.
     @Test
-    void deleteMapsPresenceStartConflictToHttp409() throws Exception {
-        doThrow(new WorkCenterDeleteForbiddenAtPresenceStartException(
-                "ESP",
-                "INTERNAL",
-                "EMP001",
-                1,
-                LocalDate.of(2026, 1, 10)
+    void deleteMapsACoverageGapToHttp409NamingTheNeighboursToStretch() throws Exception {
+        doThrow(new WorkCenterPresenceCoverageGapException(
+                "ESP", "INTERNAL", "EMP001",
+                List.of(new WorkCenterPeriod(LocalDate.of(2026, 1, 10), LocalDate.of(2026, 1, 31))),
+                List.of(new WorkCenterOccurrence(2, LocalDate.of(2026, 2, 1), null))
         )).when(deleteWorkCenterUseCase).delete(any(DeleteWorkCenterCommand.class));
 
         mockMvc.perform(delete("/employees/ESP/INTERNAL/EMP001/work-centers/1"))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("WORK_CENTER_DELETE_FORBIDDEN_AT_PRESENCE_START"))
-                .andExpect(jsonPath("$.message").value("La asignación no puede eliminarse porque inicia una presence del empleado. Corrígela si necesitas cambiarla."));
+                .andExpect(jsonPath("$.code").value("WORK_CENTER_COVERAGE_GAP"))
+                .andExpect(jsonPath("$.details.gaps[0].startDate[2]").value(10))
+                .andExpect(jsonPath("$.details.stretchCandidates[0].workCenterAssignmentNumber").value(2));
     }
 
     @Test

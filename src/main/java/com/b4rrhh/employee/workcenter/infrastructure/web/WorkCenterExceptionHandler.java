@@ -4,7 +4,6 @@ import com.b4rrhh.employee.workcenter.domain.exception.InvalidWorkCenterDateRang
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterAlreadyClosedException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatchException;
-import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterDeleteForbiddenAtPresenceStartException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterEmployeeNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterIsACorrectionException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterNotFoundException;
@@ -78,7 +77,6 @@ public class WorkCenterExceptionHandler {
     @ExceptionHandler({
             WorkCenterAlreadyClosedException.class,
             WorkCenterCompanyMismatchException.class,
-            WorkCenterDeleteForbiddenAtPresenceStartException.class,
             WorkCenterIsACorrectionException.class,
             WorkCenterOverlapException.class,
             WorkCenterOutsidePresencePeriodException.class,
@@ -132,14 +130,6 @@ public class WorkCenterExceptionHandler {
                     null
             );
         }
-        if (ex instanceof WorkCenterDeleteForbiddenAtPresenceStartException) {
-            return conflict(
-                    "WORK_CENTER_DELETE_FORBIDDEN_AT_PRESENCE_START",
-                                        "La asignación no puede eliminarse porque inicia una presence del empleado. Corrígela si necesitas cambiarla.",
-                    null
-            );
-        }
-
         return conflict(
                 "WORK_CENTER_INVALID_PERIOD",
                 "La operacion de centro de trabajo entra en conflicto con las reglas temporales del empleado.",

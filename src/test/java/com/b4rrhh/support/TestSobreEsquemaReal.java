@@ -52,6 +52,17 @@ import com.b4rrhh.employee.labor_classification.infrastructure.persistence.Labor
 import com.b4rrhh.employee.labor_classification.infrastructure.persistence.LaborClassificationPresenceConsistencyAdapter;
 import com.b4rrhh.employee.labor_classification.infrastructure.persistence.LaborClassificationRuleEntityUsageParticipant;
 import com.b4rrhh.employee.presence.infrastructure.persistence.PresenceRuleEntityUsageParticipant;
+import com.b4rrhh.employee.workcenter.application.service.WorkCenterCatalogValidator;
+import com.b4rrhh.employee.workcenter.application.service.WorkCenterTimelineService;
+import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterService;
+import com.b4rrhh.employee.workcenter.application.usecase.DeleteWorkCenterService;
+import com.b4rrhh.employee.workcenter.application.usecase.PlanWorkCenterChangeService;
+import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterService;
+import com.b4rrhh.employee.workcenter.domain.service.WorkCenterEmployeeCompanyDomainService;
+import com.b4rrhh.employee.workcenter.infrastructure.persistence.EmployeeWorkCenterLookupAdapter;
+import com.b4rrhh.employee.workcenter.infrastructure.persistence.WorkCenterCompanyLookupAdapter;
+import com.b4rrhh.employee.workcenter.infrastructure.persistence.WorkCenterPersistenceAdapter;
+import com.b4rrhh.employee.workcenter.infrastructure.persistence.WorkCenterPresenceConsistencyAdapter;
 import com.b4rrhh.employee.workcenter.infrastructure.persistence.WorkCenterRuleEntityUsageParticipant;
 import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeBusinessKeyLookupSupport;
 import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeOwnedLookupSupport;
@@ -169,6 +180,18 @@ import java.lang.annotation.Target;
         LaborClassificationPersistenceAdapter.class,
         LaborClassificationPresenceConsistencyAdapter.class,
         EmployeeLaborClassificationLookupAdapter.class,
+        // workcenter: la serie por empleado sobre el componente temporal (backend#57)
+        CreateWorkCenterService.class,
+        UpdateWorkCenterService.class,
+        DeleteWorkCenterService.class,
+        PlanWorkCenterChangeService.class,
+        WorkCenterTimelineService.class,
+        WorkCenterCatalogValidator.class,
+        WorkCenterEmployeeCompanyDomainService.class,
+        WorkCenterCompanyLookupAdapter.class,
+        WorkCenterPersistenceAdapter.class,
+        WorkCenterPresenceConsistencyAdapter.class,
+        EmployeeWorkCenterLookupAdapter.class,
         // address: la serie por (empleado, tipo) sobre el componente temporal (backend#53)
         CreateAddressService.class,
         UpdateAddressService.class,
