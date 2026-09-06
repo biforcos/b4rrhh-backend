@@ -57,6 +57,10 @@ class CostCenterTimelineFlywayIntegrationTest {
     @Autowired
     private PlanCostCenterDistributionChangeService planService;
     @Autowired
+    private CloseCostCenterDistributionService closeService;
+    @Autowired
+    private ReplaceCostCenterDistributionFromDateService replaceService;
+    @Autowired
     private JdbcTemplate jdbcTemplate;
     @Autowired
     private EntityManager entityManager;
@@ -277,6 +281,55 @@ class CostCenterTimelineFlywayIntegrationTest {
         assertEquals(List.of(new CostCenterDistributionPeriod(DAY_1, DAY_15)), plan.projected());
         assertEquals(1, persistedCount());
         assertEquals(Arrays.asList((LocalDate) null), persistedEndDates(DAY_1));
+    }
+
+    // The deprecated close, on the termination date: the presence ended that day, so every line
+    // of the window in force closes with it and no gap is left.
+    @Test
+    void closingTheOpenWindowOnTheTerminationDateClosesEveryLineOfIt() {
+        createService.create(create(DAY_1, null, Map.of("CC_ADMIN", 60, "CC_HR", 40)));
+        jdbcTemplate.update(
+                "update employee.presence set end_date = ?, exit_reason_code = 'TERMINATION' where employee_id = ?",
+                JAN_31, employeeId
+        );
+
+        closeService.close(new CloseCostCenterDistributionCommand(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_1, JAN_31));
+        entityManager.flush();
+
+        assertEquals(List.of(JAN_31, JAN_31), persistedEndDates(DAY_1));
+    }
+
+    @Test
+    void closingTheOpenWindowWhileThePresenceGoesOnIsRejectedAsAGap() {
+        createService.create(create(DAY_1, null, Map.of("CC_ADMIN", 100)));
+
+        CostCenterDistributionCoverageGapException ex = assertThrows(
+                CostCenterDistributionCoverageGapException.class,
+                () -> closeService.close(new CloseCostCenterDistributionCommand(
+                        RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_1, DAY_15))
+        );
+        entityManager.flush();
+
+        assertEquals(List.of(new CostCenterDistributionPeriod(DAY_16, null)), ex.gaps());
+        assertEquals(Arrays.asList((LocalDate) null), persistedEndDates(DAY_1));
+    }
+
+    // The deprecated replace-from-date, as the loader calls it: an add that closes the window in force.
+    @Test
+    void replacingFromADateClosesTheWindowInForceAndOpensTheNextOne() {
+        createService.create(create(DAY_1, null, Map.of("CC_ADMIN", 100)));
+
+        CostCenterDistributionWindow replaced = replaceService.replaceFromDate(new ReplaceCostCenterDistributionFromDateCommand(
+                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_16,
+                List.of(new CostCenterDistributionItem("CC_HR", BigDecimal.valueOf(50)), new CostCenterDistributionItem("CC_IT", BigDecimal.valueOf(50)))
+        ));
+        entityManager.flush();
+
+        assertEquals(DAY_16, replaced.getStartDate());
+        assertNull(replaced.getEndDate());
+        assertEquals(3, persistedCount());
+        assertEquals(List.of(DAY_15), persistedEndDates(DAY_1));
+        assertEquals(List.of("CC_HR", "CC_IT"), persistedCodes(DAY_16));
     }
 
     private CreateCostCenterDistributionCommand create(LocalDate startDate, LocalDate endDate, Map<String, Integer> items) {

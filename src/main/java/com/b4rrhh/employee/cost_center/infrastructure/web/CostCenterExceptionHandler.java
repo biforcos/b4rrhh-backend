@@ -1,7 +1,6 @@
 package com.b4rrhh.employee.cost_center.infrastructure.web;
 
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterCatalogValueInvalidException;
-import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionConflictException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionCoverageGapException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionInvalidException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionIsACorrectionException;
@@ -67,7 +66,6 @@ public class CostCenterExceptionHandler {
      * of adding a second one.
      */
     @ExceptionHandler({
-            CostCenterDistributionConflictException.class,
             CostCenterDistributionIsACorrectionException.class,
             CostCenterDistributionOverlapException.class,
             CostCenterOutsidePresencePeriodException.class,
@@ -98,11 +96,7 @@ public class CostCenterExceptionHandler {
                     Map.of("gaps", periods(gap.gaps()), "stretchCandidates", periods(gap.stretchCandidates()))
             );
         }
-        if (ex instanceof CostCenterOutsidePresencePeriodException) {
-            return respond(HttpStatus.CONFLICT, "COST_CENTER_OUTSIDE_PRESENCE", ex, null);
-        }
-
-        return respond(HttpStatus.CONFLICT, "COST_CENTER_DISTRIBUTION_CONFLICT", ex, null);
+        return respond(HttpStatus.CONFLICT, "COST_CENTER_OUTSIDE_PRESENCE", ex, null);
     }
 
     private static List<CostCenterDistributionPeriodResponse> periods(List<CostCenterDistributionPeriod> periods) {

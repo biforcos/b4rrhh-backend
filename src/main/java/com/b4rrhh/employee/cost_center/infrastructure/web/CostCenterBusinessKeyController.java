@@ -132,6 +132,12 @@ public class CostCenterBusinessKeyController {
         return ResponseEntity.ok(costCenterResponseAssembler.toCurrentResponse(current, language));
     }
 
+    /**
+     * Kept while the screen and the workforce loader still call it. ADR-057
+     * retires replace-from-date as a model: it is an add whose end date is
+     * the tail of the window in force on the effective date.
+     */
+    @Deprecated
     @PostMapping("/replace-from-date")
     public ResponseEntity<CostCenterDistributionWindowResponse> replaceFromDate(
             @PathVariable String ruleSystemCode,
@@ -154,6 +160,12 @@ public class CostCenterBusinessKeyController {
         return ResponseEntity.ok(costCenterResponseAssembler.toWindowResponse(replaced));
     }
 
+    /**
+     * Kept while the screen still closes a window. To be removed once it has
+     * migrated: adding a window already closes the one in force the day
+     * before, and any other end date is a correction (ADR-057).
+     */
+    @Deprecated
     @PostMapping("/distributions/{startDate}/close")
     public ResponseEntity<CostCenterDistributionWindowResponse> closeDistribution(
             @PathVariable String ruleSystemCode,

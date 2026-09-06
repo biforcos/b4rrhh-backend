@@ -2198,13 +2198,17 @@ paths:
     post:
       operationId: replaceCostCenterDistributionFromDate
       summary: Replace the active cost center distribution from an effective date
+      deprecated: true
       tags:
         - Employee Cost Center
       description: |
-        Finds the active distribution window at effectiveDate - 1 day,
-        closes all its lines at effectiveDate - 1 day,
-        and creates a new window starting at effectiveDate with the provided items.
-        Atomic operation. Rejected if no active window exists before effectiveDate.
+        Deprecated (ADR-057): adding a window with POST /distributions already
+        closes the one in force the day before. Kept while the screen and the
+        workforce loader still call it. It is an add from effectiveDate whose
+        end date is the tail of the window in force on that date (open when
+        none is), judged by the same invariants: an effective date on the
+        start date of an existing window is rejected as
+        COST_CENTER_IS_A_CORRECTION, and a resulting gap or overlap is named.
       parameters:
         - in: path
           name: ruleSystemCode
@@ -2239,20 +2243,40 @@ paths:
                 $ref: "#/components/schemas/CostCenterDistributionWindowResponse"
         "400":
           description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CostCenterErrorResponse"
         "404":
-          description: Employee, catalog value, or active window not found
+          description: Employee not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CostCenterErrorResponse"
         "409":
-          description: Period is outside presence
+          description: >-
+            The resulting series would break an invariant (ADR-057):
+            COST_CENTER_OVERLAP, COST_CENTER_COVERAGE_GAP, COST_CENTER_OUTSIDE_PRESENCE
+            or COST_CENTER_IS_A_CORRECTION.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CostCenterErrorResponse"
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/distributions/{startDate}/close:
     post:
       operationId: closeCostCenterDistribution
       summary: Close the cost center distribution window identified by startDate
+      deprecated: true
       tags:
         - Employee Cost Center
       description: |
-        Closes all allocation lines in the window that shares the given startDate.
-        All lines in the window receive the same endDate.
+        Deprecated (ADR-057): adding the next window already closes the one in
+        force, and any other end date is a correction (PUT). Kept while the
+        screen still calls it. Every line of the window takes endDate, and the
+        result is judged by the invariants: closing the window in force while
+        the presence goes on leaves a gap (COST_CENTER_COVERAGE_GAP); an end
+        date past the presence is COST_CENTER_OUTSIDE_PRESENCE.
       parameters:
         - in: path
           name: ruleSystemCode
@@ -2294,10 +2318,22 @@ paths:
                 $ref: "#/components/schemas/CostCenterDistributionWindowResponse"
         "400":
           description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CostCenterErrorResponse"
         "404":
           description: Employee or distribution window not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CostCenterErrorResponse"
         "409":
-          description: Resulting period is outside employee presence history
+          description: The resulting series would break an invariant (COST_CENTER_COVERAGE_GAP, COST_CENTER_OUTSIDE_PRESENCE, COST_CENTER_OVERLAP)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CostCenterErrorResponse"
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts:
     post:

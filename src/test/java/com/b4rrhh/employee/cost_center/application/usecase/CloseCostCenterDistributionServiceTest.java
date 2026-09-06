@@ -3,13 +3,18 @@ package com.b4rrhh.employee.cost_center.application.usecase;
 import com.b4rrhh.employee.cost_center.application.port.CostCenterPresenceConsistencyPort;
 import com.b4rrhh.employee.cost_center.application.port.EmployeeCostCenterContext;
 import com.b4rrhh.employee.cost_center.application.port.EmployeeCostCenterLookupPort;
+import com.b4rrhh.employee.cost_center.application.port.PresencePeriod;
+import com.b4rrhh.employee.cost_center.application.service.CostCenterTimelineService;
+import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionCoverageGapException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionInvalidException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionNotFoundException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterEmployeeNotFoundException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterOutsidePresencePeriodException;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterAllocation;
+import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionPeriod;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow;
 import com.b4rrhh.employee.cost_center.domain.port.CostCenterRepository;
+import com.b4rrhh.employee.cost_center.domain.service.CostCenterDistributionWindowGrouper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +35,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * The deprecated close as an adapter over the temporal component (ADR-057):
+ * a correction of the end date, judged by the invariants. The timeline
+ * service is real; the repository and the presence port are mocked.
+ */
 @ExtendWith(MockitoExtension.class)
 class CloseCostCenterDistributionServiceTest {
 
@@ -51,27 +61,28 @@ class CloseCostCenterDistributionServiceTest {
 
     @BeforeEach
     void setUp() {
+        CostCenterDistributionWindowGrouper grouper = new CostCenterDistributionWindowGrouper();
         service = new CloseCostCenterDistributionService(
                 costCenterRepository,
                 employeeCostCenterLookupPort,
-                costCenterPresenceConsistencyPort
+                new CostCenterTimelineService(costCenterRepository, costCenterPresenceConsistencyPort, grouper),
+                grouper
         );
     }
 
-    // Test 10: close window closes all allocation lines in the window
+    // Test 10: close window closes all allocation lines in the window. The presence ended that
+    // day (the termination flow closes it first), so the correction leaves no gap.
     @Test
     void closesAllLinesInWindowAndReturnsClosed() {
-        givenEmployeeFound();
         CostCenterAllocation lineA = new CostCenterAllocation(
                 EMPLOYEE_ID, "CC_A", new BigDecimal("60"), WINDOW_START, null
         );
         CostCenterAllocation lineB = new CostCenterAllocation(
                 EMPLOYEE_ID, "CC_B", new BigDecimal("40"), WINDOW_START, null
         );
+        givenEmployeeWithSeriesAndPresenceUntil(END_DATE, lineA, lineB);
         when(costCenterRepository.findByEmployeeIdAndStartDate(EMPLOYEE_ID, WINDOW_START))
                 .thenReturn(List.of(lineA, lineB));
-        when(costCenterPresenceConsistencyPort.existsPresenceContainingPeriod(EMPLOYEE_ID, WINDOW_START, END_DATE))
-                .thenReturn(true);
 
         CostCenterDistributionWindow result = service.close(command(WINDOW_START, END_DATE));
 
@@ -81,7 +92,26 @@ class CloseCostCenterDistributionServiceTest {
         assertEquals(2, result.getItems().size());
         assertFalse(result.isActive());
 
-        verify(costCenterRepository).closeAllForWindow(EMPLOYEE_ID, WINDOW_START, END_DATE);
+        verify(costCenterRepository).adjustWindowEndDate(EMPLOYEE_ID, WINDOW_START, END_DATE);
+    }
+
+    // ADR-057: closing the window in force while the presence goes on leaves a gap.
+    @Test
+    void closingWhileThePresenceGoesOnIsRejectedNamingTheGap() {
+        CostCenterAllocation line = new CostCenterAllocation(
+                EMPLOYEE_ID, "CC_A", new BigDecimal("100"), WINDOW_START, null
+        );
+        givenEmployeeWithSeriesAndPresenceUntil(null, line);
+        when(costCenterRepository.findByEmployeeIdAndStartDate(EMPLOYEE_ID, WINDOW_START))
+                .thenReturn(List.of(line));
+
+        CostCenterDistributionCoverageGapException ex = assertThrows(
+                CostCenterDistributionCoverageGapException.class,
+                () -> service.close(command(WINDOW_START, END_DATE))
+        );
+
+        assertEquals(List.of(new CostCenterDistributionPeriod(END_DATE.plusDays(1), null)), ex.gaps());
+        verify(costCenterRepository, never()).adjustWindowEndDate(any(), any(), any());
     }
 
     @Test
@@ -93,7 +123,7 @@ class CloseCostCenterDistributionServiceTest {
         assertThrows(CostCenterDistributionNotFoundException.class, () ->
                 service.close(command(WINDOW_START, END_DATE))
         );
-        verify(costCenterRepository, never()).closeAllForWindow(any(), any(), any());
+        verify(costCenterRepository, never()).adjustWindowEndDate(any(), any(), any());
     }
 
     @Test
@@ -106,19 +136,17 @@ class CloseCostCenterDistributionServiceTest {
 
     @Test
     void rejectsWhenPeriodIsOutsidePresence() {
-        givenEmployeeFound();
         CostCenterAllocation line = new CostCenterAllocation(
                 EMPLOYEE_ID, "CC_A", new BigDecimal("100"), WINDOW_START, null
         );
+        givenEmployeeWithSeriesAndPresenceUntil(END_DATE.minusDays(1), line);
         when(costCenterRepository.findByEmployeeIdAndStartDate(EMPLOYEE_ID, WINDOW_START))
                 .thenReturn(List.of(line));
-        when(costCenterPresenceConsistencyPort.existsPresenceContainingPeriod(EMPLOYEE_ID, WINDOW_START, END_DATE))
-                .thenReturn(false);
 
         assertThrows(CostCenterOutsidePresencePeriodException.class, () ->
                 service.close(command(WINDOW_START, END_DATE))
         );
-        verify(costCenterRepository, never()).closeAllForWindow(any(), any(), any());
+        verify(costCenterRepository, never()).adjustWindowEndDate(any(), any(), any());
     }
 
     @Test
@@ -136,6 +164,13 @@ class CloseCostCenterDistributionServiceTest {
     private void givenEmployeeFound() {
         when(employeeCostCenterLookupPort.findByBusinessKeyForUpdate(RSC, ETC, EN))
                 .thenReturn(Optional.of(new EmployeeCostCenterContext(EMPLOYEE_ID, RSC, ETC, EN)));
+    }
+
+    private void givenEmployeeWithSeriesAndPresenceUntil(LocalDate presenceEnd, CostCenterAllocation... lines) {
+        givenEmployeeFound();
+        when(costCenterRepository.findByEmployeeIdOrderByStartDate(EMPLOYEE_ID)).thenReturn(List.of(lines));
+        when(costCenterPresenceConsistencyPort.findPresencePeriodsByEmployeeIdOrderByStartDate(EMPLOYEE_ID))
+                .thenReturn(List.of(new PresencePeriod(WINDOW_START, presenceEnd)));
     }
 
     private CloseCostCenterDistributionCommand command(LocalDate windowStartDate, LocalDate endDate) {

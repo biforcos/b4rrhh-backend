@@ -1,35 +1,53 @@
 package com.b4rrhh.employee.cost_center.application.usecase;
 
-import com.b4rrhh.employee.cost_center.application.port.CostCenterPresenceConsistencyPort;
+import com.b4rrhh.employee.cost_center.application.model.CostCenterDistributionPlan;
 import com.b4rrhh.employee.cost_center.application.port.EmployeeCostCenterContext;
 import com.b4rrhh.employee.cost_center.application.port.EmployeeCostCenterLookupPort;
+import com.b4rrhh.employee.cost_center.application.service.CostCenterTimelineService;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionInvalidException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionNotFoundException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterEmployeeNotFoundException;
-import com.b4rrhh.employee.cost_center.domain.exception.CostCenterOutsidePresencePeriodException;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterAllocation;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow;
 import com.b4rrhh.employee.cost_center.domain.port.CostCenterRepository;
+import com.b4rrhh.employee.cost_center.domain.service.CostCenterDistributionWindowGrouper;
+import com.b4rrhh.employee.temporal.support.DateRange;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Closes a distribution window on a date, every line of it. Through the
+ * component it is a correction of the end date, judged like any other
+ * (ADR-057): closing the window in force while the presence goes on leaves a
+ * gap and is rejected naming it; closing it after the presence ends is
+ * outside the presence. The termination flow closes the presence first, so
+ * closing on the termination date leaves none.
+ *
+ * @deprecated ADR-057 retires {@code close} as an operation of the API:
+ *     adding the next window already closes the one in force, and any other
+ *     end date is a correction (PUT). Kept for the screen until it migrates.
+ */
+@Deprecated
 @Service
 public class CloseCostCenterDistributionService implements CloseCostCenterDistributionUseCase {
 
     private final CostCenterRepository costCenterRepository;
     private final EmployeeCostCenterLookupPort employeeCostCenterLookupPort;
-    private final CostCenterPresenceConsistencyPort costCenterPresenceConsistencyPort;
+    private final CostCenterTimelineService costCenterTimelineService;
+    private final CostCenterDistributionWindowGrouper windowGrouper;
 
     public CloseCostCenterDistributionService(
             CostCenterRepository costCenterRepository,
             EmployeeCostCenterLookupPort employeeCostCenterLookupPort,
-            CostCenterPresenceConsistencyPort costCenterPresenceConsistencyPort
+            CostCenterTimelineService costCenterTimelineService,
+            CostCenterDistributionWindowGrouper windowGrouper
     ) {
         this.costCenterRepository = costCenterRepository;
         this.employeeCostCenterLookupPort = employeeCostCenterLookupPort;
-        this.costCenterPresenceConsistencyPort = costCenterPresenceConsistencyPort;
+        this.costCenterTimelineService = costCenterTimelineService;
+        this.windowGrouper = windowGrouper;
     }
 
     @Override
@@ -57,34 +75,33 @@ public class CloseCostCenterDistributionService implements CloseCostCenterDistri
                         ruleSystemCode, employeeTypeCode, employeeNumber
                 ));
 
-        List<CostCenterAllocation> windowItems = costCenterRepository.findByEmployeeIdAndStartDate(
-                employee.employeeId(), command.windowStartDate()
+        CostCenterDistributionWindow existing = windowGrouper
+                .group(costCenterRepository.findByEmployeeIdAndStartDate(employee.employeeId(), command.windowStartDate()))
+                .findByStartDate(command.windowStartDate())
+                .orElseThrow(() -> new CostCenterDistributionNotFoundException(
+                        ruleSystemCode, employeeTypeCode, employeeNumber, command.windowStartDate()
+                ));
+
+        CostCenterDistributionPlan plan = costCenterTimelineService.planCorrect(
+                employee.employeeId(),
+                existing,
+                new DateRange(existing.getStartDate(), command.endDate())
         );
+        costCenterTimelineService.requireAccepted(plan, ruleSystemCode, employeeTypeCode, employeeNumber);
 
-        if (windowItems.isEmpty()) {
-            throw new CostCenterDistributionNotFoundException(
-                    ruleSystemCode, employeeTypeCode, employeeNumber, command.windowStartDate()
-            );
-        }
+        costCenterRepository.adjustWindowEndDate(employee.employeeId(), existing.getStartDate(), command.endDate());
 
-        // Validate presence containment for the closed period
-        if (!costCenterPresenceConsistencyPort.existsPresenceContainingPeriod(
-                employee.employeeId(), command.windowStartDate(), command.endDate()
-        )) {
-            throw new CostCenterOutsidePresencePeriodException(
-                    ruleSystemCode, employeeTypeCode, employeeNumber,
-                    command.windowStartDate(), command.endDate()
-            );
-        }
-
-        costCenterRepository.closeAllForWindow(employee.employeeId(), command.windowStartDate(), command.endDate());
-
-        // Build the closed window for the response
-        List<CostCenterAllocation> closedItems = windowItems.stream()
-                .map(item -> item.close(command.endDate()))
+        List<CostCenterAllocation> closedItems = existing.getItems().stream()
+                .map(item -> new CostCenterAllocation(
+                        item.getEmployeeId(),
+                        item.getCostCenterCode(),
+                        item.getAllocationPercentage(),
+                        item.getStartDate(),
+                        command.endDate()
+                ))
                 .toList();
 
-        return new CostCenterDistributionWindow(command.windowStartDate(), command.endDate(), closedItems);
+        return new CostCenterDistributionWindow(existing.getStartDate(), command.endDate(), closedItems);
     }
 
     private String normalizeRuleSystemCode(String value) {

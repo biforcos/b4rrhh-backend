@@ -31,9 +31,11 @@ import com.b4rrhh.employee.contract.infrastructure.persistence.ContractSubtypeRe
 import com.b4rrhh.employee.contract.infrastructure.persistence.EmployeeContractLookupAdapter;
 import com.b4rrhh.employee.cost_center.application.service.CostCenterCatalogValidator;
 import com.b4rrhh.employee.cost_center.application.service.CostCenterTimelineService;
+import com.b4rrhh.employee.cost_center.application.usecase.CloseCostCenterDistributionService;
 import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistributionService;
 import com.b4rrhh.employee.cost_center.application.usecase.DeleteCostCenterDistributionService;
 import com.b4rrhh.employee.cost_center.application.usecase.PlanCostCenterDistributionChangeService;
+import com.b4rrhh.employee.cost_center.application.usecase.ReplaceCostCenterDistributionFromDateService;
 import com.b4rrhh.employee.cost_center.application.usecase.UpdateCostCenterDistributionService;
 import com.b4rrhh.employee.cost_center.domain.service.CostCenterDistributionTimelineValidator;
 import com.b4rrhh.employee.cost_center.domain.service.CostCenterDistributionWindowGrouper;
@@ -212,6 +214,8 @@ import java.lang.annotation.Target;
         UpdateCostCenterDistributionService.class,
         DeleteCostCenterDistributionService.class,
         PlanCostCenterDistributionChangeService.class,
+        CloseCostCenterDistributionService.class,
+        ReplaceCostCenterDistributionFromDateService.class,
         CostCenterTimelineService.class,
         CostCenterCatalogValidator.class,
         CostCenterDistributionTimelineValidator.class,
