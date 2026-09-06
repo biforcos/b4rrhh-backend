@@ -1,12 +1,13 @@
 package com.b4rrhh.employee.workcenter.application.usecase;
 
+import com.b4rrhh.employee.temporal.support.DateRange;
+import com.b4rrhh.employee.workcenter.application.model.WorkCenterPlan;
 import com.b4rrhh.employee.workcenter.application.port.EmployeeWorkCenterContext;
 import com.b4rrhh.employee.workcenter.application.port.EmployeeWorkCenterLookupPort;
 import com.b4rrhh.employee.workcenter.application.service.WorkCenterCatalogValidator;
-import com.b4rrhh.employee.workcenter.application.service.WorkCenterPresenceConsistencyValidator;
+import com.b4rrhh.employee.workcenter.application.service.WorkCenterTimelineService;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterEmployeeNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterNotFoundException;
-import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOverlapException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterRuleSystemNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
 import com.b4rrhh.employee.workcenter.domain.port.WorkCenterRepository;
@@ -14,9 +15,12 @@ import com.b4rrhh.rulesystem.domain.port.RuleSystemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-
+/**
+ * Corrects a work center assignment: its code, its dates, or both. Nothing
+ * else moves (ADR-057, decision 3): if the corrected dates leave a gap or an
+ * overlap, the plan rejects them and names what the user would have to
+ * stretch instead.
+ */
 @Service("employeeUpdateWorkCenterService")
 public class UpdateWorkCenterService implements UpdateWorkCenterUseCase {
 
@@ -24,20 +28,20 @@ public class UpdateWorkCenterService implements UpdateWorkCenterUseCase {
     private final EmployeeWorkCenterLookupPort employeeWorkCenterLookupPort;
     private final RuleSystemRepository ruleSystemRepository;
     private final WorkCenterCatalogValidator workCenterCatalogValidator;
-    private final WorkCenterPresenceConsistencyValidator workCenterPresenceConsistencyValidator;
+    private final WorkCenterTimelineService workCenterTimelineService;
 
     public UpdateWorkCenterService(
             WorkCenterRepository workCenterRepository,
             EmployeeWorkCenterLookupPort employeeWorkCenterLookupPort,
             RuleSystemRepository ruleSystemRepository,
             WorkCenterCatalogValidator workCenterCatalogValidator,
-            WorkCenterPresenceConsistencyValidator workCenterPresenceConsistencyValidator
+            WorkCenterTimelineService workCenterTimelineService
     ) {
         this.workCenterRepository = workCenterRepository;
         this.employeeWorkCenterLookupPort = employeeWorkCenterLookupPort;
         this.ruleSystemRepository = ruleSystemRepository;
         this.workCenterCatalogValidator = workCenterCatalogValidator;
-        this.workCenterPresenceConsistencyValidator = workCenterPresenceConsistencyValidator;
+        this.workCenterTimelineService = workCenterTimelineService;
     }
 
     @Override
@@ -86,55 +90,19 @@ public class UpdateWorkCenterService implements UpdateWorkCenterUseCase {
                 existing.getUpdatedAt()
         );
 
-        if (workCenterRepository.existsOverlappingPeriodExcludingAssignment(
+        WorkCenterPlan plan = workCenterTimelineService.planCorrect(
                 employee.employeeId(),
-                normalizedAssignmentNumber,
-                corrected.getStartDate(),
-                corrected.getEndDate()
-        )) {
-            throw new WorkCenterOverlapException(
-                    normalizedRuleSystemCode,
-                    normalizedEmployeeTypeCode,
-                    normalizedEmployeeNumber
-            );
-        }
-
-        workCenterPresenceConsistencyValidator.validatePeriodWithinPresence(
-                employee.employeeId(),
-                corrected.getStartDate(),
-                corrected.getEndDate(),
-                normalizedRuleSystemCode,
-                normalizedEmployeeTypeCode,
-                normalizedEmployeeNumber
+                existing,
+                new DateRange(corrected.getStartDate(), corrected.getEndDate())
         );
-
-        List<WorkCenter> projectedHistory = replaceWithCorrectedVersion(
-                workCenterRepository.findByEmployeeIdOrderByStartDate(employee.employeeId()),
-                corrected
-        );
-
-        workCenterPresenceConsistencyValidator.validatePresenceCoverageIfRequired(
-                employee.employeeId(),
-                projectedHistory,
+        workCenterTimelineService.requireAccepted(
+                plan,
                 normalizedRuleSystemCode,
                 normalizedEmployeeTypeCode,
                 normalizedEmployeeNumber
         );
 
         return workCenterRepository.save(corrected);
-    }
-
-    private List<WorkCenter> replaceWithCorrectedVersion(List<WorkCenter> history, WorkCenter corrected) {
-        List<WorkCenter> projected = new ArrayList<>(history.size());
-        for (WorkCenter item : history) {
-            if (item.getWorkCenterAssignmentNumber().equals(corrected.getWorkCenterAssignmentNumber())) {
-                projected.add(corrected);
-            } else {
-                projected.add(item);
-            }
-        }
-
-        return projected;
     }
 
     private String normalizeRuleSystemCode(String ruleSystemCode) {

@@ -22,10 +22,14 @@ import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterAlreadyClosedEx
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatchException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterDeleteForbiddenAtPresenceStartException;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterIsACorrectionException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterNotFoundException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOutsidePresencePeriodException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOverlapException;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterPresenceCoverageGapException;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
+import com.b4rrhh.employee.workcenter.domain.model.WorkCenterOccurrence;
+import com.b4rrhh.employee.workcenter.domain.model.WorkCenterPeriod;
 import com.b4rrhh.employee.workcenter.infrastructure.web.assembler.WorkCenterResponseAssembler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -211,6 +215,81 @@ class WorkCenterControllerHttpTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("WORK_CENTER_OVERLAP"))
                 .andExpect(jsonPath("$.message", containsString("solapa")));
+    }
+
+    // ADR-057: the rejection names what it ran into, so the screen can show it.
+    @Test
+    void createMapsAnOverlapToHttp409NamingTheSharedDates() throws Exception {
+        when(createWorkCenterUseCase.create(any(CreateWorkCenterCommand.class)))
+                .thenThrow(new WorkCenterOverlapException(
+                        "ESP", "INTERNAL", "EMP001",
+                        LocalDate.of(2026, 1, 15), LocalDate.of(2026, 2, 10),
+                        List.of(new WorkCenterPeriod(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 10)))
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/work-centers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "workCenterCode": "MADRID_HQ",
+                                  "startDate": "2026-01-15",
+                                  "endDate": "2026-02-10"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("WORK_CENTER_OVERLAP"))
+                .andExpect(jsonPath("$.details.overlaps[0].startDate[0]").value(2026))
+                .andExpect(jsonPath("$.details.overlaps[0].startDate[1]").value(2))
+                .andExpect(jsonPath("$.details.overlaps[0].startDate[2]").value(1))
+                .andExpect(jsonPath("$.details.overlaps[0].endDate[2]").value(10));
+    }
+
+    @Test
+    void createMapsACoverageGapToHttp409SayingWhichGapAndWhatToStretch() throws Exception {
+        when(createWorkCenterUseCase.create(any(CreateWorkCenterCommand.class)))
+                .thenThrow(new WorkCenterPresenceCoverageGapException(
+                        "ESP", "INTERNAL", "EMP001",
+                        List.of(new WorkCenterPeriod(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28))),
+                        List.of(new WorkCenterOccurrence(1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31)))
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/work-centers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "workCenterCode": "MADRID_HQ",
+                                  "startDate": "2026-03-01"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("WORK_CENTER_COVERAGE_GAP"))
+                .andExpect(jsonPath("$.details.gaps[0].startDate[1]").value(2))
+                .andExpect(jsonPath("$.details.gaps[0].endDate[2]").value(28))
+                .andExpect(jsonPath("$.details.stretchCandidates[0].workCenterAssignmentNumber").value(1));
+    }
+
+    @Test
+    void createMapsACorrectionAskedForAsAnAddToHttp409NamingTheAssignmentToCorrect() throws Exception {
+        when(createWorkCenterUseCase.create(any(CreateWorkCenterCommand.class)))
+                .thenThrow(new WorkCenterIsACorrectionException(
+                        "ESP", "INTERNAL", "EMP001",
+                        new WorkCenterOccurrence(1, LocalDate.of(2026, 1, 10), null),
+                        new WorkCenterPeriod(LocalDate.of(2026, 1, 10), null)
+                ));
+
+        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/work-centers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "workCenterCode": "BARCELONA_HQ",
+                                  "startDate": "2026-01-10"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("WORK_CENTER_IS_A_CORRECTION"))
+                .andExpect(jsonPath("$.message", containsString("corrige")))
+                .andExpect(jsonPath("$.details.correctedOccurrence.workCenterAssignmentNumber").value(1))
+                .andExpect(jsonPath("$.details.correctedOccurrence.startDate[2]").value(10));
     }
 
     @Test

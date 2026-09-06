@@ -1074,7 +1074,15 @@ paths:
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers:
     post:
       operationId: createWorkCenterByBusinessKey
-      summary: Create employee work center assignment by business key
+      summary: Add a work center assignment to the employee's series
+      description: >-
+        The add is planned against the invariants of the series (ADR-057):
+        inside the presence, no overlap, no gap. The one automatic consequence
+        is closing the assignment in force on the new start date the day
+        before it. An assignment that starts on the start date of an existing
+        one is not an add: it is rejected as WORK_CENTER_IS_A_CORRECTION,
+        naming the assignment it would correct, and has to be asked for as a
+        correction (PUT).
       tags:
         - Employee Work Center
       parameters:
@@ -1116,9 +1124,16 @@ paths:
           description: Rule system, employee, or catalog not found
         "409":
           description: >-
-            The requested period overlaps an existing work center assignment for this employee,
-            or the period [startDate, endDate] is not fully contained within any of the
-            employee's active presence periods.
+            The resulting series would break an invariant (ADR-057):
+            WORK_CENTER_OVERLAP (details.overlaps), WORK_CENTER_COVERAGE_GAP
+            (details.gaps and details.stretchCandidates name the gap and the
+            neighbour to stretch), WORK_CENTER_OUTSIDE_PRESENCE,
+            WORK_CENTER_IS_A_CORRECTION (details.correctedOccurrence names the
+            assignment the add would correct), or WORK_CENTER_COMPANY_MISMATCH.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeWorkCenterErrorResponse"
     get:
       operationId: listEmployeeWorkCentersByBusinessKey
       summary: List employee work center assignments by business key
@@ -1261,6 +1276,8 @@ paths:
         Administrative correction of an existing work center assignment occurrence.
         This operation corrects assignment content and dates for the same occurrence
         identified by business keys and does not represent a workflow transition.
+        Nothing else moves (ADR-057): stretching or shrinking a neighbour is a
+        separate correction of that neighbour.
       parameters:
         - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
@@ -1306,10 +1323,15 @@ paths:
           description: Rule system, employee, or work center assignment not found
         "409":
           description: >-
-            Work center assignment correction conflicts with temporal rules.
-            Resulting period overlaps another assignment for this employee,
-            is not fully contained within employee presence history,
-            or references an invalid catalog value.
+            The corrected dates would break an invariant (ADR-057):
+            WORK_CENTER_OVERLAP (details.overlaps), WORK_CENTER_COVERAGE_GAP
+            (details.gaps and details.stretchCandidates name the gap and the
+            neighbour to stretch) or WORK_CENTER_OUTSIDE_PRESENCE; or the
+            request is invalid by dates (WORK_CENTER_INVALID_PERIOD).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeWorkCenterErrorResponse"
     delete:
       operationId: deleteWorkCenterByBusinessKey
       summary: Delete employee work center assignment by business key
@@ -8210,6 +8232,60 @@ components:
           type: string
           format: date
           nullable: true
+    EmployeeWorkCenterPeriod:
+      type: object
+      description: A stretch of dates named by a plan or an error: a gap, or an overlap.
+      required:
+        - startDate
+      properties:
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: Null means onwards.
+    EmployeeWorkCenterOccurrence:
+      type: object
+      description: A work center assignment as a plan or an error names it, by its number and its dates.
+      required:
+        - startDate
+      properties:
+        workCenterAssignmentNumber:
+          type: integer
+          format: int32
+          nullable: true
+          description: Null only for the assignment a plan would add, which has no number yet.
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+    EmployeeWorkCenterErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+          description: >-
+            What a plan rejection names (ADR-057). WORK_CENTER_OVERLAP carries
+            overlaps (EmployeeWorkCenterPeriod[]); WORK_CENTER_COVERAGE_GAP
+            carries gaps (EmployeeWorkCenterPeriod[]) and stretchCandidates
+            (EmployeeWorkCenterOccurrence[]); WORK_CENTER_IS_A_CORRECTION
+            carries correctedOccurrence (EmployeeWorkCenterOccurrence), the
+            assignment the add would correct. Catalog errors carry field. Null
+            when the error has nothing to name.
+          additionalProperties: true
     CostCenterDistributionItemRequest:
       type: object
       additionalProperties: false

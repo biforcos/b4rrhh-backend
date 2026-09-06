@@ -59,6 +59,25 @@ public class WorkCenter {
         );
     }
 
+    /**
+     * The same assignment with another end date: the one automatic consequence
+     * a plan applies (ADR-057), closed the day before a new one or reopened
+     * when the one that closed it is removed. The start date, which the number
+     * identifies, stays.
+     */
+    public WorkCenter adjustEndDate(LocalDate newEndDate) {
+        return new WorkCenter(
+                id,
+                employeeId,
+                workCenterAssignmentNumber,
+                workCenterCode,
+                startDate,
+                newEndDate,
+                createdAt,
+                updatedAt
+        );
+    }
+
     public boolean isActive() {
         return endDate == null;
     }

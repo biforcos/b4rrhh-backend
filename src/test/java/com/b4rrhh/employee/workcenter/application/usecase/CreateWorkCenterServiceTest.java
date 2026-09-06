@@ -2,15 +2,19 @@ package com.b4rrhh.employee.workcenter.application.usecase;
 
 import com.b4rrhh.employee.workcenter.application.port.EmployeeWorkCenterContext;
 import com.b4rrhh.employee.workcenter.application.port.EmployeeWorkCenterLookupPort;
+import com.b4rrhh.employee.workcenter.application.port.PresencePeriod;
+import com.b4rrhh.employee.workcenter.application.port.WorkCenterPresenceConsistencyPort;
 import com.b4rrhh.employee.workcenter.application.service.WorkCenterCatalogValidator;
-import com.b4rrhh.employee.workcenter.application.service.WorkCenterPresenceConsistencyValidator;
+import com.b4rrhh.employee.workcenter.application.service.WorkCenterTimelineService;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCatalogValueInvalidException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterCompanyMismatchException;
+import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterIsACorrectionException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOutsidePresencePeriodException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterOverlapException;
 import com.b4rrhh.employee.workcenter.domain.exception.WorkCenterPresenceCoverageGapException;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
-import com.b4rrhh.employee.workcenter.domain.port.EmployeeActiveCompanyLookupPort;
+import com.b4rrhh.employee.workcenter.domain.model.WorkCenterOccurrence;
+import com.b4rrhh.employee.workcenter.domain.model.WorkCenterPeriod;
 import com.b4rrhh.employee.workcenter.domain.port.WorkCenterCompanyLookupPort;
 import com.b4rrhh.employee.workcenter.domain.port.WorkCenterRepository;
 import com.b4rrhh.employee.workcenter.domain.service.WorkCenterEmployeeCompanyDomainService;
@@ -20,7 +24,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -30,20 +33,26 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Adding a work center assignment through the temporal component (ADR-057).
+ * The timeline service is real; the repository and the presence port are
+ * mocked. The employee is present from 2026-01-01 onwards, and the presence
+ * port doubles as the company lookup: the presence is with company COMP.
+ */
 @ExtendWith(MockitoExtension.class)
 class CreateWorkCenterServiceTest {
 
     private static final String RULE_SYSTEM_CODE = "ESP";
     private static final String EMPLOYEE_TYPE_CODE = "INTERNAL";
     private static final String EMPLOYEE_NUMBER = "EMP001";
+    private static final LocalDate PRESENCE_START = LocalDate.of(2026, 1, 1);
 
     @Mock
     private WorkCenterRepository workCenterRepository;
@@ -52,54 +61,29 @@ class CreateWorkCenterServiceTest {
     @Mock
     private RuleSystemRepository ruleSystemRepository;
     @Mock
-    private WorkCenterPresenceConsistencyValidator workCenterPresenceConsistencyValidator;
-        @Mock
-        private WorkCenterCompanyLookupPort workCenterCompanyLookupPort;
+    private WorkCenterPresenceConsistencyPort presencePort;
     @Mock
-    private EmployeeActiveCompanyLookupPort employeeActiveCompanyLookupPort;
+    private WorkCenterCompanyLookupPort workCenterCompanyLookupPort;
 
-    private WorkCenterCatalogValidator workCenterCatalogValidator;
-    private WorkCenterEmployeeCompanyDomainService workCenterEmployeeCompanyDomainService;
     private CreateWorkCenterService service;
 
     @BeforeEach
     void setUp() {
-        workCenterCatalogValidator = new TestWorkCenterCatalogValidator();
-        workCenterEmployeeCompanyDomainService = new WorkCenterEmployeeCompanyDomainService(
-                employeeActiveCompanyLookupPort,
-                workCenterCompanyLookupPort
-        );
         service = new CreateWorkCenterService(
                 workCenterRepository,
                 employeeWorkCenterLookupPort,
                 ruleSystemRepository,
-                workCenterCatalogValidator,
-                workCenterPresenceConsistencyValidator,
-                workCenterEmployeeCompanyDomainService
+                new TestWorkCenterCatalogValidator(),
+                new WorkCenterTimelineService(workCenterRepository, presencePort),
+                new WorkCenterEmployeeCompanyDomainService(presencePort, workCenterCompanyLookupPort)
         );
     }
 
     @Test
-    void createsWorkCenterAndAssignsNextNumber() {
-        CreateWorkCenterCommand command = new CreateWorkCenterCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                "madrid_hq",
-                LocalDate.of(2026, 1, 10),
-                null
-        );
-
-        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
-        when(employeeWorkCenterLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .thenReturn(Optional.of(employeeContext(10L)));
+    void createsTheFirstAssignmentAndAssignsNextNumber() {
+        givenEmployeeWithSeries();
+        givenWorkCenterOfTheEmployeeCompany("MADRID_HQ", PRESENCE_START);
         when(workCenterRepository.findMaxWorkCenterAssignmentNumberByEmployeeId(10L)).thenReturn(Optional.of(2));
-        when(workCenterRepository.existsOverlappingPeriod(10L, LocalDate.of(2026, 1, 10), null)).thenReturn(false);
-        when(workCenterRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
-        when(employeeActiveCompanyLookupPort.findActiveCompanyCode(10L, LocalDate.of(2026, 1, 10)))
-                .thenReturn(Optional.of("COMP"));
-        when(workCenterCompanyLookupPort.findCompanyCode(RULE_SYSTEM_CODE, "MADRID_HQ", LocalDate.of(2026, 1, 10)))
-                .thenReturn(Optional.of("COMP"));
         when(workCenterRepository.save(any(WorkCenter.class))).thenAnswer(invocation -> {
             WorkCenter input = invocation.getArgument(0);
             return new WorkCenter(
@@ -114,7 +98,7 @@ class CreateWorkCenterServiceTest {
             );
         });
 
-        WorkCenter created = service.create(command);
+        WorkCenter created = service.create(command("madrid_hq", PRESENCE_START, null));
 
         assertEquals(99L, created.getId());
         assertEquals(3, created.getWorkCenterAssignmentNumber());
@@ -123,234 +107,188 @@ class CreateWorkCenterServiceTest {
         ArgumentCaptor<WorkCenter> captor = ArgumentCaptor.forClass(WorkCenter.class);
         verify(workCenterRepository).save(captor.capture());
         assertEquals(3, captor.getValue().getWorkCenterAssignmentNumber());
-
-        InOrder inOrder = inOrder(employeeWorkCenterLookupPort, workCenterRepository, workCenterPresenceConsistencyValidator);
-        inOrder.verify(employeeWorkCenterLookupPort)
-                .findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER);
-        inOrder.verify(workCenterRepository).existsOverlappingPeriod(10L, LocalDate.of(2026, 1, 10), null);
-        inOrder.verify(workCenterPresenceConsistencyValidator).validatePeriodWithinPresence(
-                10L,
-                LocalDate.of(2026, 1, 10),
-                null,
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER
-        );
     }
 
     @Test
     void allowsSameDayValidity() {
-        CreateWorkCenterCommand command = new CreateWorkCenterCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                "MADRID_HQ",
-                LocalDate.of(2026, 1, 10),
-                LocalDate.of(2026, 1, 10)
-        );
-
-        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
-        when(employeeWorkCenterLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .thenReturn(Optional.of(employeeContext(10L)));
+        givenEmployeeWithSeries();
+        givenWorkCenterOfTheEmployeeCompany("MADRID_HQ", PRESENCE_START);
         when(workCenterRepository.findMaxWorkCenterAssignmentNumberByEmployeeId(10L)).thenReturn(Optional.empty());
-        when(workCenterRepository.existsOverlappingPeriod(10L, LocalDate.of(2026, 1, 10), LocalDate.of(2026, 1, 10)))
-                .thenReturn(false);
-        when(workCenterRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
-        when(employeeActiveCompanyLookupPort.findActiveCompanyCode(10L, LocalDate.of(2026, 1, 10)))
-                .thenReturn(Optional.of("COMP"));
-        when(workCenterCompanyLookupPort.findCompanyCode(RULE_SYSTEM_CODE, "MADRID_HQ", LocalDate.of(2026, 1, 10)))
-                .thenReturn(Optional.of("COMP"));
+        when(presencePort.findPresencePeriodsByEmployeeIdOrderByStartDate(10L))
+                .thenReturn(List.of(new PresencePeriod(PRESENCE_START, PRESENCE_START)));
         when(workCenterRepository.save(any(WorkCenter.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        WorkCenter created = service.create(command);
+        WorkCenter created = service.create(command("MADRID_HQ", PRESENCE_START, PRESENCE_START));
 
-        assertEquals(LocalDate.of(2026, 1, 10), created.getStartDate());
-        assertEquals(LocalDate.of(2026, 1, 10), created.getEndDate());
+        assertEquals(PRESENCE_START, created.getStartDate());
+        assertEquals(PRESENCE_START, created.getEndDate());
     }
 
+    // The five cases of backend#48, first: adding after the open one closes it the day before.
     @Test
-    void createsWorkCenterInsideValidPresencePeriod() {
-        // Confirms that when presence validation passes (validator does not throw),
-        // the work center assignment is persisted successfully.
-        CreateWorkCenterCommand command = new CreateWorkCenterCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                "MAIN_OFFICE",
-                LocalDate.of(2026, 2, 1),
-                LocalDate.of(2026, 6, 30)
-        );
-
-        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
-        when(employeeWorkCenterLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .thenReturn(Optional.of(employeeContext(10L)));
-        when(workCenterRepository.findMaxWorkCenterAssignmentNumberByEmployeeId(10L)).thenReturn(Optional.empty());
-        when(workCenterRepository.existsOverlappingPeriod(
-                        10L, LocalDate.of(2026, 2, 1), LocalDate.of(2026, 6, 30)))
-                .thenReturn(false);
-        when(workCenterRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
-        when(employeeActiveCompanyLookupPort.findActiveCompanyCode(10L, LocalDate.of(2026, 2, 1)))
-                .thenReturn(Optional.of("COMP"));
-        when(workCenterCompanyLookupPort.findCompanyCode(RULE_SYSTEM_CODE, "MAIN_OFFICE", LocalDate.of(2026, 2, 1)))
-                .thenReturn(Optional.of("COMP"));
-        when(workCenterRepository.save(any(WorkCenter.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        // workCenterPresenceConsistencyValidator.validatePeriodWithinPresence is a void mock that does not throw,
-        // simulating a presence period that fully contains [2026-02-01, 2026-06-30].
-
-        WorkCenter created = service.create(command);
-
-        assertEquals(1, created.getWorkCenterAssignmentNumber());
-        assertEquals("MAIN_OFFICE", created.getWorkCenterCode());
-        assertEquals(LocalDate.of(2026, 2, 1), created.getStartDate());
-        assertEquals(LocalDate.of(2026, 6, 30), created.getEndDate());
-        verify(workCenterPresenceConsistencyValidator).validatePeriodWithinPresence(
-                10L,
-                LocalDate.of(2026, 2, 1),
-                LocalDate.of(2026, 6, 30),
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER
-        );
-        verify(workCenterRepository).save(any(WorkCenter.class));
-    }
-
-    @Test
-    void rejectsOverlappingWorkCenterPeriod() {
-        CreateWorkCenterCommand command = new CreateWorkCenterCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                "MADRID_HQ",
-                LocalDate.of(2026, 1, 10),
-                null
-        );
-
-        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
-        when(employeeWorkCenterLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .thenReturn(Optional.of(employeeContext(10L)));
+    void addingAfterTheOpenOneClosesItTheDayBeforeInsteadOfRejectingAnOverlap() {
+        WorkCenter open = workCenter(1, "MADRID_HQ", PRESENCE_START, null);
+        givenEmployeeWithSeries(open);
+        givenWorkCenterOfTheEmployeeCompany("BARCELONA_HQ", LocalDate.of(2026, 3, 1));
         when(workCenterRepository.findMaxWorkCenterAssignmentNumberByEmployeeId(10L)).thenReturn(Optional.of(1));
-        when(workCenterRepository.existsOverlappingPeriod(10L, LocalDate.of(2026, 1, 10), null)).thenReturn(true);
+        when(workCenterRepository.findByEmployeeIdAndWorkCenterAssignmentNumber(10L, 1)).thenReturn(Optional.of(open));
+        when(workCenterRepository.save(any(WorkCenter.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThrows(WorkCenterOverlapException.class, () -> service.create(command));
+        WorkCenter created = service.create(command("barcelona_hq", LocalDate.of(2026, 3, 1), null));
+
+        assertEquals(2, created.getWorkCenterAssignmentNumber());
+        assertEquals(LocalDate.of(2026, 3, 1), created.getStartDate());
+        assertNull(created.getEndDate());
+
+        ArgumentCaptor<WorkCenter> saved = ArgumentCaptor.forClass(WorkCenter.class);
+        verify(workCenterRepository, org.mockito.Mockito.times(2)).save(saved.capture());
+        WorkCenter closed = saved.getAllValues().get(0);
+        assertEquals(1, closed.getWorkCenterAssignmentNumber());
+        assertEquals("MADRID_HQ", closed.getWorkCenterCode());
+        assertEquals(PRESENCE_START, closed.getStartDate());
+        assertEquals(LocalDate.of(2026, 2, 28), closed.getEndDate());
+        assertEquals(2, saved.getAllValues().get(1).getWorkCenterAssignmentNumber());
+    }
+
+    @Test
+    void rejectsAnOverlapWithAnAssignmentTheNewOneDoesNotStartInsideOf() {
+        WorkCenter first = workCenter(1, "MADRID_HQ", PRESENCE_START, LocalDate.of(2026, 1, 31));
+        WorkCenter second = workCenter(2, "MADRID_HQ", LocalDate.of(2026, 2, 1), null);
+        givenEmployeeWithSeries(first, second);
+        givenWorkCenterOfTheEmployeeCompany("BARCELONA_HQ", LocalDate.of(2026, 1, 15));
+        when(workCenterRepository.findMaxWorkCenterAssignmentNumberByEmployeeId(10L)).thenReturn(Optional.of(2));
+
+        WorkCenterOverlapException ex = assertThrows(
+                WorkCenterOverlapException.class,
+                () -> service.create(command("BARCELONA_HQ", LocalDate.of(2026, 1, 15), LocalDate.of(2026, 2, 10)))
+        );
+
+        assertEquals(List.of(new WorkCenterPeriod(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 10))), ex.overlaps());
         verify(workCenterRepository, never()).save(any(WorkCenter.class));
     }
 
     @Test
     void rejectsInvalidCatalogValue() {
-        CreateWorkCenterCommand command = new CreateWorkCenterCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                "bad",
-                LocalDate.of(2026, 1, 10),
-                null
+        whenEmployeeExists();
+
+        assertThrows(
+                WorkCenterCatalogValueInvalidException.class,
+                () -> service.create(command("bad", PRESENCE_START, null))
         );
-
-        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
-        when(employeeWorkCenterLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .thenReturn(Optional.of(employeeContext(10L)));
-
-        assertThrows(WorkCenterCatalogValueInvalidException.class, () -> service.create(command));
+        verify(workCenterRepository, never()).save(any(WorkCenter.class));
     }
 
     @Test
     void rejectsWhenOutsidePresenceHistory() {
-        CreateWorkCenterCommand command = new CreateWorkCenterCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                "MADRID_HQ",
-                LocalDate.of(2026, 1, 10),
-                null
-        );
-
-        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
-        when(employeeWorkCenterLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .thenReturn(Optional.of(employeeContext(10L)));
+        givenEmployeeWithSeries();
+        givenWorkCenterOfTheEmployeeCompany("MADRID_HQ", LocalDate.of(2025, 12, 1));
         when(workCenterRepository.findMaxWorkCenterAssignmentNumberByEmployeeId(10L)).thenReturn(Optional.empty());
-        when(workCenterRepository.existsOverlappingPeriod(10L, LocalDate.of(2026, 1, 10), null)).thenReturn(false);
 
-        doThrow(new WorkCenterOutsidePresencePeriodException(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                LocalDate.of(2026, 1, 10),
-                null
-        )).when(workCenterPresenceConsistencyValidator).validatePeriodWithinPresence(
-                10L,
-                LocalDate.of(2026, 1, 10),
-                null,
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER
+        assertThrows(
+                WorkCenterOutsidePresencePeriodException.class,
+                () -> service.create(command("MADRID_HQ", LocalDate.of(2025, 12, 1), null))
         );
-
-        assertThrows(WorkCenterOutsidePresencePeriodException.class, () -> service.create(command));
+        verify(workCenterRepository, never()).save(any(WorkCenter.class));
     }
 
     @Test
-    void rejectsWhenCoverageValidationFails() {
-        CreateWorkCenterCommand command = new CreateWorkCenterCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                "MADRID_HQ",
-                LocalDate.of(2026, 1, 10),
-                null
+    void rejectsAnAddThatLeavesAGapNamingTheGapAndTheNeighbourToStretch() {
+        WorkCenter closed = workCenter(1, "MADRID_HQ", PRESENCE_START, LocalDate.of(2026, 1, 31));
+        givenEmployeeWithSeries(closed);
+        givenWorkCenterOfTheEmployeeCompany("BARCELONA_HQ", LocalDate.of(2026, 3, 1));
+        when(workCenterRepository.findMaxWorkCenterAssignmentNumberByEmployeeId(10L)).thenReturn(Optional.of(1));
+
+        WorkCenterPresenceCoverageGapException ex = assertThrows(
+                WorkCenterPresenceCoverageGapException.class,
+                () -> service.create(command("BARCELONA_HQ", LocalDate.of(2026, 3, 1), null))
         );
 
-        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
-        when(employeeWorkCenterLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .thenReturn(Optional.of(employeeContext(10L)));
-        when(workCenterRepository.findMaxWorkCenterAssignmentNumberByEmployeeId(10L)).thenReturn(Optional.empty());
-        when(workCenterRepository.existsOverlappingPeriod(10L, LocalDate.of(2026, 1, 10), null)).thenReturn(false);
-        when(workCenterRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of());
-        when(employeeActiveCompanyLookupPort.findActiveCompanyCode(10L, LocalDate.of(2026, 1, 10)))
-                .thenReturn(Optional.of("COMP"));
-        when(workCenterCompanyLookupPort.findCompanyCode(RULE_SYSTEM_CODE, "MADRID_HQ", LocalDate.of(2026, 1, 10)))
-                .thenReturn(Optional.of("COMP"));
+        assertEquals(List.of(new WorkCenterPeriod(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28))), ex.gaps());
+        assertEquals(
+                List.of(
+                        new WorkCenterOccurrence(1, PRESENCE_START, LocalDate.of(2026, 1, 31)),
+                        new WorkCenterOccurrence(null, LocalDate.of(2026, 3, 1), null)
+                ),
+                ex.stretchCandidates()
+        );
+        verify(workCenterRepository, never()).save(any(WorkCenter.class));
+    }
 
-        doThrow(new WorkCenterPresenceCoverageGapException(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .when(workCenterPresenceConsistencyValidator)
-                .validatePresenceCoverageIfRequired(
-                        any(Long.class),
-                        org.mockito.ArgumentMatchers.<List<WorkCenter>>any(),
-                        any(String.class),
-                        any(String.class),
-                        any(String.class)
-                );
+    // What the old EXACT_START replaced silently is now a rejection that names the
+    // assignment to correct (backend#52), and nothing is persisted (backend#58).
+    @Test
+    void rejectsAnAddOnTheStartDateOfAnExistingOneAsItsCorrectionAndPersistsNothing() {
+        WorkCenter open = workCenter(1, "MADRID_HQ", PRESENCE_START, null);
+        givenEmployeeWithSeries(open);
+        givenWorkCenterOfTheEmployeeCompany("BARCELONA_HQ", PRESENCE_START);
+        when(workCenterRepository.findMaxWorkCenterAssignmentNumberByEmployeeId(10L)).thenReturn(Optional.of(1));
 
-        assertThrows(WorkCenterPresenceCoverageGapException.class, () -> service.create(command));
+        WorkCenterIsACorrectionException ex = assertThrows(
+                WorkCenterIsACorrectionException.class,
+                () -> service.create(command("BARCELONA_HQ", PRESENCE_START, null))
+        );
+
+        assertEquals(new WorkCenterOccurrence(1, PRESENCE_START, null), ex.correctedOccurrence());
+        assertEquals(new WorkCenterPeriod(PRESENCE_START, null), ex.requested());
         verify(workCenterRepository, never()).save(any(WorkCenter.class));
     }
 
     @Test
     void rejectsWhenWorkCenterBelongsToDifferentCompany() {
-        CreateWorkCenterCommand command = new CreateWorkCenterCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                "MADRID_HQ",
-                LocalDate.of(2026, 1, 10),
-                null
-        );
-
-        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
-        when(employeeWorkCenterLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .thenReturn(Optional.of(employeeContext(10L)));
+        whenEmployeeExists();
         when(workCenterRepository.findMaxWorkCenterAssignmentNumberByEmployeeId(10L)).thenReturn(Optional.empty());
-        when(workCenterRepository.existsOverlappingPeriod(10L, LocalDate.of(2026, 1, 10), null)).thenReturn(false);
-        when(employeeActiveCompanyLookupPort.findActiveCompanyCode(10L, LocalDate.of(2026, 1, 10)))
-                .thenReturn(Optional.of("COMP"));
-        when(workCenterCompanyLookupPort.findCompanyCode(RULE_SYSTEM_CODE, "MADRID_HQ", LocalDate.of(2026, 1, 10)))
+        when(presencePort.findActiveCompanyCode(10L, PRESENCE_START)).thenReturn(Optional.of("COMP"));
+        when(workCenterCompanyLookupPort.findCompanyCode(RULE_SYSTEM_CODE, "MADRID_HQ", PRESENCE_START))
                 .thenReturn(Optional.of("OTHER"));
 
-        assertThrows(WorkCenterCompanyMismatchException.class, () -> service.create(command));
+        assertThrows(
+                WorkCenterCompanyMismatchException.class,
+                () -> service.create(command("MADRID_HQ", PRESENCE_START, null))
+        );
         verify(workCenterRepository, never()).save(any(WorkCenter.class));
     }
 
-    private EmployeeWorkCenterContext employeeContext(Long employeeId) {
-        return new EmployeeWorkCenterContext(employeeId, RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER);
+    private CreateWorkCenterCommand command(String workCenterCode, LocalDate startDate, LocalDate endDate) {
+        return new CreateWorkCenterCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                workCenterCode,
+                startDate,
+                endDate
+        );
+    }
+
+    private void givenEmployeeWithSeries(WorkCenter... occurrences) {
+        whenEmployeeExists();
+        when(workCenterRepository.findByEmployeeIdOrderByStartDate(10L)).thenReturn(List.of(occurrences));
+        when(presencePort.findPresencePeriodsByEmployeeIdOrderByStartDate(10L))
+                .thenReturn(List.of(new PresencePeriod(PRESENCE_START, null)));
+    }
+
+    private void givenWorkCenterOfTheEmployeeCompany(String workCenterCode, LocalDate referenceDate) {
+        when(presencePort.findActiveCompanyCode(10L, referenceDate)).thenReturn(Optional.of("COMP"));
+        when(workCenterCompanyLookupPort.findCompanyCode(RULE_SYSTEM_CODE, workCenterCode, referenceDate))
+                .thenReturn(Optional.of("COMP"));
+    }
+
+    private void whenEmployeeExists() {
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
+        when(employeeWorkCenterLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(new EmployeeWorkCenterContext(10L, RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER)));
+    }
+
+    private static WorkCenter workCenter(int number, String workCenterCode, LocalDate startDate, LocalDate endDate) {
+        return new WorkCenter(
+                (long) number,
+                10L,
+                number,
+                workCenterCode,
+                startDate,
+                endDate,
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
     }
 
     private RuleSystem ruleSystem(String code) {
