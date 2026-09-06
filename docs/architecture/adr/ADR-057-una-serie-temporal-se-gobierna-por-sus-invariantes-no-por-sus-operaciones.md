@@ -92,6 +92,24 @@ Dos, y son separables:
 Cada vertical declara si su cobertura es obligatoria. El planificador ya se llama `Strong`: la
 variante débil estaba prevista y aquí se nombra.
 
+**Y la cobertura de cada una se decide aquí, no en el issue que la migre.** Cada línea lleva su
+motivo, porque sin motivo la siguiente persona la deduce, y deducirla mal es fácil:
+
+| Vertical | Cobertura | Por qué |
+|---|---|---|
+| `contract` | obligatoria | un empleado presente sin contrato no es un estado válido |
+| `working_time` | obligatoria | sin jornada no hay nada que prorratear |
+| `labor_classification` | obligatoria | de ella salen las tablas de convenio que el cálculo necesita |
+| `address` (domicilio) | obligatoria | obligación legal de declarar domicilio |
+| `address` (fiscal, notificaciones) | opcional | se tienen si se declaran |
+| `workcenter` | obligatoria | comprobado sobre mil empleados: los datos ya la cumplían |
+| `cost_center` | **opcional** | es imputación analítica, no un requisito legal ni del cálculo |
+
+La última costó aprenderla. Se dio por obligatoria en una tabla de un issue, sin justificarla, y la
+comprobación previa devolvió **1000 de 1003 empleados sin reparto**: el producto llevaba funcionando
+así desde siempre. Una regla que el 99,7 % de los datos incumple no es una regla del dominio, es una
+regla inventada — y el aviso estaba en los datos antes de escribir una línea de código.
+
 Y hay un tercer eje declarable que salió al migrar `address`: **si las ocurrencias pueden sobrevivir
 a la presencia**. La jornada no —fuera de la presencia no hay jornada que valga—, pero una dirección
 sí: alguien que causa baja sigue teniendo un domicilio al que enviarle un certificado, y en la base
