@@ -3,18 +3,23 @@ package com.b4rrhh.employee.cost_center.application.usecase;
 import com.b4rrhh.employee.cost_center.application.port.CostCenterPresenceConsistencyPort;
 import com.b4rrhh.employee.cost_center.application.port.EmployeeCostCenterContext;
 import com.b4rrhh.employee.cost_center.application.port.EmployeeCostCenterLookupPort;
+import com.b4rrhh.employee.cost_center.application.port.PresencePeriod;
 import com.b4rrhh.employee.cost_center.application.service.CostCenterCatalogValidator;
+import com.b4rrhh.employee.cost_center.application.service.CostCenterTimelineService;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterCatalogValueInvalidException;
-import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionConflictException;
+import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionCoverageGapException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionInvalidException;
+import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionIsACorrectionException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionPercentageExceededException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterEmployeeNotFoundException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterOutsidePresencePeriodException;
 import com.b4rrhh.employee.cost_center.domain.exception.InvalidAllocationPercentageException;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterAllocation;
+import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionPeriod;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow;
 import com.b4rrhh.employee.cost_center.domain.port.CostCenterRepository;
 import com.b4rrhh.employee.cost_center.domain.service.CostCenterDistributionTimelineValidator;
+import com.b4rrhh.employee.cost_center.domain.service.CostCenterDistributionWindowGrouper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,6 +40,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Adding a distribution window through the temporal component (ADR-057).
+ * The timeline service is real; the repository and the presence port are
+ * mocked. The employee is present from 2026-04-01 onwards.
+ */
 @ExtendWith(MockitoExtension.class)
 class CreateCostCenterDistributionServiceTest {
 
@@ -61,7 +71,11 @@ class CreateCostCenterDistributionServiceTest {
                 costCenterRepository,
                 employeeCostCenterLookupPort,
                 validator,
-                costCenterPresenceConsistencyPort,
+                new CostCenterTimelineService(
+                        costCenterRepository,
+                        costCenterPresenceConsistencyPort,
+                        new CostCenterDistributionWindowGrouper()
+                ),
                 timelineValidator
         );
     }
@@ -70,8 +84,7 @@ class CreateCostCenterDistributionServiceTest {
     @Test
     void createsValidSingleLineFull100Distribution() {
         givenEmployeeFound();
-        givenNoActiveDistributionAtDate();
-        givenPresenceContains();
+        givenEmptySeriesWithPresenceFromStart();
 
         CostCenterDistributionWindow window = service.create(command(
                 List.of(item("CC_A", new BigDecimal("100")))
@@ -82,14 +95,14 @@ class CreateCostCenterDistributionServiceTest {
         assertEquals(new BigDecimal("100"), window.getTotalAllocationPercentage());
         assertNull(window.getEndDate());
         verify(costCenterRepository).saveAll(any());
+        verify(costCenterRepository, never()).adjustWindowEndDate(any(), any(), any());
     }
 
     // Test 2: create valid 50/50 parallel distribution
     @Test
     void createsValid5050ParallelDistribution() {
         givenEmployeeFound();
-        givenNoActiveDistributionAtDate();
-        givenPresenceContains();
+        givenEmptySeriesWithPresenceFromStart();
 
         CostCenterDistributionWindow window = service.create(command(
                 List.of(item("CC_A", new BigDecimal("50")), item("CC_B", new BigDecimal("50")))
@@ -97,6 +110,58 @@ class CreateCostCenterDistributionServiceTest {
 
         assertEquals(2, window.getItems().size());
         assertEquals(new BigDecimal("100"), window.getTotalAllocationPercentage());
+    }
+
+    // ADR-057 §2: the add closes the window in force the day before, every line of it, instead
+    // of returning the old conflict. The two lines of that window are one occurrence.
+    @Test
+    void addingAfterTheOpenWindowClosesItTheDayBeforeWithAllItsLines() {
+        givenEmployeeFound();
+        givenSeriesWithPresenceFromStart(
+                line("CC_X", 60, START, null),
+                line("CC_Y", 40, START, null)
+        );
+
+        CostCenterDistributionWindow window = service.create(command(START.plusDays(15),
+                List.of(item("CC_A", new BigDecimal("100")))
+        ));
+
+        assertEquals(START.plusDays(15), window.getStartDate());
+        verify(costCenterRepository).adjustWindowEndDate(EMPLOYEE_ID, START, START.plusDays(14));
+        verify(costCenterRepository).saveAll(any());
+    }
+
+    // What the old conflict said ("use replace-from-date") is now a plan that names the window
+    // the add would correct (backend#52), and nothing is written.
+    @Test
+    void addingOnTheStartDateOfTheOpenWindowIsRejectedAsItsCorrection() {
+        givenEmployeeFound();
+        givenSeriesWithPresenceFromStart(line("CC_X", 100, START, null));
+
+        CostCenterDistributionIsACorrectionException ex = assertThrows(
+                CostCenterDistributionIsACorrectionException.class,
+                () -> service.create(command(List.of(item("CC_A", new BigDecimal("100")))))
+        );
+
+        assertEquals(new CostCenterDistributionPeriod(START, null), ex.correctedOccurrence());
+        verify(costCenterRepository, never()).saveAll(any());
+        verify(costCenterRepository, never()).adjustWindowEndDate(any(), any(), any());
+    }
+
+    @Test
+    void addingAClosedWindowThatLeavesTheRestOfThePresenceUncoveredIsRejectedNamingTheGap() {
+        givenEmployeeFound();
+        givenSeriesWithPresenceFromStart(line("CC_X", 100, START, null));
+
+        CostCenterDistributionCoverageGapException ex = assertThrows(
+                CostCenterDistributionCoverageGapException.class,
+                () -> service.create(command(START.plusDays(15), START.plusDays(30),
+                        List.of(item("CC_A", new BigDecimal("100")))))
+        );
+
+        assertEquals(List.of(new CostCenterDistributionPeriod(START.plusDays(31), null)), ex.gaps());
+        verify(costCenterRepository, never()).saveAll(any());
+        verify(costCenterRepository, never()).adjustWindowEndDate(any(), any(), any());
     }
 
     // Test 3: reject total percentage > 100
@@ -153,9 +218,9 @@ class CreateCostCenterDistributionServiceTest {
     @Test
     void rejectsWhenPeriodIsOutsidePresence() {
         givenEmployeeFound();
-        givenNoActiveDistributionAtDate();
-        when(costCenterPresenceConsistencyPort.existsPresenceContainingPeriod(EMPLOYEE_ID, START, null))
-                .thenReturn(false);
+        when(costCenterRepository.findByEmployeeIdOrderByStartDate(EMPLOYEE_ID)).thenReturn(List.of());
+        when(costCenterPresenceConsistencyPort.findPresencePeriodsByEmployeeIdOrderByStartDate(EMPLOYEE_ID))
+                .thenReturn(List.of(new PresencePeriod(START.plusDays(1), null)));
 
         assertThrows(CostCenterOutsidePresencePeriodException.class, () ->
                 service.create(command(
@@ -169,8 +234,7 @@ class CreateCostCenterDistributionServiceTest {
     @Test
     void windowResponseContainsNoTechnicalIds() {
         givenEmployeeFound();
-        givenNoActiveDistributionAtDate();
-        givenPresenceContains();
+        givenEmptySeriesWithPresenceFromStart();
 
         CostCenterDistributionWindow window = service.create(command(
                 List.of(item("CC_A", new BigDecimal("100")))
@@ -192,22 +256,6 @@ class CreateCostCenterDistributionServiceTest {
         );
     }
 
-    // Test for conflict when active distribution exists at startDate
-    @Test
-    void rejectsWhenActiveDistributionAlreadyExistsAtStartDate() {
-        givenEmployeeFound();
-        CostCenterAllocation existingActive = new CostCenterAllocation(
-                EMPLOYEE_ID, "CC_X", new BigDecimal("100"), START.minusDays(30), null
-        );
-        when(costCenterRepository.findActiveAtDate(EMPLOYEE_ID, START))
-                .thenReturn(List.of(existingActive));
-
-        assertThrows(CostCenterDistributionConflictException.class, () ->
-                service.create(command(List.of(item("CC_A", new BigDecimal("100")))))
-        );
-        verify(costCenterRepository, never()).saveAll(any());
-    }
-
     @Test
     void rejectsWhenNoItemsProvided() {
         assertThrows(CostCenterDistributionInvalidException.class, () ->
@@ -222,21 +270,38 @@ class CreateCostCenterDistributionServiceTest {
                 .thenReturn(Optional.of(new EmployeeCostCenterContext(EMPLOYEE_ID, RSC, ETC, EN)));
     }
 
-    private void givenNoActiveDistributionAtDate() {
-        when(costCenterRepository.findActiveAtDate(EMPLOYEE_ID, START)).thenReturn(List.of());
+    private void givenEmptySeriesWithPresenceFromStart() {
+        givenSeriesWithPresenceFromStart();
     }
 
-    private void givenPresenceContains() {
-        when(costCenterPresenceConsistencyPort.existsPresenceContainingPeriod(EMPLOYEE_ID, START, null))
-                .thenReturn(true);
+    private void givenSeriesWithPresenceFromStart(CostCenterAllocation... lines) {
+        when(costCenterRepository.findByEmployeeIdOrderByStartDate(EMPLOYEE_ID)).thenReturn(List.of(lines));
+        when(costCenterPresenceConsistencyPort.findPresencePeriodsByEmployeeIdOrderByStartDate(EMPLOYEE_ID))
+                .thenReturn(List.of(new PresencePeriod(START, null)));
     }
 
     private CreateCostCenterDistributionCommand command(List<CostCenterDistributionItem> items) {
-        return new CreateCostCenterDistributionCommand(RSC, ETC, EN, START, items);
+        return command(START, null, items);
+    }
+
+    private CreateCostCenterDistributionCommand command(LocalDate startDate, List<CostCenterDistributionItem> items) {
+        return command(startDate, null, items);
+    }
+
+    private CreateCostCenterDistributionCommand command(
+            LocalDate startDate,
+            LocalDate endDate,
+            List<CostCenterDistributionItem> items
+    ) {
+        return new CreateCostCenterDistributionCommand(RSC, ETC, EN, startDate, endDate, items);
     }
 
     private CostCenterDistributionItem item(String code, BigDecimal percentage) {
         return new CostCenterDistributionItem(code, percentage);
+    }
+
+    private static CostCenterAllocation line(String code, int percentage, LocalDate startDate, LocalDate endDate) {
+        return new CostCenterAllocation(EMPLOYEE_ID, code, BigDecimal.valueOf(percentage), startDate, endDate);
     }
 
     private static final class TestCatalogValidator extends CostCenterCatalogValidator {

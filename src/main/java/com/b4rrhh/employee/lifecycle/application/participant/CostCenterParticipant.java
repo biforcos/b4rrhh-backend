@@ -44,7 +44,7 @@ public class CostCenterParticipant implements HireParticipant {
             ctx.setCostCenter(createCostCenterDistributionUseCase.create(
                     new CreateCostCenterDistributionCommand(
                             ctx.ruleSystemCode(), ctx.employeeTypeCode(), ctx.employeeNumber(),
-                            ctx.hireDate(), items)));
+                            ctx.hireDate(), null, items)));
         } catch (CostCenterCatalogValueInvalidException | CostCenterDistributionInvalidException ex) {
             throw new HireEmployeeCatalogValueInvalidException(ex.getMessage(), ex);
         }

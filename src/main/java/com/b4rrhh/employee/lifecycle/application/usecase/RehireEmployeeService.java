@@ -287,6 +287,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                         employeeTypeCode,
                         employeeNumber,
                         rehireDate,
+                        null,
                         command.costCenterDistribution().items().stream()
                                 .map(item -> new CostCenterDistributionItem(
                                         item.costCenterCode(),

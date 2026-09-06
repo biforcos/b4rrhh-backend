@@ -8494,6 +8494,15 @@ components:
           type: string
           format: date
           description: Start date of the new distribution window (yyyy-MM-dd).
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: >-
+            End date shared by every line of the window (yyyy-MM-dd). Omit it
+            for a window that stays open. A window added inside a closed one
+            takes the dates the user gives (ADR-057): the covering window is
+            closed the day before, and the invariants judge what is left.
         items:
           type: array
           minItems: 1

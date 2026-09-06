@@ -76,6 +76,7 @@ public class CostCenterBusinessKeyController {
                         employeeTypeCode,
                         employeeNumber,
                         request.startDate(),
+                        request.endDate(),
                         items
                 )
         );

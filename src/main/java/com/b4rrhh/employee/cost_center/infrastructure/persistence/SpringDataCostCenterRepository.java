@@ -62,4 +62,29 @@ public interface SpringDataCostCenterRepository extends JpaRepository<CostCenter
             @Param("windowStartDate") LocalDate windowStartDate,
             @Param("closeDate") LocalDate closeDate
     );
+
+    /** Every line of the window takes the end date, closed or not; null reopens the window (ADR-057). */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+            update CostCenterEntity c
+            set c.endDate = :endDate
+            where c.employeeId = :employeeId
+              and c.startDate = :windowStartDate
+            """)
+    void setEndDateForWindow(
+            @Param("employeeId") Long employeeId,
+            @Param("windowStartDate") LocalDate windowStartDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+            delete from CostCenterEntity c
+            where c.employeeId = :employeeId
+              and c.startDate = :windowStartDate
+            """)
+    void deleteAllForWindow(
+            @Param("employeeId") Long employeeId,
+            @Param("windowStartDate") LocalDate windowStartDate
+    );
 }

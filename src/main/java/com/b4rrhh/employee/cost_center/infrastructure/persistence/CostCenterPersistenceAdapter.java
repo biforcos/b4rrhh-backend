@@ -57,6 +57,18 @@ public class CostCenterPersistenceAdapter implements CostCenterRepository {
         springDataCostCenterRepository.closeAllOpenForWindow(employeeId, windowStartDate, closeDate);
     }
 
+    @Override
+    @Transactional
+    public void adjustWindowEndDate(Long employeeId, LocalDate windowStartDate, LocalDate endDate) {
+        springDataCostCenterRepository.setEndDateForWindow(employeeId, windowStartDate, endDate);
+    }
+
+    @Override
+    @Transactional
+    public void deleteAllForWindow(Long employeeId, LocalDate windowStartDate) {
+        springDataCostCenterRepository.deleteAllForWindow(employeeId, windowStartDate);
+    }
+
     private CostCenterAllocation toDomain(CostCenterEntity entity) {
         return new CostCenterAllocation(
                 entity.getEmployeeId(),

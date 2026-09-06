@@ -29,7 +29,16 @@ import com.b4rrhh.employee.contract.infrastructure.persistence.ContractPresenceC
 import com.b4rrhh.employee.contract.infrastructure.persistence.ContractRuleEntityUsageParticipant;
 import com.b4rrhh.employee.contract.infrastructure.persistence.ContractSubtypeRelationLookupAdapter;
 import com.b4rrhh.employee.contract.infrastructure.persistence.EmployeeContractLookupAdapter;
+import com.b4rrhh.employee.cost_center.application.service.CostCenterCatalogValidator;
+import com.b4rrhh.employee.cost_center.application.service.CostCenterTimelineService;
+import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistributionService;
+import com.b4rrhh.employee.cost_center.application.usecase.UpdateCostCenterDistributionService;
+import com.b4rrhh.employee.cost_center.domain.service.CostCenterDistributionTimelineValidator;
+import com.b4rrhh.employee.cost_center.domain.service.CostCenterDistributionWindowGrouper;
+import com.b4rrhh.employee.cost_center.infrastructure.persistence.CostCenterPersistenceAdapter;
+import com.b4rrhh.employee.cost_center.infrastructure.persistence.CostCenterPresenceConsistencyAdapter;
 import com.b4rrhh.employee.cost_center.infrastructure.persistence.CostCenterRuleEntityUsageParticipant;
+import com.b4rrhh.employee.cost_center.infrastructure.persistence.EmployeeCostCenterLookupAdapter;
 import com.b4rrhh.employee.identifier.infrastructure.persistence.IdentifierRuleEntityUsageParticipant;
 import com.b4rrhh.employee.journey.infrastructure.persistence.EmployeeJourneyLookupAdapter;
 import com.b4rrhh.employee.journey.infrastructure.persistence.JourneyContractReadAdapter;
@@ -196,6 +205,16 @@ import java.lang.annotation.Target;
         WorkCenterPersistenceAdapter.class,
         WorkCenterPresenceConsistencyAdapter.class,
         EmployeeWorkCenterLookupAdapter.class,
+        // cost_center: la serie por empleado con la ocurrencia compuesta (backend#54)
+        CreateCostCenterDistributionService.class,
+        UpdateCostCenterDistributionService.class,
+        CostCenterTimelineService.class,
+        CostCenterCatalogValidator.class,
+        CostCenterDistributionTimelineValidator.class,
+        CostCenterDistributionWindowGrouper.class,
+        CostCenterPersistenceAdapter.class,
+        CostCenterPresenceConsistencyAdapter.class,
+        EmployeeCostCenterLookupAdapter.class,
         // address: la serie por (empleado, tipo) sobre el componente temporal (backend#53)
         CreateAddressService.class,
         UpdateAddressService.class,

@@ -95,6 +95,40 @@ class SpringDataCostCenterRepositoryWindowIntegrationTest {
         assertEquals(alreadyClosed, after.get(0).getEndDate()); // unchanged
     }
 
+    // ADR-057: reopening the previous window moves closed lines too, and every line of the window.
+    @Test
+    void setEndDateForWindowMovesClosedLinesAndReopensThemWithNull() {
+        Long empleado = DatosDePrueba.empleado(jdbcTemplate);
+        LocalDate windowStart = LocalDate.of(2026, 1, 1);
+        LocalDate closed = LocalDate.of(2026, 1, 31);
+
+        repository.saveAndFlush(entity(empleado, "CC_A", new BigDecimal("60"), windowStart, closed));
+        repository.saveAndFlush(entity(empleado, "CC_B", new BigDecimal("40"), windowStart, closed));
+
+        repository.setEndDateForWindow(empleado, windowStart, null);
+        repository.flush();
+
+        List<CostCenterEntity> after = repository.findByEmployeeIdAndStartDate(empleado, windowStart);
+        assertEquals(2, after.size());
+        after.forEach(e -> assertEquals(null, e.getEndDate()));
+    }
+
+    @Test
+    void deleteAllForWindowRemovesOnlyTheLinesOfThatWindow() {
+        Long empleado = DatosDePrueba.empleado(jdbcTemplate);
+        LocalDate first = LocalDate.of(2026, 1, 1);
+        LocalDate second = LocalDate.of(2026, 2, 1);
+        repository.saveAndFlush(entity(empleado, "CC_A", new BigDecimal("100"), first, LocalDate.of(2026, 1, 31)));
+        repository.saveAndFlush(entity(empleado, "CC_A", new BigDecimal("60"), second, null));
+        repository.saveAndFlush(entity(empleado, "CC_B", new BigDecimal("40"), second, null));
+
+        repository.deleteAllForWindow(empleado, second);
+        repository.flush();
+
+        assertTrue(repository.findByEmployeeIdAndStartDate(empleado, second).isEmpty());
+        assertEquals(1, repository.findByEmployeeIdAndStartDate(empleado, first).size());
+    }
+
     @Test
     void findActiveAtDateReturnsNothingBeforeWindowStart() {
         Long empleado = DatosDePrueba.empleado(jdbcTemplate);
