@@ -67,7 +67,7 @@ class LaborClassificationGrupoCotizacionEndToEndTest {
                 "HIRING",
                 "ES01",
                 "MAIN_OFFICE",
-                new HireEmployeeCommand.HireEmployeeContractCommand("IND", "FT1"),
+                new HireEmployeeCommand.HireEmployeeContractCommand("100", "01"),
                 new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("99002405011982", "99002405-G1"),
                 null,
                 new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("100"))

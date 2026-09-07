@@ -33,8 +33,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * The five cases of backend#48, plus the correction asked for as an add
  * (backend#52), against the real schema: the contract series is written
  * through the temporal component and the invariants of ADR-057 decide. The
- * catalog is the seeded one: IND/FT1 and TMP/PT1 are real ESP codes with
- * their relation (V29/V52).
+ * catalog is the seeded one: 100/01 and 401/01 are legal ESP contract types
+ * with their relation (V82).
+ *
+ * <p>ESP only has one contract subtype, so a pair only ever differs in the
+ * type. The correction case still proves the codes are replaced, but through
+ * the type alone (backend#76).
  */
 @TestSobreEsquemaReal
 class ContractTimelineFlywayIntegrationTest {
@@ -71,9 +75,9 @@ class ContractTimelineFlywayIntegrationTest {
 
     @Test
     void addingFromTheSixteenthClosesTheOpenOneOnTheFifteenthInsteadOfReturningAConflict() {
-        createService.create(create("IND", "FT1", DAY_1, null));
+        createService.create(create("100", "01", DAY_1, null));
 
-        Contract second = createService.create(create("TMP", "PT1", DAY_16, null));
+        Contract second = createService.create(create("401", "01", DAY_16, null));
         entityManager.flush();
 
         assertEquals(DAY_16, second.getStartDate());
@@ -81,17 +85,17 @@ class ContractTimelineFlywayIntegrationTest {
         assertEquals(2, persistedCount());
         assertEquals(DAY_15, persistedEndDate(DAY_1));
         assertNull(persistedEndDate(DAY_16));
-        assertEquals("IND", persistedCode(DAY_1));
-        assertEquals("TMP", persistedCode(DAY_16));
+        assertEquals("100", persistedCode(DAY_1));
+        assertEquals("401", persistedCode(DAY_16));
     }
 
     @Test
     void addingOneThatLeavesAGapIsRejectedSayingWhichGap() {
-        createService.create(create("IND", "FT1", DAY_1, null));
+        createService.create(create("100", "01", DAY_1, null));
 
         ContractCoverageIncompleteException ex = assertThrows(
                 ContractCoverageIncompleteException.class,
-                () -> createService.create(create("TMP", "PT1", FEB_1, LocalDate.of(2026, 2, 28)))
+                () -> createService.create(create("401", "01", FEB_1, LocalDate.of(2026, 2, 28)))
         );
         entityManager.flush();
 
@@ -102,8 +106,8 @@ class ContractTimelineFlywayIntegrationTest {
 
     @Test
     void deletingTheLastOneReopensThePreviousOne() {
-        createService.create(create("IND", "FT1", DAY_1, null));
-        createService.create(create("TMP", "PT1", DAY_16, null));
+        createService.create(create("100", "01", DAY_1, null));
+        createService.create(create("401", "01", DAY_16, null));
 
         deleteService.delete(new DeleteContractCommand(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_16));
         entityManager.flush();
@@ -114,9 +118,9 @@ class ContractTimelineFlywayIntegrationTest {
 
     @Test
     void deletingOneInTheMiddleIsRejectedSayingWhichNeighbourToStretch() {
-        createService.create(create("IND", "FT1", DAY_1, null));
-        createService.create(create("TMP", "PT1", DAY_16, null));
-        createService.create(create("IND", "FT1", FEB_1, null));
+        createService.create(create("100", "01", DAY_1, null));
+        createService.create(create("401", "01", DAY_16, null));
+        createService.create(create("100", "01", FEB_1, null));
 
         ContractCoverageIncompleteException ex = assertThrows(
                 ContractCoverageIncompleteException.class,
@@ -137,13 +141,13 @@ class ContractTimelineFlywayIntegrationTest {
 
     @Test
     void correctingTheDatesIsJudgedByTheSameInvariants() {
-        createService.create(create("IND", "FT1", DAY_1, null));
-        createService.create(create("TMP", "PT1", DAY_16, null));
+        createService.create(create("100", "01", DAY_1, null));
+        createService.create(create("401", "01", DAY_16, null));
 
         ContractCoverageIncompleteException ex = assertThrows(
                 ContractCoverageIncompleteException.class,
                 () -> updateService.update(new UpdateContractCommand(
-                        RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_16, FEB_1, null, "TMP", "PT1"
+                        RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_16, FEB_1, null, "401", "01"
                 ))
         );
         entityManager.flush();
@@ -156,7 +160,7 @@ class ContractTimelineFlywayIntegrationTest {
 
     @Test
     void thePlanCanBeAskedForWithoutApplyingIt() {
-        createService.create(create("IND", "FT1", DAY_1, null));
+        createService.create(create("100", "01", DAY_1, null));
 
         ContractPlan plan = planService.plan(new PlanContractChangeCommand(
                 RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, TimelineOperation.ADD, null, DAY_16, null
@@ -176,23 +180,23 @@ class ContractTimelineFlywayIntegrationTest {
 
     @Test
     void addingOnTheStartDateOfTheExistingOneIsRejectedAsItsCorrectionAndPersistsNothing() {
-        createService.create(create("IND", "FT1", DAY_1, null));
+        createService.create(create("100", "01", DAY_1, null));
 
         ContractIsACorrectionException ex = assertThrows(
                 ContractIsACorrectionException.class,
-                () -> createService.create(create("TMP", "PT1", DAY_1, null))
+                () -> createService.create(create("401", "01", DAY_1, null))
         );
         entityManager.flush();
 
         assertEquals(new ContractPeriod(DAY_1, null), ex.correctedOccurrence());
         assertTrue(ex.getMessage().contains("correct"), ex.getMessage());
         assertEquals(1, persistedCount());
-        assertEquals("IND", persistedCode(DAY_1));
+        assertEquals("100", persistedCode(DAY_1));
     }
 
     @Test
     void thePlanSaysAnAddOnAnExistingStartDateIsACorrectionOfThatContract() {
-        createService.create(create("IND", "FT1", DAY_1, null));
+        createService.create(create("100", "01", DAY_1, null));
 
         ContractPlan plan = planService.plan(new PlanContractChangeCommand(
                 RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, TimelineOperation.ADD, null, DAY_1, DAY_15
@@ -211,17 +215,17 @@ class ContractTimelineFlywayIntegrationTest {
     // The correction the plan proposes, asked for as such, is the PUT.
     @Test
     void theCorrectionAskedForAsSuchReplacesTheCodesWithoutADuplicateRow() {
-        createService.create(create("IND", "FT1", DAY_1, null));
+        createService.create(create("100", "01", DAY_1, null));
 
         Contract corrected = updateService.update(new UpdateContractCommand(
-                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_1, DAY_1, null, "TMP", "PT1"
+                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_1, DAY_1, null, "401", "01"
         ));
         entityManager.flush();
 
-        assertEquals("TMP", corrected.getContractCode());
+        assertEquals("401", corrected.getContractCode());
         assertEquals(1, persistedCount());
-        assertEquals("TMP", persistedCode(DAY_1));
-        assertEquals("PT1", persistedSubtypeCode(DAY_1));
+        assertEquals("401", persistedCode(DAY_1));
+        assertEquals("01", persistedSubtypeCode(DAY_1));
     }
 
     @Test
@@ -239,7 +243,7 @@ class ContractTimelineFlywayIntegrationTest {
                 """
                 insert into employee.contract (
                     employee_id, contract_code, contract_subtype_code, start_date, end_date, created_at, updated_at
-                ) values (?, 'IND', 'FT1', ?, ?, current_timestamp, current_timestamp)
+                ) values (?, '100', '01', ?, ?, current_timestamp, current_timestamp)
                 """,
                 employeeId,
                 startDate,

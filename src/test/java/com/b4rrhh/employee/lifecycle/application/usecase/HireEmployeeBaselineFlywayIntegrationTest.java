@@ -28,7 +28,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 // una vez y clonado para este contexto (ver EsquemaReal). Antes esto corria
 // contra H2 con un DDL de fundacion escrito a mano mas un subconjunto de
 // semillas; el esquema real trae las semillas baseline (V49-V52), el
-// convenio real 99002405011982 con sus tres grupos y su perfil (V61, V87) y
+// convenio real 99002405011982 con sus tres grupos y su perfil (V61, V87),
+// los diez tipos de contrato legales de ESP con su subtipo 01 (V82) y
 // la numeracion de empleados de ESP (V99).
 @ContextConfiguration(initializers = EsquemaRealInitializer.class)
 class HireEmployeeBaselineFlywayIntegrationTest {
@@ -136,8 +137,8 @@ class HireEmployeeBaselineFlywayIntegrationTest {
                 "MAIN_OFFICE",
                 "99002405011982",
                 "99002405-G3",
-                "IND",
-                "FT1",
+                "100",
+                "01",
                 new BigDecimal("100")
             ),
             new HireScenario(
@@ -150,8 +151,8 @@ class HireEmployeeBaselineFlywayIntegrationTest {
                 "BRANCH_NORTH",
                 "99002405011982",
                 "99002405-G1",
-                "IND",
-                "FT1",
+                "100",
+                "01",
                 new BigDecimal("100")
             ),
             new HireScenario(
@@ -164,8 +165,8 @@ class HireEmployeeBaselineFlywayIntegrationTest {
                 "MAIN_OFFICE",
                 "99002405011982",
                 "99002405-G3",
-                "TMP",
-                "PT1",
+                "401",
+                "01",
                 new BigDecimal("60")
             ),
             new HireScenario(
@@ -178,8 +179,8 @@ class HireEmployeeBaselineFlywayIntegrationTest {
                 "BRANCH_SOUTH",
                 "99002405011982",
                 "99002405-G2",
-                "IND",
-                "FT1",
+                "100",
+                "01",
                 new BigDecimal("100")
             )
         );
