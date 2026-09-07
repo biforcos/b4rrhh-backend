@@ -67,8 +67,8 @@ class JourneyReadPersistenceAdapterIntegrationTest {
         insertPresence(empleado, 2, "C002", LocalDate.of(2026, 2, 1), null);
         insertPresence(empleado, 1, "C001", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31));
 
-        insertContract(empleado, "TMP", "PT1", LocalDate.of(2026, 2, 1), null);
-        insertContract(empleado, "IND", "FT1", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31));
+        insertContract(empleado, "401", "01", LocalDate.of(2026, 2, 1), null);
+        insertContract(empleado, "100", "01", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31));
 
         insertLaborClassification(empleado, "AGR_B", "CAT_B", LocalDate.of(2026, 2, 1), null);
         insertLaborClassification(empleado, "AGR_A", "CAT_A", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31));
