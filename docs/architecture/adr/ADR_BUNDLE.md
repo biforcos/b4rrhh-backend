@@ -1,7 +1,6 @@
 # ADR Bundle
 
 > Fichero generado automáticamente. No editar a mano.
-> Fecha de generación: 2026-09-07 11:23:53
 
 ---
 

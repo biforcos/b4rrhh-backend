@@ -19,7 +19,6 @@ El directorio por defecto es el del propio script.
 
 import re
 import sys
-from datetime import datetime
 from pathlib import Path
 
 OUT_NAME = "ADR_BUNDLE.md"
@@ -44,12 +43,10 @@ def main() -> int:
         key=sort_key,
     )
 
-    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     parts = [
         "# ADR Bundle\n",
         "\n",
         "> Fichero generado automáticamente. No editar a mano.\n",
-        f"> Fecha de generación: {generated_at}\n",
         "\n",
         "---\n",
         "\n",
