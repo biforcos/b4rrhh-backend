@@ -204,6 +204,21 @@ class UpdateWorkingTimeServiceTest {
         );
     }
 
+    // This vertical always demanded the start date, and it is the one the
+    // other four were made to look like (backend#69). The test is here so
+    // that stays true: it is the only reason the mistake that ate three
+    // screens' edits could not happen on this screen.
+    @Test
+    void rejectsACorrectionThatDoesNotSayWhereTheWorkingTimeStarts() {
+        IllegalArgumentException rejected = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.update(command(1, null, null, new BigDecimal("50")))
+        );
+
+        assertThat(rejected.getMessage()).contains("startDate");
+        verify(workingTimeRepository, never()).save(any());
+    }
+
     private UpdateWorkingTimeCommand command(int number, LocalDate startDate, LocalDate endDate, BigDecimal percentage) {
         return new UpdateWorkingTimeCommand(
                 RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER, number, startDate, endDate, percentage

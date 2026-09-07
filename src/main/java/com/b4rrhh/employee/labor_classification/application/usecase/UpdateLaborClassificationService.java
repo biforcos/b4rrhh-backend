@@ -7,6 +7,7 @@ import com.b4rrhh.employee.labor_classification.application.port.EmployeeLaborCl
 import com.b4rrhh.employee.labor_classification.application.service.AgreementCategoryRelationValidator;
 import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationCatalogValidator;
 import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationTimelineService;
+import com.b4rrhh.employee.labor_classification.domain.exception.InvalidLaborClassificationDateRangeException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationEmployeeNotFoundException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationNotFoundException;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
@@ -76,9 +77,7 @@ public class UpdateLaborClassificationService implements UpdateLaborClassificati
                         normalizedStartDate
                 ));
 
-        LocalDate correctedStartDate = (command.newStartDate() != null)
-                ? command.newStartDate()
-                : normalizedStartDate;
+        LocalDate correctedStartDate = requireCorrectedStartDate(command.newStartDate());
 
         String normalizedAgreementCode = laborClassificationCatalogValidator
                 .normalizeRequiredCode("agreementCode", command.agreementCode());
@@ -156,5 +155,22 @@ public class UpdateLaborClassificationService implements UpdateLaborClassificati
         }
 
         return startDate;
+    }
+
+    /**
+     * The correction says where the labor classification starts, always.
+     * Omitting it used to mean "keep the one in the path", which reads the
+     * same on the wire as a client that forgot to send it: the request was
+     * legal, the answer was a 200, and the user's edit was gone without a
+     * trace. Three screens fell for it before anyone noticed (backend#69).
+     * Correcting without moving the start is now said by repeating the date
+     * the occurrence already has.
+     */
+    private LocalDate requireCorrectedStartDate(LocalDate newStartDate) {
+        if (newStartDate == null) {
+            throw new InvalidLaborClassificationDateRangeException("startDate is required");
+        }
+
+        return newStartDate;
     }
 }

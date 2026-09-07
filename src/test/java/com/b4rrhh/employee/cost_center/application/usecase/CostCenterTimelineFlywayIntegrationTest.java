@@ -181,11 +181,13 @@ class CostCenterTimelineFlywayIntegrationTest {
     }
 
     // backend#54: the typo is fixed in place. No window is invented in the history.
+    // The window is given back the dates it already had, which is how "do not
+    // move it" is said since backend#69.
     @Test
     void correctingAPercentageReplacesTheLinesOfTheWindowUnderTheSameDates() {
         createService.create(create(DAY_1, null, Map.of("CC_ADMIN", 60, "CC_HR", 40)));
 
-        CostCenterDistributionWindow corrected = updateService.update(update(DAY_1, null, null,
+        CostCenterDistributionWindow corrected = updateService.update(update(DAY_1, DAY_1, null,
                 Map.of("CC_ADMIN", 70, "CC_HR", 30)));
         entityManager.flush();
 
@@ -201,7 +203,7 @@ class CostCenterTimelineFlywayIntegrationTest {
     void theCorrectionAskedForAsSuchReplacesTheCostCentersWithoutADuplicateWindow() {
         createService.create(create(DAY_1, null, Map.of("CC_ADMIN", 100)));
 
-        updateService.update(update(DAY_1, null, null, Map.of("CC_HR", 50, "CC_IT", 50)));
+        updateService.update(update(DAY_1, DAY_1, null, Map.of("CC_HR", 50, "CC_IT", 50)));
         entityManager.flush();
 
         assertEquals(2, persistedCount());

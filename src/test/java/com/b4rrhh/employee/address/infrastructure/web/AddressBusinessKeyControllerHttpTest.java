@@ -21,6 +21,7 @@ import com.b4rrhh.employee.address.domain.exception.AddressEmployeeNotFoundExcep
 import com.b4rrhh.employee.address.domain.exception.AddressIsACorrectionException;
 import com.b4rrhh.employee.address.domain.exception.AddressNotFoundException;
 import com.b4rrhh.employee.address.domain.exception.AddressOverlapException;
+import com.b4rrhh.employee.address.domain.exception.InvalidAddressDateRangeException;
 import com.b4rrhh.employee.address.domain.model.Address;
 import com.b4rrhh.employee.address.domain.model.AddressOccurrence;
 import com.b4rrhh.employee.address.domain.model.AddressPeriod;
@@ -40,6 +41,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.List;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -106,7 +108,8 @@ class AddressBusinessKeyControllerHttpTest {
                                   "city": "Madrid",
                                   "countryCode": "ESP",
                                   "postalCode": "28009",
-                                  "regionCode": "MD"
+                                  "regionCode": "MD",
+                                  "startDate": "2026-01-10"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -147,6 +150,29 @@ class AddressBusinessKeyControllerHttpTest {
         verify(updateAddressUseCase).update(captor.capture());
         assertEquals(LocalDate.of(2026, 1, 10), captor.getValue().startDate());
         assertEquals(LocalDate.of(2026, 6, 30), captor.getValue().endDate());
+    }
+
+    // The rejection has to be loud, and 400 is the loud one: a body that
+    // forgot the start date is the client's mistake, not a clash with the
+    // series. Before backend#69 that body was legal and got a 200 back with
+    // both dates left where they were.
+    @Test
+    void aCorrectionWithoutAStartDateIsAnHttp400NamingTheField() throws Exception {
+        when(updateAddressUseCase.update(any(UpdateAddressCommand.class)))
+                .thenThrow(new InvalidAddressDateRangeException("startDate is required"));
+
+        mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/addresses/1")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "street": "Calle de Alcala 100",
+                                  "city": "Madrid",
+                                  "countryCode": "ESP"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ADDRESS_INVALID_REQUEST"))
+                .andExpect(jsonPath("$.message").value(containsString("startDate")));
     }
 
     // ADR-057: a rejected correction is a 409 that names the gap and what to stretch.

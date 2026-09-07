@@ -17,6 +17,7 @@ import com.b4rrhh.employee.labor_classification.application.usecase.ListEmployee
 import com.b4rrhh.employee.labor_classification.application.usecase.PlanLaborClassificationChangeUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.UpdateLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.command.UpdateLaborClassificationCommand;
+import com.b4rrhh.employee.labor_classification.domain.exception.InvalidLaborClassificationDateRangeException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationAgreementInvalidException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationCoverageIncompleteException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationIsACorrectionException;
@@ -239,6 +240,7 @@ class LaborClassificationControllerHttpTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                  "startDate": "2026-01-01",
                                   "endDate": "2026-06-30",
                                   "agreementCode": "AGR_TECH",
                                   "agreementCategoryCode": "CAT_TECH_1"
@@ -250,9 +252,32 @@ class LaborClassificationControllerHttpTest {
                 ArgumentCaptor.forClass(UpdateLaborClassificationCommand.class);
         verify(updateLaborClassificationUseCase).update(captor.capture());
         assertEquals(LocalDate.of(2026, 1, 1), captor.getValue().startDate());
-        assertNull(captor.getValue().newStartDate());
+        assertEquals(LocalDate.of(2026, 1, 1), captor.getValue().newStartDate());
         assertEquals(LocalDate.of(2026, 6, 30), captor.getValue().endDate());
         assertEquals("AGR_TECH", captor.getValue().agreementCode());
+    }
+
+    // The rejection has to be loud, and 400 is the loud one: a body that
+    // forgot the start date is the client's mistake, not a clash with the
+    // series. This vertical answered it with a 409 and a canned message that
+    // named no field, which is the same silence the issue is about
+    // (backend#69).
+    @Test
+    void aCorrectionWithoutAStartDateIsAnHttp400NamingTheField() throws Exception {
+        when(updateLaborClassificationUseCase.update(any()))
+                .thenThrow(new InvalidLaborClassificationDateRangeException("startDate is required"));
+
+        mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/labor-classifications/2026-01-01")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "agreementCode": "AGR_TECH",
+                                  "agreementCategoryCode": "CAT_TECH_1"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("LABOR_CLASSIFICATION_INVALID_PERIOD"))
+                .andExpect(jsonPath("$.message").value(containsString("startDate")));
     }
 
     @Test

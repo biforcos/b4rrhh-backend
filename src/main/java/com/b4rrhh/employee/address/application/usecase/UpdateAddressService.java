@@ -8,6 +8,7 @@ import com.b4rrhh.employee.address.application.service.AddressTimelineService;
 import com.b4rrhh.employee.address.domain.exception.AddressEmployeeNotFoundException;
 import com.b4rrhh.employee.address.domain.exception.AddressNotFoundException;
 import com.b4rrhh.employee.address.domain.exception.AddressRuleSystemNotFoundException;
+import com.b4rrhh.employee.address.domain.exception.InvalidAddressDateRangeException;
 import com.b4rrhh.employee.address.domain.model.Address;
 import com.b4rrhh.employee.address.domain.port.AddressRepository;
 import com.b4rrhh.employee.temporal.support.DateRange;
@@ -84,9 +85,8 @@ public class UpdateAddressService implements UpdateAddressUseCase {
         String city = normalizeRequiredTextForCorrection("city", command.city(), existing.getCity());
         String postalCode = normalizeOptionalTextForCorrection(command.postalCode(), existing.getPostalCode());
         String regionCode = normalizeOptionalCodeForCorrection(command.regionCode(), existing.getRegionCode());
-        boolean datesCorrected = command.startDate() != null;
-        LocalDate startDate = datesCorrected ? command.startDate() : existing.getStartDate();
-        LocalDate endDate = datesCorrected ? command.endDate() : existing.getEndDate();
+        LocalDate startDate = requireCorrectedStartDate(command.startDate());
+        LocalDate endDate = command.endDate();
         addressCatalogValidator.validateCountryCode(
                 normalizedRuleSystemCode,
                 countryCode,
@@ -117,6 +117,23 @@ public class UpdateAddressService implements UpdateAddressUseCase {
         );
 
         return addressRepository.save(corrected);
+    }
+
+    /**
+     * The correction says where the address starts, always. Omitting it used
+     * to mean "leave both dates as they are", which reads the same on the
+     * wire as a client that forgot to send it: the request was legal, the
+     * answer was a 200, and the user's edit was gone without a trace. Three
+     * screens fell for it before anyone noticed (backend#69). Correcting
+     * without moving the start is now said by repeating the date the address
+     * already has.
+     */
+    private LocalDate requireCorrectedStartDate(LocalDate startDate) {
+        if (startDate == null) {
+            throw new InvalidAddressDateRangeException("startDate is required");
+        }
+
+        return startDate;
     }
 
     private String normalizeRuleSystemCode(String ruleSystemCode) {

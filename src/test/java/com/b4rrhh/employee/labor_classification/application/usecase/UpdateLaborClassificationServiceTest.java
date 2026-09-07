@@ -8,6 +8,7 @@ import com.b4rrhh.employee.labor_classification.application.port.PresencePeriod;
 import com.b4rrhh.employee.labor_classification.application.service.AgreementCategoryRelationValidator;
 import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationCatalogValidator;
 import com.b4rrhh.employee.labor_classification.application.service.LaborClassificationTimelineService;
+import com.b4rrhh.employee.labor_classification.domain.exception.InvalidLaborClassificationDateRangeException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationAgreementCategoryRelationInvalidException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationCoverageIncompleteException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationNotFoundException;
@@ -74,6 +75,8 @@ class UpdateLaborClassificationServiceTest {
         );
     }
 
+    // Keeping the dates is said by sending them, not by leaving them out
+    // (backend#69).
     @Test
     void correctsTheCodesKeepingTheDates() {
         LaborClassification existing = occurrence("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null);
@@ -81,7 +84,7 @@ class UpdateLaborClassificationServiceTest {
         whenOccurrenceExists(existing);
 
         LaborClassification updated = service.update(
-                command(LocalDate.of(2026, 1, 1), null, null, "AGR_TECH", "CAT_TECH_1"));
+                command(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 1), null, "AGR_TECH", "CAT_TECH_1"));
 
         assertEquals("AGR_TECH", updated.getAgreementCode());
         assertEquals("CAT_TECH_1", updated.getAgreementCategoryCode());
@@ -105,7 +108,7 @@ class UpdateLaborClassificationServiceTest {
         whenOccurrenceExists(closedTooEarly);
 
         LaborClassification updated = service.update(
-                command(LocalDate.of(2026, 1, 1), null, null, "AGR_TECH", "CAT_TECH_1"));
+                command(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 1), null, "AGR_TECH", "CAT_TECH_1"));
 
         assertNull(updated.getEndDate());
         assertEquals("AGR_TECH", updated.getAgreementCode());
@@ -121,7 +124,8 @@ class UpdateLaborClassificationServiceTest {
 
         assertThrows(
                 LaborClassificationAgreementCategoryRelationInvalidException.class,
-                () -> service.update(command(LocalDate.of(2026, 1, 1), null, null, "AGR_TECH", "CAT_TECH_1"))
+                () -> service.update(
+                        command(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 1), null, "AGR_TECH", "CAT_TECH_1"))
         );
         verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
     }
@@ -200,6 +204,29 @@ class UpdateLaborClassificationServiceTest {
         verify(laborClassificationRepository, never()).update(any(LaborClassification.class), any(LocalDate.class));
     }
 
+    // A body without a start date used to mean "leave it where it is", which
+    // is what a client that forgot to send it looks like too. The two arrived
+    // identical and both got a 200, so a screen could stop moving the start
+    // and nobody would hear about it — three of them did (backend#69). Now
+    // the silence is a rejection, and nothing is written.
+    @Test
+    void rejectsACorrectionThatDoesNotSayWhereTheOccurrenceStarts() {
+        LaborClassification existing = occurrence("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null);
+        whenEmployeeExists();
+        whenOccurrenceExists(existing);
+
+        InvalidLaborClassificationDateRangeException rejected = assertThrows(
+                InvalidLaborClassificationDateRangeException.class,
+                () -> service.update(command(LocalDate.of(2026, 1, 1), null, null, "AGR_TECH", "CAT_TECH_1"))
+        );
+
+        assertTrue(rejected.getMessage().contains("startDate"));
+        verify(laborClassificationRepository, never())
+                .update(any(LaborClassification.class), any(LocalDate.class));
+    }
+
+    // The body is not even looked at: an occurrence that is not there is a
+    // 404, whatever the body says or leaves out.
     @Test
     void rejectsWhenTheOccurrenceDoesNotExist() {
         whenEmployeeExists();

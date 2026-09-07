@@ -78,9 +78,15 @@ public class LaborClassificationExceptionHandler {
             );
         }
 
-        return conflict(
+        // Dates that do not hold up are a malformed request, not a clash with
+        // the series: 400, and the message names the field, which is what a
+        // client needs to tell its own mistake from a decision the series
+        // made (backend#69). This was the only one of the five temporal
+        // verticals answering it with a 409 and a canned message that named
+        // nothing, while its own contract already declared the 400.
+        return badRequest(
                 "LABOR_CLASSIFICATION_INVALID_PERIOD",
-                "La clasificación laboral es inválida por fechas o datos inconsistentes.",
+                ex.getMessage(),
                 null
         );
     }
@@ -153,6 +159,15 @@ public class LaborClassificationExceptionHandler {
             Map<String, Object> details
     ) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new LaborClassificationErrorResponse(code, message, details));
+    }
+
+    private ResponseEntity<LaborClassificationErrorResponse> badRequest(
+            String code,
+            String message,
+            Map<String, Object> details
+    ) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new LaborClassificationErrorResponse(code, message, details));
     }
 

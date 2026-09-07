@@ -82,9 +82,8 @@ public class UpdateCostCenterDistributionService implements UpdateCostCenterDist
                         ruleSystemCode, employeeTypeCode, employeeNumber, command.windowStartDate()
                 ));
 
-        boolean keepsItsDates = command.startDate() == null;
-        LocalDate startDate = keepsItsDates ? existing.getStartDate() : command.startDate();
-        LocalDate endDate = keepsItsDates ? existing.getEndDate() : command.endDate();
+        LocalDate startDate = requireCorrectedStartDate(command.startDate());
+        LocalDate endDate = command.endDate();
 
         List<CostCenterAllocation> corrected = new ArrayList<>();
         for (CostCenterDistributionItem item : command.items()) {
@@ -112,6 +111,23 @@ public class UpdateCostCenterDistributionService implements UpdateCostCenterDist
         costCenterRepository.saveAll(corrected);
 
         return new CostCenterDistributionWindow(startDate, endDate, corrected);
+    }
+
+    /**
+     * The correction says where the window starts, always. Omitting it used
+     * to mean "keep the dates and correct only the lines", which reads the
+     * same on the wire as a client that forgot to send it: the request was
+     * legal, the answer was a 200, and the user's edit was gone without a
+     * trace. Three screens fell for it before anyone noticed (backend#69).
+     * Correcting only the lines is now said by repeating the start date the
+     * path already carries.
+     */
+    private LocalDate requireCorrectedStartDate(LocalDate startDate) {
+        if (startDate == null) {
+            throw new CostCenterDistributionInvalidException("startDate is required");
+        }
+
+        return startDate;
     }
 
     private String normalizeRuleSystemCode(String value) {

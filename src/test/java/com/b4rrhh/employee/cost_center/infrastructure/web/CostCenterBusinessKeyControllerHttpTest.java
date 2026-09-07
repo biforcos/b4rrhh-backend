@@ -17,6 +17,7 @@ import com.b4rrhh.employee.cost_center.application.usecase.UpdateCostCenterDistr
 import com.b4rrhh.employee.cost_center.application.usecase.UpdateCostCenterDistributionUseCase;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionCoverageGapException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionIsACorrectionException;
+import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionInvalidException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionNotFoundException;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionOverlapException;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterAllocation;
@@ -42,6 +43,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -152,9 +154,11 @@ class CostCenterBusinessKeyControllerHttpTest {
                 .andExpect(jsonPath("$.details.overlaps[0].startDate").exists());
     }
 
-    // The PUT without dates: the typo is fixed in place; the path's start date identifies the window.
+    // The PUT that fixes the typo in place: the window is given back the start
+    // date it already had, which is how "do not move it" is said now
+    // (backend#69); the path's start date identifies the window.
     @Test
-    void updateMapsThePathAndTheItemsToTheCommandKeepingTheDatesWhenNoneCome() throws Exception {
+    void updateMapsThePathAndTheItemsToTheCommandKeepingTheDatesItIsGivenAgain() throws Exception {
         when(updateCostCenterDistributionUseCase.update(any(UpdateCostCenterDistributionCommand.class)))
                 .thenReturn(new CostCenterDistributionWindow(JAN_1, null, List.of(
                         new CostCenterAllocation(10L, "CC_ADMIN", new BigDecimal("70"), JAN_1, null),
@@ -164,7 +168,8 @@ class CostCenterBusinessKeyControllerHttpTest {
         mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/cost-centers/distributions/2026-01-01")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"items":[{"costCenterCode":"CC_ADMIN","allocationPercentage":70},
+                                {"startDate":"2026-01-01",
+                                 "items":[{"costCenterCode":"CC_ADMIN","allocationPercentage":70},
                                           {"costCenterCode":"CC_HR","allocationPercentage":30}]}
                                 """))
                 .andExpect(status().isOk())
@@ -176,9 +181,28 @@ class CostCenterBusinessKeyControllerHttpTest {
                 ArgumentCaptor.forClass(UpdateCostCenterDistributionCommand.class);
         verify(updateCostCenterDistributionUseCase).update(captor.capture());
         assertEquals(JAN_1, captor.getValue().windowStartDate());
-        assertNull(captor.getValue().startDate());
+        assertEquals(JAN_1, captor.getValue().startDate());
         assertNull(captor.getValue().endDate());
         assertEquals(2, captor.getValue().items().size());
+    }
+
+    // The rejection has to be loud, and 400 is the loud one: a body that
+    // forgot the start date is the client's mistake, not a clash with the
+    // series. Before backend#69 that body was legal and got a 200 back with
+    // the window left where it was.
+    @Test
+    void aCorrectionWithoutAStartDateIsAnHttp400NamingTheField() throws Exception {
+        when(updateCostCenterDistributionUseCase.update(any(UpdateCostCenterDistributionCommand.class)))
+                .thenThrow(new CostCenterDistributionInvalidException("startDate is required"));
+
+        mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/cost-centers/distributions/2026-01-01")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"items":[{"costCenterCode":"CC_ADMIN","allocationPercentage":100}]}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COST_CENTER_INVALID_WINDOW"))
+                .andExpect(jsonPath("$.message").value(containsString("startDate")));
     }
 
     // The handler keeps the translation of the component's gap rejection (backend#58). This series

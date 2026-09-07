@@ -22,6 +22,7 @@ import com.b4rrhh.employee.contract.domain.exception.ContractCoverageIncompleteE
 import com.b4rrhh.employee.contract.domain.exception.ContractInvalidException;
 import com.b4rrhh.employee.contract.domain.exception.ContractIsACorrectionException;
 import com.b4rrhh.employee.contract.domain.exception.ContractNotFoundException;
+import com.b4rrhh.employee.contract.domain.exception.InvalidContractDateRangeException;
 import com.b4rrhh.employee.contract.domain.exception.ContractOverlapException;
 import com.b4rrhh.employee.contract.domain.exception.ContractSubtypeInvalidException;
 import com.b4rrhh.employee.contract.domain.model.Contract;
@@ -200,6 +201,7 @@ class ContractControllerHttpTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                  "startDate": "2026-01-01",
                                   "endDate": "2026-06-30",
                                   "contractCode": "TMP",
                                   "contractSubtypeCode": "INT"
@@ -215,10 +217,32 @@ class ContractControllerHttpTest {
         assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
         assertEquals("EMP001", captor.getValue().employeeNumber());
         assertEquals(LocalDate.of(2026, 1, 1), captor.getValue().startDate());
-        assertNull(captor.getValue().newStartDate());
+        assertEquals(LocalDate.of(2026, 1, 1), captor.getValue().newStartDate());
         assertEquals(LocalDate.of(2026, 6, 30), captor.getValue().endDate());
         assertEquals("TMP", captor.getValue().contractCode());
         assertEquals("INT", captor.getValue().contractSubtypeCode());
+    }
+
+    // The rejection has to be loud, and 400 is the loud one: a body that
+    // forgot the start date is the client's mistake, not a clash with the
+    // series. Before backend#69 that body was legal and got a 200 back with
+    // the start left where it was.
+    @Test
+    void aCorrectionWithoutAStartDateIsAnHttp400NamingTheField() throws Exception {
+        when(updateContractUseCase.update(any(UpdateContractCommand.class)))
+                .thenThrow(new InvalidContractDateRangeException("startDate is required"));
+
+        mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/contracts/2026-01-01")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "contractCode": "TMP",
+                                  "contractSubtypeCode": "INT"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("CONTRACT_INVALID_REQUEST"))
+                .andExpect(jsonPath("$.message").value(containsString("startDate")));
     }
 
     @Test

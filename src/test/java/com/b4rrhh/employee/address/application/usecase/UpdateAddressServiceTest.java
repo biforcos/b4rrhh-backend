@@ -10,6 +10,7 @@ import com.b4rrhh.employee.address.domain.exception.AddressCatalogValueInvalidEx
 import com.b4rrhh.employee.address.domain.exception.AddressCoverageGapException;
 import com.b4rrhh.employee.address.domain.exception.AddressEmployeeNotFoundException;
 import com.b4rrhh.employee.address.domain.exception.AddressNotFoundException;
+import com.b4rrhh.employee.address.domain.exception.InvalidAddressDateRangeException;
 import com.b4rrhh.employee.address.domain.model.Address;
 import com.b4rrhh.employee.address.domain.model.AddressPeriod;
 import com.b4rrhh.employee.address.domain.port.AddressRepository;
@@ -32,6 +33,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -159,7 +161,7 @@ class UpdateAddressServiceTest {
                 "esp",
                 "28009",
                 "md",
-                null,
+                LocalDate.of(2026, 1, 10),
                 null
         );
 
@@ -196,6 +198,43 @@ class UpdateAddressServiceTest {
         assertEquals(existing.getStartDate(), updated.getStartDate());
     }
 
+    // A body without a start date used to mean "leave both dates as they
+    // are", which is what a client that forgot to send it looks like too. The
+    // two arrived identical and both got a 200, so a screen could stop moving
+    // the start and nobody would hear about it — three of them did
+    // (backend#69). Now the silence is a rejection, and nothing is written.
+    @Test
+    void rejectsACorrectionThatDoesNotSayWhereTheAddressStarts() {
+        UpdateAddressCommand command = new UpdateAddressCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                1,
+                "Calle de Alcala 100",
+                "Madrid",
+                "ESP",
+                "28009",
+                "MD",
+                null,
+                null
+        );
+
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem()));
+        when(employeeAddressLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L)));
+        when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existingAddress()));
+
+        InvalidAddressDateRangeException rejected = assertThrows(
+                InvalidAddressDateRangeException.class,
+                () -> service.update(command)
+        );
+
+        assertTrue(rejected.getMessage().contains("startDate"));
+        verify(addressRepository, never()).save(any(Address.class));
+    }
+
+    // The body is not even looked at: an address that is not there is a 404,
+    // whatever the body says or leaves out.
     @Test
     void throwsNotFoundWhenEmployeeDoesNotExist() {
         UpdateAddressCommand command = new UpdateAddressCommand(
@@ -255,7 +294,7 @@ class UpdateAddressServiceTest {
                 "BAD",
                 "28009",
                 "MD",
-                null,
+                LocalDate.of(2026, 1, 10),
                 null
         );
 
@@ -281,7 +320,7 @@ class UpdateAddressServiceTest {
                 "  ",
                 "28009",
                 "MD",
-                null,
+                LocalDate.of(2026, 1, 10),
                 null
         );
 
@@ -313,7 +352,7 @@ class UpdateAddressServiceTest {
                 "ESP",
                 "28009",
                 "MD",
-                null,
+                LocalDate.of(2026, 1, 10),
                 null
         );
 
@@ -346,7 +385,7 @@ class UpdateAddressServiceTest {
                 "ESP",
                 "  ",
                 "",
-                null,
+                LocalDate.of(2026, 1, 10),
                 null
         );
 
@@ -379,7 +418,7 @@ class UpdateAddressServiceTest {
                 "ESP",
                 null,
                 null,
-                null,
+                LocalDate.of(2026, 1, 10),
                 null
         );
 
@@ -412,7 +451,7 @@ class UpdateAddressServiceTest {
                 "ESP",
                 "28001",
                 "ca",
-                null,
+                LocalDate.of(2026, 1, 10),
                 null
         );
 

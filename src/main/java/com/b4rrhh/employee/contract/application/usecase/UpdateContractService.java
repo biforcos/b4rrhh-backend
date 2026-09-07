@@ -9,6 +9,7 @@ import com.b4rrhh.employee.contract.application.service.ContractCatalogValidator
 import com.b4rrhh.employee.contract.application.service.ContractTimelineService;
 import com.b4rrhh.employee.contract.domain.exception.ContractEmployeeNotFoundException;
 import com.b4rrhh.employee.contract.domain.exception.ContractNotFoundException;
+import com.b4rrhh.employee.contract.domain.exception.InvalidContractDateRangeException;
 import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.contract.domain.port.ContractRepository;
 import com.b4rrhh.employee.temporal.support.DateRange;
@@ -76,9 +77,7 @@ public class UpdateContractService implements UpdateContractUseCase {
                         normalizedStartDate
                 ));
 
-        LocalDate correctedStartDate = (command.newStartDate() != null)
-                ? command.newStartDate()
-                : normalizedStartDate;
+        LocalDate correctedStartDate = requireCorrectedStartDate(command.newStartDate());
 
         String normalizedContractCode = contractCatalogValidator
                 .normalizeRequiredCode("contractCode", command.contractCode());
@@ -156,5 +155,21 @@ public class UpdateContractService implements UpdateContractUseCase {
         }
 
         return startDate;
+    }
+
+    /**
+     * The correction says where the contract starts, always. Omitting it used
+     * to mean "keep the one in the path", which reads the same on the wire as
+     * a client that forgot to send it: the request was legal, the answer was
+     * a 200, and the user's edit was gone without a trace. Three screens fell
+     * for it before anyone noticed (backend#69). Correcting without moving
+     * the start is now said by repeating the date the contract already has.
+     */
+    private LocalDate requireCorrectedStartDate(LocalDate newStartDate) {
+        if (newStartDate == null) {
+            throw new InvalidContractDateRangeException("startDate is required");
+        }
+
+        return newStartDate;
     }
 }

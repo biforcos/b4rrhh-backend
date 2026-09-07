@@ -219,7 +219,7 @@ class LaborClassificationTimelineFlywayIntegrationTest {
         createService.create(create(G1, DAY_1, null));
 
         LaborClassification corrected = updateService.update(new UpdateLaborClassificationCommand(
-                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_1, null, null, AGREEMENT, G2
+                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_1, DAY_1, null, AGREEMENT, G2
         ));
         entityManager.flush();
 

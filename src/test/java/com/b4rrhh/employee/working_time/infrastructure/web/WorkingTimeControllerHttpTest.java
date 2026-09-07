@@ -168,6 +168,26 @@ class WorkingTimeControllerHttpTest {
         assertEquals(new BigDecimal("60"), captor.getValue().workingTimePercentage());
     }
 
+    // This vertical always demanded the start date, and it is the one the
+    // other four were made to look like (backend#69). The 400 is the whole
+    // reason the mistake that ate three screens' edits could not happen here.
+    @Test
+    void aCorrectionWithoutAStartDateIsAnHttp400NamingTheField() throws Exception {
+        when(updateWorkingTimeUseCase.update(any(UpdateWorkingTimeCommand.class)))
+                .thenThrow(new IllegalArgumentException("startDate is required"));
+
+        mockMvc.perform(put("/employees/ESP/INTERNAL/EMP001/working-times/2")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "workingTimePercentage": 60
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("WORKING_TIME_INVALID_PERIOD"))
+                .andExpect(jsonPath("$.message").value(containsString("startDate")));
+    }
+
     @Test
     void createMapsACoverageGapToHttp409SayingWhichGapAndWhatToStretch() throws Exception {
         when(createWorkingTimeUseCase.create(any(CreateWorkingTimeCommand.class)))

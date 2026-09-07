@@ -214,7 +214,7 @@ class ContractTimelineFlywayIntegrationTest {
         createService.create(create("IND", "FT1", DAY_1, null));
 
         Contract corrected = updateService.update(new UpdateContractCommand(
-                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_1, null, null, "TMP", "PT1"
+                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_1, DAY_1, null, "TMP", "PT1"
         ));
         entityManager.flush();
 

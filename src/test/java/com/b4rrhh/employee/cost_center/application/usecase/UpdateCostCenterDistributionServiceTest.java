@@ -33,6 +33,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -80,14 +81,16 @@ class UpdateCostCenterDistributionServiceTest {
     }
 
     // The typo the issue is about: a percentage is fixed where it was, no window is invented.
+    // The window keeps its dates because the correction sends them again, not because it
+    // leaves them out — omitting them is a rejection now (backend#69).
     @Test
-    void correctsTheLinesWithoutTouchingTheDatesWhenNoStartDateComes() {
+    void correctsTheLinesWhenTheWindowIsGivenTheDatesItAlreadyHad() {
         CostCenterAllocation hr = line("CC_HR", 60, FEB_1, null);
         CostCenterAllocation it = line("CC_IT", 40, FEB_1, null);
         givenEmployeeWithSeries(line("CC_ADMIN", 100, JAN_1, JAN_31), hr, it);
         when(costCenterRepository.findByEmployeeIdAndStartDate(EMPLOYEE_ID, FEB_1)).thenReturn(List.of(hr, it));
 
-        CostCenterDistributionWindow corrected = service.update(command(FEB_1, null, null,
+        CostCenterDistributionWindow corrected = service.update(command(FEB_1, FEB_1, null,
                 List.of(item("CC_HR", 70), item("CC_IT", 30))));
 
         assertEquals(FEB_1, corrected.getStartDate());
@@ -162,7 +165,7 @@ class UpdateCostCenterDistributionServiceTest {
 
         assertThrows(
                 CostCenterDistributionPercentageExceededException.class,
-                () -> service.update(command(FEB_1, null, null, List.of(item("CC_HR", 80), item("CC_IT", 30))))
+                () -> service.update(command(FEB_1, FEB_1, null, List.of(item("CC_HR", 80), item("CC_IT", 30))))
         );
         verify(costCenterRepository, never()).saveAll(any());
     }
@@ -175,10 +178,34 @@ class UpdateCostCenterDistributionServiceTest {
 
         assertThrows(
                 CostCenterCatalogValueInvalidException.class,
-                () -> service.update(command(FEB_1, null, null, List.of(item("INVALID_CC", 100))))
+                () -> service.update(command(FEB_1, FEB_1, null, List.of(item("INVALID_CC", 100))))
         );
     }
 
+    // A body without a start date used to mean "keep the dates and correct
+    // only the lines", which is what a client that forgot to send it looks
+    // like too. The two arrived identical and both got a 200, so a screen
+    // could stop moving the window and nobody would hear about it — three
+    // screens did (backend#69). Now the silence is a rejection, and nothing
+    // is written.
+    @Test
+    void rejectsACorrectionThatDoesNotSayWhereTheWindowStarts() {
+        CostCenterAllocation hr = line("CC_HR", 100, FEB_1, null);
+        givenEmployeeFound();
+        when(costCenterRepository.findByEmployeeIdAndStartDate(EMPLOYEE_ID, FEB_1)).thenReturn(List.of(hr));
+
+        CostCenterDistributionInvalidException rejected = assertThrows(
+                CostCenterDistributionInvalidException.class,
+                () -> service.update(command(FEB_1, null, null, List.of(item("CC_HR", 100))))
+        );
+
+        assertTrue(rejected.getMessage().contains("startDate"));
+        verify(costCenterRepository, never()).saveAll(any());
+        verify(costCenterRepository, never()).deleteAllForWindow(any(), any());
+    }
+
+    // The body's dates are not even looked at: a window that is not there is
+    // a 404 first.
     @Test
     void rejectsWhenTheWindowDoesNotExist() {
         givenEmployeeFound();

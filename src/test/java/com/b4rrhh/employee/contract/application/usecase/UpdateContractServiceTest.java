@@ -13,6 +13,7 @@ import com.b4rrhh.employee.contract.domain.exception.ContractNotFoundException;
 import com.b4rrhh.employee.contract.domain.exception.ContractOutsidePresencePeriodException;
 import com.b4rrhh.employee.contract.domain.exception.ContractOverlapException;
 import com.b4rrhh.employee.contract.domain.exception.ContractSubtypeRelationInvalidException;
+import com.b4rrhh.employee.contract.domain.exception.InvalidContractDateRangeException;
 import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.contract.domain.model.ContractPeriod;
 import com.b4rrhh.employee.contract.domain.port.ContractRepository;
@@ -74,13 +75,17 @@ class UpdateContractServiceTest {
         );
     }
 
+    // Keeping the dates is said by sending them, not by leaving them out
+    // (backend#69).
     @Test
     void correctsTheCodesKeepingTheDates() {
         Contract existing = contract("IND", "FT1", LocalDate.of(2026, 1, 1), null);
         givenEmployeePresentFrom(LocalDate.of(2026, 1, 1), existing);
         whenContractExists(existing);
 
-        Contract updated = service.update(command(LocalDate.of(2026, 1, 1), null, null, "TMP", "PT1"));
+        Contract updated = service.update(
+                command(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 1), null, "TMP", "PT1")
+        );
 
         assertEquals("TMP", updated.getContractCode());
         assertEquals("PT1", updated.getContractSubtypeCode());
@@ -102,7 +107,9 @@ class UpdateContractServiceTest {
         givenEmployeePresentFrom(LocalDate.of(2026, 1, 1), closedTooEarly);
         whenContractExists(closedTooEarly);
 
-        Contract updated = service.update(command(LocalDate.of(2026, 1, 1), null, null, "TMP", "PT1"));
+        Contract updated = service.update(
+                command(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 1), null, "TMP", "PT1")
+        );
 
         assertNull(updated.getEndDate());
         assertEquals("TMP", updated.getContractCode());
@@ -118,7 +125,9 @@ class UpdateContractServiceTest {
 
         assertThrows(
                 ContractSubtypeRelationInvalidException.class,
-                () -> service.update(command(LocalDate.of(2026, 1, 1), null, null, "TMP", "PT1"))
+                () -> service.update(
+                        command(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 1), null, "TMP", "PT1")
+                )
         );
         verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
     }
@@ -185,6 +194,28 @@ class UpdateContractServiceTest {
         verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
     }
 
+    // A body without a start date used to mean "leave it where it is", which
+    // is what a client that forgot to send it looks like too. The two arrived
+    // identical and both got a 200, so a screen could stop moving the start
+    // and nobody would hear about it — three of them did (backend#69). Now
+    // the silence is a rejection, and nothing is written.
+    @Test
+    void rejectsACorrectionThatDoesNotSayWhereTheContractStarts() {
+        Contract existing = contract("IND", "FT1", LocalDate.of(2026, 1, 1), null);
+        whenEmployeeExists();
+        whenContractExists(existing);
+
+        InvalidContractDateRangeException rejected = assertThrows(
+                InvalidContractDateRangeException.class,
+                () -> service.update(command(LocalDate.of(2026, 1, 1), null, null, "TMP", "PT1"))
+        );
+
+        assertTrue(rejected.getMessage().contains("startDate"));
+        verify(contractRepository, never()).update(any(Contract.class), any(LocalDate.class));
+    }
+
+    // The body is not even looked at: a contract that is not there is a 404,
+    // whatever the body says or leaves out.
     @Test
     void rejectsWhenTheContractDoesNotExist() {
         whenEmployeeExists();
