@@ -616,6 +616,175 @@ class TimelinePlannerTest {
         }
     }
 
+    /**
+     * The move (backend#70). An employee is hired on 2026-01-01 and moves
+     * house on 2026-05-31: the domicile is two addresses that are the two
+     * halves of one move, and the API writes one occurrence at a time.
+     *
+     * <pre>
+     *   HEAD  2026-01-01 .. 2026-05-31
+     *   TAIL  2026-06-01 .. (open)
+     * </pre>
+     *
+     * <p>Neither half covers the presence on its own: the head leaves its
+     * tail uncovered and the tail leaves its head. Judging each write as if
+     * it had to be the last one rejected both, in both orders, so the only
+     * reachable state was the one the invariant forbids — no address at all.
+     * That is what the loader's run measured: 220 rejected addresses over the
+     * 110 employees who moved, 81 of them left with nothing.
+     *
+     * <p>Written in the order the move happened, both go in now. The other
+     * order does not, and that asymmetry is the decision, not a leftover: see
+     * {@link #areRejectedTheOtherWayRoundNamingTheStretchFromTheHire}.
+     */
+    @Nested
+    class TheTwoHalvesOfAMove {
+
+        private static final DateRange HIRED = range(LocalDate.of(2026, 1, 1), null);
+        private static final DateRange HEAD = range(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 5, 31));
+        private static final DateRange TAIL = range(LocalDate.of(2026, 6, 1), null);
+
+        @Test
+        void goInChronologicallyOneAtATime() {
+            TimelinePlan first = planner.planAdd(domicileOf(), HEAD);
+            assertTrue(first.isAccepted(), "the head of the move is turned away: " + first.rejection());
+
+            TimelinePlan second = planner.planAdd(domicileOf(HEAD), TAIL);
+            assertTrue(second.isAccepted(), "the tail of the move is turned away: " + second.rejection());
+            assertEquals(List.of(HEAD, TAIL), second.projected());
+            assertTrue(second.gaps().isEmpty());
+        }
+
+        /**
+         * The other way round is still rejected, and on purpose. The tail
+         * alone says the employee had no address between being hired and
+         * moving, and that is a claim about a past that is already over, not
+         * a question still open. So one order works and the other is told
+         * why: the error names the stretch from the hire and the occurrence
+         * to stretch back.
+         */
+        @Test
+        void areRejectedTheOtherWayRoundNamingTheStretchFromTheHire() {
+            TimelinePlan plan = planner.planAdd(domicileOf(), TAIL);
+
+            assertFalse(plan.isAccepted());
+            assertEquals(TimelineRejection.GAP_NOT_ALLOWED, plan.rejection());
+            assertEquals(List.of(range(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 5, 31))), plan.gaps());
+            assertEquals(List.of(TAIL), plan.stretchCandidates());
+        }
+
+        /**
+         * The head is accepted and the plan still says what is missing. The
+         * screen needs it to ask for the other half; hiding it would trade
+         * one silence for another.
+         */
+        @Test
+        void leaveTheHeadAcceptedWhileStillNamingWhatIsLeftUncovered() {
+            TimelinePlan head = planner.planAdd(domicileOf(), HEAD);
+
+            assertTrue(head.isAccepted());
+            assertEquals(List.of(range(LocalDate.of(2026, 6, 1), null)), head.gaps());
+            assertEquals(List.of(HEAD), head.stretchCandidates());
+        }
+
+        /**
+         * The other side of the rule, and the reason it is not just «gaps are
+         * fine now»: what a change opens is still rejected. Closing the only
+         * address of a present employee uncovers a stretch that was covered a
+         * moment ago.
+         *
+         * <p>The plan reports the head gap too, the one it found and did not
+         * cause. It is the rejection that is narrow, not the report: the
+         * screen shows the whole timeline and the user sees both.
+         */
+        @Test
+        void doNotMakeItLegalToCloseTheOnlyAddressOfAPresentEmployee() {
+            TimelinePlan plan = planner.planCorrect(domicileOf(TAIL), TAIL, range(LocalDate.of(2026, 6, 1), LocalDate.of(2026, 8, 31)));
+
+            assertFalse(plan.isAccepted());
+            assertEquals(TimelineRejection.GAP_NOT_ALLOWED, plan.rejection());
+            assertEquals(
+                    List.of(
+                            range(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 5, 31)),
+                            range(LocalDate.of(2026, 9, 1), null)
+                    ),
+                    plan.gaps()
+            );
+        }
+
+        /** And on a series that was whole, the same close is rejected on its own. */
+        @Test
+        void doNotMakeItLegalToCloseTheLastAddressOfAWholeSeriesEither() {
+            TimelinePlan plan = planner.planCorrect(
+                    domicileOf(HEAD, TAIL),
+                    TAIL,
+                    range(LocalDate.of(2026, 6, 1), LocalDate.of(2026, 8, 31))
+            );
+
+            assertFalse(plan.isAccepted());
+            assertEquals(TimelineRejection.GAP_NOT_ALLOWED, plan.rejection());
+            assertEquals(List.of(range(LocalDate.of(2026, 9, 1), null)), plan.gaps());
+        }
+
+        /** Nor to take away the half that was already there. */
+        @Test
+        void doNotMakeItLegalToRemoveOneHalfOnceBothAreIn() {
+            TimelinePlan plan = planner.planRemove(domicileOf(HEAD, TAIL), HEAD);
+
+            assertFalse(plan.isAccepted());
+            assertEquals(TimelineRejection.GAP_NOT_ALLOWED, plan.rejection());
+        }
+
+        /**
+         * And the line the leeway does not cross: a hole between two
+         * occurrences is rejected whoever left it there, even on a series
+         * that was already behind. The edges of the presence are where
+         * «nobody has told me yet» is a real state; between two occurrences
+         * the series is making a claim about the past.
+         */
+        @Test
+        void doNotMakeItLegalToLeaveAHoleBetweenTwoAddresses() {
+            DateRange early = range(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31));
+            DateRange late = range(LocalDate.of(2026, 3, 1), null);
+
+            TimelinePlan plan = planner.planAdd(domicileOf(early), late);
+
+            assertFalse(plan.isAccepted());
+            assertEquals(TimelineRejection.GAP_NOT_ALLOWED, plan.rejection());
+            assertEquals(List.of(range(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28))), plan.gaps());
+            assertEquals(List.of(early, late), plan.stretchCandidates());
+        }
+
+        /**
+         * A change that swallows an occurrence between two stretches it found
+         * uncovered opens a gap, however it looks: what separated them was
+         * covered.
+         */
+        @Test
+        void doNotMakeItLegalToJoinTwoGapsTheChangeDidNotOpen() {
+            DateRange middle = range(LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
+
+            TimelinePlan plan = planner.planRemove(domicile(HIRED, middle), middle);
+
+            assertFalse(plan.isAccepted());
+            assertEquals(TimelineRejection.GAP_NOT_ALLOWED, plan.rejection());
+        }
+
+        /** The domicile: mandatory coverage, and it may outlive the presence (backend#53). */
+        private static Timeline domicileOf(DateRange... occurrences) {
+            return domicile(HIRED, occurrences);
+        }
+
+        private static Timeline domicile(DateRange presence, DateRange... occurrences) {
+            return new Timeline(
+                    TimelineCoverage.MANDATORY,
+                    TimelineContainment.MAY_OUTLIVE_PRESENCE,
+                    List.of(presence),
+                    List.of(occurrences)
+            );
+        }
+    }
+
     private static Timeline mandatory(DateRange... occurrences) {
         return new Timeline(TimelineCoverage.MANDATORY, List.of(PRESENCE), List.of(occurrences));
     }

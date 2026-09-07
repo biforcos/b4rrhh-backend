@@ -146,6 +146,107 @@ class NoGapWithinPresenceInvariantTest {
         assertTrue(invariant.holds(series, presence));
     }
 
+    /**
+     * What separates the gap a change opens from the one it found
+     * (backend#70). The whole rule of the mandatory coverage rests on this
+     * telling: a write is judged by what it uncovers, not by what was
+     * uncovered when it arrived.
+     */
+    @Test
+    void aGapThatWasAlreadyThereIsNotOpenedByTheChange() {
+        List<DateRange> before = List.of(range(LocalDate.of(2026, 6, 1), null));
+        List<DateRange> after = List.of(range(LocalDate.of(2026, 6, 1), null));
+
+        assertTrue(invariant.opened(before, after).isEmpty());
+    }
+
+    @Test
+    void aSmallerGapInsideAnOldOneIsNotOpenedEither() {
+        List<DateRange> before = List.of(range(LocalDate.of(2026, 1, 1), null));
+        List<DateRange> after = List.of(range(LocalDate.of(2026, 6, 1), null));
+
+        assertTrue(invariant.opened(before, after).isEmpty());
+    }
+
+    @Test
+    void aGapThatReachesPastTheOldOneIsOpened() {
+        List<DateRange> before = List.of(range(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31)));
+        List<DateRange> after = List.of(range(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 4, 30)));
+
+        assertEquals(
+                List.of(range(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 4, 30))),
+                invariant.opened(before, after)
+        );
+    }
+
+    @Test
+    void aGapOnASeriesThatHadNoneIsOpened() {
+        List<DateRange> after = List.of(range(LocalDate.of(2026, 6, 1), null));
+
+        assertEquals(after, invariant.opened(List.of(), after));
+    }
+
+    // What used to separate two gaps was covered, so joining them uncovers it.
+    @Test
+    void aGapSpanningTwoOldOnesIsOpened() {
+        List<DateRange> before = List.of(
+                range(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31)),
+                range(LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31))
+        );
+        List<DateRange> after = List.of(range(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31)));
+
+        assertEquals(after, invariant.opened(before, after));
+    }
+
+    @Test
+    void filledGapsOpenNothing() {
+        List<DateRange> before = List.of(range(LocalDate.of(2026, 1, 1), null));
+
+        assertTrue(invariant.opened(before, List.of()).isEmpty());
+    }
+
+    // The other half of the rule: which gaps the series starts up again after
+    // — those hold whoever left them — and which one is the trailing edge.
+    @Test
+    void aGapBetweenTwoOccurrencesHasOneAfterIt() {
+        List<DateRange> series = List.of(
+                range(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31)),
+                range(LocalDate.of(2026, 3, 1), null)
+        );
+        List<DateRange> gaps = List.of(range(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 2, 28)));
+
+        assertEquals(gaps, invariant.beforeAnOccurrence(gaps, series));
+    }
+
+    // The asymmetry that decides the whole rule: this one is a claim about a
+    // past that is over, so it counts; the trailing one is a question still
+    // open, so it does not.
+    @Test
+    void aGapBeforeTheFirstOccurrenceHasOneAfterItToo() {
+        List<DateRange> series = List.of(range(LocalDate.of(2026, 6, 1), null));
+        List<DateRange> gaps = List.of(range(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 5, 31)));
+
+        assertEquals(gaps, invariant.beforeAnOccurrence(gaps, series));
+    }
+
+    @Test
+    void theGapAfterTheLastOccurrenceHasNothingAfterIt() {
+        List<DateRange> series = List.of(range(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 5, 31)));
+        List<DateRange> gaps = List.of(range(LocalDate.of(2026, 6, 1), null));
+
+        assertTrue(invariant.beforeAnOccurrence(gaps, series).isEmpty());
+    }
+
+    // It trails even when the presence ends: the series stops there and
+    // nothing starts again.
+    @Test
+    void theGapToTheEndOfAClosedPresenceTrailsToo() {
+        List<DateRange> series = List.of(range(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31)));
+        List<DateRange> gaps = List.of(range(LocalDate.of(2026, 2, 1), LocalDate.of(2026, 12, 31)));
+
+        assertTrue(invariant.beforeAnOccurrence(gaps, series).isEmpty());
+    }
+
     private DateRange range(LocalDate startDate, LocalDate endDate) {
         return new DateRange(startDate, endDate);
     }

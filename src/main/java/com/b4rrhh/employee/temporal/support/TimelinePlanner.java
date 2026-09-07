@@ -40,6 +40,16 @@ import java.util.List;
  * user gives and moves nothing else: whatever gap or overlap the new dates
  * leave is judged like any other resulting state.
  *
+ * <p>With mandatory coverage, a gap the series <b>starts up again after</b>
+ * always rejects the change: a hole between two occurrences, or a first
+ * occurrence that begins after the presence did. Only the <b>trailing</b>
+ * gap, the one running from the last occurrence to the end of the presence,
+ * is judged more narrowly: it rejects the change only when the change
+ * <b>opened</b> it (ADR-057 §7, backend#70). A series can arrive already
+ * uncovered — an employee just hired has none of it yet — and a state that
+ * takes two writes to reach cannot be reached at all if every write is
+ * judged as if it had to be the last one.
+ *
  * <p>Whether the added or corrected occurrence has to fall inside the presence
  * is what the series declares as its {@link TimelineContainment}: a series
  * that may outlive the presence is never rejected as
@@ -151,6 +161,21 @@ public final class TimelinePlanner {
         List<DateRange> gaps = noGapWithinPresenceInvariant.gaps(projected, timeline.presence());
         List<DateRange> stretchCandidates = neighboursOf(gaps, projected);
 
+        // Two ways a gap rejects a change (ADR-057 §7, backend#70): one the
+        // series starts up again after — a hole in the middle, or a first
+        // occurrence that begins after the hire — whoever left it; and, at
+        // the trailing edge, one the change opens. A trailing gap the change
+        // merely found is not held against it, and that is what lets the head
+        // of a move go in before its tail exists. The plan still reports
+        // every gap the resulting series leaves, so the screen can say what
+        // is still uncovered.
+        List<DateRange> gapsBeforeAnOccurrence = noGapWithinPresenceInvariant.beforeAnOccurrence(gaps, projected);
+        List<DateRange> gapsOpened = noGapWithinPresenceInvariant.opened(
+                noGapWithinPresenceInvariant.gaps(timeline.occurrences(), timeline.presence()),
+                gaps
+        );
+        boolean uncoversSomething = !gapsBeforeAnOccurrence.isEmpty() || !gapsOpened.isEmpty();
+
         TimelineRejection rejection = null;
         if (operation != intent) {
             rejection = TimelineRejection.IS_A_CORRECTION;
@@ -158,7 +183,7 @@ public final class TimelinePlanner {
             rejection = TimelineRejection.OUTSIDE_PRESENCE;
         } else if (!overlaps.isEmpty()) {
             rejection = TimelineRejection.OVERLAP;
-        } else if (timeline.coverage().requiresNoGaps() && !gaps.isEmpty()) {
+        } else if (timeline.coverage().requiresNoGaps() && uncoversSomething) {
             rejection = TimelineRejection.GAP_NOT_ALLOWED;
         }
 

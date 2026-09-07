@@ -1,7 +1,7 @@
 # ADR Bundle
 
 > Fichero generado automáticamente. No editar a mano.
-> Fecha de generación: 2026-09-06 18:03:17
+> Fecha de generación: 2026-09-07 11:23:53
 
 ---
 
@@ -14864,6 +14864,63 @@ que no coincide nace rechazado: la información del §6 está toda ahí —qué 
 quedaría—, pero aplicarlo como alta es imposible por construcción y no por disciplina de cada
 vertical. Es la misma lección que el resto del ADR: una regla que hay que acordarse de comprobar
 sólo protege a quien se acuerda.
+
+### 7. Un cambio se juzga por lo que descubre, no por lo que se encuentra
+
+La decisión 1 dice que la integridad de una serie vive en el estado resultante. Aplicada
+literalmente a cada escritura por separado, se vuelve contra sí misma: **hay estados válidos a los
+que no se llega escribiendo de una en una, y el API sólo deja escribir de una en una.**
+
+El caso que lo destapó es una mudanza (`backend#70`). Un empleado con domicilio tiene dos
+direcciones que son **las dos mitades de un mismo cambio**, partidas el día que se muda:
+
+```
+CABEZA   alta ........ mudanza
+COLA     mudanza+1 ... (abierta)
+```
+
+Ninguna de las dos, sola, cubre la presencia. La cabeza deja sin cubrir desde la mudanza hasta hoy;
+la cola, desde el alta hasta la mudanza. Con la regla literal se rechazaban **las dos, en los dos
+órdenes**, así que el único estado alcanzable era justo el que el invariante prohíbe: ninguna
+dirección. La corrida del loader lo midió: **220 direcciones rechazadas sobre los 110 empleados que
+se mudaron, y 81 de ellos acabaron sin ninguna dirección**. No pasó ninguna escritura mala: se
+rechazaron todas las buenas.
+
+Conviene decir qué **no** distingue a esos 110, porque el issue lo daba por probable y los datos
+dicen que no: la readmisión no tiene nada que ver. De los 110 sin domicilio, 51 son readmitidos
+(46,4 %); de los 890 con domicilio, 432 (48,5 %). Lo único que los separa es haberse mudado, que en
+el generador es un 10 % de la plantilla.
+
+Así que un hueco rechaza un cambio en dos casos, y en un tercero no:
+
+- **Un hueco que la serie remonta** —uno entre dos ocurrencias, o el que va del inicio de la
+  presencia a una primera ocurrencia que empieza más tarde— **rechaza siempre**, lo haya dejado
+  quien lo haya dejado.
+- **El hueco de cola** —del final de la última ocurrencia al final de la presencia— rechaza sólo si
+  **lo abre el cambio**. El que el cambio se encuentra, no.
+
+La asimetría es la decisión y no un redondeo. No saber dónde vive alguien **ahora** es una pregunta
+pendiente, y en un alta en curso es un estado normal. No saber dónde vivía **cuando entró** no lo
+es: ese día ya pasó y su dato tenía que estar completo desde el principio. Lo que la serie afirma
+del pasado se sostiene; lo que todavía no ha dicho del presente puede estar por llegar.
+
+Con eso, la mudanza entra escrita en el orden en que ocurrió —la cabeza deja sólo el hueco de cola,
+que no ha abierto, y la cola lo cierra— y **al revés se sigue rechazando**, nombrando el tramo desde
+el alta. Un orden funciona y el otro dice por qué, que es exactamente lo que faltaba.
+
+La condición de «no abrirlo» es lo que impide que esto sea «los huecos ya dan igual». Cerrar la
+única dirección de un empleado presente destapa un tramo que estaba cubierto hace un momento, y se
+sigue rechazando. Borrar una ocurrencia de en medio, también. **De las tres salidas que planteaba el
+issue, ésta es la 2 —repensar qué cuenta como hueco— con el candado que le faltaba**; la 1 —que el
+API acepte varias ocurrencias en una operación— se descarta por cara para lo que resuelve, y la 3
+—que lo apañe cada cliente— por ser justo lo que este ADR quitó de en medio.
+
+**Esto no legaliza el estado incompleto, lo hace alcanzable.** Un empleado al que le falta la cola
+de su domicilio sigue estando mal, y el plan lo dice en cada respuesta: la escritura se acepta y el
+`gaps` sigue nombrando lo que queda sin cubrir, para que la pantalla pida la otra mitad. Quién
+vigila que nadie se quede a medias es una consulta sobre la base, no el rechazo de una escritura:
+es el `backend#68`. Rechazar la escritura buena nunca fue la vigilancia — era lo que garantizaba el
+incumplimiento.
 
 ## Consecuencias
 
