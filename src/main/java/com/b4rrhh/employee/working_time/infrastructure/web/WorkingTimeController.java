@@ -1,7 +1,5 @@
 package com.b4rrhh.employee.working_time.infrastructure.web;
 
-import com.b4rrhh.employee.working_time.application.usecase.CloseWorkingTimeCommand;
-import com.b4rrhh.employee.working_time.application.usecase.CloseWorkingTimeUseCase;
 import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeCommand;
 import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeUseCase;
 import com.b4rrhh.employee.working_time.application.usecase.DeleteWorkingTimeCommand;
@@ -16,7 +14,6 @@ import com.b4rrhh.employee.working_time.application.usecase.UpdateWorkingTimeCom
 import com.b4rrhh.employee.working_time.application.usecase.UpdateWorkingTimeUseCase;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
 import com.b4rrhh.employee.working_time.infrastructure.web.assembler.WorkingTimeResponseAssembler;
-import com.b4rrhh.employee.working_time.infrastructure.web.dto.CloseWorkingTimeRequest;
 import com.b4rrhh.employee.working_time.infrastructure.web.dto.CreateWorkingTimeRequest;
 import com.b4rrhh.employee.working_time.infrastructure.web.dto.PlanWorkingTimeChangeRequest;
 import com.b4rrhh.employee.working_time.infrastructure.web.dto.UpdateWorkingTimeRequest;
@@ -42,7 +39,6 @@ public class WorkingTimeController {
     private final CreateWorkingTimeUseCase createWorkingTimeUseCase;
     private final ListEmployeeWorkingTimesUseCase listEmployeeWorkingTimesUseCase;
     private final GetWorkingTimeByBusinessKeyUseCase getWorkingTimeByBusinessKeyUseCase;
-    private final CloseWorkingTimeUseCase closeWorkingTimeUseCase;
     private final UpdateWorkingTimeUseCase updateWorkingTimeUseCase;
     private final DeleteWorkingTimeUseCase deleteWorkingTimeUseCase;
     private final PlanWorkingTimeChangeUseCase planWorkingTimeChangeUseCase;
@@ -52,7 +48,6 @@ public class WorkingTimeController {
             CreateWorkingTimeUseCase createWorkingTimeUseCase,
             ListEmployeeWorkingTimesUseCase listEmployeeWorkingTimesUseCase,
             GetWorkingTimeByBusinessKeyUseCase getWorkingTimeByBusinessKeyUseCase,
-            CloseWorkingTimeUseCase closeWorkingTimeUseCase,
             UpdateWorkingTimeUseCase updateWorkingTimeUseCase,
             DeleteWorkingTimeUseCase deleteWorkingTimeUseCase,
             PlanWorkingTimeChangeUseCase planWorkingTimeChangeUseCase,
@@ -61,7 +56,6 @@ public class WorkingTimeController {
         this.createWorkingTimeUseCase = createWorkingTimeUseCase;
         this.listEmployeeWorkingTimesUseCase = listEmployeeWorkingTimesUseCase;
         this.getWorkingTimeByBusinessKeyUseCase = getWorkingTimeByBusinessKeyUseCase;
-        this.closeWorkingTimeUseCase = closeWorkingTimeUseCase;
         this.updateWorkingTimeUseCase = updateWorkingTimeUseCase;
         this.deleteWorkingTimeUseCase = deleteWorkingTimeUseCase;
         this.planWorkingTimeChangeUseCase = planWorkingTimeChangeUseCase;
@@ -150,32 +144,6 @@ public class WorkingTimeController {
                         request.endDate()
                 ))
         ));
-    }
-
-    /**
-     * Kept while the current screen still closes a working time before adding
-     * the next one. To be removed once frontend#43 has migrated the screen to
-     * add-with-dates: adding already closes the previous one (ADR-057).
-     */
-    @PostMapping("/{workingTimeNumber}/close")
-    public ResponseEntity<WorkingTimeResponse> close(
-            @PathVariable String ruleSystemCode,
-            @PathVariable String employeeTypeCode,
-            @PathVariable String employeeNumber,
-            @PathVariable Integer workingTimeNumber,
-            @RequestBody CloseWorkingTimeRequest request
-    ) {
-        WorkingTime closed = closeWorkingTimeUseCase.close(
-                new CloseWorkingTimeCommand(
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        employeeNumber,
-                        workingTimeNumber,
-                        request.getEndDate()
-                )
-        );
-
-        return ResponseEntity.ok(workingTimeResponseAssembler.toResponse(closed));
     }
 
     @PutMapping("/{workingTimeNumber}")

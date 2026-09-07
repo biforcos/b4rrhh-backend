@@ -1,7 +1,5 @@
 package com.b4rrhh.employee.cost_center.infrastructure.web;
 
-import com.b4rrhh.employee.cost_center.application.usecase.CloseCostCenterDistributionCommand;
-import com.b4rrhh.employee.cost_center.application.usecase.CloseCostCenterDistributionUseCase;
 import com.b4rrhh.employee.cost_center.application.usecase.CostCenterDistributionItem;
 import com.b4rrhh.employee.cost_center.application.usecase.CostCenterDistributionReadModel;
 import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistributionCommand;
@@ -18,7 +16,6 @@ import com.b4rrhh.employee.cost_center.application.usecase.UpdateCostCenterDistr
 import com.b4rrhh.employee.cost_center.application.usecase.UpdateCostCenterDistributionUseCase;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow;
 import com.b4rrhh.employee.cost_center.infrastructure.web.assembler.CostCenterResponseAssembler;
-import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CloseCostCenterDistributionRequest;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterCurrentDistributionResponse;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionHistoryResponse;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionPlanResponse;
@@ -49,7 +46,6 @@ public class CostCenterBusinessKeyController {
     private final CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase;
     private final GetCurrentCostCenterDistributionUseCase getCurrentCostCenterDistributionUseCase;
     private final ListCostCenterDistributionHistoryUseCase listCostCenterDistributionHistoryUseCase;
-    private final CloseCostCenterDistributionUseCase closeCostCenterDistributionUseCase;
     private final UpdateCostCenterDistributionUseCase updateCostCenterDistributionUseCase;
     private final DeleteCostCenterDistributionUseCase deleteCostCenterDistributionUseCase;
     private final PlanCostCenterDistributionChangeUseCase planCostCenterDistributionChangeUseCase;
@@ -59,7 +55,6 @@ public class CostCenterBusinessKeyController {
             CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase,
             GetCurrentCostCenterDistributionUseCase getCurrentCostCenterDistributionUseCase,
             ListCostCenterDistributionHistoryUseCase listCostCenterDistributionHistoryUseCase,
-            CloseCostCenterDistributionUseCase closeCostCenterDistributionUseCase,
             UpdateCostCenterDistributionUseCase updateCostCenterDistributionUseCase,
             DeleteCostCenterDistributionUseCase deleteCostCenterDistributionUseCase,
             PlanCostCenterDistributionChangeUseCase planCostCenterDistributionChangeUseCase,
@@ -68,7 +63,6 @@ public class CostCenterBusinessKeyController {
         this.createCostCenterDistributionUseCase = createCostCenterDistributionUseCase;
         this.getCurrentCostCenterDistributionUseCase = getCurrentCostCenterDistributionUseCase;
         this.listCostCenterDistributionHistoryUseCase = listCostCenterDistributionHistoryUseCase;
-        this.closeCostCenterDistributionUseCase = closeCostCenterDistributionUseCase;
         this.updateCostCenterDistributionUseCase = updateCostCenterDistributionUseCase;
         this.deleteCostCenterDistributionUseCase = deleteCostCenterDistributionUseCase;
         this.planCostCenterDistributionChangeUseCase = planCostCenterDistributionChangeUseCase;
@@ -124,33 +118,6 @@ public class CostCenterBusinessKeyController {
         );
 
         return ResponseEntity.ok(costCenterResponseAssembler.toCurrentResponse(current, language));
-    }
-
-    /**
-     * Kept while the screen still closes a window. To be removed once it has
-     * migrated: adding a window already closes the one in force the day
-     * before, and any other end date is a correction (ADR-057).
-     */
-    @Deprecated
-    @PostMapping("/distributions/{startDate}/close")
-    public ResponseEntity<CostCenterDistributionWindowResponse> closeDistribution(
-            @PathVariable String ruleSystemCode,
-            @PathVariable String employeeTypeCode,
-            @PathVariable String employeeNumber,
-            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestBody CloseCostCenterDistributionRequest request
-    ) {
-        CostCenterDistributionWindow closed = closeCostCenterDistributionUseCase.close(
-                new CloseCostCenterDistributionCommand(
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        employeeNumber,
-                        startDate,
-                        request.endDate()
-                )
-        );
-
-        return ResponseEntity.ok(costCenterResponseAssembler.toWindowResponse(closed));
     }
 
     /**

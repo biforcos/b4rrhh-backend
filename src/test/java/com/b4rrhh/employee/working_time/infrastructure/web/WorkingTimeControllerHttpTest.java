@@ -1,7 +1,5 @@
 package com.b4rrhh.employee.working_time.infrastructure.web;
 
-import com.b4rrhh.employee.working_time.application.usecase.CloseWorkingTimeCommand;
-import com.b4rrhh.employee.working_time.application.usecase.CloseWorkingTimeUseCase;
 import com.b4rrhh.employee.temporal.support.TimelineOperation;
 import com.b4rrhh.employee.temporal.support.TimelineRejection;
 import com.b4rrhh.employee.working_time.application.model.WorkingTimePlan;
@@ -66,8 +64,6 @@ class WorkingTimeControllerHttpTest {
     @Mock
     private GetWorkingTimeByBusinessKeyUseCase getWorkingTimeByBusinessKeyUseCase;
     @Mock
-    private CloseWorkingTimeUseCase closeWorkingTimeUseCase;
-    @Mock
     private UpdateWorkingTimeUseCase updateWorkingTimeUseCase;
     @Mock
     private DeleteWorkingTimeUseCase deleteWorkingTimeUseCase;
@@ -83,7 +79,6 @@ class WorkingTimeControllerHttpTest {
                 createWorkingTimeUseCase,
                 listEmployeeWorkingTimesUseCase,
                 getWorkingTimeByBusinessKeyUseCase,
-                closeWorkingTimeUseCase,
                 updateWorkingTimeUseCase,
                 deleteWorkingTimeUseCase,
                 planWorkingTimeChangeUseCase,
@@ -238,30 +233,6 @@ class WorkingTimeControllerHttpTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.workingTimeNumber").value(3))
                         .andExpect(jsonPath("$.monthlyHours").value(144.67));
-    }
-
-    @Test
-    void closeMapsPathAndBodyToCommand() throws Exception {
-        when(closeWorkingTimeUseCase.close(any(CloseWorkingTimeCommand.class)))
-                .thenReturn(workingTime(1, LocalDate.of(2026, 1, 10), LocalDate.of(2026, 1, 20), new BigDecimal("50")));
-
-        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/working-times/1/close")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "endDate": "2026-01-20"
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.workingTimeNumber").value(1))
-                .andExpect(jsonPath("$.endDate[0]").value(2026))
-                .andExpect(jsonPath("$.endDate[1]").value(1))
-                .andExpect(jsonPath("$.endDate[2]").value(20));
-
-        ArgumentCaptor<CloseWorkingTimeCommand> captor = ArgumentCaptor.forClass(CloseWorkingTimeCommand.class);
-        verify(closeWorkingTimeUseCase).close(captor.capture());
-        assertEquals(1, captor.getValue().workingTimeNumber());
-        assertEquals(LocalDate.of(2026, 1, 20), captor.getValue().endDate());
     }
 
     @Test

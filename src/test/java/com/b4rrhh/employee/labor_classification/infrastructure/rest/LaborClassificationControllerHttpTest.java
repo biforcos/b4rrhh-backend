@@ -1,6 +1,5 @@
 package com.b4rrhh.employee.labor_classification.infrastructure.rest;
 
-import com.b4rrhh.employee.labor_classification.application.command.CloseLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.command.CreateLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.command.DeleteLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.command.PlanLaborClassificationChangeCommand;
@@ -11,7 +10,6 @@ import com.b4rrhh.employee.temporal.support.TimelineRejection;
 import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
 import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguageArgumentResolver;
 import com.b4rrhh.rulesystem.agreementcategoryprofile.domain.port.AgreementCategoryProfileRepository;
-import com.b4rrhh.employee.labor_classification.application.usecase.CloseLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.DeleteLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.GetLaborClassificationByBusinessKeyUseCase;
@@ -71,8 +69,6 @@ class LaborClassificationControllerHttpTest {
     @Mock
     private UpdateLaborClassificationUseCase updateLaborClassificationUseCase;
     @Mock
-    private CloseLaborClassificationUseCase closeLaborClassificationUseCase;
-    @Mock
     private DeleteLaborClassificationUseCase deleteLaborClassificationUseCase;
     @Mock
     private PlanLaborClassificationChangeUseCase planLaborClassificationChangeUseCase;
@@ -93,7 +89,6 @@ class LaborClassificationControllerHttpTest {
                 listEmployeeLaborClassificationsUseCase,
                 getLaborClassificationByBusinessKeyUseCase,
                 updateLaborClassificationUseCase,
-                closeLaborClassificationUseCase,
                 deleteLaborClassificationUseCase,
                 planLaborClassificationChangeUseCase,
                 laborClassificationResponseAssembler
@@ -143,40 +138,6 @@ class LaborClassificationControllerHttpTest {
         assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
         assertEquals("EMP001", captor.getValue().employeeNumber());
         assertEquals(LocalDate.of(2026, 1, 1), captor.getValue().startDate());
-    }
-
-    @Test
-    void closeEndpointUsesDomainActionPath() throws Exception {
-        LaborClassification closed = laborClassification(
-                "AGR_OFFICE",
-                "CAT_ADMIN",
-                LocalDate.of(2026, 1, 1),
-                LocalDate.of(2026, 1, 31)
-        );
-        when(closeLaborClassificationUseCase.close(any(CloseLaborClassificationCommand.class))).thenReturn(closed);
-        when(ruleEntityLabelResolver.resolveName("ESP", "AGREEMENT", "AGR_OFFICE", null))
-                .thenReturn(Optional.of("Office Agreement"));
-        when(ruleEntityLabelResolver.resolveName("ESP", "AGREEMENT_CATEGORY", "CAT_ADMIN", null))
-                .thenReturn(Optional.of("Administrative Category"));
-
-        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/labor-classifications/2026-01-01/close")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "endDate": "2026-01-31"
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.agreementCode").value("AGR_OFFICE"))
-                .andExpect(jsonPath("$.agreementName").value("Office Agreement"))
-                .andExpect(jsonPath("$.agreementCategoryCode").value("CAT_ADMIN"))
-                .andExpect(jsonPath("$.agreementCategoryName").value("Administrative Category"));
-
-        ArgumentCaptor<CloseLaborClassificationCommand> captor =
-                ArgumentCaptor.forClass(CloseLaborClassificationCommand.class);
-        verify(closeLaborClassificationUseCase).close(captor.capture());
-        assertEquals(LocalDate.of(2026, 1, 1), captor.getValue().startDate());
-        assertEquals(LocalDate.of(2026, 1, 31), captor.getValue().endDate());
     }
 
     @Test

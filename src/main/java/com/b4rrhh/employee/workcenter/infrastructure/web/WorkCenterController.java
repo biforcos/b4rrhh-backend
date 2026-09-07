@@ -1,7 +1,5 @@
 package com.b4rrhh.employee.workcenter.infrastructure.web;
 
-import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterCommand;
-import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.DeleteWorkCenterCommand;
@@ -14,7 +12,6 @@ import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterComman
 import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
 import com.b4rrhh.employee.workcenter.infrastructure.web.assembler.WorkCenterResponseAssembler;
-import com.b4rrhh.employee.workcenter.infrastructure.web.dto.CloseWorkCenterRequest;
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.CreateWorkCenterRequest;
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.PlanWorkCenterChangeRequest;
 import com.b4rrhh.employee.workcenter.infrastructure.web.dto.UpdateWorkCenterRequest;
@@ -39,7 +36,6 @@ import java.util.List;
 public class WorkCenterController {
 
     private final CreateWorkCenterUseCase createWorkCenterUseCase;
-    private final CloseWorkCenterUseCase closeWorkCenterUseCase;
     private final DeleteWorkCenterUseCase deleteWorkCenterUseCase;
     private final GetWorkCenterByBusinessKeyUseCase getWorkCenterByBusinessKeyUseCase;
     private final ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase;
@@ -49,7 +45,6 @@ public class WorkCenterController {
 
     public WorkCenterController(
             CreateWorkCenterUseCase createWorkCenterUseCase,
-            CloseWorkCenterUseCase closeWorkCenterUseCase,
             DeleteWorkCenterUseCase deleteWorkCenterUseCase,
             GetWorkCenterByBusinessKeyUseCase getWorkCenterByBusinessKeyUseCase,
             ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase,
@@ -58,7 +53,6 @@ public class WorkCenterController {
             WorkCenterResponseAssembler workCenterResponseAssembler
     ) {
         this.createWorkCenterUseCase = createWorkCenterUseCase;
-        this.closeWorkCenterUseCase = closeWorkCenterUseCase;
         this.deleteWorkCenterUseCase = deleteWorkCenterUseCase;
         this.getWorkCenterByBusinessKeyUseCase = getWorkCenterByBusinessKeyUseCase;
         this.listEmployeeWorkCentersUseCase = listEmployeeWorkCentersUseCase;
@@ -145,34 +139,6 @@ public class WorkCenterController {
         );
 
         return ResponseEntity.ok(workCenterResponseAssembler.toResponse(ruleSystemCode, updated, language));
-    }
-
-    /**
-     * Kept while the work center screen and the termination flow still close
-     * an assignment. To be removed once they have migrated: adding an
-     * assignment already closes the one in force the day before (ADR-057).
-     */
-    @Deprecated
-    @PostMapping("/{workCenterAssignmentNumber}/close")
-    public ResponseEntity<WorkCenterResponse> close(
-            @PathVariable String ruleSystemCode,
-            @PathVariable String employeeTypeCode,
-            @PathVariable String employeeNumber,
-            @PathVariable Integer workCenterAssignmentNumber,
-            @RequestBody CloseWorkCenterRequest request,
-            ResponseLanguage language
-    ) {
-        WorkCenter closed = closeWorkCenterUseCase.close(
-                new CloseWorkCenterCommand(
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        employeeNumber,
-                        workCenterAssignmentNumber,
-                        request.endDate()
-                )
-        );
-
-        return ResponseEntity.ok(workCenterResponseAssembler.toResponse(ruleSystemCode, closed, language));
     }
 
     /**

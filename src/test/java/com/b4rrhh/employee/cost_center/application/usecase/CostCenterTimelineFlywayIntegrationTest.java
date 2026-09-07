@@ -60,7 +60,7 @@ class CostCenterTimelineFlywayIntegrationTest {
     @Autowired
     private PlanCostCenterDistributionChangeService planService;
     @Autowired
-    private CloseCostCenterDistributionService closeService;
+    private CloseActiveCostCenterDistributionAtTerminationService closeAtTermination;
     @Autowired
     private JdbcTemplate jdbcTemplate;
     @Autowired
@@ -341,23 +341,10 @@ class CostCenterTimelineFlywayIntegrationTest {
                 JAN_31, employeeId
         );
 
-        closeService.close(new CloseCostCenterDistributionCommand(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_1, JAN_31));
+        closeAtTermination.closeIfPresent(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, JAN_31);
         entityManager.flush();
 
         assertEquals(List.of(JAN_31, JAN_31), persistedEndDates(DAY_1));
-    }
-
-    // Optional coverage: the deprecated close on a date inside an open presence leaves the rest of
-    // it uncovered, and that is legal here.
-    @Test
-    void closingTheOpenWindowWhileThePresenceGoesOnIsAcceptedAndLeavesTheGap() {
-        createService.create(create(DAY_1, null, Map.of("CC_ADMIN", 100)));
-
-        closeService.close(new CloseCostCenterDistributionCommand(
-                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_1, DAY_15));
-        entityManager.flush();
-
-        assertEquals(List.of(DAY_15), persistedEndDates(DAY_1));
     }
 
     private CreateCostCenterDistributionCommand create(LocalDate startDate, LocalDate endDate, Map<String, Integer> items) {

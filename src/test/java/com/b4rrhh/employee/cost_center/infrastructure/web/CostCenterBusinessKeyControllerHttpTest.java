@@ -2,7 +2,6 @@ package com.b4rrhh.employee.cost_center.infrastructure.web;
 
 import com.b4rrhh.employee.cost_center.application.model.CostCenterDistributionPlan;
 import com.b4rrhh.employee.cost_center.application.model.CostCenterDistributionPlanAdjustment;
-import com.b4rrhh.employee.cost_center.application.usecase.CloseCostCenterDistributionUseCase;
 import com.b4rrhh.employee.cost_center.application.usecase.CostCenterDistributionReadModel;
 import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistributionCommand;
 import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistributionUseCase;
@@ -78,8 +77,6 @@ class CostCenterBusinessKeyControllerHttpTest {
     @Mock
     private ListCostCenterDistributionHistoryUseCase listCostCenterDistributionHistoryUseCase;
     @Mock
-    private CloseCostCenterDistributionUseCase closeCostCenterDistributionUseCase;
-    @Mock
     private UpdateCostCenterDistributionUseCase updateCostCenterDistributionUseCase;
     @Mock
     private DeleteCostCenterDistributionUseCase deleteCostCenterDistributionUseCase;
@@ -97,7 +94,6 @@ class CostCenterBusinessKeyControllerHttpTest {
                                 createCostCenterDistributionUseCase,
                                 getCurrentCostCenterDistributionUseCase,
                                 listCostCenterDistributionHistoryUseCase,
-                                closeCostCenterDistributionUseCase,
                                 updateCostCenterDistributionUseCase,
                                 deleteCostCenterDistributionUseCase,
                                 planCostCenterDistributionChangeUseCase,

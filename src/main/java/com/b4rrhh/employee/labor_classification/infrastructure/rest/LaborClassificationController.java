@@ -1,13 +1,11 @@
 package com.b4rrhh.employee.labor_classification.infrastructure.rest;
 
-import com.b4rrhh.employee.labor_classification.application.command.CloseLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.command.CreateLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.command.DeleteLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.command.GetLaborClassificationByBusinessKeyCommand;
 import com.b4rrhh.employee.labor_classification.application.command.ListEmployeeLaborClassificationsCommand;
 import com.b4rrhh.employee.labor_classification.application.command.PlanLaborClassificationChangeCommand;
 import com.b4rrhh.employee.labor_classification.application.command.UpdateLaborClassificationCommand;
-import com.b4rrhh.employee.labor_classification.application.usecase.CloseLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.DeleteLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.GetLaborClassificationByBusinessKeyUseCase;
@@ -16,7 +14,6 @@ import com.b4rrhh.employee.labor_classification.application.usecase.PlanLaborCla
 import com.b4rrhh.employee.labor_classification.application.usecase.UpdateLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.labor_classification.infrastructure.rest.assembler.LaborClassificationResponseAssembler;
-import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.CloseLaborClassificationRequest;
 import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.CreateLaborClassificationRequest;
 import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.LaborClassificationPlanResponse;
 import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.LaborClassificationResponse;
@@ -46,7 +43,6 @@ public class LaborClassificationController {
     private final ListEmployeeLaborClassificationsUseCase listEmployeeLaborClassificationsUseCase;
     private final GetLaborClassificationByBusinessKeyUseCase getLaborClassificationByBusinessKeyUseCase;
     private final UpdateLaborClassificationUseCase updateLaborClassificationUseCase;
-    private final CloseLaborClassificationUseCase closeLaborClassificationUseCase;
     private final DeleteLaborClassificationUseCase deleteLaborClassificationUseCase;
     private final PlanLaborClassificationChangeUseCase planLaborClassificationChangeUseCase;
     private final LaborClassificationResponseAssembler laborClassificationResponseAssembler;
@@ -56,7 +52,6 @@ public class LaborClassificationController {
             ListEmployeeLaborClassificationsUseCase listEmployeeLaborClassificationsUseCase,
             GetLaborClassificationByBusinessKeyUseCase getLaborClassificationByBusinessKeyUseCase,
             UpdateLaborClassificationUseCase updateLaborClassificationUseCase,
-            CloseLaborClassificationUseCase closeLaborClassificationUseCase,
             DeleteLaborClassificationUseCase deleteLaborClassificationUseCase,
             PlanLaborClassificationChangeUseCase planLaborClassificationChangeUseCase,
             LaborClassificationResponseAssembler laborClassificationResponseAssembler
@@ -65,7 +60,6 @@ public class LaborClassificationController {
         this.listEmployeeLaborClassificationsUseCase = listEmployeeLaborClassificationsUseCase;
         this.getLaborClassificationByBusinessKeyUseCase = getLaborClassificationByBusinessKeyUseCase;
         this.updateLaborClassificationUseCase = updateLaborClassificationUseCase;
-        this.closeLaborClassificationUseCase = closeLaborClassificationUseCase;
         this.deleteLaborClassificationUseCase = deleteLaborClassificationUseCase;
         this.planLaborClassificationChangeUseCase = planLaborClassificationChangeUseCase;
         this.laborClassificationResponseAssembler = laborClassificationResponseAssembler;
@@ -157,35 +151,6 @@ public class LaborClassificationController {
         );
 
         return ResponseEntity.ok(laborClassificationResponseAssembler.toResponse(ruleSystemCode, updated, language));
-    }
-
-    /**
-     * Kept while the labor classification screen still closes an occurrence
-     * before adding the next one. To be removed once the screen has migrated:
-     * adding an occurrence already closes the one in force the day before
-     * (ADR-057).
-     */
-    @Deprecated
-    @PostMapping("/{startDate}/close")
-    public ResponseEntity<LaborClassificationResponse> close(
-            @PathVariable String ruleSystemCode,
-            @PathVariable String employeeTypeCode,
-            @PathVariable String employeeNumber,
-            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestBody CloseLaborClassificationRequest request,
-            ResponseLanguage language
-    ) {
-        LaborClassification closed = closeLaborClassificationUseCase.close(
-                new CloseLaborClassificationCommand(
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        employeeNumber,
-                        startDate,
-                        request.endDate()
-                )
-        );
-
-        return ResponseEntity.ok(laborClassificationResponseAssembler.toResponse(ruleSystemCode, closed, language));
     }
 
     /**

@@ -1013,64 +1013,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/AddressErrorResponse"
 
-  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/addresses/{addressNumber}/close:
-    post:
-      operationId: closeAddressByBusinessKey
-      summary: Close employee address by business key
-      deprecated: true
-      description: >-
-        Kept while the current screen still closes an address before adding the
-        next one. To be removed once the screen is migrated: adding an address
-        already closes the one of the same type in force the day before
-        (ADR-057).
-      tags:
-        - Employee Address
-      parameters:
-        - $ref: "#/components/parameters/AcceptLanguage"
-        - in: path
-          name: ruleSystemCode
-          required: true
-          schema:
-            type: string
-            maxLength: 5
-        - in: path
-          name: employeeTypeCode
-          required: true
-          schema:
-            type: string
-            maxLength: 30
-        - in: path
-          name: employeeNumber
-          required: true
-          schema:
-            type: string
-            maxLength: 15
-        - in: path
-          name: addressNumber
-          required: true
-          schema:
-            type: integer
-            format: int32
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CloseAddressRequest"
-      responses:
-        "200":
-          description: Address closed
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AddressResponse"
-        "400":
-          description: Invalid request
-        "404":
-          description: Rule system, employee, or address not found
-        "409":
-          description: Address already closed
-
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers:
     post:
       operationId: createWorkCenterByBusinessKey
@@ -1382,73 +1324,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/EmployeeWorkCenterErrorResponse"
 
-  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers/{workCenterAssignmentNumber}/close:
-    post:
-      operationId: closeWorkCenterByBusinessKey
-      summary: Close employee work center assignment by business key
-      deprecated: true
-      description: >-
-        Kept while the work center screen and the termination flow still
-        close an assignment. ADR-057 retires close as an operation: adding an
-        assignment already closes the one in force the day before, and any
-        other end date is a correction (PUT). Judged like a correction:
-        closing the assignment in force while the presence goes on is
-        rejected as WORK_CENTER_COVERAGE_GAP.
-      tags:
-        - Employee Work Center
-      parameters:
-        - $ref: "#/components/parameters/AcceptLanguage"
-        - in: path
-          name: ruleSystemCode
-          required: true
-          schema:
-            type: string
-            maxLength: 5
-        - in: path
-          name: employeeTypeCode
-          required: true
-          schema:
-            type: string
-            maxLength: 30
-        - in: path
-          name: employeeNumber
-          required: true
-          schema:
-            type: string
-            maxLength: 15
-        - in: path
-          name: workCenterAssignmentNumber
-          required: true
-          schema:
-            type: integer
-            format: int32
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/EmployeeCloseWorkCenterRequest"
-      responses:
-        "200":
-          description: Work center assignment closed
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/EmployeeWorkCenterAssignmentResponse"
-        "400":
-          description: Invalid request
-        "404":
-          description: Rule system, employee, or work center assignment not found
-        "409":
-          description: >-
-            WORK_CENTER_ALREADY_CLOSED, or the closed period would break an
-            invariant (ADR-057): WORK_CENTER_COVERAGE_GAP (details name the gap
-            it would leave) or WORK_CENTER_OUTSIDE_PRESENCE.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/EmployeeWorkCenterErrorResponse"
-
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/working-times:
     post:
       operationId: createWorkingTimeByBusinessKey
@@ -1729,65 +1604,6 @@ paths:
           description: Invalid request
         "404":
           description: Employee or working time not found
-
-  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/working-times/{workingTimeNumber}/close:
-    post:
-      operationId: closeWorkingTimeByBusinessKey
-      summary: Close employee working time by business key
-      deprecated: true
-      description: >-
-        Kept while the current screen still closes a working time before adding
-        the next one. To be removed once frontend#43 migrates the screen:
-        adding a working time already closes the one in force the day before
-        (ADR-057).
-      tags:
-        - Employee Working Time
-      parameters:
-        - in: path
-          name: ruleSystemCode
-          required: true
-          schema:
-            type: string
-            maxLength: 5
-        - in: path
-          name: employeeTypeCode
-          required: true
-          schema:
-            type: string
-            maxLength: 30
-        - in: path
-          name: employeeNumber
-          required: true
-          schema:
-            type: string
-            maxLength: 15
-        - in: path
-          name: workingTimeNumber
-          required: true
-          schema:
-            type: integer
-            format: int32
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CloseWorkingTimeRequest"
-      responses:
-        "200":
-          description: Working time closed
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkingTimeResponse"
-        "400":
-          description: Invalid request
-        "404":
-          description: Employee or working time not found
-        "409":
-          description: >-
-            Working time is already closed,
-            or the resulting period is outside employee presence history.
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers:
     get:
@@ -2122,79 +1938,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/CostCenterErrorResponse"
 
-  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/distributions/{startDate}/close:
-    post:
-      operationId: closeCostCenterDistribution
-      summary: Close the cost center distribution window identified by startDate
-      deprecated: true
-      tags:
-        - Employee Cost Center
-      description: |
-        Deprecated (ADR-057): adding the next window already closes the one in
-        force, and any other end date is a correction (PUT). Kept while the
-        screen still calls it. Every line of the window takes endDate, and the
-        result is judged by the invariants: closing the window in force while
-        the presence goes on leaves a gap, which is legal here (the series
-        declares optional coverage); an end date past the presence is
-        COST_CENTER_OUTSIDE_PRESENCE.
-      parameters:
-        - in: path
-          name: ruleSystemCode
-          required: true
-          schema:
-            type: string
-            maxLength: 5
-        - in: path
-          name: employeeTypeCode
-          required: true
-          schema:
-            type: string
-            maxLength: 30
-        - in: path
-          name: employeeNumber
-          required: true
-          schema:
-            type: string
-            maxLength: 15
-        - in: path
-          name: startDate
-          required: true
-          schema:
-            type: string
-            format: date
-          description: The startDate that identifies the distribution window to close.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CloseCostCenterDistributionRequest"
-      responses:
-        "200":
-          description: Distribution window closed
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CostCenterDistributionWindowResponse"
-        "400":
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CostCenterErrorResponse"
-        "404":
-          description: Employee or distribution window not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CostCenterErrorResponse"
-        "409":
-          description: The resulting series would break an invariant (COST_CENTER_OUTSIDE_PRESENCE, COST_CENTER_OVERLAP)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CostCenterErrorResponse"
-
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts:
     post:
       operationId: createContractByBusinessKey
@@ -2496,67 +2239,6 @@ paths:
           description: Invalid request
         "404":
           description: Employee or contract not found
-
-  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts/{startDate}/close:
-    post:
-      operationId: closeContractByBusinessKey
-      summary: Close employee contract by business key
-      deprecated: true
-      description: >-
-        Kept while the contract screen still closes a contract before adding
-        the next one. ADR-057 retires close as an operation: adding a contract
-        already closes the one in force the day before, and any other end date
-        is a correction (PUT). Judged like a correction: closing the contract
-        in force while the presence goes on is rejected as CONTRACT_COVERAGE_GAP.
-      tags:
-        - Employee Contract
-      parameters:
-        - $ref: "#/components/parameters/AcceptLanguage"
-        - in: path
-          name: ruleSystemCode
-          required: true
-          schema:
-            type: string
-            maxLength: 5
-        - in: path
-          name: employeeTypeCode
-          required: true
-          schema:
-            type: string
-            maxLength: 30
-        - in: path
-          name: employeeNumber
-          required: true
-          schema:
-            type: string
-            maxLength: 15
-        - in: path
-          name: startDate
-          required: true
-          schema:
-            type: string
-            format: date
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CloseContractRequest"
-      responses:
-        "200":
-          description: Contract closed
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ContractResponse"
-        "400":
-          description: Invalid request
-        "404":
-          description: Employee or contract not found
-        "409":
-          description: >-
-            Contract is already closed,
-            or closing creates timeline inconsistencies with employee presence.
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/labor-classifications:
     post:
@@ -2863,68 +2545,6 @@ paths:
           description: Invalid request
         "404":
           description: Employee or labor classification not found
-
-  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/labor-classifications/{startDate}/close:
-    post:
-      operationId: closeLaborClassificationByBusinessKey
-      summary: Close employee labor classification by business key
-      deprecated: true
-      description: >-
-        Kept while the labor classification screen still closes an occurrence
-        before adding the next one. ADR-057 retires close as an operation:
-        adding an occurrence already closes the one in force the day before,
-        and any other end date is a correction (PUT). Judged like a correction:
-        closing the occurrence in force while the presence goes on is rejected
-        as LABOR_CLASSIFICATION_INCOMPLETE_COVERAGE.
-      tags:
-        - Employee Labor Classification
-      parameters:
-        - $ref: "#/components/parameters/AcceptLanguage"
-        - in: path
-          name: ruleSystemCode
-          required: true
-          schema:
-            type: string
-            maxLength: 5
-        - in: path
-          name: employeeTypeCode
-          required: true
-          schema:
-            type: string
-            maxLength: 30
-        - in: path
-          name: employeeNumber
-          required: true
-          schema:
-            type: string
-            maxLength: 15
-        - in: path
-          name: startDate
-          required: true
-          schema:
-            type: string
-            format: date
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CloseLaborClassificationRequest"
-      responses:
-        "200":
-          description: Labor classification closed
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LaborClassificationResponse"
-        "400":
-          description: Invalid request
-        "404":
-          description: Employee or labor classification not found
-        "409":
-          description: >-
-            Labor classification is already closed,
-            or closing creates timeline inconsistencies with employee presence.
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/identifiers:
     post:
@@ -7943,15 +7563,6 @@ components:
           type: string
           format: date
           nullable: true
-    CloseAddressRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - endDate
-      properties:
-        endDate:
-          type: string
-          format: date
     UpdateAddressRequest:
       type: object
       additionalProperties: false
@@ -8247,19 +7858,6 @@ components:
             Corrected optional end date (yyyy-MM-dd). When provided, must be >= startDate and the
             resulting period [startDate, endDate] must be fully contained within an existing employee
             presence period.
-    EmployeeCloseWorkCenterRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - endDate
-      properties:
-        endDate:
-          type: string
-          format: date
-          description: >-
-            Date on which the assignment ends (yyyy-MM-dd). Must be >= the assignment's startDate.
-            The resulting period [startDate, endDate] must be fully contained within
-            an existing employee presence period.
     EmployeeWorkCenterAssignmentResponse:
       type: object
       required:
@@ -8486,16 +8084,6 @@ components:
           minItems: 1
           items:
             $ref: "#/components/schemas/CostCenterDistributionItemRequest"
-    CloseCostCenterDistributionRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - endDate
-      properties:
-        endDate:
-          type: string
-          format: date
-          description: Date on which all lines in the window end (yyyy-MM-dd). Must be >= window startDate.
     CostCenterDistributionItemResponse:
       type: object
       required:
@@ -8750,16 +8338,6 @@ components:
           type: number
           format: double
           description: Percentage from > 0 to <= 100. Source of truth for derived persisted hours.
-    CloseWorkingTimeRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - endDate
-      properties:
-        endDate:
-          type: string
-          format: date
-          description: Date on which the working time period ends (yyyy-MM-dd).
     UpdateWorkingTimeRequest:
       type: object
       additionalProperties: false
@@ -9008,16 +8586,6 @@ components:
           type: string
           minLength: 3
           maxLength: 3
-    CloseContractRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - endDate
-      properties:
-        endDate:
-          type: string
-          format: date
-          description: Date on which the contract period ends (yyyy-MM-dd).
     ContractResponse:
       type: object
       required:
@@ -9245,16 +8813,6 @@ components:
         agreementCategoryCode:
           type: string
           maxLength: 30
-    CloseLaborClassificationRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - endDate
-      properties:
-        endDate:
-          type: string
-          format: date
-          description: Date on which the labor classification period ends (yyyy-MM-dd).
     LaborClassificationResponse:
       type: object
       required:

@@ -1,7 +1,5 @@
 package com.b4rrhh.employee.address.infrastructure.web;
 
-import com.b4rrhh.employee.address.application.usecase.CloseAddressCommand;
-import com.b4rrhh.employee.address.application.usecase.CloseAddressUseCase;
 import com.b4rrhh.employee.address.application.usecase.CreateAddressCommand;
 import com.b4rrhh.employee.address.application.usecase.CreateAddressUseCase;
 import com.b4rrhh.employee.address.application.usecase.DeleteAddressUseCase;
@@ -15,7 +13,6 @@ import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import com.b4rrhh.employee.address.domain.model.Address;
 import com.b4rrhh.employee.address.infrastructure.web.assembler.AddressResponseAssembler;
 import com.b4rrhh.employee.address.infrastructure.web.dto.AddressResponse;
-import com.b4rrhh.employee.address.infrastructure.web.dto.CloseAddressRequest;
 import com.b4rrhh.employee.address.infrastructure.web.dto.CreateAddressRequest;
 import com.b4rrhh.employee.address.infrastructure.web.dto.UpdateAddressRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,8 +42,6 @@ class AddressBusinessKeyControllerTest {
     @Mock
     private CreateAddressUseCase createAddressUseCase;
     @Mock
-    private CloseAddressUseCase closeAddressUseCase;
-    @Mock
     private GetAddressByBusinessKeyUseCase getAddressByBusinessKeyUseCase;
     @Mock
     private ListEmployeeAddressesUseCase listEmployeeAddressesUseCase;
@@ -65,7 +60,6 @@ class AddressBusinessKeyControllerTest {
     void setUp() {
         controller = new AddressBusinessKeyController(
                 createAddressUseCase,
-                closeAddressUseCase,
                 getAddressByBusinessKeyUseCase,
                 listEmployeeAddressesUseCase,
                 updateAddressUseCase,
@@ -129,25 +123,6 @@ class AddressBusinessKeyControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().addressNumber());
-    }
-
-    @Test
-    void closesAddressUsingBusinessKeyAndAddressNumber() {
-        CloseAddressRequest request = new CloseAddressRequest(LocalDate.of(2026, 2, 1));
-        when(closeAddressUseCase.close(any(CloseAddressCommand.class))).thenReturn(closedAddress());
-
-        ResponseEntity<AddressResponse> response = controller.close("ESP", "INTERNAL", "EMP001", 1, request, ResponseLanguage.base());
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals(LocalDate.of(2026, 2, 1), response.getBody().endDate());
-
-        ArgumentCaptor<CloseAddressCommand> captor = ArgumentCaptor.forClass(CloseAddressCommand.class);
-        verify(closeAddressUseCase).close(captor.capture());
-        assertEquals("ESP", captor.getValue().ruleSystemCode());
-        assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
-        assertEquals("EMP001", captor.getValue().employeeNumber());
-        assertEquals(1, captor.getValue().addressNumber());
     }
 
     @Test

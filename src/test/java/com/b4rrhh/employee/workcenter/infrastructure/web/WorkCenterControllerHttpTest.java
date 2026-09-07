@@ -5,8 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
 import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguageArgumentResolver;
 import com.b4rrhh.employee.workcenter.domain.port.WorkCenterCompanyLookupPort;
-import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterCommand;
-import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.DeleteWorkCenterCommand;
@@ -77,8 +75,6 @@ class WorkCenterControllerHttpTest {
     @Mock
     private CreateWorkCenterUseCase createWorkCenterUseCase;
     @Mock
-    private CloseWorkCenterUseCase closeWorkCenterUseCase;
-    @Mock
         private DeleteWorkCenterUseCase deleteWorkCenterUseCase;
         @Mock
     private GetWorkCenterByBusinessKeyUseCase getWorkCenterByBusinessKeyUseCase;
@@ -102,7 +98,6 @@ class WorkCenterControllerHttpTest {
 
         WorkCenterController controller = new WorkCenterController(
                 createWorkCenterUseCase,
-                closeWorkCenterUseCase,
                 deleteWorkCenterUseCase,
                 getWorkCenterByBusinessKeyUseCase,
                 listEmployeeWorkCentersUseCase,
@@ -147,32 +142,6 @@ class WorkCenterControllerHttpTest {
         assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
         assertEquals("EMP001", captor.getValue().employeeNumber());
         assertEquals("MADRID_HQ", captor.getValue().workCenterCode());
-    }
-
-    @Test
-    void closeMapsPathAndBodyToCommand() throws Exception {
-        when(closeWorkCenterUseCase.close(any(CloseWorkCenterCommand.class)))
-                .thenReturn(workCenter(1, "MADRID_HQ", LocalDate.of(2026, 1, 10), LocalDate.of(2026, 1, 20)));
-
-        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/work-centers/1/close")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "endDate": "2026-01-20"
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.workCenterAssignmentNumber").value(1))
-                .andExpect(jsonPath("$.endDate[0]").value(2026))
-                .andExpect(jsonPath("$.endDate[1]").value(1))
-                .andExpect(jsonPath("$.endDate[2]").value(20));
-
-        ArgumentCaptor<CloseWorkCenterCommand> captor = ArgumentCaptor.forClass(CloseWorkCenterCommand.class);
-        verify(closeWorkCenterUseCase).close(captor.capture());
-        assertEquals("ESP", captor.getValue().ruleSystemCode());
-        assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
-        assertEquals("EMP001", captor.getValue().employeeNumber());
-        assertEquals(1, captor.getValue().workCenterAssignmentNumber());
     }
 
     @Test
@@ -324,22 +293,6 @@ class WorkCenterControllerHttpTest {
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("WORK_CENTER_COMPANY_MISMATCH"));
-    }
-
-    @Test
-    void closeMapsAlreadyClosedToHttp409() throws Exception {
-        when(closeWorkCenterUseCase.close(any(CloseWorkCenterCommand.class)))
-                .thenThrow(new WorkCenterAlreadyClosedException(1));
-
-        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/work-centers/1/close")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "endDate": "2026-01-20"
-                                }
-                                """))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("WORK_CENTER_ALREADY_CLOSED"));
     }
 
     @Test

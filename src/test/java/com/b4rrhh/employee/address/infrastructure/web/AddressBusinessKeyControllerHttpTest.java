@@ -2,8 +2,6 @@ package com.b4rrhh.employee.address.infrastructure.web;
 
 import com.b4rrhh.employee.address.application.model.AddressPlan;
 import com.b4rrhh.employee.address.application.model.AddressPlanAdjustment;
-import com.b4rrhh.employee.address.application.usecase.CloseAddressCommand;
-import com.b4rrhh.employee.address.application.usecase.CloseAddressUseCase;
 import com.b4rrhh.employee.address.application.usecase.CreateAddressUseCase;
 import com.b4rrhh.employee.address.application.usecase.DeleteAddressCommand;
 import com.b4rrhh.employee.address.application.usecase.DeleteAddressUseCase;
@@ -62,8 +60,6 @@ class AddressBusinessKeyControllerHttpTest {
     @Mock
     private CreateAddressUseCase createAddressUseCase;
     @Mock
-    private CloseAddressUseCase closeAddressUseCase;
-    @Mock
     private GetAddressByBusinessKeyUseCase getAddressByBusinessKeyUseCase;
     @Mock
     private ListEmployeeAddressesUseCase listEmployeeAddressesUseCase;
@@ -82,7 +78,6 @@ class AddressBusinessKeyControllerHttpTest {
     void setUp() {
         AddressBusinessKeyController controller = new AddressBusinessKeyController(
                 createAddressUseCase,
-                closeAddressUseCase,
                 getAddressByBusinessKeyUseCase,
                 listEmployeeAddressesUseCase,
                 updateAddressUseCase,

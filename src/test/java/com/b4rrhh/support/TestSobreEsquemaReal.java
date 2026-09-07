@@ -30,7 +30,7 @@ import com.b4rrhh.employee.contract.infrastructure.persistence.ContractSubtypeRe
 import com.b4rrhh.employee.contract.infrastructure.persistence.EmployeeContractLookupAdapter;
 import com.b4rrhh.employee.cost_center.application.service.CostCenterCatalogValidator;
 import com.b4rrhh.employee.cost_center.application.service.CostCenterTimelineService;
-import com.b4rrhh.employee.cost_center.application.usecase.CloseCostCenterDistributionService;
+import com.b4rrhh.employee.cost_center.application.usecase.CloseActiveCostCenterDistributionAtTerminationService;
 import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistributionService;
 import com.b4rrhh.employee.cost_center.application.usecase.DeleteCostCenterDistributionService;
 import com.b4rrhh.employee.cost_center.application.usecase.PlanCostCenterDistributionChangeService;
@@ -207,7 +207,7 @@ import java.lang.annotation.Target;
         UpdateCostCenterDistributionService.class,
         DeleteCostCenterDistributionService.class,
         PlanCostCenterDistributionChangeService.class,
-        CloseCostCenterDistributionService.class,
+        CloseActiveCostCenterDistributionAtTerminationService.class,
         CostCenterTimelineService.class,
         CostCenterCatalogValidator.class,
         CostCenterDistributionTimelineValidator.class,

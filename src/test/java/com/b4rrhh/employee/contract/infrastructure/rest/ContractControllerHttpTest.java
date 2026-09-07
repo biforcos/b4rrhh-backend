@@ -1,6 +1,5 @@
 package com.b4rrhh.employee.contract.infrastructure.rest;
 
-import com.b4rrhh.employee.contract.application.command.CloseContractCommand;
 import com.b4rrhh.employee.contract.application.command.CreateContractCommand;
 import com.b4rrhh.employee.contract.application.command.DeleteContractCommand;
 import com.b4rrhh.employee.contract.application.command.GetContractByBusinessKeyCommand;
@@ -9,7 +8,6 @@ import com.b4rrhh.employee.contract.application.command.PlanContractChangeComman
 import com.b4rrhh.employee.contract.application.command.UpdateContractCommand;
 import com.b4rrhh.employee.contract.application.model.ContractPlan;
 import com.b4rrhh.employee.contract.application.model.ContractPlanAdjustment;
-import com.b4rrhh.employee.contract.application.usecase.CloseContractUseCase;
 import com.b4rrhh.employee.contract.application.usecase.CreateContractUseCase;
 import com.b4rrhh.employee.contract.application.usecase.DeleteContractUseCase;
 import com.b4rrhh.employee.contract.application.usecase.GetContractByBusinessKeyUseCase;
@@ -73,8 +71,6 @@ class ContractControllerHttpTest {
     @Mock
     private UpdateContractUseCase updateContractUseCase;
     @Mock
-    private CloseContractUseCase closeContractUseCase;
-    @Mock
     private DeleteContractUseCase deleteContractUseCase;
     @Mock
     private PlanContractChangeUseCase planContractChangeUseCase;
@@ -90,7 +86,6 @@ class ContractControllerHttpTest {
                 listEmployeeContractsUseCase,
                 getContractByBusinessKeyUseCase,
                 updateContractUseCase,
-                closeContractUseCase,
                 deleteContractUseCase,
                 planContractChangeUseCase,
                 new ContractResponseAssembler(ruleEntityLabelResolver)
@@ -224,33 +219,6 @@ class ContractControllerHttpTest {
         assertEquals(LocalDate.of(2026, 6, 30), captor.getValue().endDate());
         assertEquals("TMP", captor.getValue().contractCode());
         assertEquals("INT", captor.getValue().contractSubtypeCode());
-    }
-
-    @Test
-    void closeEndpointUsesDomainActionPath() throws Exception {
-        when(closeContractUseCase.close(any(CloseContractCommand.class)))
-                .thenReturn(contract(
-                        "IND",
-                        "FT1",
-                        LocalDate.of(2026, 1, 1),
-                        LocalDate.of(2026, 1, 31)
-                ));
-
-        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/contracts/2026-01-01/close")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "endDate": "2026-01-31"
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.contractCode").value("IND"));
-
-        ArgumentCaptor<CloseContractCommand> captor =
-                ArgumentCaptor.forClass(CloseContractCommand.class);
-        verify(closeContractUseCase).close(captor.capture());
-        assertEquals(LocalDate.of(2026, 1, 1), captor.getValue().startDate());
-        assertEquals(LocalDate.of(2026, 1, 31), captor.getValue().endDate());
     }
 
     @Test

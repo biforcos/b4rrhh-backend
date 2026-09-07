@@ -1,7 +1,5 @@
 package com.b4rrhh.employee.address.infrastructure.web;
 
-import com.b4rrhh.employee.address.application.usecase.CloseAddressCommand;
-import com.b4rrhh.employee.address.application.usecase.CloseAddressUseCase;
 import com.b4rrhh.employee.address.application.usecase.CreateAddressCommand;
 import com.b4rrhh.employee.address.application.usecase.CreateAddressUseCase;
 import com.b4rrhh.employee.address.application.usecase.DeleteAddressCommand;
@@ -16,7 +14,6 @@ import com.b4rrhh.employee.address.domain.model.Address;
 import com.b4rrhh.employee.address.infrastructure.web.assembler.AddressResponseAssembler;
 import com.b4rrhh.employee.address.infrastructure.web.dto.AddressPlanResponse;
 import com.b4rrhh.employee.address.infrastructure.web.dto.AddressResponse;
-import com.b4rrhh.employee.address.infrastructure.web.dto.CloseAddressRequest;
 import com.b4rrhh.employee.address.infrastructure.web.dto.CreateAddressRequest;
 import com.b4rrhh.employee.address.infrastructure.web.dto.PlanAddressChangeRequest;
 import com.b4rrhh.employee.address.infrastructure.web.dto.UpdateAddressRequest;
@@ -39,7 +36,6 @@ import java.util.List;
 public class AddressBusinessKeyController {
 
     private final CreateAddressUseCase createAddressUseCase;
-    private final CloseAddressUseCase closeAddressUseCase;
     private final GetAddressByBusinessKeyUseCase getAddressByBusinessKeyUseCase;
     private final ListEmployeeAddressesUseCase listEmployeeAddressesUseCase;
     private final UpdateAddressUseCase updateAddressUseCase;
@@ -49,7 +45,6 @@ public class AddressBusinessKeyController {
 
     public AddressBusinessKeyController(
             CreateAddressUseCase createAddressUseCase,
-            CloseAddressUseCase closeAddressUseCase,
             GetAddressByBusinessKeyUseCase getAddressByBusinessKeyUseCase,
             ListEmployeeAddressesUseCase listEmployeeAddressesUseCase,
             UpdateAddressUseCase updateAddressUseCase,
@@ -58,7 +53,6 @@ public class AddressBusinessKeyController {
             AddressResponseAssembler addressResponseAssembler
     ) {
         this.createAddressUseCase = createAddressUseCase;
-        this.closeAddressUseCase = closeAddressUseCase;
         this.getAddressByBusinessKeyUseCase = getAddressByBusinessKeyUseCase;
         this.listEmployeeAddressesUseCase = listEmployeeAddressesUseCase;
         this.updateAddressUseCase = updateAddressUseCase;
@@ -195,30 +189,4 @@ public class AddressBusinessKeyController {
         ));
     }
 
-    /**
-     * Kept while the current screen still closes an address before adding the
-     * next one. To be removed once the screen is migrated to add-with-dates:
-     * adding already closes the previous one of the type (ADR-057).
-     */
-    @PostMapping("/{addressNumber}/close")
-    public ResponseEntity<AddressResponse> close(
-            @PathVariable String ruleSystemCode,
-            @PathVariable String employeeTypeCode,
-            @PathVariable String employeeNumber,
-            @PathVariable Integer addressNumber,
-            @RequestBody CloseAddressRequest request,
-            ResponseLanguage language
-    ) {
-        Address closed = closeAddressUseCase.close(
-                new CloseAddressCommand(
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        employeeNumber,
-                        addressNumber,
-                        request.endDate()
-                )
-        );
-
-        return ResponseEntity.ok(addressResponseAssembler.toResponse(ruleSystemCode, closed, language));
-    }
 }
