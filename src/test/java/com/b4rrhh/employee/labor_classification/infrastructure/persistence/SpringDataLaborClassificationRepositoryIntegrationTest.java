@@ -16,6 +16,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @TestSobreEsquemaReal
 // El esquema es el de produccion: el empleado tiene que existir de verdad
 // (clave ajena) y su id lo asigna la base ('generated always').
+//
+// Lo que se prueba aqui son restricciones de base —unicidad, clave ajena,
+// solape—, y para eso el codigo de convenio es una cadena opaca. Aun asi son
+// los del convenio real: si manana alguien mete una comprobacion de catalogo
+// en esta ruta, este test tiene que enterarse en vez de seguir verde por el
+// motivo equivocado (backend#6).
 class SpringDataLaborClassificationRepositoryIntegrationTest {
 
     @Autowired
@@ -27,14 +33,14 @@ class SpringDataLaborClassificationRepositoryIntegrationTest {
     @Test
     void enforcesUniqueConstraintByFunctionalIdentity() {
         Long empleado = DatosDePrueba.empleado(jdbcTemplate);
-        repository.saveAndFlush(entity(empleado, "AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null));
+        repository.saveAndFlush(entity(empleado, "99002405011982", "99002405-G3", LocalDate.of(2026, 1, 1), null));
 
         assertThrows(
                 DataIntegrityViolationException.class,
                 () -> repository.saveAndFlush(entity(
                         empleado,
-                        "AGR_TECH",
-                        "CAT_TECH_1",
+                        "99002405011982",
+                        "99002405-G1",
                         LocalDate.of(2026, 1, 1),
                         null
                 ))
@@ -47,8 +53,8 @@ class SpringDataLaborClassificationRepositoryIntegrationTest {
                 DataIntegrityViolationException.class,
                 () -> repository.saveAndFlush(entity(
                         999999999L,
-                        "AGR_OFFICE",
-                        "CAT_ADMIN",
+                        "99002405011982",
+                        "99002405-G3",
                         LocalDate.of(2026, 1, 1),
                         null
                 ))
@@ -60,8 +66,8 @@ class SpringDataLaborClassificationRepositoryIntegrationTest {
         Long empleado = DatosDePrueba.empleado(jdbcTemplate);
         repository.saveAndFlush(entity(
                 empleado,
-                "AGR_OFFICE",
-                "CAT_ADMIN",
+                "99002405011982",
+                "99002405-G3",
                 LocalDate.of(2026, 1, 1),
                 LocalDate.of(2026, 1, 31)
         ));
