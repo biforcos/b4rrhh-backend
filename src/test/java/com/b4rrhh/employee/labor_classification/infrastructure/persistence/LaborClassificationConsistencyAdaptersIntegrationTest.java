@@ -17,9 +17,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @TestSobreEsquemaReal
 // El esquema es el real, con sus semillas: los codigos de convenio y categoria
-// de estos tests son propios (ZAG1/ZCA1/ZCA2) porque AGR_OFFICE o CAT_ADMIN ya
-// vienen sembrados con sus relaciones (V25/V52) y contra esos la asercion
-// negativa no demostraria nada.
+// de estos tests son propios (ZAG1/ZCA1/ZCA2) porque 99002405011982 o
+// 99002405-G1 ya vienen sembrados con sus relaciones (V61) y contra esos la
+// asercion negativa no demostraria nada.
 class LaborClassificationConsistencyAdaptersIntegrationTest {
 
     @Autowired

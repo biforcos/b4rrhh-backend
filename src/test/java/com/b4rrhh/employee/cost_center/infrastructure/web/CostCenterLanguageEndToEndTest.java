@@ -78,7 +78,7 @@ class CostCenterLanguageEndToEndTest {
                 "ES01",
                 "MAIN_OFFICE",
                 new HireEmployeeCommand.HireEmployeeContractCommand("IND", "FT1"),
-                new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("AGR_OFFICE", "CAT_ADMIN"),
+                new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("99002405011982", "99002405-G3"),
                 new HireEmployeeCommand.HireEmployeeCostCenterDistributionCommand(List.of(
                         new HireEmployeeCommand.HireEmployeeCostCenterItemCommand("CC_ADMIN", 100.0)
                 )),

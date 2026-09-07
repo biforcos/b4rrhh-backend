@@ -27,9 +27,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 // El esquema no lo declara el test: es el de produccion, aplicado por Flyway
 // una vez y clonado para este contexto (ver EsquemaReal). Antes esto corria
 // contra H2 con un DDL de fundacion escrito a mano mas un subconjunto de
-// semillas; el esquema real trae las semillas baseline (V49-V52), los
-// perfiles de convenio de AGR_OFFICE y AGR_TECH (V60) y la numeracion de
-// empleados de ESP (V99).
+// semillas; el esquema real trae las semillas baseline (V49-V52), el
+// convenio real 99002405011982 con sus tres grupos y su perfil (V61, V87) y
+// la numeracion de empleados de ESP (V99).
 @ContextConfiguration(initializers = EsquemaRealInitializer.class)
 class HireEmployeeBaselineFlywayIntegrationTest {
 
@@ -134,8 +134,8 @@ class HireEmployeeBaselineFlywayIntegrationTest {
                 LocalDate.of(2026, 4, 1),
                 "ES01",
                 "MAIN_OFFICE",
-                "AGR_OFFICE",
-                "CAT_ADMIN",
+                "99002405011982",
+                "99002405-G3",
                 "IND",
                 "FT1",
                 new BigDecimal("100")
@@ -148,8 +148,8 @@ class HireEmployeeBaselineFlywayIntegrationTest {
                 LocalDate.of(2026, 4, 2),
                 "ES01",
                 "BRANCH_NORTH",
-                "AGR_TECH",
-                "CAT_TECH_1",
+                "99002405011982",
+                "99002405-G1",
                 "IND",
                 "FT1",
                 new BigDecimal("100")
@@ -162,8 +162,8 @@ class HireEmployeeBaselineFlywayIntegrationTest {
                 LocalDate.of(2026, 4, 3),
                 "ES01",
                 "MAIN_OFFICE",
-                "AGR_OFFICE",
-                "CAT_ADMIN",
+                "99002405011982",
+                "99002405-G3",
                 "TMP",
                 "PT1",
                 new BigDecimal("60")
@@ -176,8 +176,8 @@ class HireEmployeeBaselineFlywayIntegrationTest {
                 LocalDate.of(2026, 4, 4),
                 "ES02",
                 "BRANCH_SOUTH",
-                "AGR_TECH",
-                "CAT_TECH_2",
+                "99002405011982",
+                "99002405-G2",
                 "IND",
                 "FT1",
                 new BigDecimal("100")

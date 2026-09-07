@@ -67,7 +67,7 @@ class PresenceLanguageEndToEndTest {
                 "ES01",
                 "MAIN_OFFICE",
                 new HireEmployeeCommand.HireEmployeeContractCommand("IND", "FT1"),
-                new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("AGR_OFFICE", "CAT_ADMIN"),
+                new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("99002405011982", "99002405-G3"),
                 null,
                 new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("100"))
         )).employee().employeeNumber();
