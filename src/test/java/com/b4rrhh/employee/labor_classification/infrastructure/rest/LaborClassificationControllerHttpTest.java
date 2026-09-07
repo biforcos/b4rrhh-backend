@@ -4,7 +4,6 @@ import com.b4rrhh.employee.labor_classification.application.command.CloseLaborCl
 import com.b4rrhh.employee.labor_classification.application.command.CreateLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.command.DeleteLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.command.PlanLaborClassificationChangeCommand;
-import com.b4rrhh.employee.labor_classification.application.command.ReplaceLaborClassificationFromDateCommand;
 import com.b4rrhh.employee.labor_classification.application.model.LaborClassificationPlan;
 import com.b4rrhh.employee.labor_classification.application.model.LaborClassificationPlanAdjustment;
 import com.b4rrhh.employee.temporal.support.TimelineOperation;
@@ -18,7 +17,6 @@ import com.b4rrhh.employee.labor_classification.application.usecase.DeleteLaborC
 import com.b4rrhh.employee.labor_classification.application.usecase.GetLaborClassificationByBusinessKeyUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.ListEmployeeLaborClassificationsUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.PlanLaborClassificationChangeUseCase;
-import com.b4rrhh.employee.labor_classification.application.usecase.ReplaceLaborClassificationFromDateUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.UpdateLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.command.UpdateLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationAgreementInvalidException;
@@ -75,8 +73,6 @@ class LaborClassificationControllerHttpTest {
     @Mock
     private CloseLaborClassificationUseCase closeLaborClassificationUseCase;
     @Mock
-    private ReplaceLaborClassificationFromDateUseCase replaceLaborClassificationFromDateUseCase;
-    @Mock
     private DeleteLaborClassificationUseCase deleteLaborClassificationUseCase;
     @Mock
     private PlanLaborClassificationChangeUseCase planLaborClassificationChangeUseCase;
@@ -98,7 +94,6 @@ class LaborClassificationControllerHttpTest {
                 getLaborClassificationByBusinessKeyUseCase,
                 updateLaborClassificationUseCase,
                 closeLaborClassificationUseCase,
-                replaceLaborClassificationFromDateUseCase,
                 deleteLaborClassificationUseCase,
                 planLaborClassificationChangeUseCase,
                 laborClassificationResponseAssembler
@@ -185,45 +180,6 @@ class LaborClassificationControllerHttpTest {
     }
 
     @Test
-    void replaceFromDateMapsPathAndBodyToCommandAndReturns200() throws Exception {
-        LaborClassification replaced = laborClassification("AGR_TECH", "CAT_TECH_1", LocalDate.of(2026, 3, 1), null);
-        when(replaceLaborClassificationFromDateUseCase.replaceFromDate(any(ReplaceLaborClassificationFromDateCommand.class)))
-                .thenReturn(replaced);
-        when(ruleEntityLabelResolver.resolveName("ESP", "AGREEMENT", "AGR_TECH", null))
-                .thenReturn(Optional.of("Technical Agreement"));
-        when(ruleEntityLabelResolver.resolveName("ESP", "AGREEMENT_CATEGORY", "CAT_TECH_1", null))
-                .thenReturn(Optional.empty());
-
-        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/labor-classifications/replace-from-date")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "effectiveDate": "2026-03-01",
-                                  "agreementCode": "AGR_TECH",
-                                  "agreementCategoryCode": "CAT_TECH_1"
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.agreementCode").value("AGR_TECH"))
-                .andExpect(jsonPath("$.agreementName").value("Technical Agreement"))
-                .andExpect(jsonPath("$.agreementCategoryCode").value("CAT_TECH_1"))
-                .andExpect(jsonPath("$.agreementCategoryName").isEmpty())
-                .andExpect(jsonPath("$.startDate[0]").value(2026))
-                .andExpect(jsonPath("$.startDate[1]").value(3))
-                .andExpect(jsonPath("$.startDate[2]").value(1))
-                .andExpect(jsonPath("$.id").doesNotExist())
-                .andExpect(jsonPath("$.employeeId").doesNotExist());
-
-        ArgumentCaptor<ReplaceLaborClassificationFromDateCommand> captor =
-                ArgumentCaptor.forClass(ReplaceLaborClassificationFromDateCommand.class);
-        verify(replaceLaborClassificationFromDateUseCase).replaceFromDate(captor.capture());
-        assertEquals("ESP", captor.getValue().ruleSystemCode());
-        assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
-        assertEquals("EMP001", captor.getValue().employeeNumber());
-        assertEquals(LocalDate.of(2026, 3, 1), captor.getValue().effectiveDate());
-    }
-
-    @Test
     void updateReturnsEnrichedLabels() throws Exception {
         LaborClassification updated = laborClassification("AGR_OFFICE", "CAT_ADMIN", LocalDate.of(2026, 1, 1), null);
         when(updateLaborClassificationUseCase.update(any())).thenReturn(updated);
@@ -247,30 +203,6 @@ class LaborClassificationControllerHttpTest {
                 .andExpect(jsonPath("$.agreementCategoryName").value("Administrative Category"))
                 .andExpect(jsonPath("$.id").doesNotExist())
                 .andExpect(jsonPath("$.employeeId").doesNotExist());
-    }
-
-    @Test
-    void replaceFromDateMapsConflictToHttp409() throws Exception {
-        when(replaceLaborClassificationFromDateUseCase.replaceFromDate(any(ReplaceLaborClassificationFromDateCommand.class)))
-                .thenThrow(new LaborClassificationOverlapException(
-                        "ESP",
-                        "INTERNAL",
-                        "EMP001",
-                        LocalDate.of(2026, 3, 1),
-                        null
-                ));
-
-        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/labor-classifications/replace-from-date")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "effectiveDate": "2026-03-01",
-                                  "agreementCode": "AGR_TECH",
-                                  "agreementCategoryCode": "CAT_TECH_1"
-                                }
-                                """))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("LABOR_CLASSIFICATION_OVERLAP"));
     }
 
     @Test

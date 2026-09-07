@@ -62,8 +62,6 @@ class CostCenterTimelineFlywayIntegrationTest {
     @Autowired
     private CloseCostCenterDistributionService closeService;
     @Autowired
-    private ReplaceCostCenterDistributionFromDateService replaceService;
-    @Autowired
     private JdbcTemplate jdbcTemplate;
     @Autowired
     private EntityManager entityManager;
@@ -360,24 +358,6 @@ class CostCenterTimelineFlywayIntegrationTest {
         entityManager.flush();
 
         assertEquals(List.of(DAY_15), persistedEndDates(DAY_1));
-    }
-
-    // The deprecated replace-from-date, as the loader calls it: an add that closes the window in force.
-    @Test
-    void replacingFromADateClosesTheWindowInForceAndOpensTheNextOne() {
-        createService.create(create(DAY_1, null, Map.of("CC_ADMIN", 100)));
-
-        CostCenterDistributionWindow replaced = replaceService.replaceFromDate(new ReplaceCostCenterDistributionFromDateCommand(
-                RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, DAY_16,
-                List.of(new CostCenterDistributionItem("CC_HR", BigDecimal.valueOf(50)), new CostCenterDistributionItem("CC_IT", BigDecimal.valueOf(50)))
-        ));
-        entityManager.flush();
-
-        assertEquals(DAY_16, replaced.getStartDate());
-        assertNull(replaced.getEndDate());
-        assertEquals(3, persistedCount());
-        assertEquals(List.of(DAY_15), persistedEndDates(DAY_1));
-        assertEquals(List.of("CC_HR", "CC_IT"), persistedCodes(DAY_16));
     }
 
     private CreateCostCenterDistributionCommand create(LocalDate startDate, LocalDate endDate, Map<String, Integer> items) {

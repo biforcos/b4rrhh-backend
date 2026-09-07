@@ -6,7 +6,6 @@ import com.b4rrhh.employee.labor_classification.application.command.DeleteLaborC
 import com.b4rrhh.employee.labor_classification.application.command.GetLaborClassificationByBusinessKeyCommand;
 import com.b4rrhh.employee.labor_classification.application.command.ListEmployeeLaborClassificationsCommand;
 import com.b4rrhh.employee.labor_classification.application.command.PlanLaborClassificationChangeCommand;
-import com.b4rrhh.employee.labor_classification.application.command.ReplaceLaborClassificationFromDateCommand;
 import com.b4rrhh.employee.labor_classification.application.command.UpdateLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.usecase.CloseLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationUseCase;
@@ -14,7 +13,6 @@ import com.b4rrhh.employee.labor_classification.application.usecase.DeleteLaborC
 import com.b4rrhh.employee.labor_classification.application.usecase.GetLaborClassificationByBusinessKeyUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.ListEmployeeLaborClassificationsUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.PlanLaborClassificationChangeUseCase;
-import com.b4rrhh.employee.labor_classification.application.usecase.ReplaceLaborClassificationFromDateUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.UpdateLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.labor_classification.infrastructure.rest.assembler.LaborClassificationResponseAssembler;
@@ -23,7 +21,6 @@ import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.CreateLa
 import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.LaborClassificationPlanResponse;
 import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.LaborClassificationResponse;
 import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.PlanLaborClassificationChangeRequest;
-import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.ReplaceLaborClassificationFromDateRequest;
 import com.b4rrhh.employee.labor_classification.infrastructure.rest.dto.UpdateLaborClassificationRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
@@ -50,7 +47,6 @@ public class LaborClassificationController {
     private final GetLaborClassificationByBusinessKeyUseCase getLaborClassificationByBusinessKeyUseCase;
     private final UpdateLaborClassificationUseCase updateLaborClassificationUseCase;
     private final CloseLaborClassificationUseCase closeLaborClassificationUseCase;
-    private final ReplaceLaborClassificationFromDateUseCase replaceLaborClassificationFromDateUseCase;
     private final DeleteLaborClassificationUseCase deleteLaborClassificationUseCase;
     private final PlanLaborClassificationChangeUseCase planLaborClassificationChangeUseCase;
     private final LaborClassificationResponseAssembler laborClassificationResponseAssembler;
@@ -61,7 +57,6 @@ public class LaborClassificationController {
             GetLaborClassificationByBusinessKeyUseCase getLaborClassificationByBusinessKeyUseCase,
             UpdateLaborClassificationUseCase updateLaborClassificationUseCase,
             CloseLaborClassificationUseCase closeLaborClassificationUseCase,
-            ReplaceLaborClassificationFromDateUseCase replaceLaborClassificationFromDateUseCase,
             DeleteLaborClassificationUseCase deleteLaborClassificationUseCase,
             PlanLaborClassificationChangeUseCase planLaborClassificationChangeUseCase,
             LaborClassificationResponseAssembler laborClassificationResponseAssembler
@@ -71,7 +66,6 @@ public class LaborClassificationController {
         this.getLaborClassificationByBusinessKeyUseCase = getLaborClassificationByBusinessKeyUseCase;
         this.updateLaborClassificationUseCase = updateLaborClassificationUseCase;
         this.closeLaborClassificationUseCase = closeLaborClassificationUseCase;
-        this.replaceLaborClassificationFromDateUseCase = replaceLaborClassificationFromDateUseCase;
         this.deleteLaborClassificationUseCase = deleteLaborClassificationUseCase;
         this.planLaborClassificationChangeUseCase = planLaborClassificationChangeUseCase;
         this.laborClassificationResponseAssembler = laborClassificationResponseAssembler;
@@ -192,35 +186,6 @@ public class LaborClassificationController {
         );
 
         return ResponseEntity.ok(laborClassificationResponseAssembler.toResponse(ruleSystemCode, closed, language));
-    }
-
-    /**
-     * Kept while the labor classification screen and the workforce loader
-     * still call it. ADR-057 retires replace-from-date as a model: it is an add
-     * whose end date is the tail of the occurrence in force on the effective
-     * date.
-     */
-    @Deprecated
-    @PostMapping("/replace-from-date")
-    public ResponseEntity<LaborClassificationResponse> replaceFromDate(
-            @PathVariable String ruleSystemCode,
-            @PathVariable String employeeTypeCode,
-            @PathVariable String employeeNumber,
-            @RequestBody ReplaceLaborClassificationFromDateRequest request,
-            ResponseLanguage language
-    ) {
-        LaborClassification replaced = replaceLaborClassificationFromDateUseCase.replaceFromDate(
-                new ReplaceLaborClassificationFromDateCommand(
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        employeeNumber,
-                        request.effectiveDate(),
-                        request.agreementCode(),
-                        request.agreementCategoryCode()
-                )
-        );
-
-        return ResponseEntity.ok(laborClassificationResponseAssembler.toResponse(ruleSystemCode, replaced, language));
     }
 
     /**

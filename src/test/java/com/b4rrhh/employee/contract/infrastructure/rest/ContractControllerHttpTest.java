@@ -6,7 +6,6 @@ import com.b4rrhh.employee.contract.application.command.DeleteContractCommand;
 import com.b4rrhh.employee.contract.application.command.GetContractByBusinessKeyCommand;
 import com.b4rrhh.employee.contract.application.command.ListEmployeeContractsCommand;
 import com.b4rrhh.employee.contract.application.command.PlanContractChangeCommand;
-import com.b4rrhh.employee.contract.application.command.ReplaceContractFromDateCommand;
 import com.b4rrhh.employee.contract.application.command.UpdateContractCommand;
 import com.b4rrhh.employee.contract.application.model.ContractPlan;
 import com.b4rrhh.employee.contract.application.model.ContractPlanAdjustment;
@@ -16,7 +15,6 @@ import com.b4rrhh.employee.contract.application.usecase.DeleteContractUseCase;
 import com.b4rrhh.employee.contract.application.usecase.GetContractByBusinessKeyUseCase;
 import com.b4rrhh.employee.contract.application.usecase.ListEmployeeContractsUseCase;
 import com.b4rrhh.employee.contract.application.usecase.PlanContractChangeUseCase;
-import com.b4rrhh.employee.contract.application.usecase.ReplaceContractFromDateUseCase;
 import com.b4rrhh.employee.contract.application.usecase.UpdateContractUseCase;
 import com.b4rrhh.employee.temporal.support.TimelineOperation;
 import com.b4rrhh.employee.temporal.support.TimelineRejection;
@@ -77,8 +75,6 @@ class ContractControllerHttpTest {
     @Mock
     private CloseContractUseCase closeContractUseCase;
     @Mock
-    private ReplaceContractFromDateUseCase replaceContractFromDateUseCase;
-    @Mock
     private DeleteContractUseCase deleteContractUseCase;
     @Mock
     private PlanContractChangeUseCase planContractChangeUseCase;
@@ -95,7 +91,6 @@ class ContractControllerHttpTest {
                 getContractByBusinessKeyUseCase,
                 updateContractUseCase,
                 closeContractUseCase,
-                replaceContractFromDateUseCase,
                 deleteContractUseCase,
                 planContractChangeUseCase,
                 new ContractResponseAssembler(ruleEntityLabelResolver)
@@ -256,62 +251,6 @@ class ContractControllerHttpTest {
         verify(closeContractUseCase).close(captor.capture());
         assertEquals(LocalDate.of(2026, 1, 1), captor.getValue().startDate());
         assertEquals(LocalDate.of(2026, 1, 31), captor.getValue().endDate());
-    }
-
-    @Test
-    void replaceFromDateMapsPathAndBodyToCommandAndReturns200() throws Exception {
-        when(replaceContractFromDateUseCase.replaceFromDate(any(ReplaceContractFromDateCommand.class)))
-                .thenReturn(contract("TMP", "PT1", LocalDate.of(2026, 3, 1), null));
-
-        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/contracts/replace-from-date")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "effectiveDate": "2026-03-01",
-                                  "contractCode": "TMP",
-                                  "contractSubtypeCode": "PT1"
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.contractCode").value("TMP"))
-                .andExpect(jsonPath("$.contractSubtypeCode").value("PT1"))
-                .andExpect(jsonPath("$.startDate[0]").value(2026))
-                .andExpect(jsonPath("$.startDate[1]").value(3))
-                .andExpect(jsonPath("$.startDate[2]").value(1))
-                .andExpect(jsonPath("$.id").doesNotExist())
-                .andExpect(jsonPath("$.employeeId").doesNotExist());
-
-        ArgumentCaptor<ReplaceContractFromDateCommand> captor =
-                ArgumentCaptor.forClass(ReplaceContractFromDateCommand.class);
-        verify(replaceContractFromDateUseCase).replaceFromDate(captor.capture());
-        assertEquals("ESP", captor.getValue().ruleSystemCode());
-        assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
-        assertEquals("EMP001", captor.getValue().employeeNumber());
-        assertEquals(LocalDate.of(2026, 3, 1), captor.getValue().effectiveDate());
-    }
-
-    @Test
-    void replaceFromDateMapsConflictToHttp409() throws Exception {
-        when(replaceContractFromDateUseCase.replaceFromDate(any(ReplaceContractFromDateCommand.class)))
-                .thenThrow(new ContractOverlapException(
-                        "ESP",
-                        "INTERNAL",
-                        "EMP001",
-                        LocalDate.of(2026, 3, 1),
-                        null
-                ));
-
-        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/contracts/replace-from-date")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "effectiveDate": "2026-03-01",
-                                  "contractCode": "TMP",
-                                  "contractSubtypeCode": "PT1"
-                                }
-                                """))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message", containsString("overlaps")));
     }
 
     @Test

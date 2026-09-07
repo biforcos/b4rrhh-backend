@@ -22,7 +22,6 @@ import com.b4rrhh.employee.contract.application.usecase.CloseContractService;
 import com.b4rrhh.employee.contract.application.usecase.CreateContractService;
 import com.b4rrhh.employee.contract.application.usecase.DeleteContractService;
 import com.b4rrhh.employee.contract.application.usecase.PlanContractChangeService;
-import com.b4rrhh.employee.contract.application.usecase.ReplaceContractFromDateService;
 import com.b4rrhh.employee.contract.application.usecase.UpdateContractService;
 import com.b4rrhh.employee.contract.infrastructure.persistence.ContractPersistenceAdapter;
 import com.b4rrhh.employee.contract.infrastructure.persistence.ContractPresenceConsistencyAdapter;
@@ -35,7 +34,6 @@ import com.b4rrhh.employee.cost_center.application.usecase.CloseCostCenterDistri
 import com.b4rrhh.employee.cost_center.application.usecase.CreateCostCenterDistributionService;
 import com.b4rrhh.employee.cost_center.application.usecase.DeleteCostCenterDistributionService;
 import com.b4rrhh.employee.cost_center.application.usecase.PlanCostCenterDistributionChangeService;
-import com.b4rrhh.employee.cost_center.application.usecase.ReplaceCostCenterDistributionFromDateService;
 import com.b4rrhh.employee.cost_center.application.usecase.UpdateCostCenterDistributionService;
 import com.b4rrhh.employee.cost_center.domain.service.CostCenterDistributionTimelineValidator;
 import com.b4rrhh.employee.cost_center.domain.service.CostCenterDistributionWindowGrouper;
@@ -57,7 +55,6 @@ import com.b4rrhh.employee.labor_classification.application.usecase.CloseLaborCl
 import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationService;
 import com.b4rrhh.employee.labor_classification.application.usecase.DeleteLaborClassificationService;
 import com.b4rrhh.employee.labor_classification.application.usecase.PlanLaborClassificationChangeService;
-import com.b4rrhh.employee.labor_classification.application.usecase.ReplaceLaborClassificationFromDateService;
 import com.b4rrhh.employee.labor_classification.application.usecase.UpdateLaborClassificationService;
 import com.b4rrhh.employee.labor_classification.infrastructure.persistence.AgreementCategoryRelationLookupAdapter;
 import com.b4rrhh.employee.labor_classification.infrastructure.persistence.EmployeeLaborClassificationLookupAdapter;
@@ -71,7 +68,6 @@ import com.b4rrhh.employee.workcenter.application.usecase.CloseWorkCenterService
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterService;
 import com.b4rrhh.employee.workcenter.application.usecase.DeleteWorkCenterService;
 import com.b4rrhh.employee.workcenter.application.usecase.PlanWorkCenterChangeService;
-import com.b4rrhh.employee.workcenter.application.usecase.ReplaceWorkCenterFromDateService;
 import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterService;
 import com.b4rrhh.employee.workcenter.domain.service.WorkCenterEmployeeCompanyDomainService;
 import com.b4rrhh.employee.workcenter.infrastructure.persistence.EmployeeWorkCenterLookupAdapter;
@@ -173,7 +169,6 @@ import java.lang.annotation.Target;
         DeleteContractService.class,
         PlanContractChangeService.class,
         CloseContractService.class,
-        ReplaceContractFromDateService.class,
         ContractTimelineService.class,
         ContractCatalogValidator.class,
         ContractSubtypeRelationValidator.class,
@@ -187,7 +182,6 @@ import java.lang.annotation.Target;
         DeleteLaborClassificationService.class,
         PlanLaborClassificationChangeService.class,
         CloseLaborClassificationService.class,
-        ReplaceLaborClassificationFromDateService.class,
         LaborClassificationTimelineService.class,
         LaborClassificationCatalogValidator.class,
         AgreementCategoryRelationValidator.class,
@@ -201,7 +195,6 @@ import java.lang.annotation.Target;
         DeleteWorkCenterService.class,
         PlanWorkCenterChangeService.class,
         CloseWorkCenterService.class,
-        ReplaceWorkCenterFromDateService.class,
         WorkCenterTimelineService.class,
         WorkCenterCatalogValidator.class,
         WorkCenterEmployeeCompanyDomainService.class,
@@ -215,7 +208,6 @@ import java.lang.annotation.Target;
         DeleteCostCenterDistributionService.class,
         PlanCostCenterDistributionChangeService.class,
         CloseCostCenterDistributionService.class,
-        ReplaceCostCenterDistributionFromDateService.class,
         CostCenterTimelineService.class,
         CostCenterCatalogValidator.class,
         CostCenterDistributionTimelineValidator.class,

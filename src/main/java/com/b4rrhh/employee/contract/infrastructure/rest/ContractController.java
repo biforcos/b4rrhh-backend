@@ -6,7 +6,6 @@ import com.b4rrhh.employee.contract.application.command.DeleteContractCommand;
 import com.b4rrhh.employee.contract.application.command.GetContractByBusinessKeyCommand;
 import com.b4rrhh.employee.contract.application.command.ListEmployeeContractsCommand;
 import com.b4rrhh.employee.contract.application.command.PlanContractChangeCommand;
-import com.b4rrhh.employee.contract.application.command.ReplaceContractFromDateCommand;
 import com.b4rrhh.employee.contract.application.command.UpdateContractCommand;
 import com.b4rrhh.employee.contract.application.usecase.CloseContractUseCase;
 import com.b4rrhh.employee.contract.application.usecase.CreateContractUseCase;
@@ -14,7 +13,6 @@ import com.b4rrhh.employee.contract.application.usecase.DeleteContractUseCase;
 import com.b4rrhh.employee.contract.application.usecase.GetContractByBusinessKeyUseCase;
 import com.b4rrhh.employee.contract.application.usecase.ListEmployeeContractsUseCase;
 import com.b4rrhh.employee.contract.application.usecase.PlanContractChangeUseCase;
-import com.b4rrhh.employee.contract.application.usecase.ReplaceContractFromDateUseCase;
 import com.b4rrhh.employee.contract.application.usecase.UpdateContractUseCase;
 import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.contract.infrastructure.rest.assembler.ContractResponseAssembler;
@@ -23,7 +21,6 @@ import com.b4rrhh.employee.contract.infrastructure.rest.dto.ContractPlanResponse
 import com.b4rrhh.employee.contract.infrastructure.rest.dto.CreateContractRequest;
 import com.b4rrhh.employee.contract.infrastructure.rest.dto.ContractResponse;
 import com.b4rrhh.employee.contract.infrastructure.rest.dto.PlanContractChangeRequest;
-import com.b4rrhh.employee.contract.infrastructure.rest.dto.ReplaceContractFromDateRequest;
 import com.b4rrhh.employee.contract.infrastructure.rest.dto.UpdateContractRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
@@ -50,7 +47,6 @@ public class ContractController {
     private final GetContractByBusinessKeyUseCase getContractByBusinessKeyUseCase;
     private final UpdateContractUseCase updateContractUseCase;
     private final CloseContractUseCase closeContractUseCase;
-    private final ReplaceContractFromDateUseCase replaceContractFromDateUseCase;
     private final DeleteContractUseCase deleteContractUseCase;
     private final PlanContractChangeUseCase planContractChangeUseCase;
     private final ContractResponseAssembler contractResponseAssembler;
@@ -61,7 +57,6 @@ public class ContractController {
             GetContractByBusinessKeyUseCase getContractByBusinessKeyUseCase,
             UpdateContractUseCase updateContractUseCase,
             CloseContractUseCase closeContractUseCase,
-            ReplaceContractFromDateUseCase replaceContractFromDateUseCase,
             DeleteContractUseCase deleteContractUseCase,
             PlanContractChangeUseCase planContractChangeUseCase,
             ContractResponseAssembler contractResponseAssembler
@@ -71,7 +66,6 @@ public class ContractController {
         this.getContractByBusinessKeyUseCase = getContractByBusinessKeyUseCase;
         this.updateContractUseCase = updateContractUseCase;
         this.closeContractUseCase = closeContractUseCase;
-        this.replaceContractFromDateUseCase = replaceContractFromDateUseCase;
         this.deleteContractUseCase = deleteContractUseCase;
         this.planContractChangeUseCase = planContractChangeUseCase;
         this.contractResponseAssembler = contractResponseAssembler;
@@ -191,34 +185,6 @@ public class ContractController {
         );
 
         return ResponseEntity.ok(toResponse(ruleSystemCode, closed, language));
-    }
-
-    /**
-     * Kept while the contract screen and the workforce loader still call it.
-     * ADR-057 retires replace-from-date as a model: it is an add whose end date
-     * is the tail of the contract in force on the effective date.
-     */
-    @Deprecated
-    @PostMapping("/replace-from-date")
-    public ResponseEntity<ContractResponse> replaceFromDate(
-            @PathVariable String ruleSystemCode,
-            @PathVariable String employeeTypeCode,
-            @PathVariable String employeeNumber,
-            @RequestBody ReplaceContractFromDateRequest request,
-            ResponseLanguage language
-    ) {
-        Contract replaced = replaceContractFromDateUseCase.replaceFromDate(
-                new ReplaceContractFromDateCommand(
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        employeeNumber,
-                        request.effectiveDate(),
-                        request.contractCode(),
-                        request.contractSubtypeCode()
-                )
-        );
-
-                return ResponseEntity.ok(toResponse(ruleSystemCode, replaced, language));
     }
 
     /**

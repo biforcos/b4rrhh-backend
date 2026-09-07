@@ -19,8 +19,6 @@ import com.b4rrhh.employee.workcenter.application.model.WorkCenterPlan;
 import com.b4rrhh.employee.workcenter.application.model.WorkCenterPlanAdjustment;
 import com.b4rrhh.employee.temporal.support.TimelineOperation;
 import com.b4rrhh.employee.temporal.support.TimelineRejection;
-import com.b4rrhh.employee.workcenter.application.usecase.ReplaceWorkCenterFromDateCommand;
-import com.b4rrhh.employee.workcenter.application.usecase.ReplaceWorkCenterFromDateUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.UpdateWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.domain.exception.InvalidWorkCenterDateRangeException;
@@ -87,8 +85,6 @@ class WorkCenterControllerHttpTest {
     @Mock
     private ListEmployeeWorkCentersUseCase listEmployeeWorkCentersUseCase;
         @Mock
-        private ReplaceWorkCenterFromDateUseCase replaceWorkCenterFromDateUseCase;
-        @Mock
         private UpdateWorkCenterUseCase updateWorkCenterUseCase;
     @Mock
     private PlanWorkCenterChangeUseCase planWorkCenterChangeUseCase;
@@ -110,7 +106,6 @@ class WorkCenterControllerHttpTest {
                 deleteWorkCenterUseCase,
                 getWorkCenterByBusinessKeyUseCase,
                 listEmployeeWorkCentersUseCase,
-                replaceWorkCenterFromDateUseCase,
                 updateWorkCenterUseCase,
                 planWorkCenterChangeUseCase,
                 workCenterResponseAssembler
@@ -152,33 +147,6 @@ class WorkCenterControllerHttpTest {
         assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
         assertEquals("EMP001", captor.getValue().employeeNumber());
         assertEquals("MADRID_HQ", captor.getValue().workCenterCode());
-    }
-
-    @Test
-    void replaceFromDateMapsPathAndBodyToCommand() throws Exception {
-        when(replaceWorkCenterFromDateUseCase.replaceFromDate(any(ReplaceWorkCenterFromDateCommand.class)))
-                .thenReturn(workCenter(2, "BARCELONA_HQ", LocalDate.of(2026, 3, 1), null));
-
-        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/work-centers/replace-from-date")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "effectiveDate": "2026-03-01",
-                                  "workCenterCode": "BARCELONA_HQ"
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.workCenterAssignmentNumber").value(2))
-                .andExpect(jsonPath("$.workCenterCode").value("BARCELONA_HQ"));
-
-        ArgumentCaptor<ReplaceWorkCenterFromDateCommand> captor =
-                ArgumentCaptor.forClass(ReplaceWorkCenterFromDateCommand.class);
-        verify(replaceWorkCenterFromDateUseCase).replaceFromDate(captor.capture());
-        assertEquals("ESP", captor.getValue().ruleSystemCode());
-        assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
-        assertEquals("EMP001", captor.getValue().employeeNumber());
-        assertEquals(LocalDate.of(2026, 3, 1), captor.getValue().effectiveDate());
-        assertEquals("BARCELONA_HQ", captor.getValue().workCenterCode());
     }
 
     @Test
@@ -316,23 +284,6 @@ class WorkCenterControllerHttpTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("WORK_CENTER_CATALOG_NOT_FOUND"))
                 .andExpect(jsonPath("$.details.field").value("workCenterCode"));
-    }
-
-    @Test
-    void replaceFromDateMapsCatalogNotFoundToHttp404() throws Exception {
-        when(replaceWorkCenterFromDateUseCase.replaceFromDate(any(ReplaceWorkCenterFromDateCommand.class)))
-                .thenThrow(new WorkCenterCatalogValueInvalidException("workCenterCode", "UNKNOWN"));
-
-        mockMvc.perform(post("/employees/ESP/INTERNAL/EMP001/work-centers/replace-from-date")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "effectiveDate": "2026-03-01",
-                                  "workCenterCode": "UNKNOWN"
-                                }
-                                """))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("WORK_CENTER_CATALOG_NOT_FOUND"));
     }
 
     @Test

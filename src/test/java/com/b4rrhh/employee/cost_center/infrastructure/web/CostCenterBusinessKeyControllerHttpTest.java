@@ -14,7 +14,6 @@ import com.b4rrhh.employee.cost_center.application.usecase.ListCostCenterDistrib
 import com.b4rrhh.employee.cost_center.application.usecase.ListCostCenterDistributionHistoryUseCase;
 import com.b4rrhh.employee.cost_center.application.usecase.PlanCostCenterDistributionChangeCommand;
 import com.b4rrhh.employee.cost_center.application.usecase.PlanCostCenterDistributionChangeUseCase;
-import com.b4rrhh.employee.cost_center.application.usecase.ReplaceCostCenterDistributionFromDateUseCase;
 import com.b4rrhh.employee.cost_center.application.usecase.UpdateCostCenterDistributionCommand;
 import com.b4rrhh.employee.cost_center.application.usecase.UpdateCostCenterDistributionUseCase;
 import com.b4rrhh.employee.cost_center.domain.exception.CostCenterDistributionCoverageGapException;
@@ -79,8 +78,6 @@ class CostCenterBusinessKeyControllerHttpTest {
     @Mock
     private ListCostCenterDistributionHistoryUseCase listCostCenterDistributionHistoryUseCase;
     @Mock
-    private ReplaceCostCenterDistributionFromDateUseCase replaceCostCenterDistributionFromDateUseCase;
-    @Mock
     private CloseCostCenterDistributionUseCase closeCostCenterDistributionUseCase;
     @Mock
     private UpdateCostCenterDistributionUseCase updateCostCenterDistributionUseCase;
@@ -100,7 +97,6 @@ class CostCenterBusinessKeyControllerHttpTest {
                                 createCostCenterDistributionUseCase,
                                 getCurrentCostCenterDistributionUseCase,
                                 listCostCenterDistributionHistoryUseCase,
-                                replaceCostCenterDistributionFromDateUseCase,
                                 closeCostCenterDistributionUseCase,
                                 updateCostCenterDistributionUseCase,
                                 deleteCostCenterDistributionUseCase,

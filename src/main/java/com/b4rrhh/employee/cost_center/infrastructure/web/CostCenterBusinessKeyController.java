@@ -14,8 +14,6 @@ import com.b4rrhh.employee.cost_center.application.usecase.ListCostCenterDistrib
 import com.b4rrhh.employee.cost_center.application.usecase.ListCostCenterDistributionHistoryUseCase;
 import com.b4rrhh.employee.cost_center.application.usecase.PlanCostCenterDistributionChangeCommand;
 import com.b4rrhh.employee.cost_center.application.usecase.PlanCostCenterDistributionChangeUseCase;
-import com.b4rrhh.employee.cost_center.application.usecase.ReplaceCostCenterDistributionFromDateCommand;
-import com.b4rrhh.employee.cost_center.application.usecase.ReplaceCostCenterDistributionFromDateUseCase;
 import com.b4rrhh.employee.cost_center.application.usecase.UpdateCostCenterDistributionCommand;
 import com.b4rrhh.employee.cost_center.application.usecase.UpdateCostCenterDistributionUseCase;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow;
@@ -27,7 +25,6 @@ import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistribu
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CostCenterDistributionWindowResponse;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.CreateCostCenterDistributionRequest;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.PlanCostCenterDistributionChangeRequest;
-import com.b4rrhh.employee.cost_center.infrastructure.web.dto.ReplaceCostCenterDistributionFromDateRequest;
 import com.b4rrhh.employee.cost_center.infrastructure.web.dto.UpdateCostCenterDistributionRequest;
 import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -52,7 +49,6 @@ public class CostCenterBusinessKeyController {
     private final CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase;
     private final GetCurrentCostCenterDistributionUseCase getCurrentCostCenterDistributionUseCase;
     private final ListCostCenterDistributionHistoryUseCase listCostCenterDistributionHistoryUseCase;
-    private final ReplaceCostCenterDistributionFromDateUseCase replaceCostCenterDistributionFromDateUseCase;
     private final CloseCostCenterDistributionUseCase closeCostCenterDistributionUseCase;
     private final UpdateCostCenterDistributionUseCase updateCostCenterDistributionUseCase;
     private final DeleteCostCenterDistributionUseCase deleteCostCenterDistributionUseCase;
@@ -63,7 +59,6 @@ public class CostCenterBusinessKeyController {
             CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase,
             GetCurrentCostCenterDistributionUseCase getCurrentCostCenterDistributionUseCase,
             ListCostCenterDistributionHistoryUseCase listCostCenterDistributionHistoryUseCase,
-            ReplaceCostCenterDistributionFromDateUseCase replaceCostCenterDistributionFromDateUseCase,
             CloseCostCenterDistributionUseCase closeCostCenterDistributionUseCase,
             UpdateCostCenterDistributionUseCase updateCostCenterDistributionUseCase,
             DeleteCostCenterDistributionUseCase deleteCostCenterDistributionUseCase,
@@ -73,7 +68,6 @@ public class CostCenterBusinessKeyController {
         this.createCostCenterDistributionUseCase = createCostCenterDistributionUseCase;
         this.getCurrentCostCenterDistributionUseCase = getCurrentCostCenterDistributionUseCase;
         this.listCostCenterDistributionHistoryUseCase = listCostCenterDistributionHistoryUseCase;
-        this.replaceCostCenterDistributionFromDateUseCase = replaceCostCenterDistributionFromDateUseCase;
         this.closeCostCenterDistributionUseCase = closeCostCenterDistributionUseCase;
         this.updateCostCenterDistributionUseCase = updateCostCenterDistributionUseCase;
         this.deleteCostCenterDistributionUseCase = deleteCostCenterDistributionUseCase;
@@ -130,34 +124,6 @@ public class CostCenterBusinessKeyController {
         );
 
         return ResponseEntity.ok(costCenterResponseAssembler.toCurrentResponse(current, language));
-    }
-
-    /**
-     * Kept while the screen and the workforce loader still call it. ADR-057
-     * retires replace-from-date as a model: it is an add whose end date is
-     * the tail of the window in force on the effective date.
-     */
-    @Deprecated
-    @PostMapping("/replace-from-date")
-    public ResponseEntity<CostCenterDistributionWindowResponse> replaceFromDate(
-            @PathVariable String ruleSystemCode,
-            @PathVariable String employeeTypeCode,
-            @PathVariable String employeeNumber,
-            @RequestBody ReplaceCostCenterDistributionFromDateRequest request
-    ) {
-        List<CostCenterDistributionItem> items = toCommandItems(request.items());
-
-        CostCenterDistributionWindow replaced = replaceCostCenterDistributionFromDateUseCase.replaceFromDate(
-                new ReplaceCostCenterDistributionFromDateCommand(
-                        ruleSystemCode,
-                        employeeTypeCode,
-                        employeeNumber,
-                        request.effectiveDate(),
-                        items
-                )
-        );
-
-        return ResponseEntity.ok(costCenterResponseAssembler.toWindowResponse(replaced));
     }
 
     /**

@@ -1171,71 +1171,6 @@ paths:
         "404":
           description: Rule system or employee not found
 
-  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers/replace-from-date:
-    post:
-      operationId: replaceWorkCenterFromDateByBusinessKey
-      summary: Replace employee work center assignment from effective date by business key
-      deprecated: true
-      tags:
-        - Employee Work Center
-      description: >-
-        Kept while the workforce loader still calls it (the screen never did:
-        it adds). ADR-057 retires replace-from-date as a model: it is an add
-        (POST) whose end date is the tail of the assignment in force on the
-        effective date. If an assignment covers effectiveDate, it is closed at
-        effectiveDate - 1 and the new one starts at effectiveDate; if none
-        does, the new one is inserted. Starting on the very start date of an
-        existing assignment is no longer a silent replacement: it is rejected
-        as WORK_CENTER_IS_A_CORRECTION, naming the assignment, and the
-        correction is asked for as such (PUT).
-      parameters:
-        - $ref: "#/components/parameters/AcceptLanguage"
-        - in: path
-          name: ruleSystemCode
-          required: true
-          schema:
-            type: string
-            maxLength: 5
-        - in: path
-          name: employeeTypeCode
-          required: true
-          schema:
-            type: string
-            maxLength: 30
-        - in: path
-          name: employeeNumber
-          required: true
-          schema:
-            type: string
-            maxLength: 15
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/EmployeeReplaceWorkCenterFromDateRequest"
-      responses:
-        "200":
-          description: Work center assignment replaced from effective date
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/EmployeeWorkCenterAssignmentResponse"
-        "400":
-          description: Invalid request
-        "404":
-          description: Rule system, employee, or catalog not found
-        "409":
-          description: >-
-            The resulting series would break an invariant (ADR-057):
-            WORK_CENTER_OVERLAP, WORK_CENTER_COVERAGE_GAP,
-            WORK_CENTER_OUTSIDE_PRESENCE, WORK_CENTER_IS_A_CORRECTION or
-            WORK_CENTER_COMPANY_MISMATCH.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/EmployeeWorkCenterErrorResponse"
-
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/work-centers/plan:
     post:
       operationId: planWorkCenterChangeByBusinessKey
@@ -2187,77 +2122,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/CostCenterErrorResponse"
 
-  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/replace-from-date:
-    post:
-      operationId: replaceCostCenterDistributionFromDate
-      summary: Replace the active cost center distribution from an effective date
-      deprecated: true
-      tags:
-        - Employee Cost Center
-      description: |
-        Deprecated (ADR-057): adding a window with POST /distributions already
-        closes the one in force the day before. Kept while the screen and the
-        workforce loader still call it. It is an add from effectiveDate whose
-        end date is the tail of the window in force on that date (open when
-        none is), judged by the same invariants: an effective date on the
-        start date of an existing window is rejected as
-        COST_CENTER_IS_A_CORRECTION and a resulting overlap as
-        COST_CENTER_OVERLAP. A gap it leaves is legal: the series declares
-        optional coverage.
-      parameters:
-        - in: path
-          name: ruleSystemCode
-          required: true
-          schema:
-            type: string
-            maxLength: 5
-        - in: path
-          name: employeeTypeCode
-          required: true
-          schema:
-            type: string
-            maxLength: 30
-        - in: path
-          name: employeeNumber
-          required: true
-          schema:
-            type: string
-            maxLength: 15
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ReplaceCostCenterDistributionFromDateRequest"
-      responses:
-        "200":
-          description: New distribution window created, previous window closed
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CostCenterDistributionWindowResponse"
-        "400":
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CostCenterErrorResponse"
-        "404":
-          description: Employee not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CostCenterErrorResponse"
-        "409":
-          description: >-
-            The resulting series would break an invariant (ADR-057):
-            COST_CENTER_OVERLAP, COST_CENTER_OUTSIDE_PRESENCE
-            or COST_CENTER_IS_A_CORRECTION.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CostCenterErrorResponse"
-
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/cost-centers/distributions/{startDate}/close:
     post:
       operationId: closeCostCenterDistribution
@@ -2429,62 +2293,6 @@ paths:
                   $ref: "#/components/schemas/ContractResponse"
         "404":
           description: Employee not found
-
-  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts/replace-from-date:
-    post:
-      operationId: replaceContractFromDateByBusinessKey
-      summary: Replace employee contract from effective date by business key
-      deprecated: true
-      description: >-
-        Kept while the contract screen and the workforce loader still call it.
-        ADR-057 retires replace-from-date as a model: it is an add (POST) whose
-        end date is the tail of the contract in force on the effective date.
-        Starting on the very start date of an existing contract is no longer a
-        silent replacement: it is rejected as CONTRACT_IS_A_CORRECTION, naming
-        the contract, and the correction is asked for as such (PUT).
-      tags:
-        - Employee Contract
-      parameters:
-        - $ref: "#/components/parameters/AcceptLanguage"
-        - in: path
-          name: ruleSystemCode
-          required: true
-          schema:
-            type: string
-            maxLength: 5
-        - in: path
-          name: employeeTypeCode
-          required: true
-          schema:
-            type: string
-            maxLength: 30
-        - in: path
-          name: employeeNumber
-          required: true
-          schema:
-            type: string
-            maxLength: 15
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ReplaceContractFromDateRequest"
-      responses:
-        "200":
-          description: Contract replaced from effective date
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ContractResponse"
-        "400":
-          description: Invalid request
-        "404":
-          description: Employee not found
-        "409":
-          description: >-
-            Replacement results in an invalid timeline
-            (overlap, outside presence, incomplete coverage, or impossible transition).
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contracts/{startDate}:
     get:
@@ -2850,63 +2658,6 @@ paths:
                   $ref: "#/components/schemas/LaborClassificationResponse"
         "404":
           description: Employee not found
-
-  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/labor-classifications/replace-from-date:
-    post:
-      operationId: replaceLaborClassificationFromDateByBusinessKey
-      summary: Replace employee labor classification from effective date by business key
-      deprecated: true
-      description: >-
-        Kept while the labor classification screen and the workforce loader
-        still call it. ADR-057 retires replace-from-date as a model: it is an
-        add (POST) whose end date is the tail of the occurrence in force on the
-        effective date. Starting on the very start date of an existing
-        occurrence is no longer a silent replacement: it is rejected as
-        LABOR_CLASSIFICATION_IS_A_CORRECTION, naming the occurrence, and the
-        correction is asked for as such (PUT).
-      tags:
-        - Employee Labor Classification
-      parameters:
-        - $ref: "#/components/parameters/AcceptLanguage"
-        - in: path
-          name: ruleSystemCode
-          required: true
-          schema:
-            type: string
-            maxLength: 5
-        - in: path
-          name: employeeTypeCode
-          required: true
-          schema:
-            type: string
-            maxLength: 30
-        - in: path
-          name: employeeNumber
-          required: true
-          schema:
-            type: string
-            maxLength: 15
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ReplaceLaborClassificationFromDateRequest"
-      responses:
-        "200":
-          description: Labor classification replaced from effective date
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LaborClassificationResponse"
-        "400":
-          description: Invalid request
-        "404":
-          description: Employee not found
-        "409":
-          description: >-
-            Replacement results in an invalid timeline
-            (overlap, outside presence, incomplete coverage, or impossible transition).
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/labor-classifications/{startDate}:
     get:
@@ -8509,23 +8260,6 @@ components:
             Date on which the assignment ends (yyyy-MM-dd). Must be >= the assignment's startDate.
             The resulting period [startDate, endDate] must be fully contained within
             an existing employee presence period.
-    EmployeeReplaceWorkCenterFromDateRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - effectiveDate
-        - workCenterCode
-      properties:
-        effectiveDate:
-          type: string
-          format: date
-          description: >-
-            Effective date (yyyy-MM-dd) from which the new work center assignment applies.
-            If an assignment covers effectiveDate, it is closed at effectiveDate - 1.
-        workCenterCode:
-          type: string
-          maxLength: 30
-          description: Code validated against active WORK_CENTER rule entities for the employee ruleSystemCode.
     EmployeeWorkCenterAssignmentResponse:
       type: object
       required:
@@ -8747,24 +8481,6 @@ components:
             for a window that stays open. A window added inside a closed one
             takes the dates the user gives (ADR-057): the covering window is
             closed the day before, and the invariants judge what is left.
-        items:
-          type: array
-          minItems: 1
-          items:
-            $ref: "#/components/schemas/CostCenterDistributionItemRequest"
-    ReplaceCostCenterDistributionFromDateRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - effectiveDate
-        - items
-      properties:
-        effectiveDate:
-          type: string
-          format: date
-          description: >-
-            The date from which the replacement takes effect.
-            The active window ending at effectiveDate - 1 day is closed.
         items:
           type: array
           minItems: 1
@@ -9263,30 +8979,6 @@ components:
           format: date
           nullable: true
           description: Optional end date (yyyy-MM-dd). Must be greater than or equal to startDate.
-    ReplaceContractFromDateRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - effectiveDate
-        - contractCode
-        - contractSubtypeCode
-      properties:
-        effectiveDate:
-          type: string
-          format: date
-          description: Effective date from which the contract is replaced (yyyy-MM-dd).
-        contractCode:
-          type: string
-          minLength: 3
-          maxLength: 3
-          description: Code validated against active CONTRACT rule entities for the employee ruleSystemCode.
-        contractSubtypeCode:
-          type: string
-          minLength: 3
-          maxLength: 3
-          description: >-
-            Code validated against active CONTRACT_SUBTYPE rule entities for the employee ruleSystemCode
-            and against the contract-subtype relation for effectiveDate.
     UpdateContractRequest:
       type: object
       additionalProperties: false
@@ -9526,28 +9218,6 @@ components:
           format: date
           nullable: true
           description: Optional end date (yyyy-MM-dd). Must be greater than or equal to startDate.
-    ReplaceLaborClassificationFromDateRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - effectiveDate
-        - agreementCode
-        - agreementCategoryCode
-      properties:
-        effectiveDate:
-          type: string
-          format: date
-          description: Effective date from which the labor classification is replaced (yyyy-MM-dd).
-        agreementCode:
-          type: string
-          maxLength: 30
-          description: Code validated against active AGREEMENT rule entities for the employee ruleSystemCode.
-        agreementCategoryCode:
-          type: string
-          maxLength: 30
-          description: >-
-            Code validated against active AGREEMENT_CATEGORY rule entities for the employee ruleSystemCode
-            and against the agreement-category relation for effectiveDate.
     UpdateLaborClassificationRequest:
       type: object
       additionalProperties: false
