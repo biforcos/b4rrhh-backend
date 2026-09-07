@@ -42,6 +42,20 @@ jobs:
       - name: Descargar el codigo
         uses: actions/checkout@v4
 
+      - name: Comprobar que el bundle de ADR esta al dia
+        run: |
+          # El bundle se commitea, asi que puede quedarse por detras de
+          # los ADR sin que nadie se entere, que es lo que paso y motivo
+          # el issue #17. Se regenera aqui y se falla si el arbol queda
+          # sucio: desde que el generador no escribe la fecha (#65) es
+          # determinista, asi que sin ADR nuevos el diff sale vacio.
+          #
+          # python3 y no un contenedor aparte: la imagen del runner
+          # (catthehacker/ubuntu:act-latest) lo trae, y el generador solo
+          # usa la biblioteca estandar.
+          python3 docs/architecture/adr/build-adr-bundle.py
+          git diff --exit-code
+
       - name: Levantar el Postgres de los tests
         run: |
           # Por si una ejecucion anterior del mismo commit dejo restos.
