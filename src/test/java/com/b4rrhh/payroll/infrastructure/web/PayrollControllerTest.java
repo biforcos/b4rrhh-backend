@@ -126,6 +126,7 @@ class PayrollControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("202501", response.getBody().payrollPeriodCode());
+        assertEquals(41L, response.getBody().runId());
         assertEquals(0, response.getBody().warnings().size());
         }
 
@@ -284,9 +285,11 @@ class PayrollControllerTest {
                 LocalDateTime.of(2026, 1, 31, 10, 15),
                 "ENGINE",
                 "1.0",
+                41L,
                 warnings,
                 List.of(new PayrollConcept(1, "BASE", "Base salary", new BigDecimal("1000.00"), null, null, "EARNING", "202501", 1)),
                 List.of(new PayrollContextSnapshot("PRESENCE", "EMPLOYEE", "{\"presenceNumber\":1}", "{\"companyCode\":\"ES01\"}")),
+                List.of(),
                 LocalDateTime.now(),
                 LocalDateTime.now()
         );

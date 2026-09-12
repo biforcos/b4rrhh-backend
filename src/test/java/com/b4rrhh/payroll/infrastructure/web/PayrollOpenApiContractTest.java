@@ -36,6 +36,14 @@ class PayrollOpenApiContractTest {
     }
 
     @Test
+    void payrollResponseDocumentsTheRunThatProducedThePayroll() throws IOException {
+        String contract = Files.readString(Path.of("openapi", "payroll-api.yaml"));
+
+        assertTrue(contract.contains("Calculation run that produced this payroll"));
+        assertTrue(contract.contains("which is the case for the temporary calculate"));
+    }
+
+    @Test
     void bulkInvalidateEndpointIsDocumented() throws IOException {
         String contract = Files.readString(Path.of("openapi", "payroll-api.yaml"));
 

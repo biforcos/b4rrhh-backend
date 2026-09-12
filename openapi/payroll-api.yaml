@@ -897,6 +897,14 @@ components:
           type: string
         calculationEngineVersion:
           type: string
+        runId:
+          type: integer
+          format: int64
+          nullable: true
+          description: >-
+            Calculation run that produced this payroll. Null means no registered
+            execution produced it, which is the case for the temporary calculate
+            stub and for the ad-hoc recalculation of a single payroll.
         warnings:
           type: array
           description: Functional payroll warnings attached to this payroll result.

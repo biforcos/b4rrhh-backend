@@ -46,6 +46,7 @@ public class PayrollResponseAssembler {
                 payroll.getCalculatedAt(),
                 payroll.getCalculationEngineCode(),
                 payroll.getCalculationEngineVersion(),
+                payroll.getRunId(),
                 payroll.getWarnings().stream()
                         .map(warning -> new PayrollWarningResponse(
                                 warning.warningCode(),
