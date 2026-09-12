@@ -5,14 +5,11 @@ import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
 import com.b4rrhh.employee.working_time.domain.port.WorkingTimeRepository;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 @Component
 public class WorkingTimePersistenceAdapter implements WorkingTimeRepository {
-
-    private static final LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
 
     private final SpringDataWorkingTimeRepository springDataWorkingTimeRepository;
 
@@ -33,29 +30,6 @@ public class WorkingTimePersistenceAdapter implements WorkingTimeRepository {
                 .stream()
                 .map(this::toDomain)
                 .toList();
-    }
-
-    @Override
-    public boolean existsOverlappingPeriod(Long employeeId, LocalDate startDate, LocalDate endDate) {
-        LocalDate effectiveEndDate = endDate == null ? MAX_DATE : endDate;
-        return springDataWorkingTimeRepository.existsOverlappingPeriod(
-                employeeId,
-                startDate,
-                effectiveEndDate,
-                MAX_DATE
-        );
-    }
-
-    @Override
-    public boolean existsOverlappingPeriodExcluding(Long employeeId, LocalDate startDate, LocalDate endDate, Integer excludeWorkingTimeNumber) {
-        LocalDate effectiveEndDate = endDate == null ? MAX_DATE : endDate;
-        return springDataWorkingTimeRepository.existsOverlappingPeriodExcluding(
-                employeeId,
-                startDate,
-                effectiveEndDate,
-                MAX_DATE,
-                excludeWorkingTimeNumber
-        );
     }
 
     @Override

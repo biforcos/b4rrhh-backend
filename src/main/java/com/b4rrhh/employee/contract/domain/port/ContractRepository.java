@@ -12,13 +12,6 @@ public interface ContractRepository {
 
     List<Contract> findByEmployeeIdOrderByStartDate(Long employeeId);
 
-    boolean existsOverlappingPeriod(
-            Long employeeId,
-            LocalDate startDate,
-            LocalDate endDate,
-            LocalDate excludeStartDateOrNull
-    );
-
     void save(Contract contract);
 
     void update(Contract contract, LocalDate originalStartDate);

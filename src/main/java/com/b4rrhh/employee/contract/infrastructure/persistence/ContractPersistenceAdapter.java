@@ -11,8 +11,6 @@ import java.util.Optional;
 @Component
 public class ContractPersistenceAdapter implements ContractRepository {
 
-    private static final LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
-
     private final SpringDataContractRepository springDataContractRepository;
 
     public ContractPersistenceAdapter(
@@ -35,23 +33,6 @@ public class ContractPersistenceAdapter implements ContractRepository {
                 .stream()
                 .map(this::toDomain)
                 .toList();
-    }
-
-    @Override
-    public boolean existsOverlappingPeriod(
-            Long employeeId,
-            LocalDate startDate,
-            LocalDate endDate,
-            LocalDate excludeStartDateOrNull
-    ) {
-        LocalDate effectiveEndDate = endDate == null ? MAX_DATE : endDate;
-        return springDataContractRepository.existsOverlappingPeriod(
-                employeeId,
-                startDate,
-                effectiveEndDate,
-                MAX_DATE,
-                excludeStartDateOrNull
-        );
     }
 
     @Override

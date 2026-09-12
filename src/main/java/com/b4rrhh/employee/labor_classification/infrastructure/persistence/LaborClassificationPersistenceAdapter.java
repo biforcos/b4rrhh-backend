@@ -11,8 +11,6 @@ import java.util.Optional;
 @Component
 public class LaborClassificationPersistenceAdapter implements LaborClassificationRepository {
 
-    private static final LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
-
     private final SpringDataLaborClassificationRepository springDataLaborClassificationRepository;
 
     public LaborClassificationPersistenceAdapter(
@@ -35,23 +33,6 @@ public class LaborClassificationPersistenceAdapter implements LaborClassificatio
                 .stream()
                 .map(this::toDomain)
                 .toList();
-    }
-
-    @Override
-    public boolean existsOverlappingPeriod(
-            Long employeeId,
-            LocalDate startDate,
-            LocalDate endDate,
-            LocalDate excludeStartDateOrNull
-    ) {
-        LocalDate effectiveEndDate = endDate == null ? MAX_DATE : endDate;
-        return springDataLaborClassificationRepository.existsOverlappingPeriod(
-                employeeId,
-                startDate,
-                effectiveEndDate,
-                MAX_DATE,
-                excludeStartDateOrNull
-        );
     }
 
     @Override

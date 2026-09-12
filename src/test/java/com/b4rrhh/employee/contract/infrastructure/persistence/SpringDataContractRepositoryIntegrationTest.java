@@ -9,9 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.LocalDate;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @TestSobreEsquemaReal
 // El DDL a mano que habia aqui ya divergia del real: el subtipo de contrato
@@ -61,46 +59,6 @@ class SpringDataContractRepositoryIntegrationTest {
                         null
                 ))
         );
-    }
-
-    @Test
-    void detectsOverlapAndSupportsExcludeStartDate() {
-        Long empleado = DatosDePrueba.empleado(jdbcTemplate);
-        repository.saveAndFlush(entity(
-                empleado,
-                "100",
-                "01",
-                LocalDate.of(2026, 1, 1),
-                LocalDate.of(2026, 1, 31)
-        ));
-
-        boolean overlap = repository.existsOverlappingPeriod(
-                empleado,
-                LocalDate.of(2026, 1, 15),
-                LocalDate.of(2026, 2, 1),
-                LocalDate.of(9999, 12, 31),
-                null
-        );
-
-        boolean overlapExcluded = repository.existsOverlappingPeriod(
-                empleado,
-                LocalDate.of(2026, 1, 15),
-                LocalDate.of(2026, 2, 1),
-                LocalDate.of(9999, 12, 31),
-                LocalDate.of(2026, 1, 1)
-        );
-
-        boolean nonOverlap = repository.existsOverlappingPeriod(
-                empleado,
-                LocalDate.of(2026, 2, 1),
-                LocalDate.of(2026, 2, 28),
-                LocalDate.of(9999, 12, 31),
-                null
-        );
-
-        assertTrue(overlap);
-        assertFalse(overlapExcluded);
-        assertFalse(nonOverlap);
     }
 
     // Un fallo por test, y no dos seguidos: en Postgres, cuando una sentencia

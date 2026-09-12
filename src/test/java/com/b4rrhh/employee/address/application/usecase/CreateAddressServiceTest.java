@@ -138,7 +138,6 @@ class CreateAddressServiceTest {
                 .findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER);
         inOrder.verify(addressRepository).findMaxAddressNumberByEmployeeId(10L);
         inOrder.verify(addressRepository).findByEmployeeIdAndAddressTypeCodeOrderByStartDate(10L, "HOME");
-        verify(addressRepository, never()).existsOverlappingPeriodByAddressType(any(), any(), any(), any());
     }
 
     @Test

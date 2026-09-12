@@ -10,7 +10,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @TestSobreEsquemaReal
 class SpringDataWorkCenterRepositoryIntegrationTest {
@@ -30,21 +29,6 @@ class SpringDataWorkCenterRepositoryIntegrationTest {
                 DataIntegrityViolationException.class,
                 () -> repository.saveAndFlush(workCenterEntity(empleado, 1, LocalDate.of(2026, 2, 1), null))
         );
-    }
-
-    @Test
-    void detectsOverlappingPeriodsUsingRepositoryQuery() {
-        Long empleado = DatosDePrueba.empleado(jdbcTemplate);
-        repository.saveAndFlush(workCenterEntity(empleado, 1, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31)));
-
-        boolean overlap = repository.existsOverlappingPeriod(
-                empleado,
-                LocalDate.of(2026, 1, 15),
-                LocalDate.of(2026, 2, 15),
-                LocalDate.of(9999, 12, 31)
-        );
-
-        assertTrue(overlap);
     }
 
     private WorkCenterEntity workCenterEntity(Long employeeId, Integer assignmentNumber, LocalDate startDate, LocalDate endDate) {

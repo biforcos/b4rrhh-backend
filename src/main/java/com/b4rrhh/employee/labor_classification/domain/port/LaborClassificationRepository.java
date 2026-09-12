@@ -12,13 +12,6 @@ public interface LaborClassificationRepository {
 
     List<LaborClassification> findByEmployeeIdOrderByStartDate(Long employeeId);
 
-    boolean existsOverlappingPeriod(
-            Long employeeId,
-            LocalDate startDate,
-            LocalDate endDate,
-            LocalDate excludeStartDateOrNull
-    );
-
     void save(LaborClassification laborClassification);
 
     void update(LaborClassification laborClassification, LocalDate originalStartDate);

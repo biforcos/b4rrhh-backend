@@ -22,36 +22,6 @@ public interface SpringDataWorkingTimeRepository extends JpaRepository<WorkingTi
     Integer findMaxWorkingTimeNumberByEmployeeId(@Param("employeeId") Long employeeId);
 
     @Query("""
-            select case when count(w) > 0 then true else false end
-            from WorkingTimeEntity w
-            where w.employeeId = :employeeId
-              and w.startDate <= :effectiveEndDate
-              and :startDate <= coalesce(w.endDate, :maxDate)
-            """)
-    boolean existsOverlappingPeriod(
-            @Param("employeeId") Long employeeId,
-            @Param("startDate") LocalDate startDate,
-            @Param("effectiveEndDate") LocalDate effectiveEndDate,
-            @Param("maxDate") LocalDate maxDate
-    );
-
-    @Query("""
-            select case when count(w) > 0 then true else false end
-            from WorkingTimeEntity w
-            where w.employeeId = :employeeId
-              and w.startDate <= :effectiveEndDate
-              and :startDate <= coalesce(w.endDate, :maxDate)
-              and w.workingTimeNumber <> :excludeWorkingTimeNumber
-            """)
-    boolean existsOverlappingPeriodExcluding(
-            @Param("employeeId") Long employeeId,
-            @Param("startDate") LocalDate startDate,
-            @Param("effectiveEndDate") LocalDate effectiveEndDate,
-            @Param("maxDate") LocalDate maxDate,
-            @Param("excludeWorkingTimeNumber") Integer excludeWorkingTimeNumber
-    );
-
-    @Query("""
             select w
             from WorkingTimeEntity w
             where w.employeeId = :employeeId

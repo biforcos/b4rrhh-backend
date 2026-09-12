@@ -23,36 +23,6 @@ public interface SpringDataWorkCenterRepository extends JpaRepository<WorkCenter
     Integer findMaxWorkCenterAssignmentNumberByEmployeeId(@Param("employeeId") Long employeeId);
 
     @Query("""
-            select case when count(w) > 0 then true else false end
-            from WorkCenterEntity w
-            where w.employeeId = :employeeId
-              and w.startDate <= :effectiveEndDate
-              and :startDate <= coalesce(w.endDate, :maxDate)
-            """)
-    boolean existsOverlappingPeriod(
-            @Param("employeeId") Long employeeId,
-            @Param("startDate") LocalDate startDate,
-            @Param("effectiveEndDate") LocalDate effectiveEndDate,
-            @Param("maxDate") LocalDate maxDate
-    );
-
-    @Query("""
-            select case when count(w) > 0 then true else false end
-            from WorkCenterEntity w
-            where w.employeeId = :employeeId
-              and w.workCenterAssignmentNumber <> :excludedWorkCenterAssignmentNumber
-              and w.startDate <= :effectiveEndDate
-              and :startDate <= coalesce(w.endDate, :maxDate)
-            """)
-    boolean existsOverlappingPeriodExcludingAssignment(
-            @Param("employeeId") Long employeeId,
-            @Param("excludedWorkCenterAssignmentNumber") Integer excludedWorkCenterAssignmentNumber,
-            @Param("startDate") LocalDate startDate,
-            @Param("effectiveEndDate") LocalDate effectiveEndDate,
-            @Param("maxDate") LocalDate maxDate
-    );
-
-    @Query("""
             select w from WorkCenterEntity w
             where w.employeeId = :employeeId
               and w.startDate <= :referenceDate

@@ -4,14 +4,11 @@ import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
 import com.b4rrhh.employee.workcenter.domain.port.WorkCenterRepository;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 @Component
 public class WorkCenterPersistenceAdapter implements WorkCenterRepository {
-
-    private static final LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
 
     private final SpringDataWorkCenterRepository springDataWorkCenterRepository;
 
@@ -33,29 +30,6 @@ public class WorkCenterPersistenceAdapter implements WorkCenterRepository {
                 .stream()
                 .map(this::toDomain)
                 .toList();
-    }
-
-    @Override
-    public boolean existsOverlappingPeriod(Long employeeId, LocalDate startDate, LocalDate endDate) {
-        LocalDate effectiveEndDate = endDate == null ? MAX_DATE : endDate;
-        return springDataWorkCenterRepository.existsOverlappingPeriod(employeeId, startDate, effectiveEndDate, MAX_DATE);
-    }
-
-    @Override
-    public boolean existsOverlappingPeriodExcludingAssignment(
-            Long employeeId,
-            Integer excludedWorkCenterAssignmentNumber,
-            LocalDate startDate,
-            LocalDate endDate
-    ) {
-        LocalDate effectiveEndDate = endDate == null ? MAX_DATE : endDate;
-        return springDataWorkCenterRepository.existsOverlappingPeriodExcludingAssignment(
-                employeeId,
-                excludedWorkCenterAssignmentNumber,
-                startDate,
-                effectiveEndDate,
-                MAX_DATE
-        );
     }
 
     @Override

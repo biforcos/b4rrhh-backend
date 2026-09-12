@@ -4,14 +4,11 @@ import com.b4rrhh.employee.address.domain.model.Address;
 import com.b4rrhh.employee.address.domain.port.AddressRepository;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 @Component
 public class AddressPersistenceAdapter implements AddressRepository {
-
-    private static final LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
 
     private final SpringDataAddressRepository springDataAddressRepository;
 
@@ -40,23 +37,6 @@ public class AddressPersistenceAdapter implements AddressRepository {
                 .map(this::toDomain)
                 .toList();
     }
-
-        @Override
-        public boolean existsOverlappingPeriodByAddressType(
-            Long employeeId,
-            String addressTypeCode,
-            LocalDate startDate,
-            LocalDate endDate
-        ) {
-        LocalDate effectiveEndDate = endDate == null ? MAX_DATE : endDate;
-        return springDataAddressRepository.existsOverlappingPeriodByAddressType(
-            employeeId,
-            addressTypeCode,
-            startDate,
-            effectiveEndDate,
-            MAX_DATE
-        );
-        }
 
     @Override
     public Optional<Integer> findMaxAddressNumberByEmployeeId(Long employeeId) {
