@@ -32,7 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * temporales lo que EveryCatalogColumnIsDeclaredOrExemptedTest es para los
  * codigos de catalogo.
  *
- * Comprueba cinco cosas:
+ * Comprueba seis cosas:
  *
  * <ol>
  *   <li>Toda vertical con fecha de fin en su modelo declara su cobertura, o
@@ -44,6 +44,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  *       StrongTimelineReplacePlan, ReplaceMode.</li>
  *   <li>Toda vertical de tipo A expone el mismo juego de verbos —crear,
  *       corregir, borrar, leer— y ni replace-from-date ni close.</li>
+ *   <li>El puerto de repositorio de una vertical de tipo A no declara el
+ *       predicado de solape ni el de hueco.</li>
  * </ol>
  *
  * El tipo se declara, no se adivina: una vertical es de tipo A porque nombra
@@ -265,6 +267,37 @@ class EveryTemporalVerticalHonoursItsTypeTest {
                 .isEmpty();
     }
 
+    // ------------------------------------------------------------------
+    // 6. El puerto no conserva el predicado que el ADR retiro de la mano
+    // ------------------------------------------------------------------
+
+    @Test
+    void noTypeAVerticalDeclaresAnOverlapOrGapPredicateInItsRepositoryPort() {
+        List<String> conservados = predicadosDeSolapeEnLosPuertos(VERTICALES);
+
+        assertThat(conservados)
+                .withFailMessage("""
+                        Estos puertos de repositorio de una vertical de tipo A siguen declarando un
+                        predicado de solape o de hueco: %s
+
+                        La regla 2 mira quien juzga; esta mira quien conserva con que juzgar. No basta
+                        con que no lo llame nadie: el ADR-057 cambio la integridad de precondicion de
+                        la operacion a invariante del estado resultante, y un existsOverlappingPeriod
+                        que sigue en el puerto de la vertical es la precondicion intacta y a un if de
+                        distancia. El dia que alguien tenga prisa con un solape se lo va a encontrar ya
+                        escrito y ya probado contra Postgres, y lo va a usar: es el camino por el que
+                        Replace...FromDate acabo en cuatro verticales de siete (backend#79).
+
+                        Leer la serie si: el TimelineService necesita las ocurrencias para planificar.
+                        Lo que no puede haber es el veredicto ya resuelto, que es lo que se reconoce
+                        aqui: un metodo que devuelve boolean y se llama Overlap, Gap o Coverage.
+
+                        presence y absence no salen porque no son de tipo A: estan en EXENTAS con su
+                        motivo escrito, y esa es la unica lista de excepciones que hay.
+                        """, conservados)
+                .isEmpty();
+    }
+
     // ==================================================================
     // La prueba de la guarda: cada regla, en rojo, sobre un arbol de mentira
     // ==================================================================
@@ -428,6 +461,49 @@ class EveryTemporalVerticalHonoursItsTypeTest {
     }
 
     @Test
+    void aRepositoryPortThatKeepsTheOverlapPredicateShowsUpByItself(@TempDir Path arbol) throws IOException {
+        Path vertical = arbol.resolve("contract");
+        escribir(vertical.resolve("application/service/ContractTimelineService.java"), """
+                package x;
+                class ContractTimelineService {
+                    static final TimelineCoverage COVERAGE = TimelineCoverage.MANDATORY;
+                }
+                """);
+        escribir(vertical.resolve("domain/port/ContractRepository.java"), """
+                package x;
+                interface ContractRepository {
+                    java.util.List<Contract> findByEmployeeIdOrderByStartDate(Long employeeId);
+                    boolean existsOverlappingPeriod(Long employeeId, java.time.LocalDate startDate);
+                }
+                """);
+
+        assertThat(predicadosDeSolapeEnLosPuertos(arbol))
+                .containsExactly("contract/domain/port/ContractRepository.java");
+    }
+
+    // Leer las ocurrencias que caen dentro de un periodo es lo que el planificador necesita
+    // para hacer su trabajo. Lo prohibido es el veredicto ya resuelto, no la lectura.
+    @Test
+    void aRepositoryPortThatOnlyReadsTheSeriesDoesNotShowUp(@TempDir Path arbol) throws IOException {
+        Path vertical = arbol.resolve("working_time");
+        escribir(vertical.resolve("application/service/WorkingTimeTimelineService.java"), """
+                package x;
+                class WorkingTimeTimelineService {
+                    static final TimelineCoverage COVERAGE = TimelineCoverage.MANDATORY;
+                }
+                """);
+        escribir(vertical.resolve("domain/port/WorkingTimeRepository.java"), """
+                package x;
+                interface WorkingTimeRepository {
+                    java.util.List<WorkingTime> findOverlappingByEmployeeIdAndPeriod(Long employeeId);
+                    // boolean existsOverlappingPeriod(Long employeeId);
+                }
+                """);
+
+        assertThat(predicadosDeSolapeEnLosPuertos(arbol)).isEmpty();
+    }
+
+    @Test
     void aVerticalWithAnEndDateAndNoCoverageShowsUpByItself(@TempDir Path arbol) throws IOException {
         escribir(arbol.resolve("seniority/domain/model/Seniority.java"), """
                 package x;
@@ -454,6 +530,15 @@ class EveryTemporalVerticalHonoursItsTypeTest {
     /** Excepciones con las que se dice "esto solapa" o "esto deja un hueco". */
     private static final Pattern PATRON_VEREDICTO = Pattern.compile(
             "new\\s+\\w*(?:Overlap|Coverage|Gap)\\w*Exception\\s*\\(");
+
+    /**
+     * El veredicto de solape o de hueco ya resuelto: un metodo que devuelve
+     * boolean y se llama Overlap, Gap o Coverage. Se mira el tipo de retorno a
+     * proposito, para no confundirlo con leer la serie —findOverlapping...—,
+     * que es justo lo que el planificador necesita y tiene que poder pedir.
+     */
+    private static final Pattern PATRON_PREDICADO_TEMPORAL = Pattern.compile(
+            "\\bboolean\\s+\\w*(?:Overlap|Gap|Coverage)\\w*\\s*\\(");
 
     private static final Set<String> VERBOS_DEL_TIPO_A = Set.of("crear", "corregir", "borrar", "leer");
 
@@ -501,6 +586,24 @@ class EveryTemporalVerticalHonoursItsTypeTest {
         }
         porSuCuenta.sort(null);
         return porSuCuenta;
+    }
+
+    /**
+     * Puertos de repositorio de una vertical de tipo A que conservan el
+     * predicado. El puerto es el contrato que la vertical ofrece a su dominio:
+     * lo que no este declarado ahi no se puede llamar desde dentro.
+     */
+    private static List<String> predicadosDeSolapeEnLosPuertos(Path raiz) {
+        List<String> conservados = new ArrayList<>();
+        for (String vertical : verticalesDeTipoA(raiz)) {
+            for (Path fichero : ficheros(raiz.resolve(vertical).resolve("domain/port"))) {
+                if (PATRON_PREDICADO_TEMPORAL.matcher(sinComentarios(leer(fichero))).find()) {
+                    conservados.add(relativo(raiz, fichero));
+                }
+            }
+        }
+        conservados.sort(null);
+        return conservados;
     }
 
     private static List<String> rastrosEnElCodigo(Path raiz, Pattern patron) {
