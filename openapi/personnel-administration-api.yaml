@@ -6437,6 +6437,13 @@ components:
       properties:
         messageCode:
           type: string
+        messageCodeName:
+          type: string
+          nullable: true
+          description: >-
+            Literal del codigo en el idioma de Accept-Language, resuelto del catalogo
+            PAYROLL_RUN_MESSAGE (backend#81). Nulo si el codigo no esta sembrado: la
+            pantalla pinta entonces el codigo desnudo, que es feo y honesto.
         severityCode:
           type: string
         message:

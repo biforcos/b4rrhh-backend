@@ -13,6 +13,8 @@ import com.b4rrhh.payroll.infrastructure.web.dto.PayrollCalculationRunMessagesRe
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollCalculationRunResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollLaunchEmployeeTargetRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollLaunchTargetSelectionRequest;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,6 +45,8 @@ class PayrollCalculationRunControllerTest {
     private GetPayrollCalculationRunUseCase getPayrollCalculationRunUseCase;
     @Mock
     private ListPayrollCalculationRunMessagesUseCase listPayrollCalculationRunMessagesUseCase;
+    @Mock
+    private RuleEntityLabelResolver ruleEntityLabelResolver;
 
     private PayrollCalculationRunController controller;
 
@@ -53,7 +57,7 @@ class PayrollCalculationRunControllerTest {
                 getPayrollCalculationRunUseCase,
             listPayrollCalculationRunMessagesUseCase,
             new PayrollCalculationRunResponseAssembler(),
-            new PayrollCalculationRunMessageResponseAssembler()
+            new PayrollCalculationRunMessageResponseAssembler(ruleEntityLabelResolver)
         );
     }
 
@@ -161,7 +165,7 @@ class PayrollCalculationRunControllerTest {
                 )
         ));
 
-        ResponseEntity<PayrollCalculationRunMessagesResponse> response = controller.listRunMessages(1L);
+        ResponseEntity<PayrollCalculationRunMessagesResponse> response = controller.listRunMessages(1L, ResponseLanguage.base());
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -175,7 +179,7 @@ class PayrollCalculationRunControllerTest {
         when(getPayrollCalculationRunUseCase.getById(1L)).thenReturn(Optional.of(run("COMPLETED")));
         when(listPayrollCalculationRunMessagesUseCase.listByRunId(1L)).thenReturn(List.of());
 
-        ResponseEntity<PayrollCalculationRunMessagesResponse> response = controller.listRunMessages(1L);
+        ResponseEntity<PayrollCalculationRunMessagesResponse> response = controller.listRunMessages(1L, ResponseLanguage.base());
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -187,7 +191,7 @@ class PayrollCalculationRunControllerTest {
     void returnsNotFoundWhenListingMessagesForMissingRun() {
         when(getPayrollCalculationRunUseCase.getById(999L)).thenReturn(Optional.empty());
 
-        ResponseEntity<PayrollCalculationRunMessagesResponse> response = controller.listRunMessages(999L);
+        ResponseEntity<PayrollCalculationRunMessagesResponse> response = controller.listRunMessages(999L, ResponseLanguage.base());
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }

@@ -8,6 +8,7 @@ import com.b4rrhh.payroll.application.usecase.PayrollLaunchEmployeeTarget;
 import com.b4rrhh.payroll.application.usecase.PayrollLaunchTargetSelection;
 import com.b4rrhh.payroll.domain.model.CalculationRun;
 import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollCalculationRunMessageResponseAssembler;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollCalculationRunResponseAssembler;
 import com.b4rrhh.payroll.infrastructure.web.dto.LaunchPayrollCalculationRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollCalculationRunMessagesResponse;
@@ -77,17 +78,20 @@ public class PayrollCalculationRunController {
     }
 
     @GetMapping("/{runId}/messages")
-    public ResponseEntity<PayrollCalculationRunMessagesResponse> listRunMessages(@PathVariable Long runId) {
-        if (getPayrollCalculationRunUseCase.getById(runId).isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        return ResponseEntity.ok(
-                payrollCalculationRunMessageResponseAssembler.toResponse(
-                        runId,
-                        listPayrollCalculationRunMessagesUseCase.listByRunId(runId)
-                )
-        );
+    public ResponseEntity<PayrollCalculationRunMessagesResponse> listRunMessages(
+            @PathVariable Long runId,
+            ResponseLanguage language
+    ) {
+        return getPayrollCalculationRunUseCase.getById(runId)
+                .map(run -> ResponseEntity.ok(
+                        payrollCalculationRunMessageResponseAssembler.toResponse(
+                                runId,
+                                run.ruleSystemCode(),
+                                listPayrollCalculationRunMessagesUseCase.listByRunId(runId),
+                                language
+                        )
+                ))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     private PayrollLaunchTargetSelection toTargetSelection(PayrollLaunchTargetSelectionRequest request) {

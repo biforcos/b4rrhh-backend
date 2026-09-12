@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 public record PayrollCalculationRunMessageResponse(
         String messageCode,
+        String messageCodeName,
         String severityCode,
         String message,
         String detailsJson,
