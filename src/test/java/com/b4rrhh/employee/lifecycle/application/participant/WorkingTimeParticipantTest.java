@@ -8,11 +8,12 @@ import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeCom
 import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeUseCase;
 import com.b4rrhh.employee.working_time.domain.exception.InvalidWorkingTimePercentageException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeEmployeeNotFoundException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeIsACorrectionException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeNumberConflictException;
-import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOutsidePresencePeriodException;
-import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOverlapException;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTimeOccurrence;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTimePeriod;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -75,6 +76,27 @@ class WorkingTimeParticipantTest {
         HireContext ctx = validContext();
         when(createWorkingTimeUseCase.create(any(CreateWorkingTimeCommand.class)))
                 .thenThrow(new InvalidWorkingTimePercentageException("workingTimePercentage must be > 0 and <= 100"));
+
+        assertThatThrownBy(() -> participant.participate(ctx))
+                .isInstanceOf(HireEmployeeBusinessValidationException.class);
+    }
+
+    /**
+     * Esta excepcion no la nombra nadie en el flujo de alta: sale como error de
+     * validacion solo porque es del supertipo que el catch declara (backend#59).
+     * Hoy el alta no puede provocarla —la jornada empieza el dia de la
+     * contratacion y no hay otra en ese inicio—, asi que se fuerza. Si en vez de
+     * eso saliera cruda, el alta contestaria un 500.
+     */
+    @Test
+    void wrapsWorkingTimeSeriesInvariantExceptionNobodyNamesToLifecycleException() {
+        HireContext ctx = validContext();
+        LocalDate hireDate = ctx.hireDate();
+        when(createWorkingTimeUseCase.create(any(CreateWorkingTimeCommand.class)))
+                .thenThrow(new WorkingTimeIsACorrectionException(
+                        "ESP", "INTERNAL", "EMP000001",
+                        new WorkingTimeOccurrence(1, hireDate, null),
+                        new WorkingTimePeriod(hireDate, null)));
 
         assertThatThrownBy(() -> participant.participate(ctx))
                 .isInstanceOf(HireEmployeeBusinessValidationException.class);

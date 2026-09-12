@@ -38,8 +38,11 @@ import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeUse
 import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesCommand;
 import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesUseCase;
 import com.b4rrhh.employee.working_time.domain.exception.InvalidWorkingTimePercentageException;
+import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeIsACorrectionException;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTimeOccurrence;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTimePeriod;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterCommand;
 import com.b4rrhh.employee.workcenter.application.usecase.CreateWorkCenterUseCase;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
@@ -294,6 +297,44 @@ class RehireEmployeeServiceTest {
         when(createWorkCenterUseCase.create(any(CreateWorkCenterCommand.class))).thenReturn(activeWorkCenter(LocalDate.of(2026, 4, 15)));
         when(createWorkingTimeUseCase.create(any(CreateWorkingTimeCommand.class)))
                 .thenThrow(new InvalidWorkingTimePercentageException("workingTimePercentage must be greater than 0 and less than or equal to 100"));
+
+        assertThrows(RehireEmployeeBusinessValidationException.class, () -> service.rehire(validCommand()));
+        verify(employeeRepository, never()).save(any(Employee.class));
+    }
+
+    /**
+     * Igual que el de arriba, pero con una excepcion de invariante que el flujo
+     * no nombra en ningun sitio: sale como error de validacion solo porque es
+     * del supertipo (backend#59). Se fuerza porque la reincorporacion tampoco
+     * puede provocarla hoy.
+     */
+    @Test
+    void failsWhenWorkingTimeSeriesInvariantNobodyNamesIsViolated() {
+        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
+                .thenReturn(Optional.of("ES01"));
+
+        Presence closedPresence = closedPresence(LocalDate.of(2026, 3, 31));
+        Presence newPresence = activePresence(LocalDate.of(2026, 4, 15));
+
+        when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(Optional.of(employee("TERMINATED")));
+        when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of(closedPresence), List.of(newPresence));
+        when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
+                .thenReturn(List.of(new Contract(1L, "CON", "SUB", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31))));
+        when(listEmployeeLaborClassificationsUseCase.listByEmployeeBusinessKey(any(ListEmployeeLaborClassificationsCommand.class)))
+                .thenReturn(List.of(new LaborClassification(1L, "AGR", "CAT", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31))));
+        when(listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
+                .thenReturn(List.of(new WorkCenter(10L, 1L, 1, "WC1", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31), LocalDateTime.now(), LocalDateTime.now())));
+        when(createPresenceUseCase.create(any(CreatePresenceCommand.class))).thenReturn(newPresence);
+        when(createLaborClassificationUseCase.create(any(CreateLaborClassificationCommand.class))).thenReturn(activeLabor(LocalDate.of(2026, 4, 15)));
+        when(createContractUseCase.create(any(CreateContractCommand.class))).thenReturn(activeContract(LocalDate.of(2026, 4, 15)));
+        when(createWorkCenterUseCase.create(any(CreateWorkCenterCommand.class))).thenReturn(activeWorkCenter(LocalDate.of(2026, 4, 15)));
+        when(createWorkingTimeUseCase.create(any(CreateWorkingTimeCommand.class)))
+                .thenThrow(new WorkingTimeIsACorrectionException(
+                        "ESP", "INTERNAL", "EMP001",
+                        new WorkingTimeOccurrence(1, LocalDate.of(2026, 4, 15), null),
+                        new WorkingTimePeriod(LocalDate.of(2026, 4, 15), null)));
 
         assertThrows(RehireEmployeeBusinessValidationException.class, () -> service.rehire(validCommand()));
         verify(employeeRepository, never()).save(any(Employee.class));

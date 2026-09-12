@@ -5,7 +5,7 @@ import com.b4rrhh.employee.working_time.domain.model.WorkingTimePeriod;
 import java.time.LocalDate;
 import java.util.List;
 
-public class WorkingTimeOverlapException extends RuntimeException {
+public final class WorkingTimeOverlapException extends WorkingTimeSeriesInvariantException {
 
     private final List<WorkingTimePeriod> overlaps;
 

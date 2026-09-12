@@ -11,7 +11,7 @@ import java.util.List;
  * mandatory. It names the gaps and the neighbouring occurrences the user
  * could stretch to cover them.
  */
-public class WorkingTimeCoverageGapException extends RuntimeException {
+public final class WorkingTimeCoverageGapException extends WorkingTimeSeriesInvariantException {
 
     private final List<WorkingTimePeriod> gaps;
     private final List<WorkingTimeOccurrence> stretchCandidates;

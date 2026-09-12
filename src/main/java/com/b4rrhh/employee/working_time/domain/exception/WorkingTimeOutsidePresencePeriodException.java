@@ -2,7 +2,7 @@ package com.b4rrhh.employee.working_time.domain.exception;
 
 import java.time.LocalDate;
 
-public class WorkingTimeOutsidePresencePeriodException extends RuntimeException {
+public final class WorkingTimeOutsidePresencePeriodException extends WorkingTimeSeriesInvariantException {
 
     public WorkingTimeOutsidePresencePeriodException(
             String ruleSystemCode,

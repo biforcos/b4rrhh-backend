@@ -10,7 +10,7 @@ import com.b4rrhh.employee.working_time.domain.model.WorkingTimePeriod;
  * working time that would be corrected so the user can ask for the
  * correction as such.
  */
-public class WorkingTimeIsACorrectionException extends RuntimeException {
+public final class WorkingTimeIsACorrectionException extends WorkingTimeSeriesInvariantException {
 
     private final WorkingTimeOccurrence correctedOccurrence;
     private final WorkingTimePeriod requested;
