@@ -43,6 +43,23 @@ class PayrollOpenApiContractTest {
         assertTrue(contract.contains("which is the case for the temporary calculate"));
     }
 
+    // El frontend genera su cliente SOLO de personnel-administration-api.yaml. La superficie de
+    // nomina esta duplicada en los dos contratos, y lo que falte en ese no existe para el cliente:
+    // el endpoint de mensajes llevaba tiempo servido por el backend, escrito en payroll-api.yaml y
+    // ausente de aqui, o sea invisible para la pantalla que los tiene que ensenar (frontend#61).
+    @Test
+    void frontendFacingContractCarriesThePayrollCalculationRunSurface() throws IOException {
+        String contract = Files.readString(Path.of("openapi", "personnel-administration-api.yaml"));
+
+        assertTrue(contract.contains("/payroll/calculation-runs/launch:"));
+        assertTrue(contract.contains("/payroll/calculation-runs/{runId}:"));
+        assertTrue(contract.contains("/payroll/calculation-runs/{runId}/messages:"));
+        assertTrue(contract.contains("listPayrollCalculationRunMessages"));
+        assertTrue(contract.contains("PayrollCalculationRunMessagesResponse:"));
+        assertTrue(contract.contains("PayrollCalculationRunMessageResponse:"));
+        assertTrue(contract.contains("Calculation run that produced this payroll"));
+    }
+
     @Test
     void bulkInvalidateEndpointIsDocumented() throws IOException {
         String contract = Files.readString(Path.of("openapi", "payroll-api.yaml"));
