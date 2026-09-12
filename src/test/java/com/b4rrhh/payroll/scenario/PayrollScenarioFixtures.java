@@ -182,11 +182,22 @@ public class PayrollScenarioFixtures {
 
     /** Inserts a labor classification row (open-ended). */
     public void insertLaborClassification(long employeeId, LocalDate from) {
+        insertLaborClassification(employeeId, from, null);
+    }
+
+    /**
+     * Inserts a labor classification row with an explicit end date; {@code to} may be null.
+     *
+     * Hace falta para el cese a mitad de mes: la clasificacion se cierra con la presencia, y
+     * ese es el caso en el que el lanzador resolvia el convenio a fin de periodo y no
+     * encontraba ninguna vigente (backend#73).
+     */
+    public void insertLaborClassification(long employeeId, LocalDate from, LocalDate to) {
         jdbc.update(
                 "insert into employee.labor_classification" +
                 " (employee_id, agreement_code, agreement_category_code, start_date, end_date, created_at, updated_at)" +
-                " values (?, ?, ?, ?, null, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                employeeId, AGREEMENT_CODE, CATEGORY_CODE, from);
+                " values (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                employeeId, AGREEMENT_CODE, CATEGORY_CODE, from, to);
     }
 
     /**

@@ -74,16 +74,18 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
         }
 
         PresenceEntity presence = presenceOpt.get();
+        LocalDate referenceDate = lastDayInsidePresence(presence, periodEnd);
+
         List<EmployeeAgreementContext> agreementContexts = agreementContextRepository.findLatestValidByEmployeeIdAndEffectiveDate(
                 employeeId,
-                periodEnd,
+                referenceDate,
                 PageRequest.of(0, 1)
         );
         String agreementCode = agreementContexts.isEmpty() ? null : agreementContexts.getFirst().agreementCode();
 
         List<String> categories = agreementCategoryRepository.findLatestValidByEmployeeIdAndEffectiveDate(
                 employeeId,
-                periodEnd,
+                referenceDate,
                 PageRequest.of(0, 1)
         );
         String agreementCategoryCode = categories.isEmpty() ? null : categories.getFirst();
@@ -95,7 +97,7 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
                 .toList();
 
         String workCenterCode = workCenterRepository
-                .findActiveByEmployeeIdAndReferenceDate(employeeId, periodEnd, PageRequest.of(0, 1))
+                .findActiveByEmployeeIdAndReferenceDate(employeeId, referenceDate, PageRequest.of(0, 1))
                 .stream().findFirst()
                 .map(wc -> wc.getWorkCenterCode())
                 .orElse(null);
@@ -109,6 +111,26 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
                 presence.getEndDate(),
                 workCenterCode
         ));
+    }
+
+    /**
+     * La fecha a la que se resuelve el contexto vigente de la unidad: el ultimo dia que el
+     * empleado estuvo presente dentro del periodo.
+     *
+     * APANO ACOTADO, y lo sustituye el backend#47. Esto se preguntaba a fin de periodo, y quien
+     * cesa el 15 tiene la clasificacion cerrada con el cese: a fin de mes no hay ninguna vigente,
+     * el lanzador lo contaba como entrada que falta y no le hacia recibo (backend#73).
+     *
+     * Arregla el cese, y no arregla el cambio de categoria a mitad de mes: ahi sigue ganando el
+     * ultimo tramo para todo el periodo, que da un numero equivocado en vez de una ausencia. La
+     * salida buena es que las fechas de corte salgan de la union de los puntos de cambio de las
+     * verticales (backend#47), y entonces nadie pregunta por el convenio de un tramo que no
+     * existe. Ese issue tiene dos decisiones de negocio abiertas —que verticales rompen y que
+     * pasa con SegmentSpec.workingTimePercentage—, y el cese no podia esperarlas.
+     */
+    private LocalDate lastDayInsidePresence(PresenceEntity presence, LocalDate periodEnd) {
+        LocalDate presenceEnd = presence.getEndDate();
+        return presenceEnd != null && presenceEnd.isBefore(periodEnd) ? presenceEnd : periodEnd;
     }
 
     private boolean isOverlapping(
