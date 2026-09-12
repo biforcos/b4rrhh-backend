@@ -26,7 +26,9 @@ public class RuleEntityEntity {
     @Column(name = "rule_entity_type_code", nullable = false, length = 30)
     private String ruleEntityTypeCode;
 
-    @Column(nullable = false, length = 30)
+    // 50 y no 30 desde la V125: el codigo mas largo del catalogo de mensajes de
+    // ejecucion son 40 caracteres, y es la misma medida que message_code (backend#81).
+    @Column(nullable = false, length = 50)
     private String code;
 
     @Column(nullable = false, length = 100)

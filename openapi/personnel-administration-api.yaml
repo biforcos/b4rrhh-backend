@@ -3136,7 +3136,7 @@ paths:
           required: false
           schema:
             type: string
-            maxLength: 30
+            maxLength: 50
         - in: query
           name: active
           required: false
@@ -3184,7 +3184,7 @@ paths:
           required: true
           schema:
             type: string
-            maxLength: 30
+            maxLength: 50
         - in: path
           name: startDate
           required: true
@@ -3227,7 +3227,7 @@ paths:
           required: true
           schema:
             type: string
-            maxLength: 30
+            maxLength: 50
         - in: path
           name: startDate
           required: true
@@ -3279,7 +3279,7 @@ paths:
           required: true
           schema:
             type: string
-            maxLength: 30
+            maxLength: 50
         - in: path
           name: startDate
           required: true
@@ -3321,7 +3321,7 @@ paths:
           required: true
           schema:
             type: string
-            maxLength: 30
+            maxLength: 50
         - in: path
           name: startDate
           required: true
@@ -9241,7 +9241,7 @@ components:
       properties:
         code:
           type: string
-          maxLength: 30
+          maxLength: 50
         name:
           type: string
           maxLength: 100
@@ -9261,7 +9261,7 @@ components:
       properties:
         code:
           type: string
-          maxLength: 30
+          maxLength: 50
         name:
           type: string
           maxLength: 100
@@ -9327,7 +9327,7 @@ components:
       properties:
         code:
           type: string
-          maxLength: 30
+          maxLength: 50
         name:
           type: string
           maxLength: 100
@@ -9370,7 +9370,7 @@ components:
       properties:
         code:
           type: string
-          maxLength: 30
+          maxLength: 50
         name:
           type: string
           maxLength: 100
@@ -10095,7 +10095,7 @@ components:
           maxLength: 30
         code:
           type: string
-          maxLength: 30
+          maxLength: 50
         name:
           type: string
           maxLength: 100
