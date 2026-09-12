@@ -43,26 +43,8 @@ public class Contract {
         return new Contract(employeeId, contractCode, contractSubtypeCode, startDate, endDate);
     }
 
-    public Contract correctStartDate(LocalDate newStartDate) {
-        return new Contract(employeeId, contractCode, contractSubtypeCode, newStartDate, endDate);
-    }
-
     public Contract adjustEndDate(LocalDate newEndDate) {
         return new Contract(employeeId, contractCode, contractSubtypeCode, startDate, newEndDate);
-    }
-
-    public Contract updateContract(String newContractCode, String newContractSubtypeCode) {
-        if (!isActive()) {
-            throw new ContractAlreadyClosedException(startDate);
-        }
-
-        return new Contract(
-                employeeId,
-                newContractCode,
-                newContractSubtypeCode,
-                startDate,
-                endDate
-        );
     }
 
     public Contract close(LocalDate closeDate) {

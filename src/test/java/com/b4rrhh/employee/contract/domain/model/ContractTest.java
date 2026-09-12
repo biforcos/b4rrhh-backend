@@ -25,14 +25,4 @@ class ContractTest {
         );
     }
 
-    @Test
-    void updateRejectsContractCodeWithInvalidLength() {
-        Contract contract = new Contract(10L, "IND", "FT1", LocalDate.of(2026, 1, 1), null);
-
-        assertThrows(
-                ContractInvalidException.class,
-                () -> contract.updateContract("AB", "FT1")
-        );
-    }
-
 }
