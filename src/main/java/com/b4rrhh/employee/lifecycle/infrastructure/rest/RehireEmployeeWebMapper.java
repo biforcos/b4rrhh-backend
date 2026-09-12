@@ -126,7 +126,7 @@ public class RehireEmployeeWebMapper {
                                 result.newCostCenter().items().stream()
                                         .map(item -> new CostCenterDistributionItemResponse(
                                                 item.costCenterCode(),
-                                                item.costCenterName(),
+                                                null, // no enrichment at command response level
                                                 BigDecimal.valueOf(item.allocationPercentage())
                                         ))
                                         .collect(Collectors.toList())

@@ -30,8 +30,7 @@ public record HireEmployeeResponse(
 
     public record WorkCenterSummary(
             LocalDate startDate,
-            String workCenterCode,
-            String workCenterName
+            String workCenterCode
     ) {}
 
     public record ContractSummary(

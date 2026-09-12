@@ -53,7 +53,7 @@ class HireEmployeeControllerHttpTest {
                 .thenReturn(new HireEmployeeResult(
                         new HireEmployeeResult.EmployeeSummary("ESP", "INTERNAL", "EMP001", "Ana", "Lopez", null, null, "Ana Lopez", "ACTIVE", hireDate),
                         new HireEmployeeResult.PresenceSummary(1, hireDate, "COMP", "HIRE"),
-                        new HireEmployeeResult.WorkCenterSummary(hireDate, "WC1", "WC1"),
+                        new HireEmployeeResult.WorkCenterSummary(hireDate, "WC1"),
                         null,
                         new HireEmployeeResult.ContractSummary(hireDate, "CON", "SUB"),
                   new HireEmployeeResult.LaborClassificationSummary(hireDate, "AGR", "CAT"),

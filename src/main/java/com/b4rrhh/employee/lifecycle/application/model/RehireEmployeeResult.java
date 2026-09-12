@@ -32,9 +32,10 @@ public record RehireEmployeeResult(
             List<CostCenterItemSummary> items
     ) {}
 
+    /** Sin nombre: el literal del centro de coste lo resuelve la capa web de su vertical, con el
+     * idioma de la respuesta, y en los endpoints de comando va a null (backend#27, backend#36). */
     public record CostCenterItemSummary(
             String costCenterCode,
-            String costCenterName,
             Double allocationPercentage
     ) {}
 

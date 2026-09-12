@@ -33,10 +33,11 @@ public record HireEmployeeResult(
             String entryReasonCode
     ) {}
 
+    /** El centro que el alta acaba de asignar. Sin nombre: el ciclo de vida no lo tiene, y la
+     * respuesta de un comando dice lo que ha creado, no la ficha (backend#36). */
     public record WorkCenterSummary(
             LocalDate startDate,
-            String workCenterCode,
-            String workCenterName
+            String workCenterCode
     ) {}
 
     public record CostCenterSummary(
@@ -45,9 +46,10 @@ public record HireEmployeeResult(
             List<CostCenterItemSummary> items
     ) {}
 
+    /** Sin nombre, por lo mismo: el literal del centro de coste lo resuelve la capa web de su
+     * vertical, con el idioma de la respuesta, y en los endpoints de comando va a null (backend#27). */
     public record CostCenterItemSummary(
             String costCenterCode,
-            String costCenterName,
             Double allocationPercentage
     ) {}
 

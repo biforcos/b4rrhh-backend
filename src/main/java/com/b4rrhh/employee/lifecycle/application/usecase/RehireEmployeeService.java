@@ -559,7 +559,6 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                 window.getItems().stream()
                         .map(item -> new RehireEmployeeResult.CostCenterItemSummary(
                                 item.getCostCenterCode(),
-                                item.getCostCenterCode(),
                                 item.getAllocationPercentage().doubleValue()
                         ))
                         .collect(Collectors.toList())

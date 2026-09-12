@@ -133,8 +133,7 @@ public class HireContext {
                 ),
                 new HireEmployeeResult.WorkCenterSummary(
                         workCenter.getStartDate(),
-                        workCenter.getWorkCenterCode(),
-                        workCenter.getWorkCenterCode() // name not available in domain model, using code as fallback
+                        workCenter.getWorkCenterCode()
                 ),
                 costCenter != null ? new HireEmployeeResult.CostCenterSummary(
                         costCenter.getStartDate(),
@@ -142,7 +141,6 @@ public class HireContext {
                         costCenter.getItems().stream()
                                 .map(item -> new HireEmployeeResult.CostCenterItemSummary(
                                         item.getCostCenterCode(),
-                                        item.getCostCenterCode(), // name not available in domain model, using code as fallback
                                         item.getAllocationPercentage().doubleValue()
                                 ))
                                 .toList()

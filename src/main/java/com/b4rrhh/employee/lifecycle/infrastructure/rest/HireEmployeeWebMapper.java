@@ -142,8 +142,7 @@ public class HireEmployeeWebMapper {
                 ),
                 new HireEmployeeResponse.WorkCenterSummary(
                         result.workCenter().startDate(),
-                        result.workCenter().workCenterCode(),
-                        result.workCenter().workCenterName()
+                        result.workCenter().workCenterCode()
                 ),
                 result.costCenter() != null ? new CostCenterDistributionWindowResponse(
                         result.costCenter().startDate(),
@@ -152,7 +151,7 @@ public class HireEmployeeWebMapper {
                         result.costCenter().items().stream()
                                 .map(item -> new CostCenterDistributionItemResponse(
                                         item.costCenterCode(),
-                                        item.costCenterName(),
+                                        null, // no enrichment at command response level
                                         BigDecimal.valueOf(item.allocationPercentage())
                                 ))
                                 .collect(Collectors.toList())
