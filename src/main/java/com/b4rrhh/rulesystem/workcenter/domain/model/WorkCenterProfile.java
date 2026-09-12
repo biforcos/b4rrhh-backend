@@ -16,10 +16,6 @@ public class WorkCenterProfile {
         return new WorkCenterProfile(companyCode, address);
     }
 
-    public static WorkCenterProfile empty() {
-        return new WorkCenterProfile(null, WorkCenterAddress.empty());
-    }
-
     public String getCompanyCode() {
         return companyCode;
     }

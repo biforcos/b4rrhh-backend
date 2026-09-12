@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.workcenter.application.usecase;
 
+import com.b4rrhh.rulesystem.domain.exception.RequiredExtensionMissingException;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterInputNormalizer;
@@ -52,7 +53,11 @@ public class ListWorkCentersService implements ListWorkCentersUseCase {
 
         return workCenters.stream()
                 .map(entity -> {
-                    WorkCenterProfile profile = profiles.getOrDefault(entity.getId(), WorkCenterProfile.empty());
+                    WorkCenterProfile profile = profiles.get(entity.getId());
+                    if (profile == null) {
+                        throw new RequiredExtensionMissingException(
+                                entity.getId(), "rulesystem.work_center_profile");
+                    }
                     return new WorkCenterDetails(
                             new WorkCenter(
                                     entity.getRuleSystemCode(),

@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.workcenter.application.usecase;
 
+import com.b4rrhh.rulesystem.domain.exception.RequiredExtensionMissingException;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterInputNormalizer;
 import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterResolver;
@@ -35,7 +36,8 @@ public class GetWorkCenterService implements GetWorkCenterUseCase {
 
         RuleEntity workCenterEntity = workCenterResolver.resolveApplicableToday(ruleSystemCode, workCenterCode);
         WorkCenterProfile profile = workCenterProfileRepository.findByWorkCenterRuleEntityId(workCenterEntity.getId())
-                .orElseGet(WorkCenterProfile::empty);
+                .orElseThrow(() -> new RequiredExtensionMissingException(
+                        workCenterEntity.getId(), "rulesystem.work_center_profile"));
         return new WorkCenterDetails(
                 new WorkCenter(
                         workCenterEntity.getRuleSystemCode(),

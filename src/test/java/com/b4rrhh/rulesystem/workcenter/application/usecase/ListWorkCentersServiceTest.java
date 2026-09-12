@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.workcenter.application.usecase;
 
+import com.b4rrhh.rulesystem.domain.exception.RequiredExtensionMissingException;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterInputNormalizer;
@@ -18,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -50,18 +51,18 @@ class ListWorkCentersServiceTest {
         assertEquals("ES01", result.get(0).profile().getCompanyCode());
     }
 
+    // backend#35: el mismo fallback que en el get, y en la lista todavia mas facil de no
+    // ver, porque una ficha vacia entre otras llenas parece una pendiente de rellenar.
     @Test
-    void returnsEmptyProfileForWorkCenterWithoutProfile() {
+    void listFailsWhenAWorkCenterHasNoProfile() {
         RuleEntity entity = ruleEntity(10L, "ESP", "MAD-01", "Madrid HQ");
         when(ruleEntityRepository.findByFilters(eq("ESP"), eq("WORK_CENTER"), isNull(), eq(true), any(LocalDate.class)))
                 .thenReturn(List.of(entity));
         when(workCenterProfileRepository.findByWorkCenterRuleEntityIds(List.of(10L)))
                 .thenReturn(Map.of());
 
-        List<WorkCenterDetails> result = service.list(new ListWorkCentersQuery("ESP"));
-
-        assertEquals(1, result.size());
-        assertNull(result.get(0).profile().getCompanyCode());
+        assertThrows(RequiredExtensionMissingException.class,
+                () -> service.list(new ListWorkCentersQuery("ESP")));
     }
 
     @Test

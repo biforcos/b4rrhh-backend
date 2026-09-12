@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.workcenter.application.usecase;
 
+import com.b4rrhh.rulesystem.domain.exception.RequiredExtensionMissingException;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterCatalogValidator;
@@ -61,7 +62,8 @@ public class UpdateWorkCenterService implements UpdateWorkCenterUseCase {
         RuleEntity savedEntity = ruleEntityRepository.save(workCenterEntity);
 
         WorkCenterProfile existingProfile = workCenterProfileRepository.findByWorkCenterRuleEntityId(savedEntity.getId())
-                .orElseGet(WorkCenterProfile::empty);
+                .orElseThrow(() -> new RequiredExtensionMissingException(
+                        savedEntity.getId(), "rulesystem.work_center_profile"));
         WorkCenterProfile savedProfile = workCenterProfileRepository.save(
                 savedEntity.getId(),
                 existingProfile.update(companyCode, address)

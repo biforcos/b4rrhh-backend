@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.workcenter.application.usecase;
 
+import com.b4rrhh.rulesystem.domain.exception.RequiredExtensionMissingException;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterInputNormalizer;
@@ -57,17 +58,20 @@ class GetWorkCenterServiceTest {
         assertEquals("ES01", result.profile().getCompanyCode());
     }
 
+    // backend#35: antes esto devolvia un perfil de aire, que en una ficha de RRHH se lee
+    // como "esto todavia no lo ha rellenado nadie" y no levanta ninguna sospecha. Un centro
+    // sin perfil es una inconsistencia de datos y tiene que sonar. Si esto vuelve a
+    // responder en vez de fallar, se ha reintroducido el fallback.
     @Test
-    void returnsEmptyProfileWhenNoneExists() {
+    void getFailsWhenProfileMissing() {
         RuleEntity entity = ruleEntity(10L, "ESP", "MAD-01", "Madrid HQ");
         when(ruleEntityRepository.findApplicableByBusinessKey(eq("ESP"), eq("WORK_CENTER"), eq("MAD-01"), any(LocalDate.class)))
                 .thenReturn(Optional.of(entity));
         when(workCenterProfileRepository.findByWorkCenterRuleEntityId(10L))
                 .thenReturn(Optional.empty());
 
-        WorkCenterDetails result = service.get(new GetWorkCenterQuery("ESP", "MAD-01"));
-
-        assertNull(result.profile().getCompanyCode());
+        assertThrows(RequiredExtensionMissingException.class,
+                () -> service.get(new GetWorkCenterQuery("ESP", "MAD-01")));
     }
 
     @Test
@@ -87,7 +91,7 @@ class GetWorkCenterServiceTest {
         when(ruleEntityRepository.findApplicableByBusinessKey(eq("ESP"), eq("WORK_CENTER"), eq("MAD-01"), any(LocalDate.class)))
                 .thenReturn(Optional.of(entity));
         when(workCenterProfileRepository.findByWorkCenterRuleEntityId(10L))
-                .thenReturn(Optional.empty());
+                .thenReturn(Optional.of(new WorkCenterProfile("ES01", null)));
 
         service.get(new GetWorkCenterQuery(" esp ", " mad-01 "));
 
