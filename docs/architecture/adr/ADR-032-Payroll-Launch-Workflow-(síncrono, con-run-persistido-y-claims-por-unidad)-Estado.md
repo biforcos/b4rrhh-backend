@@ -3,6 +3,12 @@ Estado
 
 Propuesto
 
+> **Ya no es sincrono.** El ADR-060 sustituye la «primera iteracion» de este documento en una sola
+> cosa: la espera. El lanzamiento crea el run, contesta 202 y trabaja fuera de la peticion. Todo lo
+> demas de aqui —launch coordina, calculate materializa, claim excluye, run resume; la unidad minima;
+> los contadores; los mensajes— sigue vigente tal cual. Donde este documento dice «sin asincronia»,
+> manda el ADR-060 (`backend#75`).
+
 Contexto
 
 El bounded context payroll ya dispone de:
