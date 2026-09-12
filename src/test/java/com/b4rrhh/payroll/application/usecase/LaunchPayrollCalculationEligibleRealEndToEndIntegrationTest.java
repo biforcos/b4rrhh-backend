@@ -58,7 +58,8 @@ class LaunchPayrollCalculationEligibleRealEndToEndIntegrationTest {
                         PayrollLaunchTargetSelectionType.SINGLE_EMPLOYEE,
                         new PayrollLaunchEmployeeTarget("INTERNAL", employeeNumber),
                         null
-                )
+                ),
+                null
         ));
 
         assertEquals("COMPLETED", run.status());

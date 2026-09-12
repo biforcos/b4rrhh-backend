@@ -19,6 +19,7 @@ public record PayrollCalculationRunResponse(
         Integer totalNotValid,
         Integer totalErrors,
         LocalDateTime requestedAt,
+        String requestedBy,
         LocalDateTime startedAt,
         LocalDateTime finishedAt
 ) {

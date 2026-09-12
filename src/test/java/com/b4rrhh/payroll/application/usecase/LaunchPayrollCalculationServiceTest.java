@@ -3,6 +3,7 @@ package com.b4rrhh.payroll.application.usecase;
 import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceLookupPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEmployeeContext;
+import com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException;
 import com.b4rrhh.payroll.domain.model.CalculationClaim;
 import com.b4rrhh.payroll.domain.model.CalculationRun;
 import com.b4rrhh.payroll.domain.model.CalculationRunMessage;
@@ -26,11 +27,14 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -66,7 +70,9 @@ class LaunchPayrollCalculationServiceTest {
                 new ObjectMapper()
         );
 
-        when(calculationRunRepository.save(any(CalculationRun.class))).thenAnswer(invocation -> {
+        // lenient: un lanzamiento que se cae en la validacion no llega a guardar nada, y
+        // este eco del save lo comparten todos los demas tests de la clase.
+        lenient().when(calculationRunRepository.save(any(CalculationRun.class))).thenAnswer(invocation -> {
             CalculationRun run = invocation.getArgument(0);
             LocalDateTime now = LocalDateTime.of(2026, 4, 11, 10, 0);
             return new CalculationRun(
@@ -366,7 +372,45 @@ class LaunchPayrollCalculationServiceTest {
         verify(payrollLaunchPresenceLookupPort, never()).findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP999"), any(), any());
     }
 
+    @Test
+    void launchStampsWhoRequestedTheRunOnTheVeryFirstSave() {
+        when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
+                .thenReturn(List.of());
+
+        CalculationRun run = service.launch(singleEmployeeCommand("hr.manager@b4rrhh"));
+
+        assertEquals("hr.manager@b4rrhh", run.requestedBy());
+
+        ArgumentCaptor<CalculationRun> captor = ArgumentCaptor.forClass(CalculationRun.class);
+        verify(calculationRunRepository, atLeastOnce()).save(captor.capture());
+        // La primera fila que se escribe ya lleva quien pidio la ejecucion: es la unica
+        // que el cliente ve cuando el lanzamiento deja de esperar (#75).
+        assertEquals("hr.manager@b4rrhh", captor.getAllValues().getFirst().requestedBy());
+    }
+
+    @Test
+    void launchLeavesRequestedByEmptyWhenNobodyIsBehindTheLaunch() {
+        when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
+                .thenReturn(List.of());
+
+        CalculationRun run = service.launch(singleEmployeeCommand("   "));
+
+        assertNull(run.requestedBy());
+    }
+
+    @Test
+    void launchRejectsRequestedByThatDoesNotFitTheColumn() {
+        assertThrows(
+                InvalidPayrollArgumentException.class,
+                () -> service.launch(singleEmployeeCommand("x".repeat(101)))
+        );
+    }
+
     private LaunchPayrollCalculationCommand singleEmployeeCommand() {
+        return singleEmployeeCommand(null);
+    }
+
+    private LaunchPayrollCalculationCommand singleEmployeeCommand(String requestedBy) {
         return new LaunchPayrollCalculationCommand(
                 "ESP",
                 "202501",
@@ -377,7 +421,8 @@ class LaunchPayrollCalculationServiceTest {
                         PayrollLaunchTargetSelectionType.SINGLE_EMPLOYEE,
                         new PayrollLaunchEmployeeTarget("INTERNAL", "EMP001"),
                         null
-                )
+                ),
+                requestedBy
         );
     }
 
@@ -392,7 +437,8 @@ class LaunchPayrollCalculationServiceTest {
                         PayrollLaunchTargetSelectionType.ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD,
                         null,
                         null
-                )
+                ),
+                null
         );
     }
 

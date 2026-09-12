@@ -6,6 +6,10 @@ public record LaunchPayrollCalculationCommand(
         String payrollTypeCode,
         String calculationEngineCode,
         String calculationEngineVersion,
-        PayrollLaunchTargetSelection targetSelection
+        PayrollLaunchTargetSelection targetSelection,
+        // Quien pide la ejecucion. Lo rellena la capa web con el sujeto del token; los
+        // lanzamientos en proceso (tests y escenarios) lo dejan nulo porque no hay nadie
+        // detras. No se valida contra el modelo de usuarios: es traza, no identidad.
+        String requestedBy
 ) {
 }

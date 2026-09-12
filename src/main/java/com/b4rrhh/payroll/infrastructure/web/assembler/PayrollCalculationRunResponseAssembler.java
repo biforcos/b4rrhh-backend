@@ -25,6 +25,7 @@ public class PayrollCalculationRunResponseAssembler {
                 run.totalNotValid(),
                 run.totalErrors(),
                 run.requestedAt(),
+                run.requestedBy(),
                 run.startedAt(),
                 run.finishedAt()
         );

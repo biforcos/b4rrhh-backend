@@ -514,6 +514,10 @@ components:
         requestedAt:
           type: string
           format: date-time
+        requestedBy:
+          type: string
+          nullable: true
+          description: Subject that requested the run, taken from the authenticated token. Null for in-process launches, which have nobody behind them.
         startedAt:
           type: string
           format: date-time

@@ -68,6 +68,7 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
         String calculationEngineCode = normalizeText(command.calculationEngineCode(), "calculationEngineCode", 50);
         String calculationEngineVersion = normalizeText(command.calculationEngineVersion(), "calculationEngineVersion", 50);
         PayrollLaunchTargetSelection targetSelection = normalizeTargetSelection(command.targetSelection());
+        String requestedBy = normalizeOptionalText(command.requestedBy(), "requestedBy", 100);
         LocalDate[] periodBounds = parsePayrollPeriodBounds(payrollPeriodCode);
 
         CalculationRun run = calculationRunRepository.save(new CalculationRun(
@@ -78,7 +79,7 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                 calculationEngineCode,
                 calculationEngineVersion,
                 LocalDateTime.now(),
-                null,
+                requestedBy,
                 CalculationRunStatuses.REQUESTED,
                 toJson(targetSelection, "targetSelection"),
                 0,
@@ -465,6 +466,18 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
 
     private String normalizeCode(String value, String fieldName, int maxLength) {
         return normalizeText(value, fieldName, maxLength).toUpperCase();
+    }
+
+    /**
+     * Texto opcional: ausente es un valor legitimo, demasiado largo no. Un lanzamiento no
+     * se cae por no saber quien lo pidio, pero tampoco se trunca en silencio un sujeto que
+     * no cabe en la columna.
+     */
+    private String normalizeOptionalText(String value, String fieldName, int maxLength) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return normalizeText(value, fieldName, maxLength);
     }
 
     private String normalizeText(String value, String fieldName, int maxLength) {

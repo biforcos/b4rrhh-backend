@@ -62,7 +62,8 @@ class PayrollHappyPathIntegrationTest {
                 new PayrollLaunchTargetSelection(
                         PayrollLaunchTargetSelectionType.SINGLE_EMPLOYEE,
                         new PayrollLaunchEmployeeTarget(EMPLOYEE_TYPE, employeeNumber),
-                        null)));
+                        null),
+                null));
     }
 
     private Long payrollId(String employeeNumber, int presenceNumber) {

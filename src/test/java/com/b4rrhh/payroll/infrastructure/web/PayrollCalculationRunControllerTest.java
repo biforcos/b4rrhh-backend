@@ -21,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.TestingAuthenticationToken;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -71,7 +72,7 @@ class PayrollCalculationRunControllerTest {
                         new PayrollLaunchEmployeeTargetRequest("INTERNAL", "EMP001"),
                         null
                 )
-        ));
+        ), new TestingAuthenticationToken("hr.manager@b4rrhh", "n/a"));
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -82,6 +83,7 @@ class PayrollCalculationRunControllerTest {
         verify(launchPayrollCalculationUseCase).launch(captor.capture());
         assertEquals("NORMAL", captor.getValue().payrollTypeCode());
         assertEquals("INTERNAL", captor.getValue().targetSelection().employee().employeeTypeCode());
+        assertEquals("hr.manager@b4rrhh", captor.getValue().requestedBy());
     }
 
         @Test
@@ -99,7 +101,7 @@ class PayrollCalculationRunControllerTest {
                 null,
                 null
             )
-        ));
+        ), null);
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -112,6 +114,7 @@ class PayrollCalculationRunControllerTest {
         );
         assertNull(captor.getValue().targetSelection().employee());
         assertNull(captor.getValue().targetSelection().employees());
+        assertNull(captor.getValue().requestedBy());
         }
 
     @Test
@@ -124,6 +127,7 @@ class PayrollCalculationRunControllerTest {
         assertNotNull(response.getBody());
         assertEquals("RUNNING", response.getBody().status());
         assertEquals(1, response.getBody().totalCalculated());
+        assertEquals("hr.manager@b4rrhh", response.getBody().requestedBy());
     }
 
     @Test
@@ -196,7 +200,7 @@ class PayrollCalculationRunControllerTest {
                 "ENGINE",
                 "1.0",
                 LocalDateTime.of(2026, 4, 11, 10, 0),
-                null,
+                "hr.manager@b4rrhh",
                 status,
                 "{\"selectionType\":\"SINGLE_EMPLOYEE\"}",
                 1,
