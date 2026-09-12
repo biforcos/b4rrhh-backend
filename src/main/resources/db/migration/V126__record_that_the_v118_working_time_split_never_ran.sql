@@ -1,0 +1,42 @@
+-- =========================================================
+-- V126__record_that_the_v118_working_time_split_never_ran.sql
+-- Dejar por escrito que el corte de jornada de la V118 nunca se ejecuto (backend#74)
+-- =========================================================
+--
+-- La V118 tiene dos mitades y solo una hace algo.
+--
+-- La primera —SALARIO_BASE a SEGMENT— se aplico y sigue vigente: la V119 la
+-- recogio y puso D01, J01 y P01 con ella. Esa mitad esta bien y no se toca.
+--
+-- La segunda parte la jornada del empleado ESP/INTERNAL/EMP001000 a mitad de
+-- septiembre de 2026, con un UPDATE y un INSERT sobre employee.working_time.
+-- Esa mitad NO PUEDE HABERSE EJECUTADO NUNCA, en ninguna base:
+--
+--   Flyway corre al arrancar el backend, sobre el esquema. Los empleados los
+--   crea el workforce_loader despues, hablando por la API. Un UPDATE que busca
+--   a EMP001000 dentro de una migracion se ejecuta sobre una tabla donde ese
+--   empleado todavia no existe. Y un UPDATE que no encuentra filas no es un
+--   error: cero filas afectadas, migracion en verde, Flyway contento.
+--
+-- Esta comprobado, no deducido. En el volcado con el que se sembro la demo
+-- (deploy/a6fc955, capturado de la construccion del deploy#3):
+--
+--   flyway_schema_history  v118  installed_on = 2026-09-07 14:42:45.865
+--   employee (EMP001000)         created_at   = 2026-09-07 14:47:36.226
+--
+-- Cinco minutos de diferencia, y en ese orden. El corte que si hay en ese
+-- volcado es la ventana numero 3, creada a las 15:17 por una llamada a la API
+-- hecha a mano; la V118 inserta la numero 2, y su UPDATE busca la numero 1 con
+-- end_date nulo, que en ese empleado cerraba en 2023 por un cese. No casaba por
+-- dos sitios.
+--
+-- Desde backend#74 el corte lo planifica el loader, en cada corrida y sin que
+-- nadie se acuerde: loader.working-time-change en su application.yml. Las
+-- migraciones son del esquema y del catalogo —lo que existe antes de que haya
+-- nadie—; los empleados y su historia son del loader.
+--
+-- Esta migracion no ejecuta nada a proposito. La V118 ya esta aplicada en la
+-- demo y en las bases de desarrollo, y editarla cambiaria su checksum: Flyway
+-- fallaria la validacion al arrancar y la API no levantaria despues del
+-- siguiente reset-demo.sh. Lo que se puede arreglar no es lo que la V118 hizo
+-- —nada—, sino lo que hace creer a quien la lea; para eso esta este fichero.
