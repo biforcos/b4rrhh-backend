@@ -4,6 +4,8 @@ import com.b4rrhh.payroll.domain.model.CalculationRun;
 import com.b4rrhh.payroll.domain.port.CalculationRunRepository;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -23,6 +25,13 @@ public class CalculationRunPersistenceAdapter implements CalculationRunRepositor
     @Override
     public Optional<CalculationRun> findById(Long id) {
         return springDataCalculationRunRepository.findById(id).map(this::toDomain);
+    }
+
+    @Override
+    public List<CalculationRun> findByStatusIn(Collection<String> statuses) {
+        return springDataCalculationRunRepository.findByStatusIn(statuses).stream()
+                .map(this::toDomain)
+                .toList();
     }
 
     private CalculationRun toDomain(CalculationRunEntity entity) {

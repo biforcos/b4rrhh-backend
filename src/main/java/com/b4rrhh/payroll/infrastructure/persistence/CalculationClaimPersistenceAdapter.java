@@ -52,6 +52,15 @@ public class CalculationClaimPersistenceAdapter implements CalculationClaimRepos
         springDataCalculationClaimRepository.deleteByCalculationRunId(runId);
     }
 
+    @Override
+    public long deleteAll() {
+        // Se cuenta antes de borrar porque el numero es el diagnostico: un arranque que
+        // dice "borrados 871 claims" esta contando una corrida entera que murio a medias.
+        long claims = springDataCalculationClaimRepository.count();
+        springDataCalculationClaimRepository.deleteAllInBatch();
+        return claims;
+    }
+
     private CalculationRunEntity runReference(Long runId) {
         CalculationRunEntity run = new CalculationRunEntity();
         run.setId(runId);
