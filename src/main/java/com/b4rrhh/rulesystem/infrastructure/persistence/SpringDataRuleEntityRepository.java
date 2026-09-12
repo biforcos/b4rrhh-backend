@@ -13,14 +13,25 @@ public interface SpringDataRuleEntityRepository extends JpaRepository<RuleEntity
 
     LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
 
+    /**
+     * El catalogo entero de un tipo, sin filtrar por fecha (backend#32).
+     *
+     * La vigencia no esconde: la fecha de referencia dice respecto a que dia se
+     * calcula la marca de vigencia de cada opcion, y eso lo hace el caso de uso.
+     * Elegir un codigo no vigente es frecuente en este dominio —la correccion
+     * administrativa: «esto se grabo mal, ponle el codigo antiguo»—, y si la
+     * excepcion es frecuente no es una excepcion: esconder esos codigos obliga a
+     * un modo especial que el usuario tiene que saber que existe.
+     *
+     * {@code re.active = true} se queda: dado de baja y no vigente son cosas
+     * distintas, y lo dado de baja no se ofrece nunca.
+     */
     @Query("""
         select re
         from RuleEntityEntity re
         where re.ruleSystemCode = :ruleSystemCode
           and re.ruleEntityTypeCode = :ruleEntityTypeCode
           and re.active = true
-          and (cast(:referenceDate as date) is null or re.startDate <= :referenceDate)
-          and (cast(:referenceDate as date) is null or :referenceDate <= coalesce(re.endDate, :maxDate))
           and (
               :qLike is null
               or lower(re.code) like :qLike
@@ -31,9 +42,7 @@ public interface SpringDataRuleEntityRepository extends JpaRepository<RuleEntity
     List<RuleEntityEntity> findDirectCatalogOptions(
             @Param("ruleSystemCode") String ruleSystemCode,
             @Param("ruleEntityTypeCode") String ruleEntityTypeCode,
-            @Param("referenceDate") LocalDate referenceDate,
-            @Param("qLike") String qLike,
-            @Param("maxDate") LocalDate maxDate
+            @Param("qLike") String qLike
     );
 
         @Query("""

@@ -9,7 +9,6 @@ import com.b4rrhh.rulesystem.translation.infrastructure.persistence.RuleEntityTr
 import com.b4rrhh.rulesystem.translation.infrastructure.persistence.SpringDataRuleEntityTranslationRepository;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,18 +32,11 @@ public class RuleEntityDirectCatalogOptionReadAdapter implements DirectCatalogOp
     public List<DirectCatalogOption> findDirectOptions(
             String ruleSystemCode,
             String ruleEntityTypeCode,
-            LocalDate referenceDate,
             String qLike,
             String languageCode
     ) {
         List<RuleEntityEntity> entities = springDataRuleEntityRepository
-                .findDirectCatalogOptions(
-                        ruleSystemCode,
-                        ruleEntityTypeCode,
-                        referenceDate,
-                        qLike,
-                        SpringDataRuleEntityRepository.MAX_DATE
-                );
+                .findDirectCatalogOptions(ruleSystemCode, ruleEntityTypeCode, qLike);
         Map<Long, String> translatedNames = translatedNames(entities, languageCode);
 
         return entities.stream()

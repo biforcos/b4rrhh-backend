@@ -32,12 +32,13 @@ class GetDirectCatalogOptionsServiceTest {
         service = new GetDirectCatalogOptionsService(directCatalogOptionRepository);
     }
 
+    // backend#32: la fecha no baja al repositorio, porque ya no filtra. Baja hasta la
+    // marca, y solo hasta ahi.
     @Test
     void returnsItemsAndComputesActiveUsingReferenceDate() {
         when(directCatalogOptionRepository.findDirectOptions(
                 eq("ES_DEFAULT"),
                 eq("WORK_CENTER"),
-                eq(LocalDate.of(2026, 3, 22)),
                 eq(null)
         )).thenReturn(List.of(
                 new DirectCatalogOption("MAIN_OFFICE", "Oficina central", true, LocalDate.of(2020, 1, 1), null),
@@ -64,7 +65,6 @@ class GetDirectCatalogOptionsServiceTest {
         when(directCatalogOptionRepository.findDirectOptions(
                 eq("ES_DEFAULT"),
                 eq("WORK_CENTER"),
-                eq(null),
                 eq("%office%")
         )).thenReturn(List.of());
 
@@ -73,7 +73,6 @@ class GetDirectCatalogOptionsServiceTest {
         verify(directCatalogOptionRepository).findDirectOptions(
                 "ES_DEFAULT",
                 "WORK_CENTER",
-                null,
                 "%office%"
         );
     }
@@ -83,7 +82,6 @@ class GetDirectCatalogOptionsServiceTest {
         when(directCatalogOptionRepository.findDirectOptions(
                 eq("ES_DEFAULT"),
                 eq("WORK_CENTER"),
-                eq(null),
                 eq(null)
         )).thenReturn(List.of());
 
@@ -95,6 +93,31 @@ class GetDirectCatalogOptionsServiceTest {
         ));
 
         assertNotNull(result.referenceDate());
+    }
+
+    // backend#32: la opcion cerrada en 2020 no desaparece de la lista al pedir 2026.
+    // Sale, marcada como no vigente, y elegirla es una decision consciente.
+    @Test
+    void aCodeThatIsNotEffectiveOnTheDateStillComesBackMarked() {
+        when(directCatalogOptionRepository.findDirectOptions(
+                eq("ES_DEFAULT"),
+                eq("WORK_CENTER"),
+                eq(null)
+        )).thenReturn(List.of(
+                new DirectCatalogOption("OLD_OFFICE", "Oficina antigua", true,
+                        LocalDate.of(2010, 1, 1), LocalDate.of(2020, 12, 31))
+        ));
+
+        DirectCatalogOptionsResult result = service.get(new GetDirectCatalogOptionsQuery(
+                "ES_DEFAULT",
+                "WORK_CENTER",
+                LocalDate.of(2026, 3, 22),
+                null
+        ));
+
+        assertEquals(1, result.items().size());
+        assertEquals("OLD_OFFICE", result.items().get(0).code());
+        assertEquals(false, result.items().get(0).active());
     }
 
     @Test

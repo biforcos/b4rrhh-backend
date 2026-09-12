@@ -23,20 +23,22 @@ public class GetDirectCatalogOptionsService implements GetDirectCatalogOptionsUs
         String normalizedRuleEntityTypeCode = normalizeRequired("ruleEntityTypeCode", query.ruleEntityTypeCode());
         String normalizedQLike = normalizeLike(query.q());
 
-        LocalDate requestedReferenceDate = query.referenceDate();
-        LocalDate effectiveReferenceDate = requestedReferenceDate != null
-            ? requestedReferenceDate
+        // Una sola fecha, y solo para fechar la marca (backend#32). Antes habia dos —la
+        // pedida, que filtraba, y la efectiva, que marcaba— y esa distincion es justo la
+        // que se va: el catalogo se devuelve entero y la fecha dice respecto a que dia se
+        // mira la vigencia de cada opcion.
+        LocalDate effectiveReferenceDate = query.referenceDate() != null
+                ? query.referenceDate()
                 : LocalDate.now();
 
         List<DirectCatalogOption> items = directCatalogOptionRepository
                 .findDirectOptions(
                         normalizedRuleSystemCode,
                         normalizedRuleEntityTypeCode,
-                requestedReferenceDate,
                         normalizedQLike
                 )
                 .stream()
-            .map(option -> option.withActive(option.isEffectiveOn(effectiveReferenceDate)))
+                .map(option -> option.withActive(option.isEffectiveOn(effectiveReferenceDate)))
                 .toList();
 
         return new DirectCatalogOptionsResult(
