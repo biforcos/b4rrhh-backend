@@ -27,6 +27,15 @@ public class PayrollLaunchExecutionProperties {
      */
     private boolean collapseSegmentRows = true;
 
+    /**
+     * Cuantas ejecuciones pueden estar esperando su turno detras de la que corre.
+     *
+     * <p>Acotada a proposito: el trabajo lo hace un solo hilo, y una cola sin limite
+     * convierte un boton pulsado veinte veces en veinte ejecuciones vivas. Al llenarse,
+     * el lanzamiento se rechaza y la ejecucion queda cerrada como FAILED con su mensaje.
+     */
+    private int queueCapacity = 16;
+
     public BigDecimal getEligibleRealMonthlySalaryAmount() {
         return eligibleRealMonthlySalaryAmount;
     }
@@ -41,5 +50,13 @@ public class PayrollLaunchExecutionProperties {
 
     public void setCollapseSegmentRows(boolean collapseSegmentRows) {
         this.collapseSegmentRows = collapseSegmentRows;
+    }
+
+    public int getQueueCapacity() {
+        return queueCapacity;
+    }
+
+    public void setQueueCapacity(int queueCapacity) {
+        this.queueCapacity = queueCapacity;
     }
 }

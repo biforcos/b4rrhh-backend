@@ -22,7 +22,9 @@ class PayrollOpenApiContractTest {
         assertTrue(contract.contains("/payroll/calculation-runs/launch:"));
         assertTrue(contract.contains("/payroll/calculation-runs/{runId}:"));
         assertTrue(contract.contains("/payroll/calculation-runs/{runId}/messages:"));
-        assertTrue(contract.contains("Launch payroll calculation workflow synchronously"));
+        assertTrue(contract.contains("Accept a payroll calculation run and return its identity without waiting"));
+        assertTrue(contract.contains("\"202\":"));
+        assertTrue(contract.contains("Payroll calculation run accepted"));
         assertTrue(contract.contains("PayrollLaunchTargetSelectionRequest"));
         assertTrue(contract.contains("ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD"));
         assertTrue(contract.contains("employee is required only for SINGLE_EMPLOYEE"));
@@ -55,6 +57,9 @@ class PayrollOpenApiContractTest {
         assertTrue(contract.contains("/payroll/calculation-runs/{runId}:"));
         assertTrue(contract.contains("/payroll/calculation-runs/{runId}/messages:"));
         assertTrue(contract.contains("listPayrollCalculationRunMessages"));
+        // El cliente del frontend se genera de aqui: si este contrato sigue diciendo 201,
+        // el cliente tratara un 202 como error y la pantalla no llegara nunca (#75).
+        assertTrue(contract.contains("Calculation run accepted"));
         assertTrue(contract.contains("PayrollCalculationRunMessagesResponse:"));
         assertTrue(contract.contains("PayrollCalculationRunMessageResponse:"));
         assertTrue(contract.contains("Calculation run that produced this payroll"));

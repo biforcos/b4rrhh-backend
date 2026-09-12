@@ -2,6 +2,7 @@ package com.b4rrhh.payroll.application.usecase;
 
 import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceLookupPort;
+import com.b4rrhh.payroll.application.port.PayrollLaunchWorkerPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEmployeeContext;
 import com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException;
 import com.b4rrhh.payroll.domain.model.CalculationClaim;
@@ -28,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.RejectedExecutionException;
 
 @Service
 public class LaunchPayrollCalculationService implements LaunchPayrollCalculationUseCase {
@@ -40,6 +42,7 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
     private final PayrollRepository payrollRepository;
     private final PayrollLaunchPresenceLookupPort payrollLaunchPresenceLookupPort;
     private final CalculatePayrollUnitUseCase calculatePayrollUnitUseCase;
+    private final PayrollLaunchWorkerPort payrollLaunchWorkerPort;
     private final ObjectMapper objectMapper;
 
     public LaunchPayrollCalculationService(
@@ -49,6 +52,7 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
             PayrollRepository payrollRepository,
             PayrollLaunchPresenceLookupPort payrollLaunchPresenceLookupPort,
             CalculatePayrollUnitUseCase calculatePayrollUnitUseCase,
+            PayrollLaunchWorkerPort payrollLaunchWorkerPort,
             ObjectMapper objectMapper
     ) {
         this.calculationRunRepository = calculationRunRepository;
@@ -57,31 +61,80 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
         this.payrollRepository = payrollRepository;
         this.payrollLaunchPresenceLookupPort = payrollLaunchPresenceLookupPort;
         this.calculatePayrollUnitUseCase = calculatePayrollUnitUseCase;
+        this.payrollLaunchWorkerPort = payrollLaunchWorkerPort;
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * Crea la ejecucion, la encola y vuelve. Es el camino de la API (#75).
+     *
+     * <p>La validacion del encargo sigue siendo sincrona: una peticion mal formada se
+     * contesta con un 400 y no deja ejecucion ninguna. Lo que deja de ser sincrono es el
+     * calculo, que son cinco minutos para mil empleados y ningun intermediario aguanta esa
+     * espera.
+     */
+    @Override
+    public CalculationRun requestLaunch(LaunchPayrollCalculationCommand command) {
+        NormalizedLaunch normalizedLaunch = normalize(command);
+        CalculationRun run = createRequestedRun(normalizedLaunch);
+
+        try {
+            payrollLaunchWorkerPort.submit(() -> execute(run, normalizedLaunch));
+        } catch (RejectedExecutionException ex) {
+            // Aceptada y perdida es el peor final posible: si no cabe en la cola, la
+            // ejecucion se cierra aqui mismo y lo dice.
+            saveRunMessage(run, "LAUNCH_REJECTED", "ERROR",
+                    "Payroll launch was rejected because the launch queue is full",
+                    Map.of("exceptionType", ex.getClass().getSimpleName()), null);
+            return calculationRunRepository.save(run.withFinishedExecutionEvenIfNeverStarted(
+                    CalculationRunStatuses.FAILED,
+                    LocalDateTime.now(),
+                    buildSummaryJson(run)
+            ));
+        }
+
+        return run;
+    }
+
+    /**
+     * Lanza y espera. Es el camino en proceso: escenarios y tests, que corren dentro de su
+     * propia transaccion y necesitan el resultado en la misma llamada. No lo usa la API.
+     */
     @Override
     public CalculationRun launch(LaunchPayrollCalculationCommand command) {
-        String ruleSystemCode = normalizeCode(command.ruleSystemCode(), "ruleSystemCode", 5);
+        NormalizedLaunch normalizedLaunch = normalize(command);
+        return execute(createRequestedRun(normalizedLaunch), normalizedLaunch);
+    }
+
+    private NormalizedLaunch normalize(LaunchPayrollCalculationCommand command) {
         String payrollPeriodCode = normalizeCode(command.payrollPeriodCode(), "payrollPeriodCode", 30);
-        String payrollTypeCode = normalizeCode(command.payrollTypeCode(), "payrollTypeCode", 30);
-        String calculationEngineCode = normalizeText(command.calculationEngineCode(), "calculationEngineCode", 50);
-        String calculationEngineVersion = normalizeText(command.calculationEngineVersion(), "calculationEngineVersion", 50);
-        PayrollLaunchTargetSelection targetSelection = normalizeTargetSelection(command.targetSelection());
-        String requestedBy = normalizeOptionalText(command.requestedBy(), "requestedBy", 100);
         LocalDate[] periodBounds = parsePayrollPeriodBounds(payrollPeriodCode);
 
-        CalculationRun run = calculationRunRepository.save(new CalculationRun(
-                null,
-                ruleSystemCode,
+        return new NormalizedLaunch(
+                normalizeCode(command.ruleSystemCode(), "ruleSystemCode", 5),
                 payrollPeriodCode,
-                payrollTypeCode,
-                calculationEngineCode,
-                calculationEngineVersion,
+                normalizeCode(command.payrollTypeCode(), "payrollTypeCode", 30),
+                normalizeText(command.calculationEngineCode(), "calculationEngineCode", 50),
+                normalizeText(command.calculationEngineVersion(), "calculationEngineVersion", 50),
+                normalizeTargetSelection(command.targetSelection()),
+                normalizeOptionalText(command.requestedBy(), "requestedBy", 100),
+                periodBounds[0],
+                periodBounds[1]
+        );
+    }
+
+    private CalculationRun createRequestedRun(NormalizedLaunch normalizedLaunch) {
+        return calculationRunRepository.save(new CalculationRun(
+                null,
+                normalizedLaunch.ruleSystemCode(),
+                normalizedLaunch.payrollPeriodCode(),
+                normalizedLaunch.payrollTypeCode(),
+                normalizedLaunch.calculationEngineCode(),
+                normalizedLaunch.calculationEngineVersion(),
                 LocalDateTime.now(),
-                requestedBy,
+                normalizedLaunch.requestedBy(),
                 CalculationRunStatuses.REQUESTED,
-                toJson(targetSelection, "targetSelection"),
+                toJson(normalizedLaunch.targetSelection(), "targetSelection"),
                 0,
                 0,
                 0,
@@ -96,24 +149,35 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                 null,
                 null
         ));
+    }
 
+    /**
+     * El trabajo. Corre en el hilo de la peticion cuando se llama a {@link #launch}, y en
+     * el hilo del worker cuando se llama a {@link #requestLaunch}.
+     *
+     * <p>Sin {@code @Transactional}, y no por descuido: los contadores se guardan unidad
+     * por unidad para que la ejecucion se vea avanzar desde fuera. En una sola transaccion
+     * no se veria nada hasta el final, que es justo lo contrario de lo que hace falta.
+     */
+    private CalculationRun execute(CalculationRun requestedRun, NormalizedLaunch normalizedLaunch) {
+        CalculationRun run = requestedRun;
         try {
             run = calculationRunRepository.save(run.withStatus(CalculationRunStatuses.RUNNING).withStartedAt(LocalDateTime.now()));
 
             List<PayrollCalculationUnit> units = expandUnits(
                     run,
-                    targetSelection,
-                    ruleSystemCode,
-                    payrollPeriodCode,
-                    payrollTypeCode,
-                    periodBounds[0],
-                    periodBounds[1]
+                    normalizedLaunch.targetSelection(),
+                    normalizedLaunch.ruleSystemCode(),
+                    normalizedLaunch.payrollPeriodCode(),
+                    normalizedLaunch.payrollTypeCode(),
+                    normalizedLaunch.periodStart(),
+                    normalizedLaunch.periodEnd()
             );
                     // totalCandidates counts expanded calculation units after presence overlap resolution, not raw target employees.
             run = calculationRunRepository.save(run.withTotalCandidates(units.size()));
 
             for (PayrollCalculationUnit unit : units) {
-                run = processUnit(run, unit, calculationEngineCode, calculationEngineVersion);
+                run = processUnit(run, unit, normalizedLaunch.calculationEngineCode(), normalizedLaunch.calculationEngineVersion());
             }
 
             String finalStatus = run.totalErrors() > 0
@@ -129,7 +193,7 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
         } catch (RuntimeException ex) {
             saveRunMessage(run, "LAUNCH_ABORTED", "ERROR", ex.getMessage(),
                     Map.of("exceptionType", ex.getClass().getSimpleName()), null);
-            CalculationRun failedRun = calculationRunRepository.save(run.withFinishedExecution(
+            CalculationRun failedRun = calculationRunRepository.save(run.withFinishedExecutionEvenIfNeverStarted(
                     CalculationRunStatuses.FAILED,
                     LocalDateTime.now(),
                     buildSummaryJson(run.incrementTotalErrors())
@@ -137,6 +201,23 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                 cleanupClaimsByRunId(failedRun.id());
             return failedRun;
         }
+    }
+
+    /**
+     * El encargo ya validado y normalizado, con el mes resuelto a fechas. Existe para que
+     * pedir y ejecutar puedan ser dos momentos distintos sin normalizar dos veces.
+     */
+    private record NormalizedLaunch(
+            String ruleSystemCode,
+            String payrollPeriodCode,
+            String payrollTypeCode,
+            String calculationEngineCode,
+            String calculationEngineVersion,
+            PayrollLaunchTargetSelection targetSelection,
+            String requestedBy,
+            LocalDate periodStart,
+            LocalDate periodEnd
+    ) {
     }
 
     private List<PayrollCalculationUnit> expandUnits(

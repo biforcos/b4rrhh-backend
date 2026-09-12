@@ -112,6 +112,25 @@ public record CalculationRun(
                 );
         }
 
+        /**
+         * Cierra una ejecucion que pudo no llegar a empezar nunca.
+         *
+         * <p>Una ejecucion puede morir encolada: se pidio, se quedo en REQUESTED y el
+         * backend se reinicio, o la cola la rechazo. Hay que poder cerrarla igual, y el
+         * esquema no admite una fecha de fin sin fecha de inicio
+         * (chk_calculation_run_finished_requires_started, V55). Cuando no empezo, el
+         * inicio que se le pone es el momento en que se pidio: lo mas cercano a la verdad
+         * que existe en la fila. Que no arranco lo dice su mensaje, no esta fecha.
+         */
+        public CalculationRun withFinishedExecutionEvenIfNeverStarted(
+                        String newStatus,
+                        LocalDateTime newFinishedAt,
+                        String newSummaryJson
+        ) {
+                return withStartedAt(startedAt == null ? requestedAt : startedAt)
+                                .withFinishedExecution(newStatus, newFinishedAt, newSummaryJson);
+        }
+
         public CalculationRun withTotalCandidates(int newTotalCandidates) {
                 return new CalculationRun(
                                 id,

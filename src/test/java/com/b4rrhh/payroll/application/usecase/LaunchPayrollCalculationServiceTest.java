@@ -3,6 +3,7 @@ package com.b4rrhh.payroll.application.usecase;
 import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceLookupPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEmployeeContext;
+import com.b4rrhh.payroll.application.port.PayrollLaunchWorkerPort;
 import com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException;
 import com.b4rrhh.payroll.domain.model.CalculationClaim;
 import com.b4rrhh.payroll.domain.model.CalculationRun;
@@ -23,10 +24,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.RejectedExecutionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -37,6 +41,7 @@ import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
@@ -57,9 +62,11 @@ class LaunchPayrollCalculationServiceTest {
     private CalculatePayrollUnitUseCase calculatePayrollUnitUseCase;
 
     private LaunchPayrollCalculationService service;
+    private RecordingWorker worker;
 
     @BeforeEach
     void setUp() {
+        worker = new RecordingWorker();
         service = new LaunchPayrollCalculationService(
                 calculationRunRepository,
                 calculationClaimRepository,
@@ -67,6 +74,7 @@ class LaunchPayrollCalculationServiceTest {
                 payrollRepository,
                 payrollLaunchPresenceLookupPort,
                 calculatePayrollUnitUseCase,
+                worker,
                 new ObjectMapper()
         );
 
@@ -404,6 +412,82 @@ class LaunchPayrollCalculationServiceTest {
                 InvalidPayrollArgumentException.class,
                 () -> service.launch(singleEmployeeCommand("x".repeat(101)))
         );
+    }
+
+    @Test
+    void requestLaunchHandsBackTheRunInRequestedWithoutDoingTheWork() {
+        CalculationRun run = service.requestLaunch(singleEmployeeCommand("hr.manager@b4rrhh"));
+
+        assertEquals(CalculationRunStatuses.REQUESTED, run.status());
+        assertEquals(1L, run.id());
+        assertEquals("hr.manager@b4rrhh", run.requestedBy());
+        assertNull(run.startedAt());
+        assertEquals(1, worker.submitted.size());
+        // Nadie ha mirado presencias todavia: el trabajo esta encolado, no hecho.
+        verifyNoInteractions(payrollLaunchPresenceLookupPort, calculatePayrollUnitUseCase);
+    }
+
+    @Test
+    void theWorkerRunsTheSameWorkAndCompletesTheRunItWasGiven() {
+        when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
+                .thenReturn(List.of(new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP001", 1)));
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
+                .thenReturn(Optional.empty());
+        when(calculationClaimRepository.save(any(CalculationClaim.class)))
+                .thenReturn(new CalculationClaim(31L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1, LocalDateTime.now(), null));
+        when(calculatePayrollUnitUseCase.calculate(any(CalculatePayrollUnitCommand.class)))
+                .thenReturn(payroll(PayrollStatus.CALCULATED));
+
+        service.requestLaunch(singleEmployeeCommand());
+        worker.runAll();
+
+        ArgumentCaptor<CalculationRun> captor = ArgumentCaptor.forClass(CalculationRun.class);
+        verify(calculationRunRepository, atLeastOnce()).save(captor.capture());
+        CalculationRun lastSaved = captor.getAllValues().getLast();
+        assertEquals(CalculationRunStatuses.COMPLETED, lastSaved.status());
+        assertEquals(1, lastSaved.totalCalculated());
+        verify(calculationClaimRepository).deleteById(31L);
+        verify(calculationClaimRepository).deleteByRunId(1L);
+    }
+
+    @Test
+    void requestLaunchClosesTheRunWhenTheQueueHasNoRoom() {
+        worker.rejectEverything = true;
+
+        CalculationRun run = service.requestLaunch(singleEmployeeCommand());
+
+        assertEquals(CalculationRunStatuses.FAILED, run.status());
+        // finished_at no se admite sin started_at (V55), y una ejecucion rechazada no
+        // arranco nunca: se cierra con el instante en que se pidio.
+        assertEquals(run.requestedAt(), run.startedAt());
+        assertNotNull(run.finishedAt());
+
+        ArgumentCaptor<CalculationRunMessage> messages = ArgumentCaptor.forClass(CalculationRunMessage.class);
+        verify(calculationRunMessageRepository).save(messages.capture());
+        assertEquals("LAUNCH_REJECTED", messages.getValue().messageCode());
+        assertEquals("ERROR", messages.getValue().severityCode());
+    }
+
+    /**
+     * Un worker de mentira: guarda lo que se le encola y solo lo ejecuta cuando el test se
+     * lo pide. Asi el test ve las dos mitades —aceptar y trabajar— por separado.
+     */
+    private static final class RecordingWorker implements PayrollLaunchWorkerPort {
+
+        private final List<Runnable> submitted = new ArrayList<>();
+        private boolean rejectEverything;
+
+        @Override
+        public void submit(Runnable work) {
+            if (rejectEverything) {
+                throw new RejectedExecutionException("queue is full");
+            }
+            submitted.add(work);
+        }
+
+        void runAll() {
+            List.copyOf(submitted).forEach(Runnable::run);
+        }
     }
 
     private LaunchPayrollCalculationCommand singleEmployeeCommand() {

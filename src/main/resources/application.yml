@@ -77,6 +77,11 @@ payroll:
   launch:
     execution:
       collapse-segment-rows: true
+      # Ejecuciones que pueden esperar turno detras de la que corre. El trabajo lo hace un
+      # solo hilo: calcular la plantilla son minutos, y dos corridas a la vez se pelearian
+      # por la misma base sin que nadie gane tiempo. Al llenarse la cola el lanzamiento se
+      # rechaza y su ejecucion queda cerrada como FAILED, que se ve (#75).
+      queue-capacity: 16
 
 minio:
   endpoint: ${MINIO_ENDPOINT:http://localhost:9000}

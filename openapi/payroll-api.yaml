@@ -13,8 +13,25 @@ paths:
   /payroll/calculation-runs/launch:
     post:
       operationId: launchPayrollCalculation
-      summary: Launch payroll calculation workflow synchronously
-      description: Starts a synchronous payroll launch workflow for an explicit target selection. This V1 contract supports SINGLE_EMPLOYEE, EMPLOYEE_LIST, and ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD, and requires payrollPeriodCode in YYYYMM format so the backend can resolve relevant employee presences by month overlap. For ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD, target employees are resolved from the backend as all employees with at least one overlapping presence in the payroll month. totalCandidates represents expanded presence-based calculation units that overlap at least one day of the payroll month, not the raw number of requested or resolved employees. This endpoint coordinates launch execution and persists a calculation run; it is not the final payroll engine API.
+      summary: Accept a payroll calculation run and return its identity without waiting
+      description: >
+        Accepts a payroll launch workflow for an explicit target selection and returns as soon as the
+        calculation run has been persisted, with status REQUESTED. The calculation itself runs outside
+        the request: calculating a full workforce takes minutes, and no client or intermediary survives
+        that wait. Progress is read from GET /payroll/calculation-runs/{runId}, whose counters advance
+        while the run is RUNNING, and from GET /payroll/calculation-runs/{runId}/messages.
+        Runs are executed one at a time: a second launch stays in REQUESTED, queued and observable,
+        until the one in flight finishes. If the queue is full the run is persisted as FAILED with a
+        LAUNCH_REJECTED message instead of being silently dropped, so the response always carries the
+        run identity and its real status.
+        Request validation is still synchronous: a malformed launch answers 400 and leaves no run.
+        This V1 contract supports SINGLE_EMPLOYEE, EMPLOYEE_LIST, and ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD,
+        and requires payrollPeriodCode in YYYYMM format so the backend can resolve relevant employee
+        presences by month overlap. For ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD, target employees are
+        resolved from the backend as all employees with at least one overlapping presence in the payroll
+        month. totalCandidates represents expanded presence-based calculation units that overlap at least
+        one day of the payroll month, not the raw number of requested or resolved employees. This endpoint
+        coordinates launch execution and persists a calculation run; it is not the final payroll engine API.
       tags:
         - PayrollCalculationRun
       requestBody:
@@ -24,8 +41,8 @@ paths:
             schema:
               $ref: "#/components/schemas/LaunchPayrollCalculationRequest"
       responses:
-        "201":
-          description: Payroll calculation run launched and completed synchronously
+        "202":
+          description: Payroll calculation run accepted. The run is persisted and its counters are observable while it executes.
           content:
             application/json:
               schema:

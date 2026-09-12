@@ -59,7 +59,7 @@ class PayrollCalculationRunControllerTest {
 
     @Test
     void launchesPayrollCalculationRun() {
-        when(launchPayrollCalculationUseCase.launch(any(LaunchPayrollCalculationCommand.class))).thenReturn(run("COMPLETED"));
+        when(launchPayrollCalculationUseCase.requestLaunch(any(LaunchPayrollCalculationCommand.class))).thenReturn(run("REQUESTED"));
 
         ResponseEntity<PayrollCalculationRunResponse> response = controller.launch(new LaunchPayrollCalculationRequest(
                 "ESP",
@@ -74,13 +74,14 @@ class PayrollCalculationRunControllerTest {
                 )
         ), new TestingAuthenticationToken("hr.manager@b4rrhh", "n/a"));
 
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        // 202: la ejecucion esta aceptada y en marcha, no terminada (#75).
+        assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(1L, response.getBody().runId());
-        assertEquals("COMPLETED", response.getBody().status());
+        assertEquals("REQUESTED", response.getBody().status());
 
         ArgumentCaptor<LaunchPayrollCalculationCommand> captor = ArgumentCaptor.forClass(LaunchPayrollCalculationCommand.class);
-        verify(launchPayrollCalculationUseCase).launch(captor.capture());
+        verify(launchPayrollCalculationUseCase).requestLaunch(captor.capture());
         assertEquals("NORMAL", captor.getValue().payrollTypeCode());
         assertEquals("INTERNAL", captor.getValue().targetSelection().employee().employeeTypeCode());
         assertEquals("hr.manager@b4rrhh", captor.getValue().requestedBy());
@@ -88,7 +89,7 @@ class PayrollCalculationRunControllerTest {
 
         @Test
         void launchesPayrollCalculationRunForAllEmployeesWithPresenceInPeriod() {
-        when(launchPayrollCalculationUseCase.launch(any(LaunchPayrollCalculationCommand.class))).thenReturn(run("COMPLETED"));
+        when(launchPayrollCalculationUseCase.requestLaunch(any(LaunchPayrollCalculationCommand.class))).thenReturn(run("REQUESTED"));
 
         ResponseEntity<PayrollCalculationRunResponse> response = controller.launch(new LaunchPayrollCalculationRequest(
             "ESP",
@@ -103,11 +104,11 @@ class PayrollCalculationRunControllerTest {
             )
         ), null);
 
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
         assertNotNull(response.getBody());
 
         ArgumentCaptor<LaunchPayrollCalculationCommand> captor = ArgumentCaptor.forClass(LaunchPayrollCalculationCommand.class);
-        verify(launchPayrollCalculationUseCase).launch(captor.capture());
+        verify(launchPayrollCalculationUseCase).requestLaunch(captor.capture());
         assertEquals(
             com.b4rrhh.payroll.application.usecase.PayrollLaunchTargetSelectionType.ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD,
             captor.getValue().targetSelection().selectionType()

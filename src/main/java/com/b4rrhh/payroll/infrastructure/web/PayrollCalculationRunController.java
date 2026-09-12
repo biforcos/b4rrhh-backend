@@ -53,7 +53,7 @@ public class PayrollCalculationRunController {
             @RequestBody LaunchPayrollCalculationRequest request,
             Authentication authentication
     ) {
-        CalculationRun run = launchPayrollCalculationUseCase.launch(new LaunchPayrollCalculationCommand(
+        CalculationRun run = launchPayrollCalculationUseCase.requestLaunch(new LaunchPayrollCalculationCommand(
                 request.ruleSystemCode(),
                 request.payrollPeriodCode(),
                 request.payrollTypeCode(),
@@ -63,7 +63,9 @@ public class PayrollCalculationRunController {
                 authentication == null ? null : authentication.getName()
         ));
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(payrollCalculationRunResponseAssembler.toResponse(run));
+        // 202 y no 201: lo que se ha creado es la ejecucion, no el resultado. Los recibos
+        // no existen todavia, y quien pregunte por ellos tiene que ir al runId (#75).
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(payrollCalculationRunResponseAssembler.toResponse(run));
     }
 
     @GetMapping("/{runId}")
