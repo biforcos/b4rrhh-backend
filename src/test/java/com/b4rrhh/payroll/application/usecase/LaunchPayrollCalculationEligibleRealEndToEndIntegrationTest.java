@@ -71,6 +71,11 @@ class LaunchPayrollCalculationEligibleRealEndToEndIntegrationTest {
                 RULE_SYSTEM, "INTERNAL", employeeNumber, "202501", "NORMAL", 1, "CALCULATED");
         assertNotNull(payrollId);
 
+        Long persistedRunId = jdbcTemplate.queryForObject(
+                "select run_id from payroll.payroll where id = ?",
+                Long.class, payrollId);
+        assertEquals(run.id(), persistedRunId);
+
         Integer conceptCount = jdbcTemplate.queryForObject(
                 "select count(*) from payroll.payroll_concept where payroll_id = ?",
                 Integer.class, payrollId);

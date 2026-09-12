@@ -18,6 +18,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -76,6 +77,38 @@ class PayrollPersistenceAdapterTest {
         assertEquals(1, savedEntity.getContextSnapshots().size());
         assertSame(conceptEntity, savedEntity.getConcepts().iterator().next());
         assertSame(snapshotEntity, savedEntity.getContextSnapshots().iterator().next());
+        assertEquals(41L, savedEntity.getRunId());
+    }
+
+    @Test
+    void saveNewPayrollWritesTheRunThatProducedIt() {
+        Payroll calculated = Payroll.create(
+                "ESP",
+                "INTERNAL",
+                "EMP001",
+                "202501",
+                "NORMAL",
+                1,
+                PayrollStatus.CALCULATED,
+                null,
+                LocalDateTime.of(2026, 1, 31, 10, 15),
+                "ENGINE",
+                "1.0",
+                41L,
+                List.of(),
+                List.of(new PayrollConcept(1, "BASE", "Base salary", new BigDecimal("1000.00"), null, null, "EARNING", "202501", 1)),
+                List.of(new PayrollContextSnapshot("PRESENCE", "EMPLOYEE", "{\"presenceNumber\":1}", "{\"companyCode\":\"ES01\"}")),
+                List.of()
+        );
+
+        when(springDataPayrollRepository.save(any(PayrollEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        adapter.save(calculated);
+
+        ArgumentCaptor<PayrollEntity> captor = ArgumentCaptor.forClass(PayrollEntity.class);
+        verify(springDataPayrollRepository).save(captor.capture());
+        assertEquals(41L, captor.getValue().getRunId());
     }
 
     private PayrollEntity payrollEntity(PayrollStatus status, String statusReasonCode) {
@@ -92,6 +125,7 @@ class PayrollPersistenceAdapterTest {
         payroll.setCalculatedAt(LocalDateTime.of(2026, 1, 31, 10, 15));
         payroll.setCalculationEngineCode("ENGINE");
         payroll.setCalculationEngineVersion("1.0");
+        payroll.setRunId(41L);
         payroll.setCreatedAt(LocalDateTime.of(2026, 1, 31, 10, 15));
         payroll.setUpdatedAt(LocalDateTime.of(2026, 1, 31, 10, 15));
         return payroll;

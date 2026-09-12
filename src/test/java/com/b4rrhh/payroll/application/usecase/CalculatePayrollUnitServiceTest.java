@@ -183,13 +183,15 @@ class CalculatePayrollUnitServiceTest {
             LocalDate.of(2025, 1, 1),
             LocalDate.of(2025, 1, 31),
             "ENGINE",
-            "1.0"
+            "1.0",
+            7L
         ));
 
         ArgumentCaptor<CalculatePayrollCommand> captor = ArgumentCaptor.forClass(CalculatePayrollCommand.class);
         verify(calculatePayrollUseCase).calculate(captor.capture());
 
         CalculatePayrollCommand persisted = captor.getValue();
+        assertEquals(7L, persisted.runId());
         assertEquals(1, persisted.concepts().size());
         assertEquals("101", persisted.concepts().getFirst().getConceptCode());
         assertEquals(0, new BigDecimal("1425.00").compareTo(persisted.concepts().getFirst().getAmount()));
@@ -251,7 +253,8 @@ class CalculatePayrollUnitServiceTest {
                 LocalDate.of(2025, 1, 1),
                 LocalDate.of(2025, 1, 31),
                 "ENGINE",
-                "1.0"
+                "1.0",
+                7L
             ))
         );
 
@@ -400,7 +403,8 @@ class CalculatePayrollUnitServiceTest {
             LocalDate.of(2026, 9, 1),
             LocalDate.of(2026, 9, 30),
             "ENGINE",
-            "1.0"
+            "1.0",
+            7L
         ));
 
         ArgumentCaptor<CalculatePayrollCommand> captor = ArgumentCaptor.forClass(CalculatePayrollCommand.class);

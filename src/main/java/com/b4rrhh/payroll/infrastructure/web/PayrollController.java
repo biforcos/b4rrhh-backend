@@ -115,6 +115,9 @@ public class PayrollController {
                 request.calculatedAt(),
                 request.calculationEngineCode(),
                 request.calculationEngineVersion(),
+                // Endpoint temporal: materializa un recibo a mano, sin lanzamiento, asi que no hay
+                // ejecucion que anotar (backend#62).
+                null,
                 java.util.List.of(),
                 request.concepts().stream()
                         .map(concept -> new PayrollConcept(

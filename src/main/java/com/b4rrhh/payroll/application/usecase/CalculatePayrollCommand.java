@@ -21,6 +21,7 @@ public record CalculatePayrollCommand(
         LocalDateTime calculatedAt,
         String calculationEngineCode,
         String calculationEngineVersion,
+        Long runId,
         List<PayrollWarning> warnings,
         List<PayrollConcept> concepts,
         List<PayrollContextSnapshot> contextSnapshots,

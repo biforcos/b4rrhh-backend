@@ -187,6 +187,25 @@ class LaunchPayrollCalculationServiceTest {
     }
 
     @Test
+    void recalculationStampsTheRunningExecutionAndNotTheOneThatProducedThePreviousPayroll() {
+        when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
+                .thenReturn(List.of(new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP001", 1)));
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
+                .thenReturn(Optional.of(payroll(PayrollStatus.NOT_VALID, 41L)));
+        when(calculationClaimRepository.save(any(CalculationClaim.class)))
+                .thenReturn(new CalculationClaim(14L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1, LocalDateTime.now(), null));
+        when(calculatePayrollUnitUseCase.calculate(any(CalculatePayrollUnitCommand.class)))
+                .thenReturn(payroll(PayrollStatus.CALCULATED, 1L));
+
+        CalculationRun run = service.launch(singleEmployeeCommand());
+
+        ArgumentCaptor<CalculatePayrollUnitCommand> captor = ArgumentCaptor.forClass(CalculatePayrollUnitCommand.class);
+        verify(calculatePayrollUnitUseCase).calculate(captor.capture());
+        assertEquals(run.id(), captor.getValue().runId());
+        assertEquals(1L, captor.getValue().runId());
+    }
+
+    @Test
     void launchPersistsRunMessageAndFinalizesWithErrorsWhenUnitCalculationFails() {
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP001", 1)));
@@ -378,6 +397,10 @@ class LaunchPayrollCalculationServiceTest {
     }
 
     private Payroll payroll(PayrollStatus status) {
+        return payroll(status, null);
+    }
+
+    private Payroll payroll(PayrollStatus status, Long runId) {
         return Payroll.rehydrate(
                 7L,
                 "ESP",
@@ -391,6 +414,9 @@ class LaunchPayrollCalculationServiceTest {
                 LocalDateTime.of(2026, 1, 31, 10, 15),
                 "ENGINE",
                 "1.0",
+                runId,
+                List.of(),
+                List.of(),
                 List.of(),
                 List.of(),
                 LocalDateTime.now(),

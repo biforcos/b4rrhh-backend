@@ -261,7 +261,8 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                     unitPeriodBounds[0],
                     unitPeriodBounds[1],
                     calculationEngineCode,
-                    calculationEngineVersion
+                    calculationEngineVersion,
+                    run.id()
             ));
             saveEligibleRealSuccessMessageIfPresent(run, unit, payroll);
             if (payroll.getStatus() == PayrollStatus.NOT_VALID) {

@@ -12,6 +12,7 @@ public record CalculatePayrollUnitCommand(
         LocalDate periodStart,
         LocalDate periodEnd,
         String calculationEngineCode,
-        String calculationEngineVersion
+        String calculationEngineVersion,
+        Long runId
 ) {
 }

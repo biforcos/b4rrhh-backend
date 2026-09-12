@@ -63,7 +63,10 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
                 periodStart,
                 periodStart.withDayOfMonth(periodStart.lengthOfMonth()),
                 payroll.getCalculationEngineCode(),
-                payroll.getCalculationEngineVersion()
+                payroll.getCalculationEngineVersion(),
+                // El recalculo puntual no nace de un lanzamiento: no hay ejecucion que anotar. No se
+                // arrastra la del recibo anterior, porque no es la que produjo este (backend#62).
+                null
         ));
     }
 

@@ -62,6 +62,9 @@ public class PayrollEntity {
     @Column(name = "calculation_engine_version", nullable = false, length = 50)
     private String calculationEngineVersion;
 
+    @Column(name = "run_id")
+    private Long runId;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -172,6 +175,8 @@ public class PayrollEntity {
     public void setCalculationEngineCode(String calculationEngineCode) { this.calculationEngineCode = calculationEngineCode; }
     public String getCalculationEngineVersion() { return calculationEngineVersion; }
     public void setCalculationEngineVersion(String calculationEngineVersion) { this.calculationEngineVersion = calculationEngineVersion; }
+    public Long getRunId() { return runId; }
+    public void setRunId(Long runId) { this.runId = runId; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

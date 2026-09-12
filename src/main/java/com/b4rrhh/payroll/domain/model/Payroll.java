@@ -21,6 +21,12 @@ public class Payroll {
     private final LocalDateTime calculatedAt;
     private final String calculationEngineCode;
     private final String calculationEngineVersion;
+    // La ejecucion que produjo este recibo. No es mutable: si se recalcula, el recibo es otro y
+    // lleva el suyo (ADR-059, backend#62). Null significa que no hubo ejecucion registrada, que es
+    // el caso de los dos caminos que todavia crean recibo a mano: el endpoint temporal de calculo
+    // y el recalculo puntual. Las sobrecargas de conveniencia de create y rehydrate delegan con
+    // null por eso mismo; el camino de lanzamiento pasa siempre por la sobrecarga completa.
+    private final Long runId;
     private final List<PayrollWarning> warnings;
     private final List<PayrollConcept> concepts;
     private final List<PayrollContextSnapshot> contextSnapshots;
@@ -41,6 +47,7 @@ public class Payroll {
             LocalDateTime calculatedAt,
             String calculationEngineCode,
             String calculationEngineVersion,
+            Long runId,
             List<PayrollWarning> warnings,
             List<PayrollConcept> concepts,
             List<PayrollContextSnapshot> contextSnapshots,
@@ -64,6 +71,7 @@ public class Payroll {
         this.calculatedAt = requireCalculatedAt(calculatedAt);
         this.calculationEngineCode = requireCode(calculationEngineCode, "calculationEngineCode", 50);
         this.calculationEngineVersion = requireText(calculationEngineVersion, "calculationEngineVersion", 50);
+        this.runId = runId;
         this.warnings = copyWarnings(warnings);
         this.concepts = copyConcepts(concepts);
         this.contextSnapshots = copySnapshots(contextSnapshots);
@@ -90,7 +98,7 @@ public class Payroll {
     ) {
         return create(ruleSystemCode, employeeTypeCode, employeeNumber, payrollPeriodCode,
                 payrollTypeCode, presenceNumber, status, statusReasonCode, calculatedAt,
-                calculationEngineCode, calculationEngineVersion, warnings, concepts,
+                calculationEngineCode, calculationEngineVersion, null, warnings, concepts,
                 contextSnapshots, List.of());
     }
 
@@ -106,6 +114,7 @@ public class Payroll {
             LocalDateTime calculatedAt,
             String calculationEngineCode,
             String calculationEngineVersion,
+            Long runId,
             List<PayrollWarning> warnings,
             List<PayrollConcept> concepts,
             List<PayrollContextSnapshot> contextSnapshots,
@@ -124,6 +133,7 @@ public class Payroll {
                 calculatedAt,
                 calculationEngineCode,
                 calculationEngineVersion,
+                runId,
                 warnings,
                 concepts,
                 contextSnapshots,
@@ -150,7 +160,7 @@ public class Payroll {
     ) {
         return create(ruleSystemCode, employeeTypeCode, employeeNumber, payrollPeriodCode,
                 payrollTypeCode, presenceNumber, status, statusReasonCode, calculatedAt,
-                calculationEngineCode, calculationEngineVersion, List.of(), concepts,
+                calculationEngineCode, calculationEngineVersion, null, List.of(), concepts,
                 contextSnapshots, List.of());
     }
 
@@ -175,7 +185,7 @@ public class Payroll {
     ) {
         return rehydrate(id, ruleSystemCode, employeeTypeCode, employeeNumber, payrollPeriodCode,
                 payrollTypeCode, presenceNumber, status, statusReasonCode, calculatedAt,
-                calculationEngineCode, calculationEngineVersion, warnings, concepts,
+                calculationEngineCode, calculationEngineVersion, null, warnings, concepts,
                 contextSnapshots, List.of(), createdAt, updatedAt);
     }
 
@@ -192,6 +202,7 @@ public class Payroll {
             LocalDateTime calculatedAt,
             String calculationEngineCode,
             String calculationEngineVersion,
+            Long runId,
             List<PayrollWarning> warnings,
             List<PayrollConcept> concepts,
             List<PayrollContextSnapshot> contextSnapshots,
@@ -212,6 +223,7 @@ public class Payroll {
                 calculatedAt,
                 calculationEngineCode,
                 calculationEngineVersion,
+                runId,
                 warnings,
                 concepts,
                 contextSnapshots,
@@ -241,7 +253,7 @@ public class Payroll {
     ) {
         return rehydrate(id, ruleSystemCode, employeeTypeCode, employeeNumber, payrollPeriodCode,
                 payrollTypeCode, presenceNumber, status, statusReasonCode, calculatedAt,
-                calculationEngineCode, calculationEngineVersion, List.of(), concepts,
+                calculationEngineCode, calculationEngineVersion, null, List.of(), concepts,
                 contextSnapshots, List.of(), createdAt, updatedAt);
     }
 
@@ -280,6 +292,7 @@ public class Payroll {
                 calculatedAt,
                 calculationEngineCode,
                 calculationEngineVersion,
+                runId,
                 warnings,
                 concepts,
                 contextSnapshots,
@@ -404,6 +417,10 @@ public class Payroll {
 
     public String getCalculationEngineVersion() {
         return calculationEngineVersion;
+    }
+
+    public Long getRunId() {
+        return runId;
     }
 
     public List<PayrollWarning> getWarnings() {

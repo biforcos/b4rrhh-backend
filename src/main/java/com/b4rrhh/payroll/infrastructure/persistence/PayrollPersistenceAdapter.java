@@ -87,6 +87,7 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
                 entity.getCalculatedAt(),
                 entity.getCalculationEngineCode(),
                 entity.getCalculationEngineVersion(),
+                entity.getRunId(),
                 entity.getWarnings().stream()
                     .map(warning -> new PayrollWarning(
                         warning.getId(),
@@ -132,6 +133,9 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
         PayrollEntity entity = new PayrollEntity();
         entity.setId(payroll.getId());
         applyScalarFields(entity, payroll);
+        // Fuera de applyScalarFields a proposito: la ejecucion que produjo un recibo se escribe al
+        // crearlo y no se reescribe despues, ni al invalidarlo ni al validarlo (backend#62).
+        entity.setRunId(payroll.getRunId());
         entity.replaceConcepts(payroll.getConcepts().stream().map(this::toConceptEntity).toList());
         entity.replaceContextSnapshots(payroll.getContextSnapshots().stream().map(this::toSnapshotEntity).toList());
         entity.replaceWarnings(payroll.getWarnings().stream().map(this::toWarningEntity).toList());

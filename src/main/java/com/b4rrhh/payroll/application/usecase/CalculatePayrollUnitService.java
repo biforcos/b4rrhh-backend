@@ -354,6 +354,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 LocalDateTime.now(),
                 command.calculationEngineCode(),
                 command.calculationEngineVersion(),
+                command.runId(),
                 List.of(eligibleRealWarning(command, input)),
                 payrollConcepts,
                 buildSnapshots(command, input),
