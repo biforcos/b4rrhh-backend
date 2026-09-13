@@ -38,6 +38,7 @@ import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntr
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import com.b4rrhh.payroll_engine.planning.application.service.BuildEligibleExecutionPlanUseCase;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import com.b4rrhh.payroll_engine.planning.domain.model.EligibleExecutionPlanResult;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -52,6 +53,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodelFixtures.metamodel;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.lenient;
@@ -97,6 +99,12 @@ class CalculatePayrollUnitServiceTest {
                     new AccrualDaysConceptCalculator(),
                     new WorkingTimeConceptCalculator())));
 
+    // El plan y el calculo de conceptos van mockeados: lo que se prueba aqui es como la
+    // unidad orquesta, no la reglamentacion. Basta con que el metamodelo exista y sea el
+    // del sistema de reglas de la unidad.
+    private static final RuleSystemMetamodel METAMODELO =
+            metamodel("ESP", LocalDate.of(2025, 1, 31)).build();
+
     @Test
         void eligibleRealMode_persistsSingleConcept101FromMinimalExecutor() {
         PayrollLaunchExecutionProperties properties = new PayrollLaunchExecutionProperties();
@@ -140,7 +148,7 @@ class CalculatePayrollUnitServiceTest {
         )));
 
         // Pre-computation of DIRECT_AMOUNT during the pre-compute pass
-        when(payrollConceptGraphCalculator.calculateConceptResult(org.mockito.ArgumentMatchers.eq("101"), org.mockito.ArgumentMatchers.any()))
+        when(payrollConceptGraphCalculator.calculateConceptResult(org.mockito.ArgumentMatchers.eq("101"), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(new PayrollConceptExecutionResult(
                         "101",
                         new BigDecimal("1425.00"),
@@ -184,7 +192,8 @@ class CalculatePayrollUnitServiceTest {
             LocalDate.of(2025, 1, 31),
             "ENGINE",
             "1.0",
-            7L
+            7L,
+            METAMODELO
         ));
 
         ArgumentCaptor<CalculatePayrollCommand> captor = ArgumentCaptor.forClass(CalculatePayrollCommand.class);
@@ -196,8 +205,8 @@ class CalculatePayrollUnitServiceTest {
         assertEquals("101", persisted.concepts().getFirst().getConceptCode());
         assertEquals(0, new BigDecimal("1425.00").compareTo(persisted.concepts().getFirst().getAmount()));
         // quantity and rate are null for DIRECT_AMOUNT concepts
-        verify(payrollConceptGraphCalculator, never()).calculateConceptResult(org.mockito.ArgumentMatchers.eq("D01"), org.mockito.ArgumentMatchers.any());
-        verify(payrollConceptGraphCalculator, never()).calculateConceptResult(org.mockito.ArgumentMatchers.eq("P01"), org.mockito.ArgumentMatchers.any());
+        verify(payrollConceptGraphCalculator, never()).calculateConceptResult(org.mockito.ArgumentMatchers.eq("D01"), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        verify(payrollConceptGraphCalculator, never()).calculateConceptResult(org.mockito.ArgumentMatchers.eq("P01"), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
         }
 
         @Test
@@ -254,7 +263,8 @@ class CalculatePayrollUnitServiceTest {
                 LocalDate.of(2025, 1, 31),
                 "ENGINE",
                 "1.0",
-                7L
+                7L,
+                METAMODELO
             ))
         );
 
@@ -349,7 +359,8 @@ class CalculatePayrollUnitServiceTest {
         )));
 
         when(payrollConceptGraphCalculator.calculateConceptResult(
-                org.mockito.ArgumentMatchers.eq("P02"), org.mockito.ArgumentMatchers.any()))
+                org.mockito.ArgumentMatchers.eq("P02"), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any()))
                 .thenReturn(new PayrollConceptExecutionResult("P02", new BigDecimal("47.50"), null, null));
         when(calculatePayrollUseCase.calculate(org.mockito.ArgumentMatchers.any(CalculatePayrollCommand.class)))
             .thenReturn(payroll());
@@ -404,7 +415,8 @@ class CalculatePayrollUnitServiceTest {
             LocalDate.of(2026, 9, 30),
             "ENGINE",
             "1.0",
-            7L
+            7L,
+            METAMODELO
         ));
 
         ArgumentCaptor<CalculatePayrollCommand> captor = ArgumentCaptor.forClass(CalculatePayrollCommand.class);

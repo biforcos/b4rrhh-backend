@@ -71,6 +71,16 @@ public class PayrollConceptFeedRelationPersistenceAdapter implements PayrollConc
     }
 
     @Override
+    public List<PayrollConceptFeedRelation> findAllActiveByRuleSystemCode(
+            String ruleSystemCode, LocalDate referenceDate) {
+        return feedRelationRepository
+                .findAllActiveByRuleSystemCodeFetchingObjects(ruleSystemCode, referenceDate)
+                .stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
     public void deleteAllByRuleSystemCodeAndTargetConceptCode(String ruleSystemCode, String conceptCode) {
         feedRelationRepository.deleteAllByRuleSystemCodeAndTargetConceptCode(ruleSystemCode, conceptCode);
     }

@@ -3,8 +3,8 @@ package com.b4rrhh.payroll_engine.execution.application.service;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraph;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 
-import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -30,10 +30,11 @@ public interface ExecutionPlanBuilder {
     /**
      * Builds an ordered execution plan from the given graph and concept definitions.
      *
-     * @param graph         the dependency graph defining structural order and nodes
-     * @param concepts      the concept definitions providing {@code CalculationType}
-     * @param referenceDate the reference date used to filter active feed relations
+     * @param graph     the dependency graph defining structural order and nodes
+     * @param concepts  the concept definitions providing {@code CalculationType}
+     * @param metamodel the execution's metamodel, supplying operand definitions and the
+     *                  feed relations already filtered to the execution's reference date
      * @return entries in topological order, one per graph node
      */
-    List<ConceptExecutionPlanEntry> build(ConceptDependencyGraph graph, List<PayrollConcept> concepts, LocalDate referenceDate);
+    List<ConceptExecutionPlanEntry> build(ConceptDependencyGraph graph, List<PayrollConcept> concepts, RuleSystemMetamodel metamodel);
 }

@@ -111,6 +111,13 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     }
 
     private Payroll calculateEligibleReal(CalculatePayrollUnitCommand command) {
+        if (command.metamodel() == null) {
+            throw new IllegalArgumentException(
+                    "La unidad se calcula contra la reglamentación de su ejecución: el metamodelo "
+                            + "no puede faltar. Quien lanza la ejecución lo carga una vez (backend#87).");
+        }
+        command.metamodel().requireSameRuleSystem(command.ruleSystemCode());
+
         log.info("[NÓMINA] ▶ Iniciando cálculo ELIGIBLE_REAL | empleado={} tipo={} periodo={} presencia={}",
                 command.employeeNumber(), command.employeeTypeCode(),
                 command.payrollPeriodCode(), command.presenceNumber());
@@ -172,7 +179,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         log.debug("[ENGINE] Construyendo plan de ejecución | RS={} convenio={} ref={}",
                 command.ruleSystemCode(), input.agreementCode(), command.periodEnd());
         EligibleExecutionPlanResult planResult =
-                buildEligibleExecutionPlanUseCase.build(assignmentContext, command.periodEnd());
+                buildEligibleExecutionPlanUseCase.build(assignmentContext, command.metamodel());
 
         List<ConceptExecutionPlanEntry> plan = planResult.executionPlan();
         log.info("[NÓMINA] Plan de ejecución: {} pasos → {}",
@@ -211,7 +218,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             if (entry.calculationType() == CalculationType.DIRECT_AMOUNT) {
                 String conceptCode = entry.identity().getConceptCode();
                 PayrollConceptExecutionResult directResult =
-                        payrollConceptGraphCalculator.calculateConceptResult(conceptCode, calcContext);
+                        payrollConceptGraphCalculator.calculateConceptResult(
+                                conceptCode, calcContext, command.metamodel());
                 precomputedDirectAmounts.put(conceptCode, directResult.amount());
                 log.debug("[NOMINA] Pre-calculado DIRECT_AMOUNT {} = {}", conceptCode, directResult.amount());
             }

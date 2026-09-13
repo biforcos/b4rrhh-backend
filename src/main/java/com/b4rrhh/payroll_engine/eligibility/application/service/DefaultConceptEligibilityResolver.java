@@ -5,9 +5,9 @@ import com.b4rrhh.payroll_engine.eligibility.domain.model.ConceptAssignment;
 import com.b4rrhh.payroll_engine.eligibility.domain.model.EmployeeAssignmentContext;
 import com.b4rrhh.payroll_engine.eligibility.domain.model.ResolvedConceptAssignment;
 import com.b4rrhh.payroll_engine.eligibility.domain.port.ConceptAssignmentRepository;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -19,9 +19,10 @@ import java.util.stream.Collectors;
  *
  * <h3>Resolution algorithm</h3>
  * <ol>
- *   <li>Load all candidate assignments from {@link ConceptAssignmentRepository} for the given
- *       context and reference date. The repository applies wildcard matching on optional
- *       dimensions and validity-date filtering.</li>
+ *   <li>Take the candidate assignments from the execution's {@link RuleSystemMetamodel},
+ *       which applies wildcard matching on optional dimensions over the assignments already
+ *       filtered by validity date when it was loaded. Before backend#87 this was one
+ *       {@link ConceptAssignmentRepository} query per calculation unit.</li>
  *   <li>Group candidates by {@code conceptCode}.</li>
  *   <li>For each {@code conceptCode} group, find the maximum priority. If more than one
  *       assignment shares that maximum priority, fail fast with
@@ -33,15 +34,9 @@ import java.util.stream.Collectors;
 @Service
 public class DefaultConceptEligibilityResolver implements ResolveApplicableConceptsUseCase {
 
-    private final ConceptAssignmentRepository repository;
-
-    public DefaultConceptEligibilityResolver(ConceptAssignmentRepository repository) {
-        this.repository = repository;
-    }
-
     @Override
-    public List<ResolvedConceptAssignment> resolve(EmployeeAssignmentContext context, LocalDate referenceDate) {
-        List<ConceptAssignment> candidates = repository.findApplicableAssignments(context, referenceDate);
+    public List<ResolvedConceptAssignment> resolve(EmployeeAssignmentContext context, RuleSystemMetamodel metamodel) {
+        List<ConceptAssignment> candidates = metamodel.applicableAssignments(context);
 
         Map<String, List<ConceptAssignment>> byConceptCode = candidates.stream()
                 .collect(Collectors.groupingBy(ConceptAssignment::getConceptCode));

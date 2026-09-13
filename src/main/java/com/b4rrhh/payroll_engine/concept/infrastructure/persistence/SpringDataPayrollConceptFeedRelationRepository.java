@@ -34,6 +34,25 @@ public interface SpringDataPayrollConceptFeedRelationRepository
             @Param("conceptCode") String conceptCode
     );
 
+    /**
+     * Todas las alimentaciones del sistema de reglas vigentes en la fecha dada, con sus dos
+     * objetos en la misma consulta. Es la carga del metamodelo de una ejecución: sustituye a
+     * una llamada a {@link #findActiveByTargetObjectId} por concepto y por unidad (backend#87).
+     */
+    @Query("""
+        select r from PayrollEngineFeedRelationEntity r
+        join fetch r.targetObject t
+        join fetch r.sourceObject
+        where t.ruleSystemCode = :ruleSystemCode
+          and r.effectiveFrom <= :referenceDate
+          and (r.effectiveTo is null or r.effectiveTo >= :referenceDate)
+        order by t.objectCode asc, r.id asc
+        """)
+    List<PayrollConceptFeedRelationEntity> findAllActiveByRuleSystemCodeFetchingObjects(
+            @Param("ruleSystemCode") String ruleSystemCode,
+            @Param("referenceDate") LocalDate referenceDate
+    );
+
     @Modifying
     @Transactional
     @Query("""

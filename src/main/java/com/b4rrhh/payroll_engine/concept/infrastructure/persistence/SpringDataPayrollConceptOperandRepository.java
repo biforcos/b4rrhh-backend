@@ -25,6 +25,22 @@ public interface SpringDataPayrollConceptOperandRepository
             @Param("conceptCode") String conceptCode
     );
 
+    /**
+     * Todos los operandos del sistema de reglas, con su objeto destino y su objeto origen
+     * en la misma consulta. Es la carga del metamodelo de una ejecución: una consulta en
+     * lugar de una por concepto más un select por objeto (backend#87).
+     */
+    @Query("""
+            select o from PayrollEngineConceptOperandEntity o
+            join fetch o.targetObject t
+            join fetch o.sourceObject
+            where t.ruleSystemCode = :ruleSystemCode
+            order by t.objectCode asc, o.operandRole asc
+            """)
+    List<PayrollConceptOperandEntity> findAllByRuleSystemCodeFetchingObjects(
+            @Param("ruleSystemCode") String ruleSystemCode
+    );
+
     @Modifying
     @Transactional
     @Query("""

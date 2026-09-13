@@ -4,9 +4,7 @@ import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptRepository;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import com.b4rrhh.payroll_engine.planning.domain.exception.MissingDependencyConceptDefinitionException;
@@ -14,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -30,13 +27,12 @@ import java.util.Queue;
  *   <li>Seed the working queue with all input {@code eligibleConcepts}.</li>
  *   <li>For each concept dequeued:
  *     <ul>
- *       <li><strong>Operand discovery:</strong> for RATE_BY_QUANTITY and PERCENTAGE concepts,
- *           load operand definitions from {@link PayrollConceptOperandRepository} and enqueue
- *           each source concept that has not yet been loaded.</li>
- *       <li><strong>Feed-relation discovery:</strong> fetch active inbound feed relations via
- *           {@link PayrollConceptFeedRelationRepository}. Only CONCEPT-typed sources within
- *           the same rule system are followed; CONSTANT and TABLE sources are silently skipped
- *           because they are not concept definitions.</li>
+ *       <li><strong>Operand discovery:</strong> read the operand definitions from the
+ *           metamodel and enqueue each source concept that has not yet been seen.</li>
+ *       <li><strong>Feed-relation discovery:</strong> read the active inbound feed relations
+ *           from the metamodel. Only CONCEPT-typed sources within the same rule system are
+ *           followed; CONSTANT and TABLE sources are silently skipped because they are not
+ *           concept definitions.</li>
  *     </ul>
  *   </li>
  *   <li>Continue until the queue is empty. Return all loaded concepts in discovery order.</li>
@@ -47,22 +43,8 @@ public class DefaultEligibleConceptExpansionService implements EligibleConceptEx
 
     private static final Logger log = LoggerFactory.getLogger(DefaultEligibleConceptExpansionService.class);
 
-    private final PayrollConceptRepository conceptRepository;
-    private final PayrollConceptFeedRelationRepository feedRelationRepository;
-    private final PayrollConceptOperandRepository operandRepository;
-
-    public DefaultEligibleConceptExpansionService(
-            PayrollConceptRepository conceptRepository,
-            PayrollConceptFeedRelationRepository feedRelationRepository,
-            PayrollConceptOperandRepository operandRepository
-    ) {
-        this.conceptRepository = conceptRepository;
-        this.feedRelationRepository = feedRelationRepository;
-        this.operandRepository = operandRepository;
-    }
-
     @Override
-    public List<PayrollConcept> expand(List<PayrollConcept> eligibleConcepts, LocalDate referenceDate) {
+    public List<PayrollConcept> expand(List<PayrollConcept> eligibleConcepts, RuleSystemMetamodel metamodel) {
         Map<String, PayrollConcept> loaded = new LinkedHashMap<>();
         Queue<PayrollConcept> toProcess = new ArrayDeque<>();
 
@@ -79,16 +61,16 @@ public class DefaultEligibleConceptExpansionService implements EligibleConceptEx
         while (!toProcess.isEmpty()) {
             PayrollConcept current = toProcess.poll();
             String ruleSystemCode = current.getRuleSystemCode();
+            metamodel.requireSameRuleSystem(ruleSystemCode);
             String currentCode = current.getConceptCode();
             log.debug("[ENGINE]   BFS procesando {} ({})", currentCode, current.getCalculationType());
 
-            List<PayrollConceptOperand> operands =
-                    operandRepository.findByTarget(ruleSystemCode, currentCode);
+            List<PayrollConceptOperand> operands = metamodel.operandsOf(currentCode);
             for (PayrollConceptOperand operand : operands) {
                 String sourceCode = operand.getSourceObject().getObjectCode();
                 if (!loaded.containsKey(sourceCode)) {
-                    PayrollConcept sourceConcept = conceptRepository
-                            .findByBusinessKey(ruleSystemCode, sourceCode)
+                    PayrollConcept sourceConcept = metamodel
+                            .findConcept(sourceCode)
                             .orElseThrow(() -> new MissingDependencyConceptDefinitionException(
                                     ruleSystemCode, sourceCode));
                     loaded.put(sourceCode, sourceConcept);
@@ -114,8 +96,7 @@ public class DefaultEligibleConceptExpansionService implements EligibleConceptEx
                 continue;
             }
 
-            List<PayrollConceptFeedRelation> relations =
-                    feedRelationRepository.findActiveByTargetObjectId(objectId, referenceDate);
+            List<PayrollConceptFeedRelation> relations = metamodel.activeFeedsOf(objectId);
             for (PayrollConceptFeedRelation relation : relations) {
                 PayrollObject source = relation.getSourceObject();
                 if (source.getObjectTypeCode() != PayrollObjectTypeCode.CONCEPT) {
@@ -128,8 +109,8 @@ public class DefaultEligibleConceptExpansionService implements EligibleConceptEx
                 }
                 String sourceCode = source.getObjectCode();
                 if (!loaded.containsKey(sourceCode)) {
-                    PayrollConcept sourceConcept = conceptRepository
-                            .findByBusinessKey(ruleSystemCode, sourceCode)
+                    PayrollConcept sourceConcept = metamodel
+                            .findConcept(sourceCode)
                             .orElseThrow(() -> new MissingDependencyConceptDefinitionException(
                                     ruleSystemCode, sourceCode));
                     loaded.put(sourceCode, sourceConcept);

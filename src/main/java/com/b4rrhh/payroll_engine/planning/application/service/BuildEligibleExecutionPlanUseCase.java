@@ -1,12 +1,12 @@
 package com.b4rrhh.payroll_engine.planning.application.service;
 
 import com.b4rrhh.payroll_engine.eligibility.domain.model.EmployeeAssignmentContext;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import com.b4rrhh.payroll_engine.planning.domain.model.EligibleExecutionPlanResult;
 
-import java.time.LocalDate;
-
 /**
- * Input port for building an eligible execution plan from an employee context and reference date.
+ * Input port for building an eligible execution plan from an employee context and the
+ * metamodel loaded for the execution.
  *
  * <p>The result includes all intermediate layers (applicable assignments, eligible concepts,
  * expanded concepts, dependency graph, execution plan) for full auditability.
@@ -25,11 +25,15 @@ import java.time.LocalDate;
 public interface BuildEligibleExecutionPlanUseCase {
 
     /**
-     * Builds the eligible execution plan for the given context and reference date.
+     * Builds the eligible execution plan for the given context against the execution's metamodel.
      *
-     * @param context       the employee context carrying rule system and optional scope dimensions
-     * @param referenceDate the date used for eligibility validity and feed relation filtering
+     * <p>There is no reference date parameter on purpose: the date is the one the metamodel was
+     * loaded with. Two units of the same execution cannot be planned against different dates
+     * because there is nowhere left to say a different one.
+     *
+     * @param context   the employee context carrying rule system and optional scope dimensions
+     * @param metamodel the rule system metamodel loaded when the execution started
      * @return an auditable result with all intermediate layers
      */
-    EligibleExecutionPlanResult build(EmployeeAssignmentContext context, LocalDate referenceDate);
+    EligibleExecutionPlanResult build(EmployeeAssignmentContext context, RuleSystemMetamodel metamodel);
 }

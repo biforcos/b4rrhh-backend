@@ -19,6 +19,14 @@ public interface PayrollConceptFeedRelationRepository {
             String ruleSystemCode, String conceptCode);
 
     /**
+     * Returns every feed relation active on the reference date whose target object belongs to
+     * the given rule system. This is the bulk read the execution metamodel is loaded with:
+     * one call per execution instead of one per concept and unit.
+     */
+    List<PayrollConceptFeedRelation> findAllActiveByRuleSystemCode(
+            String ruleSystemCode, LocalDate referenceDate);
+
+    /**
      * Removes every feed relation whose target concept matches the given business key.
      * The operation is a no-op when no feed exists; it never raises.
      */

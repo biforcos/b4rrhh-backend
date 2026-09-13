@@ -6,7 +6,6 @@ import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraph;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraphBuilder;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
@@ -15,17 +14,17 @@ import com.b4rrhh.payroll_engine.execution.domain.exception.DuplicateOperandDefi
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingConceptDefinitionException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingOperandDefinitionException;
 import com.b4rrhh.payroll_engine.execution.domain.exception.OperandGraphMismatchException;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 
+import static com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodelFixtures.metamodel;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -40,20 +39,29 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ExecutionPlanBuilderTest {
 
     private static final String RS = "ESP";
+    private static final LocalDate REF = LocalDate.of(2025, 1, 1);
 
     private final DefaultExecutionPlanBuilder builder =
-            new DefaultExecutionPlanBuilder(pocOperandRepo(), new OperandConfigurationValidator(), emptyFeedRelationRepo());
+            new DefaultExecutionPlanBuilder(new OperandConfigurationValidator());
+
+    /** El metamodelo del PoC: el que usan todos los casos que no traen el suyo. */
+    private static final RuleSystemMetamodel POC = pocMetamodel();
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
+    /** El metamodelo de la ejecución, con los operandos que el caso necesite. */
+    private static RuleSystemMetamodel metamodelWith(List<PayrollConceptOperand> operands) {
+        return metamodel(RS, REF).withOperands(operands).build();
+    }
+
     /**
-     * Returns a stub operand repository seeded with:
+     * Returns a metamodel seeded with:
      * <ul>
      *   <li>SALARIO_BASE operands: QUANTITY=T_DIAS_PRESENCIA_SEGMENTO, RATE=T_PRECIO_DIA</li>
      *   <li>RETENCION_IRPF_TRAMO operands: BASE=TOTAL_DEVENGOS_SEGMENTO, PERCENTAGE=T_PCT_IRPF</li>
      * </ul>
      */
-    private static PayrollConceptOperandRepository pocOperandRepo() {
+    private static RuleSystemMetamodel pocMetamodel() {
         PayrollObject salarioTargetObj = new PayrollObject(3L, RS, PayrollObjectTypeCode.CONCEPT,
                 "SALARIO_BASE", LocalDateTime.now(), LocalDateTime.now());
         PayrollObject qObj = new PayrollObject(1L, RS, PayrollObjectTypeCode.CONCEPT,
@@ -82,26 +90,10 @@ class ExecutionPlanBuilderTest {
                         LocalDateTime.now(), LocalDateTime.now())
         );
 
-        return new PayrollConceptOperandRepository() {
-            @Override
-            public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
-            @Override
-            public List<PayrollConceptOperand> findByTarget(String rs, String code) {
-                return switch (code) {
-                    case "SALARIO_BASE"        -> salarioBaseOperands;
-                    case "RETENCION_IRPF_TRAMO" -> retencionIrpfOperands;
-                    default                    -> Collections.emptyList();
-                };
-            }
-            @Override
-            public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
-                throw new UnsupportedOperationException();
-            }
-            @Override
-            public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {
-                throw new UnsupportedOperationException();
-            }
-        };
+        return metamodel(RS, REF)
+                .withOperands(salarioBaseOperands)
+                .withOperands(retencionIrpfOperands)
+                .build();
     }
 
     private static PayrollConcept concept(String code, CalculationType type) {
@@ -145,7 +137,7 @@ class ExecutionPlanBuilderTest {
         PayrollConcept salario = concept("SALARIO_BASE",              CalculationType.RATE_BY_QUANTITY);
 
         List<ConceptExecutionPlanEntry> plan =
-                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), LocalDate.of(2025, 1, 1));
+                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), POC);
 
         assertEquals(3, plan.size());
     }
@@ -157,7 +149,7 @@ class ExecutionPlanBuilderTest {
         PayrollConcept salario = concept("SALARIO_BASE",              CalculationType.RATE_BY_QUANTITY);
 
         List<ConceptExecutionPlanEntry> plan =
-                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), LocalDate.of(2025, 1, 1));
+                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), POC);
 
         assertEquals(id("SALARIO_BASE"), plan.get(plan.size() - 1).identity());
     }
@@ -169,7 +161,7 @@ class ExecutionPlanBuilderTest {
         PayrollConcept salario = concept("SALARIO_BASE",              CalculationType.RATE_BY_QUANTITY);
 
         List<ConceptExecutionPlanEntry> plan =
-                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), LocalDate.of(2025, 1, 1));
+                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), POC);
 
         int salarioIdx = indexOf(plan, "SALARIO_BASE");
         int diasIdx    = indexOf(plan, "T_DIAS_PRESENCIA_SEGMENTO");
@@ -189,7 +181,7 @@ class ExecutionPlanBuilderTest {
         PayrollConcept salario = concept("SALARIO_BASE",              CalculationType.RATE_BY_QUANTITY);
 
         List<ConceptExecutionPlanEntry> plan =
-                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), LocalDate.of(2025, 1, 1));
+                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), POC);
 
         ConceptExecutionPlanEntry salarioEntry = plan.stream()
                 .filter(e -> e.identity().equals(id("SALARIO_BASE")))
@@ -209,7 +201,7 @@ class ExecutionPlanBuilderTest {
                 .addNode(solo)
                 .build();
 
-        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(solo), LocalDate.of(2025, 1, 1));
+        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(solo), POC);
 
         assertEquals(1, plan.size());
         assertEquals(id("STANDALONE"), plan.get(0).identity());
@@ -226,7 +218,7 @@ class ExecutionPlanBuilderTest {
                 .addNode(inGraph)
                 .build();
 
-        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(inGraph, outGraph), LocalDate.of(2025, 1, 1));
+        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(inGraph, outGraph), POC);
 
         assertEquals(1, plan.size());
         assertEquals(id("IN_GRAPH"), plan.get(0).identity());
@@ -244,7 +236,7 @@ class ExecutionPlanBuilderTest {
         ConceptDependencyGraph graph = pocGraph(dias, precio, salario);
 
         // Concept list order is intentionally reversed from the expected execution order.
-        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(salario, precio, dias), LocalDate.of(2025, 1, 1));
+        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(salario, precio, dias), POC);
 
         int salarioIdx = indexOf(plan, "SALARIO_BASE");
         int diasIdx    = indexOf(plan, "T_DIAS_PRESENCIA_SEGMENTO");
@@ -261,14 +253,14 @@ class ExecutionPlanBuilderTest {
     @Test
     void nullGraphIsRejected() {
         PayrollConcept dias = concept("T_DIAS", CalculationType.DIRECT_AMOUNT);
-        assertThrows(IllegalArgumentException.class, () -> builder.build(null, List.of(dias), LocalDate.of(2025, 1, 1)));
+        assertThrows(IllegalArgumentException.class, () -> builder.build(null, List.of(dias), POC));
     }
 
     @Test
     void nullConceptListIsRejected() {
         PayrollConcept dias = concept("T_DIAS", CalculationType.DIRECT_AMOUNT);
         ConceptDependencyGraph graph = new ConceptDependencyGraphBuilder().addNode(dias).build();
-        assertThrows(IllegalArgumentException.class, () -> builder.build(graph, null, LocalDate.of(2025, 1, 1)));
+        assertThrows(IllegalArgumentException.class, () -> builder.build(graph, null, POC));
     }
 
     @Test
@@ -282,7 +274,7 @@ class ExecutionPlanBuilderTest {
 
         // Supply only 2 of the 3 concepts — SALARIO_BASE is missing from the list.
         assertThrows(MissingConceptDefinitionException.class,
-                () -> builder.build(graph, List.of(dias, precio), LocalDate.of(2025, 1, 1)));
+                () -> builder.build(graph, List.of(dias, precio), POC));
     }
 
     @Test
@@ -298,7 +290,7 @@ class ExecutionPlanBuilderTest {
 
         // Same identity appears twice in the list.
         assertThrows(DuplicateConceptIdentityException.class,
-                () -> builder.build(graph, List.of(dias, diasDupe, salario), LocalDate.of(2025, 1, 1)));
+                () -> builder.build(graph, List.of(dias, diasDupe, salario), POC));
     }
 
     // ── operand enrichment ────────────────────────────────────────────────────
@@ -310,7 +302,7 @@ class ExecutionPlanBuilderTest {
         PayrollConcept salario = concept("SALARIO_BASE",              CalculationType.RATE_BY_QUANTITY);
 
         List<ConceptExecutionPlanEntry> plan =
-                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), LocalDate.of(2025, 1, 1));
+                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), POC);
 
         ConceptExecutionPlanEntry salarioEntry = plan.stream()
                 .filter(e -> e.identity().equals(id("SALARIO_BASE")))
@@ -326,7 +318,7 @@ class ExecutionPlanBuilderTest {
         PayrollConcept salario = concept("SALARIO_BASE",              CalculationType.RATE_BY_QUANTITY);
 
         List<ConceptExecutionPlanEntry> plan =
-                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), LocalDate.of(2025, 1, 1));
+                builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), POC);
 
         ConceptExecutionPlanEntry salarioEntry = plan.stream()
                 .filter(e -> e.identity().equals(id("SALARIO_BASE")))
@@ -346,32 +338,14 @@ class ExecutionPlanBuilderTest {
                 new PayrollConceptOperand(null, targetObj, OperandRole.RATE, rObj,
                         LocalDateTime.now(), LocalDateTime.now()));
 
-        DefaultExecutionPlanBuilder missingQuantityBuilder = new DefaultExecutionPlanBuilder(
-                new PayrollConceptOperandRepository() {
-                    @Override
-                    public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
-                    @Override
-                    public List<PayrollConceptOperand> findByTarget(String rs, String code) {
-                        return "SALARIO_BASE".equals(code) ? rateOnly : Collections.emptyList();
-                    }
-                    @Override
-                    public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
-                        throw new UnsupportedOperationException();
-                    }
-                    @Override
-                    public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {
-                        throw new UnsupportedOperationException();
-                    }
-                },
-                new OperandConfigurationValidator(),
-                emptyFeedRelationRepo());
+        RuleSystemMetamodel rateOnlyMetamodel = metamodelWith(rateOnly);
 
         PayrollConcept dias    = concept("T_DIAS_PRESENCIA_SEGMENTO", CalculationType.DIRECT_AMOUNT);
         PayrollConcept precio  = concept("T_PRECIO_DIA",              CalculationType.DIRECT_AMOUNT);
         PayrollConcept salario = concept("SALARIO_BASE",              CalculationType.RATE_BY_QUANTITY);
 
         assertThrows(MissingOperandDefinitionException.class,
-                () -> missingQuantityBuilder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), LocalDate.of(2025, 1, 1)));
+                () -> builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), rateOnlyMetamodel));
     }
 
     @Test
@@ -393,25 +367,7 @@ class ExecutionPlanBuilderTest {
                 new PayrollConceptOperand(null, targetObj, OperandRole.RATE, rObj,
                         LocalDateTime.now(), LocalDateTime.now()));
 
-        DefaultExecutionPlanBuilder duplicateBuilder = new DefaultExecutionPlanBuilder(
-                new PayrollConceptOperandRepository() {
-                    @Override
-                    public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
-                    @Override
-                    public List<PayrollConceptOperand> findByTarget(String rs, String code) {
-                        return "SALARIO_BASE".equals(code) ? duplicateQuantity : Collections.emptyList();
-                    }
-                    @Override
-                    public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
-                        throw new UnsupportedOperationException();
-                    }
-                    @Override
-                    public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {
-                        throw new UnsupportedOperationException();
-                    }
-                },
-                new OperandConfigurationValidator(),
-                emptyFeedRelationRepo());
+        RuleSystemMetamodel duplicateQuantityMetamodel = metamodelWith(duplicateQuantity);
 
         PayrollConcept dias    = concept("T_DIAS_PRESENCIA_SEGMENTO", CalculationType.DIRECT_AMOUNT);
         PayrollConcept precio  = concept("T_PRECIO_DIA",              CalculationType.DIRECT_AMOUNT);
@@ -427,8 +383,8 @@ class ExecutionPlanBuilderTest {
                 .build();
 
         assertThrows(DuplicateOperandDefinitionException.class,
-                () -> duplicateBuilder.build(graphWithExtra, List.of(dias, precio,
-                        otherQuantityConcept, salario), LocalDate.of(2025, 1, 1)));
+                () -> builder.build(graphWithExtra, List.of(dias, precio,
+                        otherQuantityConcept, salario), duplicateQuantityMetamodel));
     }
 
     @Test
@@ -446,25 +402,7 @@ class ExecutionPlanBuilderTest {
                 new PayrollConceptOperand(null, targetObj, OperandRole.RATE, rObj,
                         LocalDateTime.now(), LocalDateTime.now()));
 
-        DefaultExecutionPlanBuilder mismatchBuilder = new DefaultExecutionPlanBuilder(
-                new PayrollConceptOperandRepository() {
-                    @Override
-                    public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
-                    @Override
-                    public List<PayrollConceptOperand> findByTarget(String rs, String code) {
-                        return "SALARIO_BASE".equals(code) ? mismatchedOperands : Collections.emptyList();
-                    }
-                    @Override
-                    public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
-                        throw new UnsupportedOperationException();
-                    }
-                    @Override
-                    public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {
-                        throw new UnsupportedOperationException();
-                    }
-                },
-                new OperandConfigurationValidator(),
-                emptyFeedRelationRepo());
+        RuleSystemMetamodel mismatchedOperandsMetamodel = metamodelWith(mismatchedOperands);
 
         PayrollConcept dias    = concept("T_DIAS_PRESENCIA_SEGMENTO", CalculationType.DIRECT_AMOUNT);
         PayrollConcept precio  = concept("T_PRECIO_DIA",              CalculationType.DIRECT_AMOUNT);
@@ -472,7 +410,7 @@ class ExecutionPlanBuilderTest {
 
         // Graph has dias+precio as deps — T_OTHER is NOT a declared dep
         assertThrows(OperandGraphMismatchException.class,
-                () -> mismatchBuilder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), LocalDate.of(2025, 1, 1)));
+                () -> builder.build(pocGraph(dias, precio, salario), List.of(dias, precio, salario), mismatchedOperandsMetamodel));
     }
 
     // ── utility ───────────────────────────────────────────────────────────────
@@ -486,29 +424,6 @@ class ExecutionPlanBuilderTest {
         throw new AssertionError("Concept not found in plan: " + conceptCode);
     }
 
-    private static PayrollConceptFeedRelationRepository emptyFeedRelationRepo() {
-        return new PayrollConceptFeedRelationRepository() {
-            @Override
-            public com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation save(
-                    com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation r) {
-                throw new UnsupportedOperationException();
-            }
-            @Override
-            public List<com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation> findActiveByTargetObjectId(
-                    Long id, LocalDate date) {
-                return Collections.emptyList();
-            }
-            @Override
-            public List<com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation>
-                    findByRuleSystemCodeAndTargetConceptCode(String rs, String code) {
-                throw new UnsupportedOperationException();
-            }
-            @Override
-            public void deleteAllByRuleSystemCodeAndTargetConceptCode(String rs, String code) {
-                throw new UnsupportedOperationException();
-            }
-        };
-    }
 
     // ── aggregate enrichment ──────────────────────────────────────────────────
 
@@ -538,7 +453,7 @@ class ExecutionPlanBuilderTest {
         PayrollConcept total    = concept("TOTAL_DEVENGOS_SEGMENTO",   CalculationType.AGGREGATE);
 
         ConceptDependencyGraph graph = aggregateGraph(salario, plus, total);
-        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(salario, plus, total), LocalDate.of(2025, 1, 1));
+        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(salario, plus, total), POC);
 
         ConceptExecutionPlanEntry totalEntry = plan.stream()
                 .filter(e -> e.identity().equals(id("TOTAL_DEVENGOS_SEGMENTO")))
@@ -562,7 +477,7 @@ class ExecutionPlanBuilderTest {
         PayrollConcept total    = concept("TOTAL_DEVENGOS_SEGMENTO", CalculationType.AGGREGATE);
 
         ConceptDependencyGraph graph = aggregateGraph(salario, plus, total);
-        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(total, plus, salario), LocalDate.of(2025, 1, 1));
+        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(total, plus, salario), POC);
 
         int totalIdx   = indexOf(plan, "TOTAL_DEVENGOS_SEGMENTO");
         int salarioIdx = indexOf(plan, "SALARIO_BASE");
@@ -581,7 +496,7 @@ class ExecutionPlanBuilderTest {
                 .addNode(total)
                 .build();
 
-        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(total), LocalDate.of(2025, 1, 1));
+        List<ConceptExecutionPlanEntry> plan = builder.build(graph, List.of(total), POC);
 
         assertEquals(1, plan.size());
         ConceptExecutionPlanEntry entry = plan.getFirst();
@@ -617,7 +532,7 @@ class ExecutionPlanBuilderTest {
 
         List<ConceptExecutionPlanEntry> plan = builder.build(
                 percentageGraph(totalDevengos, tPctIrpf, retencionIrpf),
-                List.of(totalDevengos, tPctIrpf, retencionIrpf), LocalDate.of(2025, 1, 1));
+                List.of(totalDevengos, tPctIrpf, retencionIrpf), POC);
 
         ConceptExecutionPlanEntry entry = plan.stream()
                 .filter(e -> e.identity().equals(id("RETENCION_IRPF_TRAMO")))
@@ -634,7 +549,7 @@ class ExecutionPlanBuilderTest {
 
         List<ConceptExecutionPlanEntry> plan = builder.build(
                 percentageGraph(totalDevengos, tPctIrpf, retencionIrpf),
-                List.of(totalDevengos, tPctIrpf, retencionIrpf), LocalDate.of(2025, 1, 1));
+                List.of(totalDevengos, tPctIrpf, retencionIrpf), POC);
 
         ConceptExecutionPlanEntry entry = plan.stream()
                 .filter(e -> e.identity().equals(id("RETENCION_IRPF_TRAMO")))
@@ -651,7 +566,7 @@ class ExecutionPlanBuilderTest {
 
         List<ConceptExecutionPlanEntry> plan = builder.build(
                 percentageGraph(totalDevengos, tPctIrpf, retencionIrpf),
-                List.of(retencionIrpf, tPctIrpf, totalDevengos), LocalDate.of(2025, 1, 1));
+                List.of(retencionIrpf, tPctIrpf, totalDevengos), POC);
 
         int retencionIdx = indexOf(plan, "RETENCION_IRPF_TRAMO");
         int totalIdx     = indexOf(plan, "TOTAL_DEVENGOS_SEGMENTO");
@@ -674,34 +589,16 @@ class ExecutionPlanBuilderTest {
                 new PayrollConceptOperand(null, retencionObj, OperandRole.PERCENTAGE, pctObj,
                         LocalDateTime.now(), LocalDateTime.now()));
 
-        DefaultExecutionPlanBuilder missingBaseBuilder = new DefaultExecutionPlanBuilder(
-                new PayrollConceptOperandRepository() {
-                    @Override
-                    public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
-                    @Override
-                    public List<PayrollConceptOperand> findByTarget(String rs, String code) {
-                        return "RETENCION_IRPF_TRAMO".equals(code) ? pctOnly : Collections.emptyList();
-                    }
-                    @Override
-                    public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
-                        throw new UnsupportedOperationException();
-                    }
-                    @Override
-                    public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {
-                        throw new UnsupportedOperationException();
-                    }
-                },
-                new OperandConfigurationValidator(),
-                emptyFeedRelationRepo());
+        RuleSystemMetamodel pctOnlyMetamodel = metamodelWith(pctOnly);
 
         PayrollConcept totalDevengos = concept("TOTAL_DEVENGOS_SEGMENTO", CalculationType.DIRECT_AMOUNT);
         PayrollConcept tPctIrpf      = concept("T_PCT_IRPF",               CalculationType.DIRECT_AMOUNT);
         PayrollConcept retencionIrpf = concept("RETENCION_IRPF_TRAMO",     CalculationType.PERCENTAGE);
 
         assertThrows(MissingOperandDefinitionException.class,
-                () -> missingBaseBuilder.build(
+                () -> builder.build(
                         percentageGraph(totalDevengos, tPctIrpf, retencionIrpf),
-                        List.of(totalDevengos, tPctIrpf, retencionIrpf), LocalDate.of(2025, 1, 1)));
+                        List.of(totalDevengos, tPctIrpf, retencionIrpf), pctOnlyMetamodel));
     }
 
     @Test
@@ -715,34 +612,15 @@ class ExecutionPlanBuilderTest {
                 new PayrollConceptOperand(null, retencionObj, OperandRole.BASE, baseObj,
                         LocalDateTime.now(), LocalDateTime.now()));
 
-        DefaultExecutionPlanBuilder missingPctBuilder = new DefaultExecutionPlanBuilder(
-                new PayrollConceptOperandRepository() {
-                    @Override
-                    public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
-                    @Override
-                    public List<PayrollConceptOperand> findByTarget(String rs, String code) {
-                        return "RETENCION_IRPF_TRAMO".equals(code) ? baseOnly : Collections.emptyList();
-                    }
-                    @Override
-                    public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
-                        throw new UnsupportedOperationException();
-                    }
-                    @Override
-                    public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {
-                        throw new UnsupportedOperationException();
-                    }
-                },
-                new OperandConfigurationValidator(),
-
-                emptyFeedRelationRepo());
+        RuleSystemMetamodel baseOnlyMetamodel = metamodelWith(baseOnly);
         PayrollConcept totalDevengos = concept("TOTAL_DEVENGOS_SEGMENTO", CalculationType.DIRECT_AMOUNT);
         PayrollConcept tPctIrpf      = concept("T_PCT_IRPF",               CalculationType.DIRECT_AMOUNT);
         PayrollConcept retencionIrpf = concept("RETENCION_IRPF_TRAMO",     CalculationType.PERCENTAGE);
 
         assertThrows(MissingOperandDefinitionException.class,
-                () -> missingPctBuilder.build(
+                () -> builder.build(
                         percentageGraph(totalDevengos, tPctIrpf, retencionIrpf),
-                        List.of(totalDevengos, tPctIrpf, retencionIrpf), LocalDate.of(2025, 1, 1)));
+                        List.of(totalDevengos, tPctIrpf, retencionIrpf), baseOnlyMetamodel));
     }
 
     @Test
@@ -760,25 +638,7 @@ class ExecutionPlanBuilderTest {
                 new PayrollConceptOperand(null, retencionObj, OperandRole.PERCENTAGE, pctObj,
                         LocalDateTime.now(), LocalDateTime.now()));
 
-        DefaultExecutionPlanBuilder mismatchBuilder = new DefaultExecutionPlanBuilder(
-                new PayrollConceptOperandRepository() {
-                    @Override
-                    public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
-                    @Override
-                    public List<PayrollConceptOperand> findByTarget(String rs, String code) {
-                        return "RETENCION_IRPF_TRAMO".equals(code) ? operandsPointingToUndeclaredDep : Collections.emptyList();
-                    }
-                    @Override
-                    public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
-                        throw new UnsupportedOperationException();
-                    }
-                    @Override
-                    public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {
-                        throw new UnsupportedOperationException();
-                    }
-                },
-                new OperandConfigurationValidator(),
-                emptyFeedRelationRepo());
+        RuleSystemMetamodel operandsPointingToUndeclaredDepMetamodel = metamodelWith(operandsPointingToUndeclaredDep);
 
         // Graph: only T_PCT_IRPF is declared as dep — TOTAL_DEVENGOS_SEGMENTO is absent
         PayrollConcept tPctIrpf      = concept("T_PCT_IRPF",           CalculationType.DIRECT_AMOUNT);
@@ -789,8 +649,8 @@ class ExecutionPlanBuilderTest {
                 .build();
 
         assertThrows(OperandGraphMismatchException.class,
-                () -> mismatchBuilder.build(
+                () -> builder.build(
                         graphWithoutTotalDevengos,
-                        List.of(tPctIrpf, retencionIrpf), LocalDate.of(2025, 1, 1)));
+                        List.of(tPctIrpf, retencionIrpf), operandsPointingToUndeclaredDepMetamodel));
     }
 }

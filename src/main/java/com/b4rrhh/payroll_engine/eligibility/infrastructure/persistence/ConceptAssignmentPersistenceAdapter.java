@@ -39,6 +39,15 @@ public class ConceptAssignmentPersistenceAdapter implements ConceptAssignmentRep
 
     @Override
     @Transactional(readOnly = true)
+    public List<ConceptAssignment> findAllValidByRuleSystemCode(String ruleSystemCode, LocalDate referenceDate) {
+        return springDataRepo.findAllValidByRuleSystemCode(ruleSystemCode, referenceDate)
+                .stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<ConceptAssignment> findAllByRuleSystemCode(String ruleSystemCode) {
         return springDataRepo.findAllByRuleSystemCode(ruleSystemCode)
                 .stream()

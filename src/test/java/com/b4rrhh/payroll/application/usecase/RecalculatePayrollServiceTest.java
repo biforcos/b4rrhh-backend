@@ -5,6 +5,7 @@ import com.b4rrhh.payroll.domain.exception.PayrollRecalculationNotAllowedExcepti
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
+import com.b4rrhh.payroll_engine.metamodel.domain.port.RuleSystemMetamodelRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,12 +28,15 @@ class RecalculatePayrollServiceTest {
     private PayrollRepository payrollRepository;
     @Mock
     private CalculatePayrollUnitUseCase calculatePayrollUnitUseCase;
+    @Mock
+    private RuleSystemMetamodelRepository ruleSystemMetamodelRepository;
 
     private RecalculatePayrollService service;
 
     @BeforeEach
     void setUp() {
-        service = new RecalculatePayrollService(payrollRepository, calculatePayrollUnitUseCase);
+        service = new RecalculatePayrollService(
+                payrollRepository, calculatePayrollUnitUseCase, ruleSystemMetamodelRepository);
     }
 
     @Test

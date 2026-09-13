@@ -45,11 +45,17 @@ public interface SpringDataPayrollConceptRepository extends JpaRepository<Payrol
             @Param("conceptCodes") Collection<String> conceptCodes
     );
 
+    /**
+     * El {@code join fetch} no es decorativo: mapear un concepto a dominio toca su
+     * {@code payroll_object}, y sin traerlo aquí cada concepto se cobra un select aparte.
+     * De ahí salían 194 de las 349 lecturas al metamodelo por unidad de cálculo (backend#87).
+     */
     @Query("""
         select c from PayrollEngineConceptEntity c
-        where c.payrollObject.ruleSystemCode = :ruleSystemCode
-          and c.payrollObject.objectTypeCode = 'CONCEPT'
-        order by c.payrollObject.objectCode
+        join fetch c.payrollObject o
+        where o.ruleSystemCode = :ruleSystemCode
+          and o.objectTypeCode = 'CONCEPT'
+        order by o.objectCode
         """)
     List<PayrollConceptEntity> findAllByRuleSystemCode(
             @Param("ruleSystemCode") String ruleSystemCode

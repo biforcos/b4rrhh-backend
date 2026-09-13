@@ -45,6 +45,14 @@ public interface ConceptAssignmentRepository {
     List<ConceptAssignment> findApplicableAssignments(EmployeeAssignmentContext context, LocalDate referenceDate);
 
     /**
+     * Returns every concept assignment of the rule system that is valid on the reference date,
+     * without filtering by the employee dimensions. Wildcard matching is then applied in memory
+     * by the execution metamodel: this is the bulk read it is loaded with, one call per
+     * execution instead of one {@link #findApplicableAssignments} per unit.
+     */
+    List<ConceptAssignment> findAllValidByRuleSystemCode(String ruleSystemCode, LocalDate referenceDate);
+
+    /**
      * Returns every concept assignment registered under the given rule system, ordered by
      * concept code and priority. Returns an empty list when no assignment is found.
      */

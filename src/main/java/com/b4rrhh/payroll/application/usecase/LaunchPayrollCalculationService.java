@@ -14,6 +14,8 @@ import com.b4rrhh.payroll.domain.port.CalculationClaimRepository;
 import com.b4rrhh.payroll.domain.port.CalculationRunMessageRepository;
 import com.b4rrhh.payroll.domain.port.CalculationRunRepository;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
+import com.b4rrhh.payroll_engine.metamodel.domain.port.RuleSystemMetamodelRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -43,6 +45,7 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
     private final PayrollLaunchPresenceLookupPort payrollLaunchPresenceLookupPort;
     private final CalculatePayrollUnitUseCase calculatePayrollUnitUseCase;
     private final PayrollLaunchWorkerPort payrollLaunchWorkerPort;
+    private final RuleSystemMetamodelRepository ruleSystemMetamodelRepository;
     private final ObjectMapper objectMapper;
 
     public LaunchPayrollCalculationService(
@@ -53,6 +56,7 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
             PayrollLaunchPresenceLookupPort payrollLaunchPresenceLookupPort,
             CalculatePayrollUnitUseCase calculatePayrollUnitUseCase,
             PayrollLaunchWorkerPort payrollLaunchWorkerPort,
+            RuleSystemMetamodelRepository ruleSystemMetamodelRepository,
             ObjectMapper objectMapper
     ) {
         this.calculationRunRepository = calculationRunRepository;
@@ -62,6 +66,7 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
         this.payrollLaunchPresenceLookupPort = payrollLaunchPresenceLookupPort;
         this.calculatePayrollUnitUseCase = calculatePayrollUnitUseCase;
         this.payrollLaunchWorkerPort = payrollLaunchWorkerPort;
+        this.ruleSystemMetamodelRepository = ruleSystemMetamodelRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -158,11 +163,25 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
      * <p>Sin {@code @Transactional}, y no por descuido: los contadores se guardan unidad
      * por unidad para que la ejecucion se vea avanzar desde fuera. En una sola transaccion
      * no se veria nada hasta el final, que es justo lo contrario de lo que hace falta.
+     *
+     * <p><b>La reglamentacion se lee aqui, una vez, y no la vuelve a leer nadie.</b> El
+     * metamodelo del motor —los conceptos con sus operandos, sus alimentaciones y sus
+     * asignaciones— no cambia mientras la ejecucion corre, y ahora eso esta garantizado en
+     * vez de ser una casualidad: lo que se cargue en esta linea es lo que van a usar la
+     * unidad 1 y la 873. Antes lo releia cada unidad, y un cambio en el grafo a mitad de una
+     * corrida de minutos dejaba dos nominas distintas con los mismos datos sin que nada lo
+     * dijera (backend#87). La vida de lo cargado es esta ejecucion: la siguiente vuelve a
+     * leer, y por eso ve los cambios.
      */
     private CalculationRun execute(CalculationRun requestedRun, NormalizedLaunch normalizedLaunch) {
         CalculationRun run = requestedRun;
         try {
             run = calculationRunRepository.save(run.withStatus(CalculationRunStatuses.RUNNING).withStartedAt(LocalDateTime.now()));
+
+            RuleSystemMetamodel metamodel = ruleSystemMetamodelRepository.load(
+                    normalizedLaunch.ruleSystemCode(),
+                    normalizedLaunch.periodEnd()
+            );
 
             List<PayrollCalculationUnit> units = expandUnits(
                     run,
@@ -177,7 +196,8 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
             run = calculationRunRepository.save(run.withTotalCandidates(units.size()));
 
             for (PayrollCalculationUnit unit : units) {
-                run = processUnit(run, unit, normalizedLaunch.calculationEngineCode(), normalizedLaunch.calculationEngineVersion());
+                run = processUnit(run, unit, normalizedLaunch.calculationEngineCode(),
+                        normalizedLaunch.calculationEngineVersion(), metamodel);
             }
 
             String finalStatus = run.totalErrors() > 0
@@ -278,7 +298,8 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
             CalculationRun run,
             PayrollCalculationUnit unit,
             String calculationEngineCode,
-            String calculationEngineVersion
+            String calculationEngineVersion,
+            RuleSystemMetamodel metamodel
     ) {
         Optional<Payroll> existingPayroll = payrollRepository.findByBusinessKey(
                 unit.ruleSystemCode(),
@@ -344,7 +365,8 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                     unitPeriodBounds[1],
                     calculationEngineCode,
                     calculationEngineVersion,
-                    run.id()
+                    run.id(),
+                    metamodel
             ));
             saveEligibleRealSuccessMessageIfPresent(run, unit, payroll);
             if (payroll.getStatus() == PayrollStatus.NOT_VALID) {

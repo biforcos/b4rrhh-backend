@@ -5,6 +5,7 @@ import com.b4rrhh.payroll.domain.exception.PayrollNotFoundException;
 import com.b4rrhh.payroll.domain.exception.PayrollRecalculationNotAllowedException;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
+import com.b4rrhh.payroll_engine.metamodel.domain.port.RuleSystemMetamodelRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,13 +21,16 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
 
     private final PayrollRepository payrollRepository;
     private final CalculatePayrollUnitUseCase calculatePayrollUnitUseCase;
+    private final RuleSystemMetamodelRepository ruleSystemMetamodelRepository;
 
     public RecalculatePayrollService(
             PayrollRepository payrollRepository,
-            CalculatePayrollUnitUseCase calculatePayrollUnitUseCase
+            CalculatePayrollUnitUseCase calculatePayrollUnitUseCase,
+            RuleSystemMetamodelRepository ruleSystemMetamodelRepository
     ) {
         this.payrollRepository = payrollRepository;
         this.calculatePayrollUnitUseCase = calculatePayrollUnitUseCase;
+        this.ruleSystemMetamodelRepository = ruleSystemMetamodelRepository;
     }
 
     @Override
@@ -53,6 +57,11 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
         }
 
         LocalDate periodStart = parsePeriodStart(command.payrollPeriodCode());
+        LocalDate periodEnd = periodStart.withDayOfMonth(periodStart.lengthOfMonth());
+
+        // Un recalculo puntual tambien es una ejecucion, de una sola unidad: lee su
+        // reglamentacion aqui y calcula contra ella. Por eso ve los cambios del grafo que
+        // haya habido desde la corrida que produjo el recibo anterior (backend#87).
         return calculatePayrollUnitUseCase.calculate(new CalculatePayrollUnitCommand(
                 command.ruleSystemCode(),
                 command.employeeTypeCode(),
@@ -61,12 +70,13 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
                 command.payrollTypeCode(),
                 command.presenceNumber(),
                 periodStart,
-                periodStart.withDayOfMonth(periodStart.lengthOfMonth()),
+                periodEnd,
                 payroll.getCalculationEngineCode(),
                 payroll.getCalculationEngineVersion(),
                 // El recalculo puntual no nace de un lanzamiento: no hay ejecucion que anotar. No se
                 // arrastra la del recibo anterior, porque no es la que produjo este (backend#62).
-                null
+                null,
+                ruleSystemMetamodelRepository.load(command.ruleSystemCode(), periodEnd)
         ));
     }
 

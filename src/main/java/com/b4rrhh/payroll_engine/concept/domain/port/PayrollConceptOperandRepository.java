@@ -27,6 +27,13 @@ public interface PayrollConceptOperandRepository {
     List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String ruleSystemCode, String conceptCode);
 
     /**
+     * Returns every operand whose target concept belongs to the given rule system, ordered by
+     * concept code and then operand role. This is the bulk read the execution metamodel is
+     * loaded with: one call per execution instead of one per concept and unit.
+     */
+    List<PayrollConceptOperand> findAllByRuleSystemCode(String ruleSystemCode);
+
+    /**
      * Removes every operand attached to the concept identified by the given business key.
      * The operation is a no-op when no operand exists; it never raises.
      */

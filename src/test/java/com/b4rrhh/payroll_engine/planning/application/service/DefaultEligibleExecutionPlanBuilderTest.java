@@ -6,10 +6,6 @@ import com.b4rrhh.payroll_engine.concept.domain.model.FeedMode;
 import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
-import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptRepository;
 import com.b4rrhh.payroll_engine.dependency.application.service.DefaultConceptDependencyGraphService;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraph;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
@@ -17,9 +13,9 @@ import com.b4rrhh.payroll_engine.eligibility.application.service.DefaultConceptE
 import com.b4rrhh.payroll_engine.eligibility.domain.model.ConceptAssignment;
 import com.b4rrhh.payroll_engine.eligibility.domain.model.EmployeeAssignmentContext;
 import com.b4rrhh.payroll_engine.eligibility.domain.model.ResolvedConceptAssignment;
-import com.b4rrhh.payroll_engine.eligibility.domain.port.ConceptAssignmentRepository;
 import com.b4rrhh.payroll_engine.execution.application.service.ExecutionPlanBuilder;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import com.b4rrhh.payroll_engine.planning.domain.exception.MissingDependencyConceptDefinitionException;
@@ -31,14 +27,12 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodelFixtures.metamodel;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -47,7 +41,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Unit tests for {@link DefaultEligibleExecutionPlanBuilder}.
  *
- * <p>All collaborators are replaced with in-memory fakes — no Spring context is needed.
+ * <p>La reglamentación se le pasa en un metamodelo construido en memoria — ni contexto de
+ * Spring ni base de datos.
  * Tests validate that:
  * <ul>
  *   <li>applicable assignments are preserved in the result</li>
@@ -89,11 +84,13 @@ class DefaultEligibleExecutionPlanBuilderTest {
     private PayrollConcept tPrecioTransporte;
     private PayrollConcept tPctIrpf;
 
-    // ── fakes ───────────────────────────────────────────────────────────────
+    // ── la reglamentación del caso ──────────────────────────────────────────
 
-    private FakeConceptRepository conceptRepo;
-    private FakeFeedRelationRepository feedRepo;
-    private DefaultConceptDependencyGraphService graphService;
+    private List<PayrollConcept> conceptos;
+    private List<PayrollConceptFeedRelation> alimentaciones;
+
+    private final DefaultConceptDependencyGraphService graphService =
+            new DefaultConceptDependencyGraphService();
 
     @BeforeEach
     void setUp() {
@@ -106,35 +103,32 @@ class DefaultEligibleExecutionPlanBuilderTest {
         tPrecioTransporte  = concept(ID_T_PRECIO_TRANSPORTE,  "T_PRECIO_TRANSPORTE");
         tPctIrpf           = concept(ID_T_PCT_IRPF,           "T_PCT_IRPF");
 
-        conceptRepo = new FakeConceptRepository(List.of(
+        conceptos = List.of(
                 salarioBase, plusTransporte, retencionIrpf, totalDevengos,
                 tDias, tPrecioDia, tPrecioTransporte, tPctIrpf
-        ));
+        );
 
         // Feed relations (target ← source):
         //   SALARIO_BASE(1)            ← T_DIAS(5), T_PRECIO_DIA(6)
         //   PLUS_TRANSPORTE(2)         ← T_PRECIO_TRANSPORTE(7)
         //   RETENCION_IRPF_TRAMO(3)   ← TOTAL_DEVENGOS(4), T_PCT_IRPF(8)
         //   TOTAL_DEVENGOS_SEGMENTO(4) ← SALARIO_BASE(1), PLUS_TRANSPORTE(2)
-        feedRepo = new FakeFeedRelationRepository(Map.of(
-                ID_SALARIO_BASE,    List.of(feedRel(tDias, salarioBase), feedRel(tPrecioDia, salarioBase)),
-                ID_PLUS_TRANSPORTE, List.of(feedRel(tPrecioTransporte, plusTransporte)),
-                ID_RETENCION_IRPF,  List.of(feedRel(totalDevengos, retencionIrpf), feedRel(tPctIrpf, retencionIrpf)),
-                ID_TOTAL_DEVENGOS,  List.of(feedRel(salarioBase, totalDevengos), feedRel(plusTransporte, totalDevengos))
-        ));
-
-        graphService = new DefaultConceptDependencyGraphService(feedRepo, emptyOperandRepo());
+        alimentaciones = List.of(
+                feedRel(tDias, salarioBase), feedRel(tPrecioDia, salarioBase),
+                feedRel(tPrecioTransporte, plusTransporte),
+                feedRel(totalDevengos, retencionIrpf), feedRel(tPctIrpf, retencionIrpf),
+                feedRel(salarioBase, totalDevengos), feedRel(plusTransporte, totalDevengos)
+        );
     }
 
     // ── test: integration — expansion and plan construction ─────────────────
 
     @Test
     void eligibleConcepts_expandedWithDependencies_planIsTopologicallyOrdered() {
-        DefaultEligibleExecutionPlanBuilder builder = builderWith(
-                eligibilityResolverWith("SALARIO_BASE", "PLUS_TRANSPORTE", "RETENCION_IRPF_TRAMO")
-        );
+        DefaultEligibleExecutionPlanBuilder builder = builder();
+        RuleSystemMetamodel metamodel = metamodelWith("SALARIO_BASE", "PLUS_TRANSPORTE", "RETENCION_IRPF_TRAMO");
 
-        EligibleExecutionPlanResult result = builder.build(CONTEXT, REF);
+        EligibleExecutionPlanResult result = builder.build(CONTEXT, metamodel);
 
         // 1. Applicable assignments: exactly the 3 directly eligible codes
         assertEquals(3, result.applicableAssignments().size());
@@ -186,11 +180,10 @@ class DefaultEligibleExecutionPlanBuilderTest {
 
     @Test
     void noEligibleAssignments_returnsEmptyResult() {
-        DefaultEligibleExecutionPlanBuilder builder = builderWith(
-                eligibilityResolverWith()
-        );
+        DefaultEligibleExecutionPlanBuilder builder = builder();
+        RuleSystemMetamodel metamodel = metamodelWith();
 
-        EligibleExecutionPlanResult result = builder.build(CONTEXT, REF);
+        EligibleExecutionPlanResult result = builder.build(CONTEXT, metamodel);
 
         assertTrue(result.applicableAssignments().isEmpty());
         assertTrue(result.eligibleConcepts().isEmpty());
@@ -217,23 +210,21 @@ class DefaultEligibleExecutionPlanBuilderTest {
         PayrollConcept horasExtra = concept(ID_HORAS_EXTRA,  "HORAS_EXTRA_201");
         PayrollConcept bruto      = concept(ID_BRUTO,        "BRUTO", CalculationType.AGGREGATE);
 
-        FakeConceptRepository repo = new FakeConceptRepository(List.of(salario, horasExtra, bruto));
-
         // Both SALARIO_BASE and HORAS_EXTRA_201 feed into BRUTO (the aggregate).
         // HORAS_EXTRA_201 has no eligibility assignment — it must not appear in the plan.
-        FakeFeedRelationRepository feeds = new FakeFeedRelationRepository(Map.of(
-                ID_BRUTO, List.of(feedRel(salario, bruto), feedRel(horasExtra, bruto))
-        ));
-
-        DefaultConceptDependencyGraphService gs = new DefaultConceptDependencyGraphService(feeds, emptyOperandRepo());
-        DefaultEligibleConceptExpansionService es = new DefaultEligibleConceptExpansionService(repo, feeds, emptyOperandRepo());
-
-        DefaultConceptEligibilityResolver eligibility = eligibilityResolverWith(repo, "SALARIO_BASE", "BRUTO");
+        RuleSystemMetamodel metamodel = metamodel(RS, REF)
+                .withConcepts(salario, horasExtra, bruto)
+                .withFeeds(feedRel(salario, bruto), feedRel(horasExtra, bruto))
+                .withAssignments(assignments("SALARIO_BASE", "BRUTO"))
+                .build();
 
         DefaultEligibleExecutionPlanBuilder builder = new DefaultEligibleExecutionPlanBuilder(
-                eligibility, repo, es, gs, simplePlanBuilder());
+                new DefaultConceptEligibilityResolver(),
+                new DefaultEligibleConceptExpansionService(),
+                graphService,
+                simplePlanBuilder());
 
-        EligibleExecutionPlanResult result = builder.build(CONTEXT, REF);
+        EligibleExecutionPlanResult result = builder.build(CONTEXT, metamodel);
 
         Set<String> expandedCodes = conceptCodes(result.expandedConcepts());
         assertFalse(expandedCodes.contains("HORAS_EXTRA_201"),
@@ -254,13 +245,12 @@ class DefaultEligibleExecutionPlanBuilderTest {
     @Test
     void missingEligibleConceptDefinition_throwsMissingEligibleConceptDefinitionException() {
         // Eligibility resolves GHOST_CONCEPT but no definition exists in the repo
-        DefaultEligibleExecutionPlanBuilder builder = builderWith(
-                eligibilityResolverWith("SALARIO_BASE", "GHOST_CONCEPT")
-        );
+        DefaultEligibleExecutionPlanBuilder builder = builder();
+        RuleSystemMetamodel metamodel = metamodelWith("SALARIO_BASE", "GHOST_CONCEPT");
 
         MissingEligibleConceptDefinitionException ex = assertThrows(
                 MissingEligibleConceptDefinitionException.class,
-                () -> builder.build(CONTEXT, REF)
+                () -> builder.build(CONTEXT, metamodel)
         );
         assertEquals(RS, ex.getRuleSystemCode());
         assertEquals("GHOST_CONCEPT", ex.getConceptCode());
@@ -272,24 +262,18 @@ class DefaultEligibleExecutionPlanBuilderTest {
     void missingDependencyConceptDefinition_throwsMissingDependencyConceptDefinitionException() {
         // SALARIO_BASE has a feed relation pointing to a source not present in the concept repo
         PayrollConcept ghost = concept(99L, "GHOST_SOURCE");
-        FakeFeedRelationRepository brokenFeedRepo = new FakeFeedRelationRepository(Map.of(
-                ID_SALARIO_BASE, List.of(feedRel(ghost, salarioBase))
-        ));
-        // ghost is deliberately NOT added to conceptRepo
+        // ghost is deliberately NOT among the metamodel's concepts
+        RuleSystemMetamodel roto = metamodel(RS, REF)
+                .withConcepts(conceptos)
+                .withFeeds(feedRel(ghost, salarioBase))
+                .withAssignments(assignments("SALARIO_BASE"))
+                .build();
 
-        DefaultConceptDependencyGraphService gs = new DefaultConceptDependencyGraphService(brokenFeedRepo, emptyOperandRepo());
-        DefaultEligibleConceptExpansionService es = new DefaultEligibleConceptExpansionService(conceptRepo, brokenFeedRepo, emptyOperandRepo());
-        DefaultEligibleExecutionPlanBuilder builder = new DefaultEligibleExecutionPlanBuilder(
-                eligibilityResolverWith("SALARIO_BASE"),
-                conceptRepo,
-                es,
-                gs,
-                simplePlanBuilder()
-        );
+        DefaultEligibleExecutionPlanBuilder builder = builder();
 
         MissingDependencyConceptDefinitionException ex = assertThrows(
                 MissingDependencyConceptDefinitionException.class,
-                () -> builder.build(CONTEXT, REF)
+                () -> builder.build(CONTEXT, roto)
         );
         assertEquals(RS, ex.getRuleSystemCode());
         assertEquals("GHOST_SOURCE", ex.getConceptCode());
@@ -297,16 +281,22 @@ class DefaultEligibleExecutionPlanBuilderTest {
 
     // ── helpers ─────────────────────────────────────────────────────────────
 
-    private DefaultEligibleExecutionPlanBuilder builderWith(DefaultConceptEligibilityResolver eligibilityResolver) {
-        DefaultEligibleConceptExpansionService expansionService =
-                new DefaultEligibleConceptExpansionService(conceptRepo, feedRepo, emptyOperandRepo());
+    private DefaultEligibleExecutionPlanBuilder builder() {
         return new DefaultEligibleExecutionPlanBuilder(
-                eligibilityResolver,
-                conceptRepo,
-                expansionService,
+                new DefaultConceptEligibilityResolver(),
+                new DefaultEligibleConceptExpansionService(),
                 graphService,
                 simplePlanBuilder()
         );
+    }
+
+    /** La reglamentación de setUp, con los conceptos que este caso declara elegibles. */
+    private RuleSystemMetamodel metamodelWith(String... eligibleCodes) {
+        return metamodel(RS, REF)
+                .withConcepts(conceptos)
+                .withFeeds(alimentaciones)
+                .withAssignments(assignments(eligibleCodes))
+                .build();
     }
 
     /**
@@ -314,7 +304,7 @@ class DefaultEligibleExecutionPlanBuilderTest {
      * Does not require operand configuration — suitable for plan-assembly tests.
      */
     private ExecutionPlanBuilder simplePlanBuilder() {
-        return (graph, concepts, referenceDate) -> {
+        return (graph, concepts, metamodel) -> {
             Map<ConceptNodeIdentity, PayrollConcept> idx = concepts.stream()
                     .collect(Collectors.toMap(
                             c -> new ConceptNodeIdentity(c.getRuleSystemCode(), c.getConceptCode()),
@@ -326,14 +316,8 @@ class DefaultEligibleExecutionPlanBuilderTest {
         };
     }
 
-    private DefaultConceptEligibilityResolver eligibilityResolverWith(
-            FakeConceptRepository repo, String... conceptCodes
-    ) {
-        // identical logic, just ignored (repo is unused — assignments drive eligibility)
-        return eligibilityResolverWith(conceptCodes);
-    }
-
-    private DefaultConceptEligibilityResolver eligibilityResolverWith(String... conceptCodes) {
+    /** Una asignación comodín por concepto: lo que hace elegible a cada uno en el caso. */
+    private List<ConceptAssignment> assignments(String... conceptCodes) {
         List<ConceptAssignment> assignments = new ArrayList<>();
         for (String code : conceptCodes) {
             assignments.add(new ConceptAssignment(
@@ -341,41 +325,7 @@ class DefaultEligibleExecutionPlanBuilderTest {
                     LocalDate.of(2025, 1, 1), null, 0, NOW, NOW
             ));
         }
-        ConceptAssignmentRepository repo = new ConceptAssignmentRepository() {
-            @Override
-            public com.b4rrhh.payroll_engine.eligibility.domain.model.ConceptAssignment save(
-                    com.b4rrhh.payroll_engine.eligibility.domain.model.ConceptAssignment a) {
-                throw new UnsupportedOperationException();
-            }
-            @Override
-            public List<ConceptAssignment> findApplicableAssignments(
-                    EmployeeAssignmentContext ctx, LocalDate date) {
-                return assignments;
-            }
-            @Override
-            public List<ConceptAssignment> findAllByRuleSystemCode(String ruleSystemCode) {
-                return assignments;
-            }
-            @Override
-            public List<ConceptAssignment> findAllByRuleSystemCodeAndConceptCode(String ruleSystemCode, String conceptCode) {
-                return assignments.stream()
-                        .filter(a -> conceptCode.equals(a.getConceptCode()))
-                        .toList();
-            }
-            @Override
-            public void deleteById(Long id) {
-                // no-op for test fake
-            }
-            @Override
-            public boolean existsByIdAndRuleSystemCode(Long id, String ruleSystemCode) {
-                return false;
-            }
-            @Override
-            public Optional<ConceptAssignment> findByIdAndRuleSystemCode(Long id, String ruleSystemCode) {
-                return Optional.empty();
-            }
-        };
-        return new DefaultConceptEligibilityResolver(repo);
+        return assignments;
     }
 
     private PayrollConcept concept(long id, String code) {
@@ -426,100 +376,4 @@ class DefaultEligibleExecutionPlanBuilderTest {
                         + after + "' (index " + indexAfter + ") in plan: " + planCodes);
     }
 
-    // ── in-memory fakes ──────────────────────────────────────────────────────
-
-    private static final class FakeConceptRepository implements PayrollConceptRepository {
-
-        private final Map<String, PayrollConcept> byCode;
-
-        FakeConceptRepository(List<PayrollConcept> concepts) {
-            this.byCode = concepts.stream()
-                    .collect(Collectors.toMap(PayrollConcept::getConceptCode, c -> c));
-        }
-
-        @Override
-        public Optional<PayrollConcept> findByBusinessKey(String ruleSystemCode, String conceptCode) {
-            return Optional.ofNullable(byCode.get(conceptCode));
-        }
-
-        @Override
-        public List<PayrollConcept> findAllByCodes(String ruleSystemCode, Collection<String> conceptCodes) {
-            return conceptCodes.stream()
-                    .map(byCode::get)
-                    .filter(java.util.Objects::nonNull)
-                    .collect(Collectors.toList());
-        }
-
-        @Override
-        public List<PayrollConcept> findAllByRuleSystemCode(String ruleSystemCode) {
-            return new java.util.ArrayList<>(byCode.values());
-        }
-
-        @Override
-        public void deleteByBusinessKey(String ruleSystemCode, String conceptCode) {
-            byCode.remove(conceptCode);
-        }
-
-        @Override
-        public PayrollConcept save(PayrollConcept concept) {
-            throw new UnsupportedOperationException("not needed in this test");
-        }
-
-        @Override
-        public boolean existsByBusinessKey(String ruleSystemCode, String conceptCode) {
-            return byCode.containsKey(conceptCode);
-        }
-    }
-
-    private static PayrollConceptOperandRepository emptyOperandRepo() {
-        return new PayrollConceptOperandRepository() {
-            @Override
-            public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
-            @Override
-            public List<PayrollConceptOperand> findByTarget(String rs, String code) { return List.of(); }
-            @Override
-            public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) {
-                throw new UnsupportedOperationException();
-            }
-            @Override
-            public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) {
-                throw new UnsupportedOperationException();
-            }
-        };
-    }
-
-    private static final class FakeFeedRelationRepository implements PayrollConceptFeedRelationRepository {
-
-        private final Map<Long, List<PayrollConceptFeedRelation>> byTargetId;
-
-        FakeFeedRelationRepository(Map<Long, List<PayrollConceptFeedRelation>> byTargetId) {
-            this.byTargetId = new HashMap<>(byTargetId);
-        }
-
-        @Override
-        public PayrollConceptFeedRelation save(PayrollConceptFeedRelation feedRelation) {
-            throw new UnsupportedOperationException("not needed in this test");
-        }
-
-        @Override
-        public List<PayrollConceptFeedRelation> findActiveByTargetObjectId(
-                Long targetObjectId, LocalDate referenceDate
-        ) {
-            return byTargetId.getOrDefault(targetObjectId, List.of());
-        }
-
-        @Override
-        public List<PayrollConceptFeedRelation> findByRuleSystemCodeAndTargetConceptCode(
-                String ruleSystemCode, String conceptCode
-        ) {
-            throw new UnsupportedOperationException("not needed in this test");
-        }
-
-        @Override
-        public void deleteAllByRuleSystemCodeAndTargetConceptCode(
-                String ruleSystemCode, String conceptCode
-        ) {
-            throw new UnsupportedOperationException("not needed in this test");
-        }
-    }
 }

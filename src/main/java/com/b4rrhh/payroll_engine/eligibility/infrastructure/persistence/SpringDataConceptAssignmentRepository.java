@@ -44,6 +44,23 @@ public interface SpringDataConceptAssignmentRepository extends JpaRepository<Con
             @Param("employeeTypeCode") String employeeTypeCode
     );
 
+    /**
+     * Todas las asignaciones del sistema de reglas vigentes en la fecha dada, sin filtrar por
+     * las dimensiones del empleado: el filtrado por comodín lo hace el metamodelo en memoria,
+     * una vez cargado, en lugar de una consulta por unidad de cálculo (backend#87).
+     */
+    @Query("""
+            SELECT a FROM PayrollEngineConceptAssignmentEntity a
+            WHERE a.ruleSystemCode = :ruleSystemCode
+              AND a.validFrom <= :referenceDate
+              AND (a.validTo IS NULL OR a.validTo >= :referenceDate)
+            ORDER BY a.conceptCode ASC, a.priority DESC, a.id ASC
+            """)
+    List<ConceptAssignmentEntity> findAllValidByRuleSystemCode(
+            @Param("ruleSystemCode") String ruleSystemCode,
+            @Param("referenceDate") LocalDate referenceDate
+    );
+
     @Query("""
             SELECT a FROM PayrollEngineConceptAssignmentEntity a
             WHERE a.ruleSystemCode = :ruleSystemCode

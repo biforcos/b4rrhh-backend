@@ -4,14 +4,14 @@ import com.b4rrhh.payroll_engine.eligibility.domain.exception.DuplicateConceptAs
 import com.b4rrhh.payroll_engine.eligibility.domain.model.ConceptAssignment;
 import com.b4rrhh.payroll_engine.eligibility.domain.model.EmployeeAssignmentContext;
 import com.b4rrhh.payroll_engine.eligibility.domain.model.ResolvedConceptAssignment;
-import com.b4rrhh.payroll_engine.eligibility.domain.port.ConceptAssignmentRepository;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
+import static com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodelFixtures.metamodel;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -19,7 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 /**
  * Unit tests for {@link DefaultConceptEligibilityResolver}.
  *
- * <p>The repository is replaced with an in-memory fake so no Spring context is needed.
+ * <p>The assignments are handed over in a metamodel built in memory, so no Spring context
+ * and no database are needed.
  */
 class DefaultConceptEligibilityResolverTest {
 
@@ -29,14 +30,17 @@ class DefaultConceptEligibilityResolverTest {
     private static final EmployeeAssignmentContext FULL_CONTEXT =
             new EmployeeAssignmentContext(RS, "EMP1", "METAL", "INDEFINIDO");
 
+    // El resolvedor ya no tiene estado: resuelve contra el metamodelo que se le pasa.
+    private static final DefaultConceptEligibilityResolver RESOLVER = new DefaultConceptEligibilityResolver();
+
     // ── test: global assignment applies ────────────────────────────────────
 
     @Test
     void globalAssignment_appliesWhenContextMatches() {
         ConceptAssignment global = assignment(RS, "SALARIO_BASE", null, null, null, 0);
-        DefaultConceptEligibilityResolver resolver = resolverWith(List.of(global));
+        RuleSystemMetamodel metamodel = metamodelWith(List.of(global));
 
-        List<ResolvedConceptAssignment> result = resolver.resolve(FULL_CONTEXT, REF);
+        List<ResolvedConceptAssignment> result = RESOLVER.resolve(FULL_CONTEXT, metamodel);
 
         assertEquals(1, result.size());
         assertEquals("SALARIO_BASE", result.get(0).getConceptCode());
@@ -53,10 +57,10 @@ class DefaultConceptEligibilityResolverTest {
         ConceptAssignment global = assignment(RS, "SALARIO_BASE", null, null, null, 0);
         ConceptAssignment specific = assignment(RS, "SALARIO_BASE", "EMP1", "METAL", "INDEFINIDO", 30);
 
-        // repository returns both candidates (wildcard filtering already applied in repo)
-        DefaultConceptEligibilityResolver resolver = resolverWith(List.of(global, specific));
+        // ambas asignaciones casan con el contexto: el comodín lo resuelve el metamodelo
+        RuleSystemMetamodel metamodel = metamodelWith(List.of(global, specific));
 
-        List<ResolvedConceptAssignment> result = resolver.resolve(FULL_CONTEXT, REF);
+        List<ResolvedConceptAssignment> result = RESOLVER.resolve(FULL_CONTEXT, metamodel);
 
         assertEquals(1, result.size());
         ResolvedConceptAssignment winner = result.get(0);
@@ -74,9 +78,9 @@ class DefaultConceptEligibilityResolverTest {
         ConceptAssignment salario = assignment(RS, "SALARIO_BASE", null, null, null, 0);
         ConceptAssignment transporte = assignment(RS, "PLUS_TRANSPORTE", "EMP1", "METAL", null, 20);
 
-        DefaultConceptEligibilityResolver resolver = resolverWith(List.of(salario, transporte));
+        RuleSystemMetamodel metamodel = metamodelWith(List.of(salario, transporte));
 
-        List<ResolvedConceptAssignment> result = resolver.resolve(FULL_CONTEXT, REF);
+        List<ResolvedConceptAssignment> result = RESOLVER.resolve(FULL_CONTEXT, metamodel);
 
         assertEquals(2, result.size());
         // sorted: priority desc (20 first), then conceptCode asc
@@ -94,9 +98,9 @@ class DefaultConceptEligibilityResolverTest {
         ConceptAssignment b = assignment(RS, "CONCEPT_A", null, null, null, 10);
         ConceptAssignment c = assignment(RS, "CONCEPT_M", null, null, null, 10);
 
-        DefaultConceptEligibilityResolver resolver = resolverWith(List.of(a, b, c));
+        RuleSystemMetamodel metamodel = metamodelWith(List.of(a, b, c));
 
-        List<ResolvedConceptAssignment> result = resolver.resolve(FULL_CONTEXT, REF);
+        List<ResolvedConceptAssignment> result = RESOLVER.resolve(FULL_CONTEXT, metamodel);
 
         assertEquals(3, result.size());
         assertEquals("CONCEPT_A", result.get(0).getConceptCode());
@@ -108,9 +112,9 @@ class DefaultConceptEligibilityResolverTest {
 
     @Test
     void noAssignmentsFound_returnsEmptyList() {
-        DefaultConceptEligibilityResolver resolver = resolverWith(List.of());
+        RuleSystemMetamodel metamodel = metamodelWith(List.of());
 
-        List<ResolvedConceptAssignment> result = resolver.resolve(FULL_CONTEXT, REF);
+        List<ResolvedConceptAssignment> result = RESOLVER.resolve(FULL_CONTEXT, metamodel);
 
         assertEquals(0, result.size());
     }
@@ -122,10 +126,10 @@ class DefaultConceptEligibilityResolverTest {
         ConceptAssignment a = assignment(RS, "SALARIO_BASE", "EMP1", null, null, 20);
         ConceptAssignment b = assignment(RS, "SALARIO_BASE", null, "METAL", null, 20);
 
-        DefaultConceptEligibilityResolver resolver = resolverWith(List.of(a, b));
+        RuleSystemMetamodel metamodel = metamodelWith(List.of(a, b));
 
         assertThrows(DuplicateConceptAssignmentException.class,
-                () -> resolver.resolve(FULL_CONTEXT, REF));
+                () -> RESOLVER.resolve(FULL_CONTEXT, metamodel));
     }
 
     // ── test: lower priority loses even when more specific ─────────────────
@@ -135,9 +139,9 @@ class DefaultConceptEligibilityResolverTest {
         ConceptAssignment lowSpecific = assignment(RS, "SALARIO_BASE", "EMP1", "METAL", "INDEFINIDO", 5);
         ConceptAssignment highGlobal = assignment(RS, "SALARIO_BASE", null, null, null, 15);
 
-        DefaultConceptEligibilityResolver resolver = resolverWith(List.of(lowSpecific, highGlobal));
+        RuleSystemMetamodel metamodel = metamodelWith(List.of(lowSpecific, highGlobal));
 
-        List<ResolvedConceptAssignment> result = resolver.resolve(FULL_CONTEXT, REF);
+        List<ResolvedConceptAssignment> result = RESOLVER.resolve(FULL_CONTEXT, metamodel);
 
         assertEquals(1, result.size());
         assertEquals(15, result.get(0).getWinningPriority());
@@ -156,42 +160,8 @@ class DefaultConceptEligibilityResolverTest {
         );
     }
 
-    /**
-     * Creates a resolver backed by a simple in-memory fake repository
-     * that always returns the given list regardless of context/date.
-     */
-    private static DefaultConceptEligibilityResolver resolverWith(List<ConceptAssignment> candidates) {
-        ConceptAssignmentRepository fakeRepo = new ConceptAssignmentRepository() {
-            @Override
-            public ConceptAssignment save(ConceptAssignment a) { throw new UnsupportedOperationException(); }
-
-            @Override
-            public List<ConceptAssignment> findApplicableAssignments(EmployeeAssignmentContext ctx, LocalDate ref) {
-                return candidates;
-            }
-            @Override
-            public List<ConceptAssignment> findAllByRuleSystemCode(String ruleSystemCode) {
-                return candidates;
-            }
-            @Override
-            public List<ConceptAssignment> findAllByRuleSystemCodeAndConceptCode(String ruleSystemCode, String conceptCode) {
-                return candidates.stream()
-                        .filter(a -> conceptCode.equals(a.getConceptCode()))
-                        .toList();
-            }
-            @Override
-            public void deleteById(Long id) {
-                // no-op for test fake
-            }
-            @Override
-            public boolean existsByIdAndRuleSystemCode(Long id, String ruleSystemCode) {
-                return false;
-            }
-            @Override
-            public Optional<ConceptAssignment> findByIdAndRuleSystemCode(Long id, String ruleSystemCode) {
-                return Optional.empty();
-            }
-        };
-        return new DefaultConceptEligibilityResolver(fakeRepo);
+    /** El metamodelo de la ejecución con las asignaciones del caso, ya vigentes. */
+    private static RuleSystemMetamodel metamodelWith(List<ConceptAssignment> candidates) {
+        return metamodel(RS, REF).withAssignments(candidates).build();
     }
 }

@@ -7,9 +7,7 @@ import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptRepository;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -23,22 +21,13 @@ public class PayrollConceptGraphCalculatorService implements PayrollConceptGraph
 
     private static final String BINDING_OWNER_TYPE = "AGREEMENT";
 
-    private final PayrollConceptRepository conceptRepository;
-    private final PayrollConceptOperandRepository operandRepository;
-    private final PayrollConceptFeedRelationRepository feedRelationRepository;
     private final PayrollObjectBindingLookupPort bindingLookup;
     private final PayrollTableRowLookupPort tableRowLookup;
 
     public PayrollConceptGraphCalculatorService(
-            PayrollConceptRepository conceptRepository,
-            PayrollConceptOperandRepository operandRepository,
-            PayrollConceptFeedRelationRepository feedRelationRepository,
             PayrollObjectBindingLookupPort bindingLookup,
             PayrollTableRowLookupPort tableRowLookup
     ) {
-        this.conceptRepository = conceptRepository;
-        this.operandRepository = operandRepository;
-        this.feedRelationRepository = feedRelationRepository;
         this.bindingLookup = bindingLookup;
         this.tableRowLookup = tableRowLookup;
     }
@@ -46,14 +35,17 @@ public class PayrollConceptGraphCalculatorService implements PayrollConceptGraph
     @Override
         public PayrollConceptExecutionResult calculateConceptResult(
                         String conceptCode,
-                        PayrollConceptExecutionContext context
+                        PayrollConceptExecutionContext context,
+                        RuleSystemMetamodel metamodel
         ) {
-                return calculateConceptResult(conceptCode, context, new HashMap<>());
+                metamodel.requireSameRuleSystem(context.ruleSystemCode());
+                return calculateConceptResult(conceptCode, context, metamodel, new HashMap<>());
     }
 
         private PayrollConceptExecutionResult calculateConceptResult(
             String conceptCode,
             PayrollConceptExecutionContext context,
+                        RuleSystemMetamodel metamodel,
                         Map<String, PayrollConceptExecutionResult> memo
     ) {
                 PayrollConceptExecutionResult cached = memo.get(conceptCode);
@@ -61,12 +53,12 @@ public class PayrollConceptGraphCalculatorService implements PayrollConceptGraph
             return cached;
         }
 
-        PayrollConcept concept = conceptRepository.findByBusinessKey(context.ruleSystemCode(), conceptCode)
+        PayrollConcept concept = metamodel.findConcept(conceptCode)
                 .orElseThrow(() -> new IllegalStateException("Configuration error: Payroll concept not found: " + conceptCode));
 
                 PayrollConceptExecutionResult result = switch (concept.getCalculationType()) {
-                        case DIRECT_AMOUNT -> calculateDirectAmount(concept, context, memo);
-                        case RATE_BY_QUANTITY -> calculateRateByQuantity(conceptCode, context, memo);
+                        case DIRECT_AMOUNT -> calculateDirectAmount(concept, context, metamodel, memo);
+                        case RATE_BY_QUANTITY -> calculateRateByQuantity(conceptCode, context, metamodel, memo);
             default -> throw new IllegalStateException(
                     "Configuration error: Unsupported calculation type " + concept.getCalculationType()
                             + " for concept " + conceptCode);
@@ -79,6 +71,7 @@ public class PayrollConceptGraphCalculatorService implements PayrollConceptGraph
     private PayrollConceptExecutionResult calculateDirectAmount(
             PayrollConcept concept,
             PayrollConceptExecutionContext context,
+            RuleSystemMetamodel metamodel,
             Map<String, PayrollConceptExecutionResult> memo
     ) {
         Long conceptObjectId = concept.getObject().getId();
@@ -86,10 +79,7 @@ public class PayrollConceptGraphCalculatorService implements PayrollConceptGraph
             throw new IllegalStateException("Configuration error: Concept object id is required for DIRECT_AMOUNT resolution");
         }
 
-        List<PayrollConceptFeedRelation> activeRelations = feedRelationRepository.findActiveByTargetObjectId(
-                conceptObjectId,
-                context.referenceDate()
-        );
+        List<PayrollConceptFeedRelation> activeRelations = metamodel.activeFeedsOf(conceptObjectId);
 
         if (activeRelations.isEmpty()) {
             throw new IllegalStateException(
@@ -104,7 +94,7 @@ public class PayrollConceptGraphCalculatorService implements PayrollConceptGraph
 
         PayrollConceptFeedRelation relation = activeRelations.getFirst();
         return switch (relation.getSourceObject().getObjectTypeCode()) {
-            case CONCEPT -> calculateConceptResult(relation.getSourceObject().getObjectCode(), context, memo);
+            case CONCEPT -> calculateConceptResult(relation.getSourceObject().getObjectCode(), context, metamodel, memo);
             case CONSTANT -> directAmountResult(
                     concept.getObject().getObjectCode(),
                     resolveConstantValue(relation, concept.getObject().getObjectCode())
@@ -161,14 +151,15 @@ public class PayrollConceptGraphCalculatorService implements PayrollConceptGraph
         private PayrollConceptExecutionResult calculateRateByQuantity(
             String conceptCode,
             PayrollConceptExecutionContext context,
+                        RuleSystemMetamodel metamodel,
                         Map<String, PayrollConceptExecutionResult> memo
     ) {
-        List<PayrollConceptOperand> operands = operandRepository.findByTarget(context.ruleSystemCode(), conceptCode);
+        List<PayrollConceptOperand> operands = metamodel.operandsOf(conceptCode);
         PayrollConceptOperand quantityOperand = findSingleOperand(conceptCode, operands, OperandRole.QUANTITY);
         PayrollConceptOperand rateOperand = findSingleOperand(conceptCode, operands, OperandRole.RATE);
 
-                BigDecimal quantity = calculateConceptResult(quantityOperand.getSourceObject().getObjectCode(), context, memo).amount();
-                BigDecimal rate = calculateConceptResult(rateOperand.getSourceObject().getObjectCode(), context, memo).amount();
+                BigDecimal quantity = calculateConceptResult(quantityOperand.getSourceObject().getObjectCode(), context, metamodel, memo).amount();
+                BigDecimal rate = calculateConceptResult(rateOperand.getSourceObject().getObjectCode(), context, metamodel, memo).amount();
 
                 BigDecimal result = quantity.multiply(rate);
                 if (result.scale() > 6) {

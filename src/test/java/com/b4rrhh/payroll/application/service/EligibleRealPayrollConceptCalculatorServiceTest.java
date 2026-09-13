@@ -10,9 +10,7 @@ import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptRepository;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import org.junit.jupiter.api.Test;
@@ -25,18 +23,13 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import static com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodelFixtures.metamodel;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class PayrollConceptGraphCalculatorServiceTest {
 
-    @Mock
-    private PayrollConceptRepository conceptRepository;
-    @Mock
-    private PayrollConceptOperandRepository operandRepository;
-    @Mock
-    private PayrollConceptFeedRelationRepository feedRelationRepository;
     @Mock
     private PayrollObjectBindingLookupPort bindingLookup;
     @Mock
@@ -45,9 +38,6 @@ class PayrollConceptGraphCalculatorServiceTest {
     @Test
     void calculateConcept_returnsBaseSalaryFromFixedDaysAndDailyPrice() {
         PayrollConceptGraphCalculatorService service = new PayrollConceptGraphCalculatorService(
-                conceptRepository,
-                operandRepository,
-                feedRelationRepository,
                 bindingLookup,
                 tableRowLookup
         );
@@ -59,23 +49,28 @@ class PayrollConceptGraphCalculatorServiceTest {
                 LocalDate.of(2025, 1, 31)
         );
 
-        when(conceptRepository.findByBusinessKey("ESP", "101")).thenReturn(Optional.of(concept(101L, "ESP", "101", CalculationType.RATE_BY_QUANTITY)));
-        when(conceptRepository.findByBusinessKey("ESP", "D01")).thenReturn(Optional.of(concept(102L, "ESP", "D01", CalculationType.DIRECT_AMOUNT)));
-        when(conceptRepository.findByBusinessKey("ESP", "P01")).thenReturn(Optional.of(concept(103L, "ESP", "P01", CalculationType.DIRECT_AMOUNT)));
-        when(operandRepository.findByTarget("ESP", "101")).thenReturn(List.of(
-                operand("ESP", "101", OperandRole.QUANTITY, "D01"),
-                operand("ESP", "101", OperandRole.RATE, "P01")
-        ));
-        when(feedRelationRepository.findActiveByTargetObjectId(102L, LocalDate.of(2025, 1, 31)))
-                .thenReturn(List.of(constantSourceRelation("ESP", "D01_FIXED_30", "D01", new BigDecimal("30"))));
-        when(feedRelationRepository.findActiveByTargetObjectId(103L, LocalDate.of(2025, 1, 31)))
-                .thenReturn(List.of(tableSourceRelation("ESP", "P01_DAILY_AMOUNT_TABLE", "P01")));
+        // La reglamentación de la ejecución: los tres conceptos, sus operandos y las
+        // alimentaciones vigentes el 31/01. No hay repositorio que consultar.
+        RuleSystemMetamodel metamodel = metamodel("ESP", LocalDate.of(2025, 1, 31))
+                .withConcepts(
+                        concept(101L, "ESP", "101", CalculationType.RATE_BY_QUANTITY),
+                        concept(102L, "ESP", "D01", CalculationType.DIRECT_AMOUNT),
+                        concept(103L, "ESP", "P01", CalculationType.DIRECT_AMOUNT))
+                .withOperands(
+                        operand("ESP", "101", OperandRole.QUANTITY, "D01"),
+                        operand("ESP", "101", OperandRole.RATE, "P01"))
+                .withFeeds(
+                        constantSourceRelation("ESP", "D01_FIXED_30", "D01", new BigDecimal("30")),
+                        tableSourceRelation("ESP", "P01_DAILY_AMOUNT_TABLE", "P01"))
+                .build();
+
         when(bindingLookup.resolveBoundObjectCode("ESP", "AGREEMENT", "99002405011982", "P01_DAILY_AMOUNT_TABLE"))
                 .thenReturn(Optional.of("P01_99002405011982"));
         when(tableRowLookup.resolveDailyValue("ESP", "P01_99002405011982", "99002405-G2", LocalDate.of(2025, 1, 31)))
                 .thenReturn(Optional.of(new BigDecimal("47.50")));
 
-        PayrollConceptExecutionResult concept101 = service.calculateConceptResult("101", context);
+        PayrollConceptExecutionResult concept101 =
+                service.calculateConceptResult("101", context, metamodel);
 
         assertEquals(0, new BigDecimal("1425.00").compareTo(concept101.amount()));
         assertEquals(0, new BigDecimal("30").compareTo(concept101.quantity()));

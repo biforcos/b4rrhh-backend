@@ -1,9 +1,9 @@
 package com.b4rrhh.payroll_engine.planning.application.service;
 
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import com.b4rrhh.payroll_engine.planning.domain.exception.MissingDependencyConceptDefinitionException;
 
-import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -24,16 +24,18 @@ import java.util.List;
  * <p>Returns the full expanded set, including the input {@code eligibleConcepts}.
  *
  * @throws MissingDependencyConceptDefinitionException if a discovered dependency has no
- *         matching concept definition in the repository
+ *         matching concept definition in the metamodel
  */
 public interface EligibleConceptExpansionService {
 
     /**
-     * Expands the given eligible concepts by loading all required transitive dependencies.
+     * Expands the given eligible concepts by walking all required transitive dependencies.
      *
      * @param eligibleConcepts the pre-loaded directly applicable concepts (must not be null)
-     * @param referenceDate    the date used to filter active feed relations
+     * @param metamodel        the execution's rule system metamodel: it supplies the concept
+     *                         definitions, the operands and the feed relations already filtered
+     *                         to the execution's reference date
      * @return the full expanded concept set in discovery order, including the input concepts
      */
-    List<PayrollConcept> expand(List<PayrollConcept> eligibleConcepts, LocalDate referenceDate);
+    List<PayrollConcept> expand(List<PayrollConcept> eligibleConcepts, RuleSystemMetamodel metamodel);
 }

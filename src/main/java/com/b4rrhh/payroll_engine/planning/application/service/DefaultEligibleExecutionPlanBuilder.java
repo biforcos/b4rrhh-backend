@@ -1,7 +1,6 @@
 package com.b4rrhh.payroll_engine.planning.application.service;
 
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptRepository;
 import com.b4rrhh.payroll_engine.dependency.application.service.ConceptDependencyGraphService;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraph;
 import com.b4rrhh.payroll_engine.eligibility.application.service.ResolveApplicableConceptsUseCase;
@@ -9,13 +8,13 @@ import com.b4rrhh.payroll_engine.eligibility.domain.model.EmployeeAssignmentCont
 import com.b4rrhh.payroll_engine.eligibility.domain.model.ResolvedConceptAssignment;
 import com.b4rrhh.payroll_engine.execution.application.service.ExecutionPlanBuilder;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import com.b4rrhh.payroll_engine.planning.domain.exception.MissingEligibleConceptDefinitionException;
 import com.b4rrhh.payroll_engine.planning.domain.model.EligibleExecutionPlanResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -29,8 +28,8 @@ import java.util.stream.Collectors;
  *   <li><strong>Resolve applicable assignments</strong> — calls {@link ResolveApplicableConceptsUseCase}
  *       to obtain one winning assignment per applicable concept code for the given context
  *       and reference date.</li>
- *   <li><strong>Load eligible concept definitions</strong> — loads the concept definitions
- *       for all resolved codes in a single query. Fails fast with
+ *   <li><strong>Take eligible concept definitions</strong> — reads the concept definitions
+ *       for all resolved codes from the execution's metamodel. Fails fast with
  *       {@link MissingEligibleConceptDefinitionException} if any code lacks a definition.</li>
  *   <li><strong>Expand dependencies</strong> — delegates to {@link EligibleConceptExpansionService}
  *       to iteratively discover and load all structural dependencies within the same rule system.
@@ -56,33 +55,31 @@ public class DefaultEligibleExecutionPlanBuilder implements BuildEligibleExecuti
     private static final Logger log = LoggerFactory.getLogger(DefaultEligibleExecutionPlanBuilder.class);
 
     private final ResolveApplicableConceptsUseCase eligibilityResolver;
-    private final PayrollConceptRepository conceptRepository;
     private final EligibleConceptExpansionService expansionService;
     private final ConceptDependencyGraphService graphService;
     private final ExecutionPlanBuilder planBuilder;
 
     public DefaultEligibleExecutionPlanBuilder(
             ResolveApplicableConceptsUseCase eligibilityResolver,
-            PayrollConceptRepository conceptRepository,
             EligibleConceptExpansionService expansionService,
             ConceptDependencyGraphService graphService,
             ExecutionPlanBuilder planBuilder
     ) {
         this.eligibilityResolver = eligibilityResolver;
-        this.conceptRepository = conceptRepository;
         this.expansionService = expansionService;
         this.graphService = graphService;
         this.planBuilder = planBuilder;
     }
 
     @Override
-    public EligibleExecutionPlanResult build(EmployeeAssignmentContext context, LocalDate referenceDate) {
+    public EligibleExecutionPlanResult build(EmployeeAssignmentContext context, RuleSystemMetamodel metamodel) {
+        metamodel.requireSameRuleSystem(context.getRuleSystemCode());
         log.debug("[ENGINE] ── Paso 1/5 ELEGIBILIDAD | RS={} empresa={} convenio={} tipo={} ref={}",
                 context.getRuleSystemCode(), context.getCompanyCode(),
-                context.getAgreementCode(), context.getEmployeeTypeCode(), referenceDate);
+                context.getAgreementCode(), context.getEmployeeTypeCode(), metamodel.referenceDate());
 
         List<ResolvedConceptAssignment> applicableAssignments =
-                eligibilityResolver.resolve(context, referenceDate);
+                eligibilityResolver.resolve(context, metamodel);
 
         Set<String> eligibleCodes = applicableAssignments.stream()
                 .map(ResolvedConceptAssignment::getConceptCode)
@@ -90,9 +87,8 @@ public class DefaultEligibleExecutionPlanBuilder implements BuildEligibleExecuti
         log.debug("[ENGINE] ✓ Paso 1/5 | {} conceptos elegibles → [{}]",
                 eligibleCodes.size(), String.join(", ", eligibleCodes));
 
-        log.debug("[ENGINE] ── Paso 2/5 DEFINICIONES | cargando {} definiciones de concepto", eligibleCodes.size());
-        List<PayrollConcept> eligibleConcepts =
-                conceptRepository.findAllByCodes(context.getRuleSystemCode(), eligibleCodes);
+        log.debug("[ENGINE] ── Paso 2/5 DEFINICIONES | tomando {} definiciones de concepto", eligibleCodes.size());
+        List<PayrollConcept> eligibleConcepts = metamodel.findConcepts(eligibleCodes);
 
         Set<String> foundCodes = eligibleConcepts.stream()
                 .map(PayrollConcept::getConceptCode)
@@ -109,17 +105,17 @@ public class DefaultEligibleExecutionPlanBuilder implements BuildEligibleExecuti
                         .collect(Collectors.joining(", ")));
 
         log.debug("[ENGINE] ── Paso 3/5 EXPANSIÓN BFS | descubriendo dependencias transitivas");
-        List<PayrollConcept> expandedConcepts = expansionService.expand(eligibleConcepts, referenceDate);
+        List<PayrollConcept> expandedConcepts = expansionService.expand(eligibleConcepts, metamodel);
         log.debug("[ENGINE] ✓ Paso 3/5 | {} conceptos tras expansión → [{}]",
                 expandedConcepts.size(),
                 expandedConcepts.stream().map(PayrollConcept::getConceptCode).collect(Collectors.joining(", ")));
 
         log.debug("[ENGINE] ── Paso 4/5 GRAFO | construyendo grafo de dependencias sobre {} nodos", expandedConcepts.size());
-        ConceptDependencyGraph dependencyGraph = graphService.build(expandedConcepts, referenceDate);
+        ConceptDependencyGraph dependencyGraph = graphService.build(expandedConcepts, metamodel);
         log.debug("[ENGINE] ✓ Paso 4/5 | grafo construido");
 
         log.debug("[ENGINE] ── Paso 5/5 PLAN | ordenación topológica y wiring de operandos");
-        List<ConceptExecutionPlanEntry> executionPlan = planBuilder.build(dependencyGraph, expandedConcepts, referenceDate);
+        List<ConceptExecutionPlanEntry> executionPlan = planBuilder.build(dependencyGraph, expandedConcepts, metamodel);
         log.debug("[ENGINE] ✓ Paso 5/5 | {} entradas en plan → [{}]",
                 executionPlan.size(),
                 executionPlan.stream().map(e -> e.identity().getConceptCode()).collect(Collectors.joining(" → ")));

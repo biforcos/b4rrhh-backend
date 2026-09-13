@@ -6,23 +6,18 @@ import com.b4rrhh.payroll_engine.concept.domain.model.FeedMode;
 import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
-import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraph;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
+import static com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodelFixtures.metamodel;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -32,6 +27,9 @@ class ConceptDependencyGraphServiceTest {
 
     private static final String RULE_SYS = "ESP";
     private static final LocalDate REF = LocalDate.of(2026, 4, 1);
+
+    // El servicio ya no lee de la base: construye el grafo contra el metamodelo que recibe.
+    private static final ConceptDependencyGraphService SERVICE = new DefaultConceptDependencyGraphService();
 
     // ── concepts with persisted IDs ──────────────────────────────────────────
 
@@ -60,9 +58,7 @@ class ConceptDependencyGraphServiceTest {
     @Test
     void graphContainsAllInputConceptsAsNodes() {
         List<PayrollConcept> concepts = List.of(diasPresencia(), precioDia(), salarioBase());
-        ConceptDependencyGraphService service = new DefaultConceptDependencyGraphService(emptyRepo(), emptyOperandRepo());
-
-        ConceptDependencyGraph graph = service.build(concepts, REF);
+        ConceptDependencyGraph graph = SERVICE.build(concepts, metamodelWith());
 
         assertTrue(graph.getNodes().contains(new ConceptNodeIdentity(RULE_SYS, "T_DIAS_PRESENCIA_SEGMENTO")));
         assertTrue(graph.getNodes().contains(new ConceptNodeIdentity(RULE_SYS, "T_PRECIO_DIA")));
@@ -72,10 +68,7 @@ class ConceptDependencyGraphServiceTest {
     @Test
     void salarioBaseDependsOnBothTechnicalConceptsWhenRelationsPersisted() {
         List<PayrollConcept> concepts = List.of(diasPresencia(), precioDia(), salarioBase());
-        ConceptDependencyGraphService service =
-                new DefaultConceptDependencyGraphService(pocFeedRelationRepo(diasPresencia(), precioDia(), salarioBase()), emptyOperandRepo());
-
-        ConceptDependencyGraph graph = service.build(concepts, REF);
+        ConceptDependencyGraph graph = SERVICE.build(concepts, pocMetamodel());
 
         // SALARIO_BASE must come after both technical concepts in topological order
         List<ConceptNodeIdentity> order = graph.topologicalOrder();
@@ -95,16 +88,12 @@ class ConceptDependencyGraphServiceTest {
         PayrollConcept external = externalConcept();
         PayrollConcept salarioBase = salarioBase();
 
-        // Build a repo that returns: salarioBase(id=3) is fed by external(id=99)
-        Map<Long, List<PayrollConceptFeedRelation>> relsByTarget = new HashMap<>();
-        relsByTarget.put(3L, List.of(feedRelation(external, salarioBase)));
-
-        ConceptDependencyGraphService service =
-                new DefaultConceptDependencyGraphService(repoFromMap(relsByTarget), emptyOperandRepo());
+        // El metamodelo trae la alimentacion external(id=99) -> salarioBase(id=3)
+        RuleSystemMetamodel metamodel = metamodelWith(feedRelation(external, salarioBase));
 
         // Input list does NOT include externalConcept
         List<PayrollConcept> concepts = List.of(diasPresencia(), precioDia(), salarioBase);
-        ConceptDependencyGraph graph = service.build(concepts, REF);
+        ConceptDependencyGraph graph = SERVICE.build(concepts, metamodel);
 
         // External node must not appear in the graph
         assertFalse(graph.getNodes().contains(new ConceptNodeIdentity(RULE_SYS, "EXTERNAL_CONCEPT")),
@@ -126,10 +115,7 @@ class ConceptDependencyGraphServiceTest {
                 CalculationType.DIRECT_AMOUNT, FunctionalNature.INFORMATIONAL);
         List<PayrollConcept> concepts = List.of(unpersisted);
 
-        // Repo stub that would record calls if invoked; we use an empty repo that never returns data.
-        ConceptDependencyGraphService service = new DefaultConceptDependencyGraphService(emptyRepo(), emptyOperandRepo());
-
-        ConceptDependencyGraph graph = service.build(concepts, REF);
+        ConceptDependencyGraph graph = SERVICE.build(concepts, metamodelWith());
 
         // The concept must still be a node.
         assertTrue(graph.getNodes().contains(
@@ -144,14 +130,12 @@ class ConceptDependencyGraphServiceTest {
 
     @Test
     void nullConceptListIsRejected() {
-        ConceptDependencyGraphService service = new DefaultConceptDependencyGraphService(emptyRepo(), emptyOperandRepo());
-        assertThrows(IllegalArgumentException.class, () -> service.build(null, REF));
+        assertThrows(IllegalArgumentException.class, () -> SERVICE.build(null, metamodelWith()));
     }
 
     @Test
-    void nullReferenceDateIsRejected() {
-        ConceptDependencyGraphService service = new DefaultConceptDependencyGraphService(emptyRepo(), emptyOperandRepo());
-        assertThrows(IllegalArgumentException.class, () -> service.build(List.of(), null));
+    void nullMetamodelIsRejected() {
+        assertThrows(IllegalArgumentException.class, () -> SERVICE.build(List.of(), null));
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -188,61 +172,19 @@ class ConceptDependencyGraphServiceTest {
         );
     }
 
+    private static RuleSystemMetamodel metamodelWith(PayrollConceptFeedRelation... feeds) {
+        return metamodel(RULE_SYS, REF).withFeeds(feeds).build();
+    }
+
     /**
-     * Repo stub seeded with the 2 PoC feed relations:
+     * Metamodelo con las 2 alimentaciones del PoC:
      * T_DIAS_PRESENCIA_SEGMENTO → SALARIO_BASE
      * T_PRECIO_DIA              → SALARIO_BASE
      */
-    private static PayrollConceptFeedRelationRepository pocFeedRelationRepo(
-            PayrollConcept diasPresencia,
-            PayrollConcept precioDia,
-            PayrollConcept salarioBase
-    ) {
-        Map<Long, List<PayrollConceptFeedRelation>> relsByTarget = new HashMap<>();
-        relsByTarget.put(salarioBase.getObject().getId(), List.of(
-                feedRelation(diasPresencia, salarioBase),
-                feedRelation(precioDia, salarioBase)
-        ));
-        return repoFromMap(relsByTarget);
-    }
-
-    private static PayrollConceptFeedRelationRepository repoFromMap(
-            Map<Long, List<PayrollConceptFeedRelation>> relsByTarget
-    ) {
-        return new PayrollConceptFeedRelationRepository() {
-            @Override
-            public PayrollConceptFeedRelation save(PayrollConceptFeedRelation r) {
-                throw new UnsupportedOperationException();
-            }
-            @Override
-            public List<PayrollConceptFeedRelation> findActiveByTargetObjectId(Long id, LocalDate date) {
-                return relsByTarget.getOrDefault(id, Collections.emptyList());
-            }
-            @Override
-            public List<PayrollConceptFeedRelation> findByRuleSystemCodeAndTargetConceptCode(String rs, String code) {
-                return Collections.emptyList();
-            }
-            @Override
-            public void deleteAllByRuleSystemCodeAndTargetConceptCode(String rs, String code) {
-                /* no-op */
-            }
-        };
-    }
-
-    private static PayrollConceptFeedRelationRepository emptyRepo() {
-        return repoFromMap(Collections.emptyMap());
-    }
-
-    private static PayrollConceptOperandRepository emptyOperandRepo() {
-        return new PayrollConceptOperandRepository() {
-            @Override
-            public PayrollConceptOperand save(PayrollConceptOperand o) { throw new UnsupportedOperationException(); }
-            @Override
-            public List<PayrollConceptOperand> findByTarget(String rs, String code) { return Collections.emptyList(); }
-            @Override
-            public List<PayrollConceptOperand> findByRuleSystemCodeAndConceptCode(String rs, String code) { return Collections.emptyList(); }
-            @Override
-            public void deleteAllByRuleSystemCodeAndConceptCode(String rs, String code) { /* no-op */ }
-        };
+    private static RuleSystemMetamodel pocMetamodel() {
+        return metamodelWith(
+                feedRelation(diasPresencia(), salarioBase()),
+                feedRelation(precioDia(), salarioBase())
+        );
     }
 }

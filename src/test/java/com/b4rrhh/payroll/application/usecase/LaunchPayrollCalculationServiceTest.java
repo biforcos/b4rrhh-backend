@@ -14,6 +14,8 @@ import com.b4rrhh.payroll.domain.port.CalculationClaimRepository;
 import com.b4rrhh.payroll.domain.port.CalculationRunMessageRepository;
 import com.b4rrhh.payroll.domain.port.CalculationRunRepository;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
+import com.b4rrhh.payroll_engine.metamodel.domain.port.RuleSystemMetamodelRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,14 +25,17 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.RejectedExecutionException;
 
+import static com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodelFixtures.metamodel;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -40,6 +45,7 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -60,6 +66,8 @@ class LaunchPayrollCalculationServiceTest {
     private PayrollLaunchPresenceLookupPort payrollLaunchPresenceLookupPort;
     @Mock
     private CalculatePayrollUnitUseCase calculatePayrollUnitUseCase;
+    @Mock
+    private RuleSystemMetamodelRepository ruleSystemMetamodelRepository;
 
     private LaunchPayrollCalculationService service;
     private RecordingWorker worker;
@@ -75,8 +83,14 @@ class LaunchPayrollCalculationServiceTest {
                 payrollLaunchPresenceLookupPort,
                 calculatePayrollUnitUseCase,
                 worker,
+                ruleSystemMetamodelRepository,
                 new ObjectMapper()
         );
+
+        // La ejecucion lee su reglamentacion al empezar. Lo que se prueba aqui es la cola y
+        // los contadores, no el motor, asi que basta con que la carga conteste.
+        lenient().when(ruleSystemMetamodelRepository.load(any(), any()))
+                .thenReturn(metamodel("ESP", LocalDate.of(2025, 1, 31)).build());
 
         // lenient: un lanzamiento que se cae en la validacion no llega a guardar nada, y
         // este eco del save lo comparten todos los demas tests de la clase.
@@ -488,6 +502,92 @@ class LaunchPayrollCalculationServiceTest {
         void runAll() {
             List.copyOf(submitted).forEach(Runnable::run);
         }
+    }
+
+    // ── La reglamentacion se lee una vez por ejecucion (backend#87) ──────────
+
+    /**
+     * Tres unidades, una sola lectura del metamodelo, y la misma instancia para las tres.
+     *
+     * <p>Es el criterio del issue: el numero de lecturas a la reglamentacion no depende del
+     * numero de unidades. Y no es solo cuentas — que las tres reciban <b>el mismo objeto</b>
+     * es lo que garantiza que las tres calculan con las mismas reglas.
+     */
+    @Test
+    void laReglamentacionSeLeeUnaVezPorEjecucionYNoUnaVezPorUnidad() {
+        for (String numero : List.of("EMP001", "EMP002", "EMP003")) {
+            when(payrollLaunchPresenceLookupPort.findRelevantPresences(
+                    eq("ESP"), eq("INTERNAL"), eq(numero), any(), any()))
+                    .thenReturn(List.of(new PayrollLaunchPresenceContext("ESP", "INTERNAL", numero, 1)));
+            when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", numero, "202501", "NORMAL", 1))
+                    .thenReturn(Optional.empty());
+        }
+        when(calculationClaimRepository.save(any(CalculationClaim.class)))
+                .thenReturn(new CalculationClaim(21L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1, LocalDateTime.now(), null));
+        when(calculatePayrollUnitUseCase.calculate(any(CalculatePayrollUnitCommand.class)))
+                .thenReturn(payroll(PayrollStatus.CALCULATED));
+
+        CalculationRun run = service.launch(employeeListCommand("EMP001", "EMP002", "EMP003"));
+
+        assertEquals(3, run.totalCalculated());
+        verify(ruleSystemMetamodelRepository, times(1)).load(eq("ESP"), any());
+
+        ArgumentCaptor<CalculatePayrollUnitCommand> captor =
+                ArgumentCaptor.forClass(CalculatePayrollUnitCommand.class);
+        verify(calculatePayrollUnitUseCase, times(3)).calculate(captor.capture());
+        RuleSystemMetamodel primero = captor.getAllValues().getFirst().metamodel();
+        assertNotNull(primero);
+        for (CalculatePayrollUnitCommand enviado : captor.getAllValues()) {
+            assertSame(primero, enviado.metamodel(),
+                    "todas las unidades de una ejecucion calculan contra la misma reglamentacion");
+        }
+    }
+
+    /**
+     * Lo cargado vive lo que dura la ejecucion y no mas: la siguiente vuelve a leer, y por
+     * eso ve los cambios del grafo que haya habido en medio. No es una cache del proceso.
+     */
+    @Test
+    void cadaEjecucionLeeSuPropiaReglamentacion() {
+        when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
+                .thenReturn(List.of(new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP001", 1)));
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
+                .thenReturn(Optional.empty());
+        when(calculationClaimRepository.save(any(CalculationClaim.class)))
+                .thenReturn(new CalculationClaim(22L, 1L, "ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1, LocalDateTime.now(), null));
+        when(calculatePayrollUnitUseCase.calculate(any(CalculatePayrollUnitCommand.class)))
+                .thenReturn(payroll(PayrollStatus.CALCULATED));
+
+        service.launch(singleEmployeeCommand());
+        service.launch(singleEmployeeCommand());
+
+        verify(ruleSystemMetamodelRepository, times(2)).load(eq("ESP"), any());
+    }
+
+    /** La fecha con la que se carga es el fin del periodo de la ejecucion, no hoy. */
+    @Test
+    void laReglamentacionSeLeeAlCierreDelPeriodoDeLaEjecucion() {
+        service.launch(allEmployeesWithPresenceCommand());
+
+        verify(ruleSystemMetamodelRepository).load("ESP", LocalDate.of(2025, 1, 31));
+    }
+
+    private LaunchPayrollCalculationCommand employeeListCommand(String... employeeNumbers) {
+        return new LaunchPayrollCalculationCommand(
+                "ESP",
+                "202501",
+                "NORMAL",
+                "ENGINE",
+                "1.0",
+                new PayrollLaunchTargetSelection(
+                        PayrollLaunchTargetSelectionType.EMPLOYEE_LIST,
+                        null,
+                        java.util.Arrays.stream(employeeNumbers)
+                                .map(numero -> new PayrollLaunchEmployeeTarget("INTERNAL", numero))
+                                .toList()
+                ),
+                null
+        );
     }
 
     private LaunchPayrollCalculationCommand singleEmployeeCommand() {

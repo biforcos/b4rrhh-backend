@@ -5,8 +5,6 @@ import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptOperand;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
-import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptOperandRepository;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptDependencyGraph;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
 import com.b4rrhh.payroll_engine.execution.domain.exception.DuplicateAggregateSourceException;
@@ -16,11 +14,11 @@ import com.b4rrhh.payroll_engine.execution.domain.exception.MissingConceptDefini
 import com.b4rrhh.payroll_engine.execution.domain.exception.MissingOperandDefinitionException;
 import com.b4rrhh.payroll_engine.execution.domain.model.AggregateSourceEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,7 +42,7 @@ import java.util.stream.Collectors;
  *       (no operand wiring needed).</li>
  *   <li>For {@code RATE_BY_QUANTITY} and {@code PERCENTAGE} concepts, additionally:
  *       <ul>
- *         <li>Load operand definitions from {@link PayrollConceptOperandRepository}.</li>
+ *         <li>Read operand definitions from the execution's {@link RuleSystemMetamodel}.</li>
  *         <li>Validate graph ↔ operand coherence via {@link OperandConfigurationValidator}.</li>
  *         <li>Resolve exactly two operand source identities (QUANTITY+RATE for RATE_BY_QUANTITY;
  *             BASE+PERCENTAGE for PERCENTAGE).</li>
@@ -54,7 +52,7 @@ import java.util.stream.Collectors;
  * </ol>
  *
  * <h3>Why at plan-build time</h3>
- * <p>Loading and validating operand configuration once during plan construction ensures
+ * <p>Validating operand configuration once during plan construction ensures
  * that per-segment execution is fully in-memory. The segment engine never accesses the
  * repository; it reads operand source identities directly from the pre-enriched plan entry.
  */
@@ -63,27 +61,22 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
 
     private static final Logger log = LoggerFactory.getLogger(DefaultExecutionPlanBuilder.class);
 
-    private final PayrollConceptOperandRepository operandRepository;
     private final OperandConfigurationValidator configurationValidator;
-    private final PayrollConceptFeedRelationRepository feedRelationRepository;
 
-    public DefaultExecutionPlanBuilder(
-            PayrollConceptOperandRepository operandRepository,
-            OperandConfigurationValidator configurationValidator,
-            PayrollConceptFeedRelationRepository feedRelationRepository
-    ) {
-        this.operandRepository = operandRepository;
+    public DefaultExecutionPlanBuilder(OperandConfigurationValidator configurationValidator) {
         this.configurationValidator = configurationValidator;
-        this.feedRelationRepository = feedRelationRepository;
     }
 
     @Override
-    public List<ConceptExecutionPlanEntry> build(ConceptDependencyGraph graph, List<PayrollConcept> concepts, LocalDate referenceDate) {
+    public List<ConceptExecutionPlanEntry> build(ConceptDependencyGraph graph, List<PayrollConcept> concepts, RuleSystemMetamodel metamodel) {
         if (graph == null) {
             throw new IllegalArgumentException("graph must not be null");
         }
         if (concepts == null) {
             throw new IllegalArgumentException("concepts must not be null");
+        }
+        if (metamodel == null) {
+            throw new IllegalArgumentException("metamodel must not be null");
         }
         Map<ConceptNodeIdentity, PayrollConcept> conceptIndex = buildIndex(concepts);
         List<ConceptNodeIdentity> orderedNodes = graph.topologicalOrder();
@@ -99,7 +92,7 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
             if (concept == null) {
                 throw new MissingConceptDefinitionException(identity);
             }
-            plan.add(buildEntry(graph, identity, concept, referenceDate));
+            plan.add(buildEntry(graph, identity, concept, metamodel));
         }
 
         return plan;
@@ -115,7 +108,7 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
             ConceptDependencyGraph graph,
             ConceptNodeIdentity identity,
             PayrollConcept concept,
-            LocalDate referenceDate
+            RuleSystemMetamodel metamodel
     ) {
         CalculationType calculationType = concept.getCalculationType();
 
@@ -127,8 +120,7 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
             }
 
             Long targetObjectId = concept.getObject().getId();
-            List<PayrollConceptFeedRelation> feedRelations =
-                    feedRelationRepository.findActiveByTargetObjectId(targetObjectId, referenceDate);
+            List<PayrollConceptFeedRelation> feedRelations = metamodel.activeFeedsOf(targetObjectId);
 
             Map<String, Boolean> invertSignBySourceCode = feedRelations.stream()
                     .collect(Collectors.toMap(
@@ -161,7 +153,7 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
         }
 
         if (calculationType == CalculationType.RATE_BY_QUANTITY) {
-            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType,
+            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType, metamodel,
                     OperandRole.QUANTITY, OperandRole.RATE);
             log.debug("[ENGINE]     PLAN {} | RATE_BY_QUANTITY: QUANTITY={} RATE={}",
                     identity.getConceptCode(),
@@ -171,7 +163,7 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
         }
 
         if (calculationType == CalculationType.PERCENTAGE) {
-            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType,
+            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType, metamodel,
                     OperandRole.BASE, OperandRole.PERCENTAGE);
             log.debug("[ENGINE]     PLAN {} | PERCENTAGE: BASE={} PCT={}",
                     identity.getConceptCode(),
@@ -181,7 +173,7 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
         }
 
         if (calculationType == CalculationType.GREATEST) {
-            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType,
+            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType, metamodel,
                     OperandRole.LEFT, OperandRole.RIGHT);
             log.debug("[ENGINE]     PLAN {} | GREATEST: LEFT={} RIGHT={}",
                     identity.getConceptCode(),
@@ -191,7 +183,7 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
         }
 
         if (calculationType == CalculationType.LEAST) {
-            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType,
+            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType, metamodel,
                     OperandRole.LEFT, OperandRole.RIGHT);
             log.debug("[ENGINE]     PLAN {} | LEAST: LEFT={} RIGHT={}",
                     identity.getConceptCode(),
@@ -215,13 +207,15 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
             ConceptDependencyGraph graph,
             ConceptNodeIdentity identity,
             CalculationType calculationType,
+            RuleSystemMetamodel metamodel,
             OperandRole role1,
             OperandRole role2
     ) {
         String ruleSystemCode = identity.getRuleSystemCode();
         String conceptCode    = identity.getConceptCode();
 
-        List<PayrollConceptOperand> operands  = operandRepository.findByTarget(ruleSystemCode, conceptCode);
+        metamodel.requireSameRuleSystem(ruleSystemCode);
+        List<PayrollConceptOperand> operands  = metamodel.operandsOf(conceptCode);
         Set<ConceptNodeIdentity> declaredDeps = graph.getDependenciesOf(identity);
 
         configurationValidator.validate(ruleSystemCode, conceptCode, operands, declaredDeps);
