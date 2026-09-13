@@ -43,6 +43,10 @@ public class RuleEntityTypeEntity {
     @Column(name = "group_code", nullable = false, length = 30)
     private String groupCode;
 
+    /** Nula mientras el tipo no tenga coleccion propia en el API (backend#88). */
+    @Column(name = "api_collection_path", length = 100)
+    private String apiCollectionPath;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -85,6 +89,9 @@ public class RuleEntityTypeEntity {
 
     public String getGroupCode() { return groupCode; }
     public void setGroupCode(String groupCode) { this.groupCode = groupCode; }
+
+    public String getApiCollectionPath() { return apiCollectionPath; }
+    public void setApiCollectionPath(String apiCollectionPath) { this.apiCollectionPath = apiCollectionPath; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

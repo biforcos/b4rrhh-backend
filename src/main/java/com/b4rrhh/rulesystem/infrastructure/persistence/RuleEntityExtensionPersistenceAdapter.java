@@ -22,6 +22,13 @@ public class RuleEntityExtensionPersistenceAdapter implements RuleEntityExtensio
         return springDataRuleEntityExtensionRepository.findAll().stream().map(this::toDomain).toList();
     }
 
+    @Override
+    public List<RuleEntityExtension> findRequiredByRuleEntityTypeCode(String ruleEntityTypeCode) {
+        return springDataRuleEntityExtensionRepository
+                .findByRuleEntityTypeCodeAndRequiredIsTrueOrderByExtensionCode(ruleEntityTypeCode)
+                .stream().map(this::toDomain).toList();
+    }
+
     private RuleEntityExtension toDomain(RuleEntityExtensionEntity entity) {
         return new RuleEntityExtension(
                 entity.getRuleEntityTypeCode(),
