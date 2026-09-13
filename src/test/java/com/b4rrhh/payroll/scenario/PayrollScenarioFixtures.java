@@ -180,6 +180,29 @@ public class PayrollScenarioFixtures {
                 Long.class, employeeId, presenceNumber);
     }
 
+    /**
+     * Inserts one tax declaration for the employee, valid from {@code validFrom}.
+     *
+     * Los valores que se pasan son los tres que cambian el IRPF; el resto se deja en lo mismo
+     * que dice el valor por omision, a proposito: asi un test puede declarar una situacion
+     * identica a la supuesta y comprobar que aun asi se distinguen (backend#92).
+     */
+    public void insertTaxInformation(
+            long employeeId,
+            LocalDate validFrom,
+            String familySituation,
+            int descendantsCount,
+            String taxTerritory) {
+        jdbc.update(
+                "insert into employee.employee_tax_information" +
+                " (employee_id, valid_from, family_situation, descendants_count, ascendants_count," +
+                "  disability_degree, pension_compensatoria, geographic_mobility," +
+                "  habitual_residence_loan, tax_territory, created_at, updated_at)" +
+                " values (?, ?, ?, ?, 0, 'NONE', false, false, false, ?," +
+                "  CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                employeeId, validFrom, familySituation, descendantsCount, taxTerritory);
+    }
+
     /** Inserts a labor classification row (open-ended). */
     public void insertLaborClassification(long employeeId, LocalDate from) {
         insertLaborClassification(employeeId, from, null);

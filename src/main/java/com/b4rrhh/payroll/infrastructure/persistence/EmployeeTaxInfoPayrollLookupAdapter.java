@@ -26,7 +26,7 @@ public class EmployeeTaxInfoPayrollLookupAdapter implements EmployeeTaxInfoPayro
         return employeeLookupAdapter.findEmployeeId(ruleSystemCode, employeeTypeCode, employeeNumber)
             .flatMap(employeeId -> springDataRepo
                 .findFirstByEmployeeIdAndValidFromLessThanEqualOrderByValidFromDesc(employeeId, referenceDate))
-            .map(e -> new EmployeeTaxInfoContext(
+            .map(e -> EmployeeTaxInfoContext.ofDeclared(
                 e.getFamilySituation().name(),
                 e.getDescendantsCount(),
                 e.getAscendantsCount(),

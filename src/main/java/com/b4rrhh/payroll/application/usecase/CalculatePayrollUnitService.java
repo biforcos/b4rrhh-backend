@@ -587,7 +587,10 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     .ifPresent(snapshots::add);
         }
 
-        // Tax info is always captured; ofDefault() applies when no record exists (single, no dependants, territory COMUN)
+        // La foto fiscal se guarda siempre, haya declaracion o no, y por eso es la unica que no
+        // usa ifPresent: las otras cuatro se omiten cuando no hay dato, que es una ausencia que
+        // se ve. Esta no puede omitirse porque el calculo si tuvo una situacion delante, asi que
+        // lo que dice de donde salio es el campo "source" del payload (backend#92).
         snapshots.add(buildTaxInfoSnapshot(command, input));
 
         return List.copyOf(snapshots);
@@ -610,6 +613,10 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         sourceKey.put("referenceDate", referenceDate.toString());
 
         Map<String, Object> payload = new LinkedHashMap<>();
+        // Primero, y dentro del payload y no al lado: quien lea los campos de abajo tiene que
+        // leer antes de donde salen. DEFAULT_NO_DECLARATION dice que esta situacion no la
+        // declaro nadie (backend#92).
+        payload.put("source", ctx.source().name());
         payload.put("familySituation", ctx.familySituation());
         payload.put("descendantsCount", ctx.descendantsCount());
         payload.put("ascendantsCount", ctx.ascendantsCount());
