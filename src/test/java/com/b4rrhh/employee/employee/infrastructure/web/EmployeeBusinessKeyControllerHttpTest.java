@@ -94,7 +94,12 @@ class EmployeeBusinessKeyControllerHttpTest {
                 .andExpect(jsonPath("$.firstName").value("Alicia"))
                 .andExpect(jsonPath("$.lastName1").value("Garcia"))
                 .andExpect(jsonPath("$.lastName2").value("Perez"))
-                .andExpect(jsonPath("$.preferredName").value("Ali"));
+                .andExpect(jsonPath("$.preferredName").value("Ali"))
+                // La identidad publica del empleado es su clave de negocio, y el id de
+                // persistencia no sale por el API (ADR-001 4.3, ADR-004). Es la misma
+                // comprobacion que ya hacen address, contract, labor_classification,
+                // presence, working_time y los dos flujos de lifecycle (#10).
+                .andExpect(jsonPath("$.id").doesNotExist());
 
         ArgumentCaptor<UpdateEmployeeCommand> captor = ArgumentCaptor.forClass(UpdateEmployeeCommand.class);
         verify(updateEmployeeUseCase).update(captor.capture());

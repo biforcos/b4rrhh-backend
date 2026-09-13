@@ -101,7 +101,6 @@ public class EmployeePhotoController {
                 employee.getPreferredName()
         );
         return new EmployeeResponse(
-                employee.getId(),
                 employee.getRuleSystemCode(),
                 employee.getEmployeeTypeCode(),
                 employee.getEmployeeNumber(),
