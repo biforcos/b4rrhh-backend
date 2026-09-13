@@ -7333,7 +7333,6 @@ components:
     EmployeeResponse:
       type: object
       required:
-        - id
         - ruleSystemCode
         - employeeTypeCode
         - employeeNumber
@@ -7345,6 +7344,11 @@ components:
         id:
           type: integer
           format: int64
+          deprecated: true
+          description: >-
+            Identificador tecnico de persistencia. No forma parte de la identidad publica del
+            empleado, que es (ruleSystemCode, employeeTypeCode, employeeNumber) segun ADR-004.
+            Se mantiene temporalmente por compatibilidad y se retirara.
         ruleSystemCode:
           type: string
         employeeTypeCode:
