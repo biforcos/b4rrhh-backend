@@ -14,6 +14,20 @@ public interface SpringDataPresenceRepository extends JpaRepository<PresenceEnti
 
     List<PresenceEntity> findByEmployeeIdOrderByStartDateAsc(Long employeeId);
 
+    /**
+     * El arranque de la presencia mas antigua, cortes incluidos. Nulo si el empleado no tiene
+     * ninguna.
+     *
+     * <p>Es un hecho de la serie de presencia y se llama por lo que es: quien lo lee decide que
+     * significa. Hoy lo lee la nomina, que lo llama antiguedad (backend#91).</p>
+     */
+    @Query("""
+            select min(p.startDate)
+            from PresenceEntity p
+            where p.employeeId = :employeeId
+            """)
+    LocalDate findEarliestStartDateByEmployeeId(@Param("employeeId") Long employeeId);
+
     boolean existsByEmployeeIdAndEndDateIsNull(Long employeeId);
 
     @Query("""

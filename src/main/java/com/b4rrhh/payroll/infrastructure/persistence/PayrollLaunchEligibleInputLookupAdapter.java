@@ -102,6 +102,12 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
                 .map(wc -> wc.getWorkCenterCode())
                 .orElse(null);
 
+        // La antiguedad sale de la presencia MAS ANTIGUA del empleado y no de la de esta
+        // unidad: quien se readmite la conserva del primer alta (backend#91). Para EMP000001
+        // —alta 25/11/2023, cese por jubilacion, readmision 08/03/2024— son dos fechas
+        // distintas, y es el unico caso en el que se nota.
+        LocalDate seniorityDate = presenceRepository.findEarliestStartDateByEmployeeId(employeeId);
+
         return Optional.of(new PayrollLaunchEligibleInputContext(
                 presence.getCompanyCode(),
                 agreementCode,
@@ -109,7 +115,8 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
                 windows,
                 presence.getStartDate(),
                 presence.getEndDate(),
-                workCenterCode
+                workCenterCode,
+                seniorityDate
         ));
     }
 

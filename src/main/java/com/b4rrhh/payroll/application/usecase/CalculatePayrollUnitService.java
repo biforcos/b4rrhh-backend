@@ -716,6 +716,9 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         payload.put("agreementCategoryCode", input.agreementCategoryCode());
         payload.put("presenceStartDate", input.presenceStartDate() != null ? input.presenceStartDate().toString() : null);
         payload.put("presenceEndDate", input.presenceEndDate() != null ? input.presenceEndDate().toString() : null);
+        // Va en la foto y no se recalcula al leer: un recibo dice lo que valia al calcularlo,
+        // tambien si manana alguien corrige la primera presencia (backend#91).
+        payload.put("seniorityDate", input.seniorityDate() != null ? input.seniorityDate().toString() : null);
 
         return new PayrollContextSnapshot(
                 "EMPLOYEE_PAYROLL_CONTEXT",

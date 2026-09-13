@@ -26,6 +26,7 @@ public record PayrollResponse(
         PayrollAgreementProfileResponse agreementProfile,
         String presenceStartDate,
         String presenceEndDate,
+        String seniorityDate,
         String workCenterCode,
         String workCenterName
 ) {

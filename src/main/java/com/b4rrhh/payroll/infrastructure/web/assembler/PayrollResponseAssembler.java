@@ -81,6 +81,7 @@ public class PayrollResponseAssembler {
                 extractAgreementProfile(snapshots),
                 extractPresenceStartDate(snapshots),
                 extractPresenceEndDate(snapshots),
+                extractSeniorityDate(snapshots),
                 extractWorkCenterCode(snapshots),
                 extractWorkCenterName(snapshots)
         );
@@ -173,6 +174,19 @@ public class PayrollResponseAssembler {
                 .filter(s -> EMPLOYEE_PAYROLL_CONTEXT.equals(s.getSnapshotTypeCode()))
                 .findFirst()
                 .map(s -> extractStringField(s.getSnapshotPayloadJson(), "presenceStartDate"))
+                .orElse(null);
+    }
+
+    /**
+     * La antiguedad que la foto guardo al calcular (backend#91). Nula en los recibos anteriores
+     * al issue, y esa nulidad significa «no se sabe»: no se sustituye por presenceStartDate, que
+     * es la fecha que esta al lado y da un numero distinto para todo readmitido.
+     */
+    private String extractSeniorityDate(List<PayrollContextSnapshot> snapshots) {
+        return snapshots.stream()
+                .filter(s -> EMPLOYEE_PAYROLL_CONTEXT.equals(s.getSnapshotTypeCode()))
+                .findFirst()
+                .map(s -> extractStringField(s.getSnapshotPayloadJson(), "seniorityDate"))
                 .orElse(null);
     }
 

@@ -91,6 +91,7 @@ import com.b4rrhh.employee.working_time.infrastructure.persistence.WorkingTimePe
 import com.b4rrhh.employee.working_time.infrastructure.persistence.WorkingTimePresenceConsistencyAdapter;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollObjectBindingLookupAdapter;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollTableRowLookupAdapter;
+import com.b4rrhh.payroll.infrastructure.persistence.PayrollLaunchEligibleInputLookupAdapter;
 import com.b4rrhh.payroll_engine.concept.infrastructure.persistence.PayrollConceptOperandPersistenceAdapter;
 import com.b4rrhh.payroll_engine.concept.infrastructure.persistence.PayrollConceptPersistenceAdapter;
 import com.b4rrhh.payroll_engine.eligibility.infrastructure.persistence.ConceptAssignmentPersistenceAdapter;
@@ -239,6 +240,8 @@ import java.lang.annotation.Target;
         JourneyWorkCenterReadAdapter.class,
         JourneyCostCenterReadAdapter.class,
         EmployeeJourneyLookupAdapter.class,
+        // payroll: de donde sale el contexto de la unidad, antiguedad incluida (backend#91)
+        PayrollLaunchEligibleInputLookupAdapter.class,
         // payroll: binding de objetos y tablas
         PayrollObjectBindingLookupAdapter.class,
         PayrollTableRowLookupAdapter.class,

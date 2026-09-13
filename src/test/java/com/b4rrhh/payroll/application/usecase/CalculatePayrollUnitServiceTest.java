@@ -144,7 +144,8 @@ class CalculatePayrollUnitServiceTest {
             )),
             LocalDate.of(2025, 1, 1),
             null,
-            null
+            null,
+            LocalDate.of(2025, 1, 1)
         )));
 
         // Pre-computation of DIRECT_AMOUNT during the pre-compute pass
@@ -248,7 +249,8 @@ class CalculatePayrollUnitServiceTest {
             )),
             LocalDate.of(2025, 1, 1),
             null,
-            null
+            null,
+            LocalDate.of(2025, 1, 1)
         )));
 
         PayrollLaunchInputMissingException ex = assertThrows(PayrollLaunchInputMissingException.class, () ->
@@ -355,7 +357,8 @@ class CalculatePayrollUnitServiceTest {
             ),
             LocalDate.of(2023, 2, 6),
             null,
-            null
+            null,
+            LocalDate.of(2023, 2, 6)
         )));
 
         when(payrollConceptGraphCalculator.calculateConceptResult(
