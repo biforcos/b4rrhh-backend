@@ -113,6 +113,7 @@ class LaunchPayrollCalculationServiceTest {
                     run.totalClaimed(),
                     run.totalSkippedNotEligible(),
                     run.totalSkippedAlreadyClaimed(),
+                    run.totalSkippedMissingInput(),
                     run.totalCalculated(),
                     run.totalNotValid(),
                     run.totalErrors(),
@@ -158,6 +159,8 @@ class LaunchPayrollCalculationServiceTest {
         CalculationRun run = service.launch(singleEmployeeCommand());
 
         assertEquals(1, run.totalSkippedNotEligible());
+        assertEquals(0, run.totalSkippedMissingInput());
+        assertEquals(0, run.totalEligible());
         verify(calculatePayrollUnitUseCase, never()).calculate(any(CalculatePayrollUnitCommand.class));
         verify(calculationRunMessageRepository).save(any(CalculationRunMessage.class));
     }
@@ -270,13 +273,57 @@ class LaunchPayrollCalculationServiceTest {
         CalculationRun run = service.launch(singleEmployeeCommand());
 
         assertEquals(CalculationRunStatuses.COMPLETED, run.status());
-        assertEquals(1, run.totalSkippedNotEligible());
+        // backend#85: sumaba a totalSkippedNotEligible, que es la lectura contraria.
+        assertEquals(1, run.totalSkippedMissingInput());
+        assertEquals(0, run.totalSkippedNotEligible());
+        // Era elegible, y lo sigue siendo: totalEligible las incluye, y esta documentado.
+        assertEquals(1, run.totalEligible());
+        assertEquals(1, run.totalClaimed());
         assertEquals(0, run.totalErrors());
 
         ArgumentCaptor<CalculationRunMessage> captor = ArgumentCaptor.forClass(CalculationRunMessage.class);
         verify(calculationRunMessageRepository, atLeastOnce()).save(captor.capture());
         assertTrue(captor.getAllValues().stream()
                 .anyMatch(m -> "UNIT_ELIGIBLE_REAL_SKIPPED_MISSING_INPUT".equals(m.messageCode())));
+    }
+
+    // El criterio 1 del backend#85: una ejecucion que salta por las DOS razones las ensena
+    // separadas. Antes las dos sumaban al mismo contador y la pantalla decia «2 saltadas por
+    // falta de datos» cuando una de ellas ya tenia recibo — la lectura contraria.
+    @Test
+    void launchCountsTheTwoKindsOfSkipApart() {
+        when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
+                .thenReturn(List.of(new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP001", 1)));
+        when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP002"), any(), any()))
+                .thenReturn(List.of(new PayrollLaunchPresenceContext("ESP", "INTERNAL", "EMP002", 1)));
+        // EMP001 ya tiene recibo inmutable: no elegible, y no pide nada de nadie.
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
+                .thenReturn(Optional.of(payroll(PayrollStatus.CALCULATED)));
+        // EMP002 era elegible y le faltan datos: eso si pide que alguien mire.
+        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP002", "202501", "NORMAL", 1))
+                .thenReturn(Optional.empty());
+        when(calculationClaimRepository.save(any(CalculationClaim.class)))
+                .thenReturn(new CalculationClaim(41L, 1L, "ESP", "INTERNAL", "EMP002", "202501", "NORMAL", 1, LocalDateTime.now(), null));
+        when(calculatePayrollUnitUseCase.calculate(any(CalculatePayrollUnitCommand.class)))
+                .thenThrow(new PayrollLaunchInputMissingException(
+                        "MONTHLY_SALARY_NOT_CONFIGURED",
+                        "Eligible real execution skipped: monthly salary is not configured",
+                        java.util.Map.of("executionMode", "ELIGIBLE_REAL")
+                ));
+
+        CalculationRun run = service.launch(employeeListCommand("EMP001", "EMP002"));
+
+        assertEquals(2, run.totalCandidates());
+        assertEquals(1, run.totalSkippedNotEligible());
+        assertEquals(1, run.totalSkippedMissingInput());
+        // La particion cuadra: 2 candidatas = 1 + 0 + 1 + 0 + 0 + 0. totalEligible no entra en
+        // la suma, es una etapa, y vale 1 porque EMP002 si era elegible.
+        assertEquals(1, run.totalEligible());
+        assertEquals(
+                run.totalCandidates(),
+                run.totalSkippedNotEligible() + run.totalSkippedAlreadyClaimed()
+                        + run.totalSkippedMissingInput() + run.totalCalculated()
+                        + run.totalNotValid() + run.totalErrors());
     }
 
     @Test

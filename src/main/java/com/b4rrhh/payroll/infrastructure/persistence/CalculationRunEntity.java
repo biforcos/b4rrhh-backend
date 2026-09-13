@@ -64,6 +64,9 @@ public class CalculationRunEntity {
     @Column(name = "total_skipped_already_claimed", nullable = false)
     private Integer totalSkippedAlreadyClaimed;
 
+    @Column(name = "total_skipped_missing_input", nullable = false)
+    private Integer totalSkippedMissingInput;
+
     @Column(name = "total_calculated", nullable = false)
     private Integer totalCalculated;
 
@@ -135,6 +138,9 @@ public class CalculationRunEntity {
     public void setTotalSkippedNotEligible(Integer totalSkippedNotEligible) { this.totalSkippedNotEligible = totalSkippedNotEligible; }
     public Integer getTotalSkippedAlreadyClaimed() { return totalSkippedAlreadyClaimed; }
     public void setTotalSkippedAlreadyClaimed(Integer totalSkippedAlreadyClaimed) { this.totalSkippedAlreadyClaimed = totalSkippedAlreadyClaimed; }
+
+    public Integer getTotalSkippedMissingInput() { return totalSkippedMissingInput; }
+    public void setTotalSkippedMissingInput(Integer totalSkippedMissingInput) { this.totalSkippedMissingInput = totalSkippedMissingInput; }
     public Integer getTotalCalculated() { return totalCalculated; }
     public void setTotalCalculated(Integer totalCalculated) { this.totalCalculated = totalCalculated; }
     public Integer getTotalNotValid() { return totalNotValid; }

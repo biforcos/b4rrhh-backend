@@ -51,6 +51,7 @@ public class CalculationRunPersistenceAdapter implements CalculationRunRepositor
                 entity.getTotalClaimed(),
                 entity.getTotalSkippedNotEligible(),
                 entity.getTotalSkippedAlreadyClaimed(),
+                entity.getTotalSkippedMissingInput(),
                 entity.getTotalCalculated(),
                 entity.getTotalNotValid(),
                 entity.getTotalErrors(),
@@ -79,6 +80,7 @@ public class CalculationRunPersistenceAdapter implements CalculationRunRepositor
         entity.setTotalClaimed(calculationRun.totalClaimed());
         entity.setTotalSkippedNotEligible(calculationRun.totalSkippedNotEligible());
         entity.setTotalSkippedAlreadyClaimed(calculationRun.totalSkippedAlreadyClaimed());
+        entity.setTotalSkippedMissingInput(calculationRun.totalSkippedMissingInput());
         entity.setTotalCalculated(calculationRun.totalCalculated());
         entity.setTotalNotValid(calculationRun.totalNotValid());
         entity.setTotalErrors(calculationRun.totalErrors());

@@ -15,6 +15,7 @@ public record PayrollCalculationRunResponse(
         Integer totalClaimed,
         Integer totalSkippedNotEligible,
         Integer totalSkippedAlreadyClaimed,
+        Integer totalSkippedMissingInput,
         Integer totalCalculated,
         Integer totalNotValid,
         Integer totalErrors,

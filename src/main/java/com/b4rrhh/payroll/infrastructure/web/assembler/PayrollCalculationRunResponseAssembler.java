@@ -21,6 +21,7 @@ public class PayrollCalculationRunResponseAssembler {
                 run.totalClaimed(),
                 run.totalSkippedNotEligible(),
                 run.totalSkippedAlreadyClaimed(),
+                run.totalSkippedMissingInput(),
                 run.totalCalculated(),
                 run.totalNotValid(),
                 run.totalErrors(),

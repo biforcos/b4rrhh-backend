@@ -119,6 +119,7 @@ class RecoverAbandonedPayrollCalculationRunsServiceTest {
                 7,
                 0,
                 0,
+                0,
                 7,
                 0,
                 0,

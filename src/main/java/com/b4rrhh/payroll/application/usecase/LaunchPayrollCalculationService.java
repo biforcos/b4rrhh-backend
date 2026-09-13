@@ -148,6 +148,7 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                 0,
                 0,
                 0,
+                0,
                 null,
                 null,
                 null,
@@ -388,7 +389,10 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                     details,
                     unit
             );
-            return calculationRunRepository.save(run.incrementTotalSkippedNotEligible());
+            // Su propio contador desde el backend#85. Sumaba a total_skipped_not_eligible, que
+            // es la lectura contraria: «ya estaba hecho» no pide nada de nadie y esto siempre
+            // pide que alguien mire. El literal ya decia ELIGIBLE y sumaba a NOT_ELIGIBLE.
+            return calculationRunRepository.save(run.incrementTotalSkippedMissingInput());
         } catch (RuntimeException ex) {
             saveRunMessage(
                     run,
