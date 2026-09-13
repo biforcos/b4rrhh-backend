@@ -14,6 +14,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -23,94 +24,56 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Dos contratos describen la nomina, y hasta ahora nada comprobaba que dijeran lo mismo.
+ * Un contrato, y lo que se sirve esta declarado en el.
  *
- * OpenApiContractsAreValidTest mira que cada fichero sea un documento OpenAPI correcto. Dos
- * ficheros pueden ser los dos correctos y contradecirse, y es exactamente lo que pasaba:
- * GET /payroll/calculation-runs/{runId}/messages estaba servido, documentado en
- * payroll-api.yaml y ausente de personnel-administration-api.yaml, que es del unico del que
- * el frontend genera su cliente. Un endpoint servido e invisible (frontend#61).
+ * <p>Hubo dos. {@code payroll-api.yaml} nacio en abril de 2026 como banco de diseno del
+ * ADR-029 y acabo describiendo endpoints servidos sin que nadie lo decidiera.
+ * {@code OpenApiContractsAreValidTest} miraba que cada fichero fuese un documento OpenAPI
+ * correcto, y dos ficheros pueden ser los dos correctos y contradecirse: eso es lo que dejo
+ * {@code GET /payroll/calculation-runs/{runId}/messages} servido, documentado solo en el
+ * pequeno, e invisible para el cliente que el frontend genera del grande
+ * ({@code frontend#61}). Cuando se hizo el barrido entero resulto que <b>ninguno de los dos
+ * describia las once rutas servidas</b>: no eran uno completo y otro parcial, eran dos
+ * parciales que se solapaban en siete.
  *
- * Este test es lo que convierte esa deriva en un fallo de la suite. Comprueba tres cosas
- * distintas, separadas para que el mensaje diga cual se rompio:
+ * <p>Se fusiono en {@code backend#80}. Este test es lo que impide que vuelva a pasar, y
+ * comprueba tres cosas separadas para que el mensaje diga cual se rompio:
  *
- * 1. Que lo que el backend sirve esta escrito en el contrato del que sus clientes generan.
- *    Es la regla que de verdad importa: un campo que el backend manda y el contrato no
- *    declara no existe para el cliente generado, y nadie se entera hasta que alguien lo echa
- *    de menos en una pantalla.
- *
- * 2. Que la superficie compartida por los dos contratos no crece. Hoy son siete operaciones;
- *    el dia que alguien escriba una octava en los dos sitios, esto falla y le obliga a decidir
- *    en cual va, en vez de dejar dos copias sueltas.
- *
- * 3. Que la deriva conocida entre las copias no crece. La lista de abajo es el inventario de lo
- *    que hoy ya diverge, y es a proposito una lista congelada y no una regla: lo que hay que
- *    hacer con cada pareja —cual manda y cual sobra— es una decision de modelo que esta
- *    pendiente en backend#80. Hasta que se tome, lo unico que se puede exigir es que no
- *    empeore. El test falla en los dos sentidos: si aparece una pareja nueva que diverge, y
- *    tambien si una deja de divergir sin quitarla de la lista. Asi el inventario solo puede
- *    encoger a proposito.
- *
- * Cuando backend#80 se cierre, los dos inventarios se quedaran vacios y los tests 2 y 3 pasaran
- * a ser la regla que hoy no se puede exigir: que ninguna operacion viva en los dos contratos a
- * la vez.
+ * <ol>
+ *   <li><b>Lo que el backend sirve esta declarado.</b> Un campo que el backend manda y el
+ *       contrato no declara no existe para el cliente generado, y nadie se entera hasta que
+ *       alguien lo echa de menos en una pantalla. Asi se encontro que
+ *       {@code PayrollResponse} servia cuatro campos que el contrato callaba, uno de ellos
+ *       {@code statusReasonCode}, que es el registro del acto humano (ADR-059).</li>
+ *   <li><b>Hay un solo contrato.</b> No es una cuenta de ficheros por gusto: mientras solo
+ *       haya uno, "esta declarado" y "esta declarado donde mis clientes lo leen" son la
+ *       misma frase. En cuanto haya dos, dejan de serlo.</li>
+ *   <li><b>Y si algun dia vuelve a haber dos, ninguna operacion vive en los dos.</b> Esta
+ *       era un inventario congelado de siete duplicados mientras se decidia cual mandaba;
+ *       ahora que la fusion esta hecha, es la regla que entonces no se podia exigir.</li>
+ * </ol>
  */
 class TheTwoContractsNeverDivergeInSilenceTest {
 
-    /** Del que generan su cliente el frontend y el designer. */
-    private static final Path PUBLICADO = Path.of("openapi/personnel-administration-api.yaml");
+    private static final Path CONTRATOS = Path.of("openapi");
 
-    private static final Path NOMINA = Path.of("openapi/payroll-api.yaml");
+    /** Del que generan su cliente el frontend y el designer. */
+    private static final Path PUBLICADO = CONTRATOS.resolve("personnel-administration-api.yaml");
 
     private static final Path DTOS =
             Path.of("src/main/java/com/b4rrhh/payroll/infrastructure/web/dto");
-
-    /**
-     * Las siete operaciones que hoy estan escritas en los dos contratos. Cada entrada es
-     * "METODO ruta". Dos de ellas ademas llevan distinto operationId en cada fichero, o sea que
-     * el metodo del cliente generado se llama de una forma u otra segun de cual generes:
-     * getPayrollCalculationRun / getPayrollCalculationRunById, y
-     * bulkInvalidatePayroll / invalidatePayrollBulk.
-     */
-    private static final Set<String> SUPERFICIE_COMPARTIDA_CONOCIDA = new TreeSet<>(Set.of(
-            "GET /payroll/calculation-runs/{runId}",
-            "GET /payroll/calculation-runs/{runId}/messages",
-            "GET /payrolls/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}"
-                    + "/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}",
-            "POST /payroll/calculation-runs/launch",
-            "POST /payrolls/invalidate-bulk",
-            "POST /payrolls/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}"
-                    + "/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}/invalidate",
-            "POST /payrolls/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}"
-                    + "/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}/validate"
-    ));
-
-    /**
-     * Los esquemas que existen en los dos contratos con el mismo nombre y distinto conjunto de
-     * propiedades. Hoy solo uno, y es el grave: PayrollResponse tiene en cada fichero campos que
-     * el otro no tiene, y el backend sirve la union de los dos.
-     *
-     * Los otros trece nombres compartidos coinciden en que campos llevan y difieren solo en el
-     * detalle —descripciones, format: int32, un enum escrito a mano en un sitio y referenciado en
-     * el otro—. Eso no se congela aqui porque no cambia la forma de los datos; se deja anotado en
-     * el issue.
-     */
-    private static final Set<String> ESQUEMAS_QUE_YA_DIVERGEN = new TreeSet<>(Set.of(
-            "PayrollResponse"
-    ));
 
     @Test
     void everyFieldTheBackendServesIsDeclaredInTheContractItsClientsGenerateFrom() {
         Map<String, Map<String, Object>> esquemas = esquemasDe(PUBLICADO);
         List<String> fallos = new ArrayList<>();
 
-        for (Path dto : ficheros(DTOS)) {
+        for (Path dto : ficherosJava(DTOS)) {
             String nombre = dto.getFileName().toString().replace(".java", "");
             Map<String, Object> esquema = esquemas.get(nombre);
             if (esquema == null) {
-                // No todo DTO tiene que estar publicado: los hay que solo viven en payroll-api.yaml
-                // mientras esa superficie no se publique. Lo que no se acepta es que este publicado
-                // a medias, que es lo que mira el bucle de abajo.
+                // Un DTO puede ser interno y no asomar por el API. Lo que no se acepta es que
+                // este declarado a medias, que es lo que mira el bucle de abajo.
                 continue;
             }
             Set<String> declaradas = propiedadesDe(esquema, esquemas);
@@ -129,40 +92,41 @@ class TheTwoContractsNeverDivergeInSilenceTest {
     }
 
     @Test
-    void theSurfaceWrittenInBothContractsDoesNotGrow() {
-        Set<String> compartida = new TreeSet<>(operacionesDe(PUBLICADO).keySet());
-        compartida.retainAll(operacionesDe(NOMINA).keySet());
+    void thereIsExactlyOneContract() {
+        List<Path> contratos = contratos();
 
-        assertEquals(SUPERFICIE_COMPARTIDA_CONOCIDA, compartida,
-                "Ha cambiado que operaciones estan escritas en los dos contratos a la vez.\n"
-                        + "Si has anadido una: decide en cual va y escribela solo ahi. Mientras "
-                        + "backend#80 no diga cual es el papel de cada fichero, la unica regla que "
-                        + "se puede exigir es que la duplicacion no crezca.\n"
-                        + "Si has quitado una: quitala tambien de SUPERFICIE_COMPARTIDA_CONOCIDA, "
-                        + "para que el inventario diga la verdad.");
+        assertEquals(List.of(PUBLICADO), contratos,
+                "La fuente de verdad del API es un solo fichero desde backend#80. Si has anadido "
+                        + "otro contrato, eso reabre justo el defecto que aquel issue cerro: dos "
+                        + "ficheros que se contradicen sin que nada avise, y un cliente que genera "
+                        + "de uno de los dos.\nSi de verdad hacen falta dos, lo que hay que hacer "
+                        + "primero es decidir y escribir el papel de cada uno; luego este test se "
+                        + "actualiza, y el de abajo se vuelve imprescindible.");
     }
 
     @Test
-    void theKnownDivergenceBetweenTheSharedSchemasDoesNotGrow() {
-        Map<String, Map<String, Object>> publicados = esquemasDe(PUBLICADO);
-        Map<String, Map<String, Object>> nomina = esquemasDe(NOMINA);
-
-        Set<String> divergen = new TreeSet<>();
-        for (String nombre : publicados.keySet()) {
-            if (!nomina.containsKey(nombre)) {
-                continue;
-            }
-            if (!propiedadesDe(publicados.get(nombre), publicados)
-                    .equals(propiedadesDe(nomina.get(nombre), nomina))) {
-                divergen.add(nombre);
-            }
+    void noOperationLivesInTwoContractsAtOnce() {
+        Map<String, List<String>> contratosPorOperacion = new TreeMap<>();
+        for (Path contrato : contratos()) {
+            operacionesDe(contrato).keySet().forEach(operacion ->
+                    contratosPorOperacion
+                            .computeIfAbsent(operacion, clave -> new ArrayList<>())
+                            .add(contrato.getFileName().toString()));
         }
 
-        assertEquals(ESQUEMAS_QUE_YA_DIVERGEN, divergen,
-                "Ha cambiado que esquemas llevan el mismo nombre en los dos contratos y distintos "
-                        + "campos.\nSi hay uno nuevo, es un defecto vivo: el mismo nombre describe "
-                        + "dos formas, y quien lea un contrato u otro construira cosas distintas.\n"
-                        + "Si has arreglado uno, quitalo de ESQUEMAS_QUE_YA_DIVERGEN.");
+        Map<String, List<String>> duplicadas = new TreeMap<>();
+        contratosPorOperacion.forEach((operacion, ficheros) -> {
+            if (ficheros.size() > 1) {
+                duplicadas.put(operacion, ficheros);
+            }
+        });
+
+        assertEquals(Map.of(), duplicadas,
+                "Hay operaciones escritas en mas de un contrato. Cada una tiene que vivir en uno "
+                        + "solo: dos copias del mismo endpoint derivan, y la que derive sera la que "
+                        + "tu cliente no genera.\nEsto fue un inventario congelado de siete mientras "
+                        + "backend#80 decidia cual mandaba. Ya esta decidido, asi que ahora la lista "
+                        + "tiene que estar vacia.");
     }
 
     // ---- lectura de los contratos y de los DTO ----
@@ -284,11 +248,20 @@ class TheTwoContractsNeverDivergeInSilenceTest {
         }
     }
 
-    private static List<Path> ficheros(Path directorio) {
+    /** Todos los .yaml de openapi/, no una lista fija: un contrato nuevo tiene que saltar aqui. */
+    private static List<Path> contratos() {
+        return ficheros(CONTRATOS, ".yaml");
+    }
+
+    private static List<Path> ficherosJava(Path directorio) {
+        return ficheros(directorio, ".java");
+    }
+
+    private static List<Path> ficheros(Path directorio, String extension) {
         assertTrue(Files.isDirectory(directorio), "No encuentro " + directorio.toAbsolutePath());
         try (Stream<Path> ficheros = Files.list(directorio)) {
             return ficheros
-                    .filter(f -> f.getFileName().toString().endsWith(".java"))
+                    .filter(f -> f.getFileName().toString().endsWith(extension))
                     .sorted()
                     .toList();
         } catch (IOException e) {

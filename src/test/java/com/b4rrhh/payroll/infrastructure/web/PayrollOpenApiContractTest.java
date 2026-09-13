@@ -12,7 +12,7 @@ class PayrollOpenApiContractTest {
 
     @Test
     void calculateEndpointIsExplicitlyDocumentedAsTemporaryStub() throws IOException {
-        String contract = Files.readString(Path.of("openapi", "payroll-api.yaml"));
+        String contract = contrato();
 
         assertTrue(contract.contains("/payrolls/calculate:"));
         assertTrue(contract.contains("Temporary pipeline-validation stub endpoint"));
@@ -24,7 +24,7 @@ class PayrollOpenApiContractTest {
         assertTrue(contract.contains("/payroll/calculation-runs/{runId}/messages:"));
         assertTrue(contract.contains("Accept a payroll calculation run and return its identity without waiting"));
         assertTrue(contract.contains("\"202\":"));
-        assertTrue(contract.contains("Payroll calculation run accepted"));
+        assertTrue(contract.contains("Calculation run accepted"));
         assertTrue(contract.contains("PayrollLaunchTargetSelectionRequest"));
         assertTrue(contract.contains("ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD"));
         assertTrue(contract.contains("employee is required only for SINGLE_EMPLOYEE"));
@@ -39,19 +39,19 @@ class PayrollOpenApiContractTest {
 
     @Test
     void payrollResponseDocumentsTheRunThatProducedThePayroll() throws IOException {
-        String contract = Files.readString(Path.of("openapi", "payroll-api.yaml"));
+        String contract = contrato();
 
         assertTrue(contract.contains("Calculation run that produced this payroll"));
         assertTrue(contract.contains("which is the case for the temporary calculate"));
     }
 
-    // El frontend genera su cliente SOLO de personnel-administration-api.yaml. La superficie de
-    // nomina esta duplicada en los dos contratos, y lo que falte en ese no existe para el cliente:
-    // el endpoint de mensajes llevaba tiempo servido por el backend, escrito en payroll-api.yaml y
-    // ausente de aqui, o sea invisible para la pantalla que los tiene que ensenar (frontend#61).
+    // El endpoint de mensajes llevaba tiempo servido por el backend, escrito en payroll-api.yaml y
+    // ausente del contrato del que el frontend genera, o sea invisible para la pantalla que los
+    // tiene que ensenar (frontend#61). Desde backend#80 hay un solo contrato y "falta aqui" y
+    // "no existe" son lo mismo, pero estas afirmaciones se quedan: son lo que aquel issue costo.
     @Test
     void frontendFacingContractCarriesThePayrollCalculationRunSurface() throws IOException {
-        String contract = Files.readString(Path.of("openapi", "personnel-administration-api.yaml"));
+        String contract = contrato();
 
         assertTrue(contract.contains("/payroll/calculation-runs/launch:"));
         assertTrue(contract.contains("/payroll/calculation-runs/{runId}:"));
@@ -67,10 +67,10 @@ class PayrollOpenApiContractTest {
 
     @Test
     void bulkInvalidateEndpointIsDocumented() throws IOException {
-        String contract = Files.readString(Path.of("openapi", "payroll-api.yaml"));
+        String contract = contrato();
 
         assertTrue(contract.contains("/payrolls/invalidate-bulk:"));
-        assertTrue(contract.contains("invalidatePayrollBulk"));
+        assertTrue(contract.contains("bulkInvalidatePayroll"));
         assertTrue(contract.contains("Bulk invalidation workflow for payroll results"));
         assertTrue(contract.contains("invalidates only existing CALCULATED payrolls") ||
                 contract.contains("invalidates all existing CALCULATED payrolls"));
@@ -86,5 +86,15 @@ class PayrollOpenApiContractTest {
         assertTrue(contract.contains("totalSkippedProtected"));
         assertTrue(contract.contains("totalSkippedNotFound"));
         assertTrue(contract.contains("EXPLICIT_VALIDATED or DEFINITIVE"));
+    }
+
+    /**
+     * El contrato con los espacios normalizados. Estas afirmaciones son sobre lo que el contrato
+     * dice, no sobre como esta doblado: comparar contra el texto crudo hacia que reajustar una
+     * linea del YAML tumbara el candado sin que el contrato hubiera cambiado (backend#80).
+     */
+    private static String contrato() throws IOException {
+        return Files.readString(Path.of("openapi", "personnel-administration-api.yaml"))
+                .replaceAll("\\s+", " ");
     }
 }
