@@ -6,6 +6,7 @@ import com.b4rrhh.payroll_engine.concept.domain.exception.PayrollConceptNotFound
 import com.b4rrhh.payroll_engine.concept.domain.model.FeedMode;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptFeedRelationRepository;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.MetamodelValidityWindow;
 import com.b4rrhh.payroll_engine.object.domain.exception.PayrollObjectNotFoundException;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
@@ -64,6 +65,20 @@ public class ReplaceConceptFeedsService implements ReplaceConceptFeedsUseCase {
         PayrollObject targetObject = objectRepository
                 .findByBusinessKey(ruleSystemCode, PayrollObjectTypeCode.CONCEPT, conceptCode)
                 .orElseThrow(() -> new PayrollConceptNotFoundException(ruleSystemCode, conceptCode));
+
+        // Se comprueban todas antes de borrar nada: este endpoint reemplaza el juego entero,
+        // y una vigencia mal puesta en la tercera no puede dejar al concepto sin las otras dos.
+        if (command.items() != null) {
+            for (ReplaceConceptFeedsCommand.Item item : command.items()) {
+                MetamodelValidityWindow.requireWholePeriods(
+                        item.effectiveFrom(),
+                        item.effectiveTo(),
+                        "la alimentacion de " + conceptCode + " desde " + item.sourceObjectCode(),
+                        "effectiveFrom",
+                        "effectiveTo"
+                );
+            }
+        }
 
         feedRelationRepository.deleteAllByRuleSystemCodeAndTargetConceptCode(ruleSystemCode, conceptCode);
 

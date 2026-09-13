@@ -5,6 +5,7 @@ import com.b4rrhh.payroll_engine.eligibility.application.usecase.UpdateConceptAs
 import com.b4rrhh.payroll_engine.eligibility.domain.exception.ConceptAssignmentNotFoundException;
 import com.b4rrhh.payroll_engine.eligibility.domain.model.ConceptAssignment;
 import com.b4rrhh.payroll_engine.eligibility.domain.port.ConceptAssignmentRepository;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.MetamodelValidityWindow;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,14 @@ public class UpdateConceptAssignmentService implements UpdateConceptAssignmentUs
                 .findByIdAndRuleSystemCode(id, command.ruleSystemCode())
                 .orElseThrow(() -> new ConceptAssignmentNotFoundException(
                         command.ruleSystemCode(), command.assignmentCode()));
+
+        MetamodelValidityWindow.requireWholePeriods(
+                command.validFrom(),
+                command.validTo(),
+                "la asignacion " + command.assignmentCode(),
+                "validFrom",
+                "validTo"
+        );
 
         ConceptAssignment updated = new ConceptAssignment(
                 existing.getId(),

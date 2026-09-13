@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll_engine.table.application.service;
 
+import com.b4rrhh.payroll_engine.metamodel.domain.exception.ValidityWindowDoesNotCoverWholePeriodsException;
 import com.b4rrhh.payroll_engine.table.application.usecase.UpdateTableRowCommand;
 import com.b4rrhh.payroll_engine.table.domain.exception.TableRowNotFoundException;
 import com.b4rrhh.payroll_engine.table.domain.model.PayrollTableRow;
@@ -18,6 +19,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -58,5 +60,28 @@ class UpdateTableRowServiceTest {
 
         assertThatThrownBy(() -> service.update(cmd))
                 .isInstanceOf(TableRowNotFoundException.class);
+    }
+
+    // backend#89, y aqui la trampa de la actualizacion parcial: el PUT solo trae el endDate.
+    // Lo que hay que comprobar es la ventana que queda, no la que viene.
+    @Test
+    void rejectsAnEndDateMidMonthEvenWhenTheStartComesFromTheExistingRow() {
+        PayrollTableRow existing = new PayrollTableRow(
+                5L, "ESP", "SB_TEST", "SB-G1",
+                LocalDate.of(2024, 1, 1), null,
+                new BigDecimal("1800.00"), new BigDecimal("21600.00"),
+                new BigDecimal("60.00"), new BigDecimal("7.50"), true
+        );
+        when(port.findById(5L)).thenReturn(Optional.of(existing));
+
+        UpdateTableRowCommand cmd = new UpdateTableRowCommand(
+                5L, null, null, LocalDate.of(2026, 9, 12), null, null, null, null, null);
+
+        assertThatThrownBy(() -> service.update(cmd))
+                .isInstanceOf(ValidityWindowDoesNotCoverWholePeriodsException.class)
+                .hasMessageContaining("endDate")
+                .hasMessageContaining("2026-09-30");
+
+        verify(port, never()).save(any());
     }
 }

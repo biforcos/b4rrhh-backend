@@ -15563,6 +15563,45 @@ para esto.
 
 **No es la base entera** y **no es una caché de proceso**. Son las dos formas de perder el borde.
 
+#### Por qué fin de periodo es la fecha buena (`backend#89`)
+
+Esta sección daba por hecho que fin de periodo era la fecha correcta. No lo decía, y merecía decirse,
+porque **preguntar a una sola fecha sólo es correcto si ninguna vigencia corta un periodo por la
+mitad.** Si alguna lo cortase, la unidad que se fue el día 12 se calcularía con la foto del día 30 —la
+reglamentación de otro— y nada lo diría. Es la misma forma de defecto que el `backend#73`: una
+pregunta temporal hecha a fin de periodo es la pregunta equivocada para una unidad que no llega a fin
+de periodo.
+
+Se comprobó con la base delante y **no había ninguna**: las 26 vigencias del metamodelo abren el
+2025-01-01 y ninguna cierra. O sea que la suposición era cierta, pero **por casualidad**: nada impedía
+que el primer `validTo` a mitad de mes la rompiera en silencio.
+
+Desde `backend#89` ya no es casualidad. **Una vigencia de la reglamentación tiene que cubrir periodos
+naturales enteros** —apertura el día 1 de un mes, cierre el último día de un mes o nulo— y los cinco
+caminos que escriben una la rechazan si no lo hace, con un 400 que nombra el campo, el valor que vino
+y el día que se esperaba:
+
+| Camino | Tabla | Campos |
+|---|---|---|
+| `POST /payroll-engine/{rs}/assignments` | `payroll_engine.concept_assignment` | `validFrom` / `validTo` |
+| `PUT /payroll-engine/{rs}/assignments/{code}` | ídem | ídem |
+| `PUT /payroll-engine/{rs}/concepts/{code}/feeds` | `payroll_engine.payroll_concept_feed_relation` | `effectiveFrom` / `effectiveTo` |
+| `POST /payroll-engine/{rs}/tables/{code}/rows` | `payroll.payroll_table_row` | `startDate` / `endDate` |
+| `PUT /payroll-engine/{rs}/tables/{code}/rows/{id}` | ídem | ídem |
+
+La regla vive en `MetamodelValidityWindow`, en el dominio de `metamodel`, porque es un invariante de la
+reglamentación y no de ninguno de los tres verticales que la escriben.
+
+**Así que fin de periodo no es *una* fecha válida: es que dentro de un periodo no puede haber otra.**
+Preguntar el día 1, el 12 o el 30 devuelve lo mismo por construcción, y este ADR deja de depender de
+que nadie escriba la vigencia equivocada.
+
+**Lo que esto no decide** es si algún día la reglamentación debe tener vigencias dentro de la
+ejecución. Puede que sí, y entonces la carga tendrá que seguir a los segmentos igual que la jornada y
+el contrato: eso es `backend#47`. Lo que se decide aquí es que, hasta que eso exista de verdad, la
+alternativa a rechazar no es soportarlo, es calcular mal sin avisar. **Una validación se relaja cuando
+se quiera; una nómina calculada con las reglas equivocadas no se arregla hacia atrás.**
+
 ### 3. Se carga en `execute`, después de pasar a `RUNNING`. No en `requestLaunch`
 
 `LaunchPayrollCalculationService.requestLaunch` valida el encargo, crea la ejecución en `REQUESTED` y

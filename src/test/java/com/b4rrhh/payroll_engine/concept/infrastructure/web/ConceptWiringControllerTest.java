@@ -232,4 +232,51 @@ class ConceptWiringControllerTest {
                 .andExpect(jsonPath("$[0].invertSign").value(false))
                 .andExpect(jsonPath("$[0].effectiveFrom").value("2025-01-01"));
     }
+
+    // backend#89: la alimentacion es el otro camino que escribe una vigencia de la
+    // reglamentacion, y el barrido es lo que lo saco. La misma regla que en las asignaciones.
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void putFeeds_returns400WhenAWindowClosesMidMonth() throws Exception {
+        Map<String, Object> bueno = new LinkedHashMap<>();
+        bueno.put("sourceObjectCode", SOURCE_QUANTITY_CODE);
+        bueno.put("invertSign", false);
+        bueno.put("effectiveFrom", "2025-01-01");
+
+        Map<String, Object> primerJuego = new LinkedHashMap<>();
+        primerJuego.put("feeds", List.of(bueno));
+
+        mockMvc.perform(put("/payroll-engine/{rs}/concepts/{c}/feeds",
+                        RULE_SYSTEM_CODE, TARGET_CONCEPT_CODE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(primerJuego)))
+                .andExpect(status().isOk());
+
+        Map<String, Object> malo = new LinkedHashMap<>();
+        malo.put("sourceObjectCode", SOURCE_QUANTITY_CODE);
+        malo.put("invertSign", false);
+        malo.put("effectiveFrom", "2025-01-01");
+        malo.put("effectiveTo", "2026-09-12");
+
+        Map<String, Object> segundoJuego = new LinkedHashMap<>();
+        segundoJuego.put("feeds", List.of(malo));
+
+        mockMvc.perform(put("/payroll-engine/{rs}/concepts/{c}/feeds",
+                        RULE_SYSTEM_CODE, TARGET_CONCEPT_CODE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(segundoJuego)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", allOf(
+                        containsString("effectiveTo"),
+                        containsString("2026-09-12"),
+                        containsString("2026-09-30"))));
+
+        // Este endpoint reemplaza el juego entero: si la comprobacion llegara despues del
+        // borrado, el rechazo habria dejado al concepto sin las alimentaciones que si valian.
+        mockMvc.perform(get("/payroll-engine/{rs}/concepts/{c}/feeds",
+                        RULE_SYSTEM_CODE, TARGET_CONCEPT_CODE))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].effectiveFrom").value("2025-01-01"));
+    }
 }

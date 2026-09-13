@@ -6,6 +6,7 @@ import com.b4rrhh.payroll_engine.eligibility.application.usecase.CreateConceptAs
 import com.b4rrhh.payroll_engine.eligibility.application.usecase.CreateConceptAssignmentUseCase;
 import com.b4rrhh.payroll_engine.eligibility.domain.model.ConceptAssignment;
 import com.b4rrhh.payroll_engine.eligibility.domain.port.ConceptAssignmentRepository;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.MetamodelValidityWindow;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +37,14 @@ public class CreateConceptAssignmentService implements CreateConceptAssignmentUs
         if (!conceptRepository.existsByBusinessKey(command.ruleSystemCode(), command.conceptCode())) {
             throw new PayrollConceptNotFoundException(command.ruleSystemCode(), command.conceptCode());
         }
+
+        MetamodelValidityWindow.requireWholePeriods(
+                command.validFrom(),
+                command.validTo(),
+                "la asignacion del concepto " + command.conceptCode(),
+                "validFrom",
+                "validTo"
+        );
 
         LocalDateTime now = LocalDateTime.now();
         ConceptAssignment assignment = new ConceptAssignment(

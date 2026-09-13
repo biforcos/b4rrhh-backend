@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -210,5 +211,88 @@ class ConceptAssignmentManagementControllerTest {
         mockMvc.perform(get("/payroll-engine/{rs}/assignments", RULE_SYSTEM_CODE))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.assignmentCode == '" + assignmentCode + "')]").doesNotExist());
+    }
+
+    // backend#89: la reglamentacion de una ejecucion se carga una vez, preguntando por el fin
+    // del periodo (ADR-061). Eso solo es correcto mientras ninguna vigencia corte un periodo
+    // por la mitad, asi que la que lo corta no entra. Se comprueba por el endpoint y no solo
+    // en el validador: lo que importa es que la puerta este cerrada, no que exista la llave.
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void createAssignment_returns400WhenTheWindowClosesMidMonth() throws Exception {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("conceptCode", CONCEPT_CODE);
+        body.put("validFrom", "2025-01-01");
+        body.put("validTo", "2026-09-12");
+        body.put("priority", 10);
+
+        mockMvc.perform(post("/payroll-engine/{rs}/assignments", RULE_SYSTEM_CODE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isBadRequest())
+                // No vale un 400 mudo: tiene que decir el campo, lo que vino y lo que se esperaba.
+                .andExpect(jsonPath("$.message", containsString("validTo")))
+                .andExpect(jsonPath("$.message", containsString("2026-09-12")))
+                .andExpect(jsonPath("$.message", containsString("2026-09-30")));
+
+        mockMvc.perform(get("/payroll-engine/{rs}/assignments", RULE_SYSTEM_CODE))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void createAssignment_returns400WhenTheWindowOpensMidMonth() throws Exception {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("conceptCode", CONCEPT_CODE);
+        body.put("validFrom", "2025-01-15");
+        body.put("priority", 10);
+
+        mockMvc.perform(post("/payroll-engine/{rs}/assignments", RULE_SYSTEM_CODE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("validFrom")))
+                .andExpect(jsonPath("$.message", containsString("2025-01-01")));
+
+        mockMvc.perform(get("/payroll-engine/{rs}/assignments", RULE_SYSTEM_CODE))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    // El PUT escribe una vigencia igual que el POST, y el barrido del issue es lo que dice
+    // que no era el unico camino.
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void updateAssignment_returns400WhenTheWindowClosesMidMonth() throws Exception {
+        Map<String, Object> createBody = new LinkedHashMap<>();
+        createBody.put("conceptCode", CONCEPT_CODE);
+        createBody.put("validFrom", "2025-01-01");
+        createBody.put("priority", 5);
+
+        var result = mockMvc.perform(post("/payroll-engine/{rs}/assignments", RULE_SYSTEM_CODE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createBody)))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String assignmentCode = objectMapper.readTree(result.getResponse().getContentAsString())
+                .get("assignmentCode").asText();
+
+        Map<String, Object> updateBody = new LinkedHashMap<>();
+        updateBody.put("validFrom", "2025-01-01");
+        updateBody.put("validTo", "2026-09-12");
+        updateBody.put("priority", 5);
+
+        mockMvc.perform(put("/payroll-engine/{rs}/assignments/{code}", RULE_SYSTEM_CODE, assignmentCode)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateBody)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("validTo")));
+
+        // Y la que ya estaba no se ha tocado.
+        mockMvc.perform(get("/payroll-engine/{rs}/assignments", RULE_SYSTEM_CODE))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].validTo").doesNotExist());
     }
 }

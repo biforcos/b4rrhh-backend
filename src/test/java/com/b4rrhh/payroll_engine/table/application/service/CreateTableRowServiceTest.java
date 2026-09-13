@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll_engine.table.application.service;
 
+import com.b4rrhh.payroll_engine.metamodel.domain.exception.ValidityWindowDoesNotCoverWholePeriodsException;
 import com.b4rrhh.payroll_engine.table.application.usecase.CreateTableRowCommand;
 import com.b4rrhh.payroll_engine.table.domain.exception.TableRowAlreadyExistsException;
 import com.b4rrhh.payroll_engine.table.domain.model.PayrollTableRow;
@@ -69,6 +70,27 @@ class CreateTableRowServiceTest {
 
         assertThatThrownBy(() -> service.create(cmd))
                 .isInstanceOf(TableRowAlreadyExistsException.class);
+
+        verify(port, never()).save(any());
+    }
+
+    // backend#89: la fila de tabla es el tercer camino que escribe una vigencia de la
+    // reglamentacion, y se lee con la misma fecha unica de fin de periodo que el resto
+    // (PayrollConceptExecutionContext.referenceDate <- command.periodEnd()).
+    @Test
+    void rejectsAWindowThatDoesNotCoverWholePeriodsBeforeAskingTheDatabase() {
+        CreateTableRowCommand cmd = new CreateTableRowCommand(
+                "ESP", "SB_TEST", "SB-G1",
+                LocalDate.of(2024, 1, 1), LocalDate.of(2026, 9, 12),
+                new BigDecimal("1800.00"), new BigDecimal("21600.00"),
+                new BigDecimal("60.00"), new BigDecimal("7.50")
+        );
+
+        assertThatThrownBy(() -> service.create(cmd))
+                .isInstanceOf(ValidityWindowDoesNotCoverWholePeriodsException.class)
+                .hasMessageContaining("endDate")
+                .hasMessageContaining("2026-09-12")
+                .hasMessageContaining("2026-09-30");
 
         verify(port, never()).save(any());
     }
