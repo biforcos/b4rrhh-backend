@@ -2,6 +2,12 @@ package com.b4rrhh.payroll.domain.model;
 
 import java.time.LocalDateTime;
 
+/**
+ * Los ocho {@code incrementTotal*} suman leyendo esta foto, construyendo otra y guardando la
+ * fila entera: dos hilos que terminen dos unidades a la vez se pisan y ademas machacan los
+ * otros siete contadores con los valores que cada uno leyo al empezar. Por eso el bucle de
+ * unidades de {@code LaunchPayrollCalculationService} es secuencial a proposito (backend#83).
+ */
 public record CalculationRun(
         Long id,
         String ruleSystemCode,

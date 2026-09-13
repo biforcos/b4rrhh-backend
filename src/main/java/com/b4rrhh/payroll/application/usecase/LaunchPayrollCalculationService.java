@@ -195,6 +195,9 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                     // totalCandidates counts expanded calculation units after presence overlap resolution, not raw target employees.
             run = calculationRunRepository.save(run.withTotalCandidates(units.size()));
 
+            // Secuencial a proposito: los ocho contadores de CalculationRun se suman leyendo el
+            // objeto, sumando uno y guardando la fila entera, asi que un parallelStream aqui los
+            // dejaria mintiendo sin un solo error en los registros (backend#83).
             for (PayrollCalculationUnit unit : units) {
                 run = processUnit(run, unit, normalizedLaunch.calculationEngineCode(),
                         normalizedLaunch.calculationEngineVersion(), metamodel);
