@@ -42,4 +42,17 @@ public interface PayrollTableRowRepository extends JpaRepository<PayrollTableRow
 
     boolean existsByRuleSystemCodeAndTableCodeAndSearchCodeAndStartDate(
             String ruleSystemCode, String tableCode, String searchCode, LocalDate startDate);
+
+    /**
+     * Cuantas filas y cuantas activas tiene cada codigo de tabla de un sistema
+     * de reglas. Es la mitad de "que tablas hay" que saben las filas: la otra
+     * la saben las vinculaciones (backend#95).
+     */
+    @Query("""
+        select r.tableCode, count(r), sum(case when r.active = true then 1L else 0L end)
+        from PayrollTableRowEntity r
+        where r.ruleSystemCode = :ruleSystemCode
+        group by r.tableCode
+        """)
+    List<Object[]> countRowsByTableCode(@Param("ruleSystemCode") String ruleSystemCode);
 }
