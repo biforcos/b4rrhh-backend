@@ -16,13 +16,17 @@ import java.util.List;
  * fila existe, que son 35 o 39 selects por recibo para insertar 35 o 39. Aquí sabemos que son
  * altas: el recibo acaba de nacer.
  *
- * <p><b>Y con {@code flush} al final, que no es adorno.</b> Una clave asignada hace que el
- * {@code insert} sea diferido —a diferencia de las líneas del recibo, que llevan {@code identity}
- * y se insertan al persistir—, y medido: en el recálculo puntual, donde la transacción la abre
- * {@code RecalculatePayrollService} y no el cálculo de la unidad, los pasos se quedaban pendientes
- * y no llegaban a la base. El recibo salía con sus 14 líneas y con cero pasos. Flushear aquí
- * también hace que una violación de la clave o del {@code check} del ámbito salte en esta llamada
- * y no en un commit lejano.
+ * <p><b>Y sin {@code flush}, a propósito.</b> Ésta es la única entidad de {@code payroll} con
+ * clave asignada, así que es la única cuyo {@code insert} queda diferido hasta el vaciado de la
+ * sesión: las demás llevan {@code identity} y Hibernate tiene que insertarlas al persistir para
+ * sacar el id. El commit de la transacción las vacía, y está comprobado contra la aplicación
+ * arrancada, por los dos caminos —lanzamiento y recálculo puntual—: 35 pasos en la base en los
+ * dos. Un {@code flush} aquí no haría la escritura más duradera; sólo adelantaría el momento.
+ *
+ * <p>Lo que sí hay que saber, y por eso se escribe: <b>dentro de una transacción que no hace
+ * commit, esos 35 {@code insert} no existen para nadie que lea por JDBC</b>. Es el caso de los
+ * tests de {@code @TestWebSobreEsquemaReal}, que van en transacción y se deshacen al terminar; por
+ * eso el test de integración vacía la sesión antes de contar filas, y lo dice ahí (ADR-062).
  */
 @Component
 public class PayrollCalculationStepWriteAdapter implements PayrollCalculationStepWritePort {
@@ -35,7 +39,6 @@ public class PayrollCalculationStepWriteAdapter implements PayrollCalculationSte
         for (PayrollCalculationStep step : steps) {
             entityManager.persist(toEntity(payrollId, step));
         }
-        entityManager.flush();
     }
 
     private PayrollCalculationStepEntity toEntity(long payrollId, PayrollCalculationStep step) {

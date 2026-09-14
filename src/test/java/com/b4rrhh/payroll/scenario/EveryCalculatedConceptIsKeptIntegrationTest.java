@@ -11,6 +11,8 @@ import com.b4rrhh.payroll.application.usecase.RecalculatePayrollCommand;
 import com.b4rrhh.payroll.application.usecase.RecalculatePayrollUseCase;
 import com.b4rrhh.payroll.domain.model.CalculationRun;
 import com.b4rrhh.support.TestWebSobreEsquemaReal;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,11 +79,31 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     private PayrollScenarioFixtures fixtures;
 
     @BeforeEach
     void setUp() {
         fixtures = new PayrollScenarioFixtures(jdbc);
+    }
+
+    /**
+     * Vacia la sesion antes de contar filas por JDBC.
+     *
+     * <p>Hace falta aqui y no lo hacia ningun test anterior porque
+     * {@code payroll_calculation_step} es la unica entidad de {@code payroll} con clave asignada:
+     * su {@code insert} queda diferido hasta el vaciado, mientras que las lineas del recibo llevan
+     * {@code identity} y se insertan al persistir para sacar el id. Y estos tests van en una
+     * transaccion que se deshace al terminar, asi que no hay commit que vacie por ellos.
+     *
+     * <p>No es un arreglo de produccion disfrazado: sin esto, la aplicacion escribe los pasos
+     * igual —comprobado contra la aplicacion arrancada, por el lanzamiento y por el recalculo
+     * puntual—. Lo que falta aqui es el commit, no el {@code flush} (ADR-062).
+     */
+    private void vaciarLaSesion() {
+        entityManager.flush();
     }
 
     @Test
@@ -107,6 +129,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
     void aWholeMonthKeepsEveryStep_andOnly14OfThemReachThePayslip() {
         String emp = hireWholeMonth();
         assertEquals("COMPLETED", launchSingleEmployee(emp).status());
+        vaciarLaSesion();
         Long pid = payrollId(emp);
 
         // Un solo tramo: un paso por concepto ejecutado.
@@ -140,6 +163,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
     void aSplitMonthKeepsFourStepsMore_withSalarioBaseTwiceAndNeitherOneLost() {
         String emp = hireWithSplitWorkingTime(new BigDecimal("100.00"), new BigDecimal("50.00"));
         assertEquals("COMPLETED", launchSingleEmployee(emp).status());
+        vaciarLaSesion();
         Long pid = payrollId(emp);
 
         // Los 4 conceptos SEGMENT se evaluan una vez por tramo: 31 + 4 x 2 = 39.
@@ -170,6 +194,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
     void recalculating_replacesBothTablesAtOnce_andLeavesNoStepsBehind() {
         String emp = hireWholeMonth();
         assertEquals("COMPLETED", launchSingleEmployee(emp).status());
+        vaciarLaSesion();
 
         Long firstId = payrollId(emp);
         int stepsBefore = countSteps(firstId);
@@ -188,6 +213,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
 
         recalculate.recalculate(new RecalculatePayrollCommand(
                 RULE_SYSTEM, EMPLOYEE_TYPE, emp, PERIOD, PAYROLL_TYPE, 1));
+        vaciarLaSesion();
 
         Long secondId = payrollId(emp);
         assertNotEquals(firstId, secondId, "un recalculo hace un recibo nuevo, no edita el viejo");
