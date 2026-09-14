@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll.infrastructure.web;
 
+import com.b4rrhh.payroll.application.port.PayrollCalculationStep;
 import com.b4rrhh.payroll.application.usecase.BulkInvalidatePayrollResult;
 import com.b4rrhh.payroll.application.usecase.BulkInvalidatePayrollUseCase;
 import com.b4rrhh.payroll.application.usecase.CalculatePayrollCommand;
@@ -9,6 +10,7 @@ import com.b4rrhh.payroll.application.usecase.FinalizePayrollUseCase;
 import com.b4rrhh.payroll.application.usecase.GetPayrollByBusinessKeyUseCase;
 import com.b4rrhh.payroll.application.usecase.InvalidatePayrollCommand;
 import com.b4rrhh.payroll.application.usecase.InvalidatePayrollUseCase;
+import com.b4rrhh.payroll.application.usecase.ListPayrollCalculationStepsUseCase;
 import com.b4rrhh.payroll.application.usecase.ValidatePayrollCommand;
 import com.b4rrhh.payroll.application.usecase.ValidatePayrollUseCase;
 import com.b4rrhh.payroll.domain.model.Payroll;
@@ -16,12 +18,14 @@ import com.b4rrhh.payroll.domain.model.PayrollConcept;
 import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.model.PayrollWarning;
+import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollCalculationStepResponseAssembler;
 import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollResponseAssembler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.b4rrhh.payroll.infrastructure.web.dto.BulkInvalidatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.BulkInvalidatePayrollResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.CalculatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.InvalidatePayrollRequest;
+import com.b4rrhh.payroll.infrastructure.web.dto.PayrollCalculationStepResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollConceptRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollContextSnapshotRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollResponse;
@@ -46,6 +50,7 @@ import com.b4rrhh.payroll.application.usecase.SearchPayrollsUseCase;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollSummaryResponse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -69,6 +74,8 @@ class PayrollControllerTest {
     private SearchPayrollsUseCase searchPayrollsUseCase;
     @Mock
     private RecalculatePayrollUseCase recalculatePayrollUseCase;
+    @Mock
+    private ListPayrollCalculationStepsUseCase listPayrollCalculationStepsUseCase;
 
     private PayrollController controller;
 
@@ -83,7 +90,9 @@ class PayrollControllerTest {
                 bulkInvalidatePayrollUseCase,
                 searchPayrollsUseCase,
                 recalculatePayrollUseCase,
-                new PayrollResponseAssembler(new ObjectMapper())
+                listPayrollCalculationStepsUseCase,
+                new PayrollResponseAssembler(new ObjectMapper()),
+                new PayrollCalculationStepResponseAssembler()
         );
     }
 
@@ -265,6 +274,65 @@ class PayrollControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals("CALCULATED", response.getBody().status().name());
+    }
+
+    // ── los pasos del calculo (backend#97) ───────────────────────────────────
+
+    @Test
+    void servesTheCalculationStepsInTheOrderTheUseCaseGivesThem_withTheSameConceptTwice() {
+        when(listPayrollCalculationStepsUseCase.listByPayrollBusinessKey(
+                "ESP", "INTERNAL", "EMP001", "202504", "NORMAL", 1))
+                .thenReturn(Optional.of(List.of(
+                        step(1, "D01", null),
+                        step(2, "101", "101"),
+                        step(3, "101", "101"))));
+
+        ResponseEntity<List<PayrollCalculationStepResponse>> response = controller.getCalculationSteps(
+                "ESP", "INTERNAL", "EMP001", "202504", "NORMAL", 1);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(List.of(1, 2, 3),
+                response.getBody().stream().map(PayrollCalculationStepResponse::executionOrder).toList());
+        // El concepto repetido llega repetido: la capa web no agrupa ni deduplica.
+        assertEquals(List.of("D01", "101", "101"),
+                response.getBody().stream().map(PayrollCalculationStepResponse::conceptCode).toList());
+        // Y el que no llego al folio se distingue por el campo, no por la naturaleza.
+        assertNull(response.getBody().get(0).payslipOrderCode());
+        assertEquals("101", response.getBody().get(1).payslipOrderCode());
+    }
+
+    @Test
+    void aPayrollWithoutStepsIsTwoHundredWithAnEmptyList_notAFourOhFour() {
+        when(listPayrollCalculationStepsUseCase.listByPayrollBusinessKey(
+                "ESP", "INTERNAL", "EMP001", "202504", "NORMAL", 1))
+                .thenReturn(Optional.of(List.of()));
+
+        ResponseEntity<List<PayrollCalculationStepResponse>> response = controller.getCalculationSteps(
+                "ESP", "INTERNAL", "EMP001", "202504", "NORMAL", 1);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(List.of(), response.getBody());
+    }
+
+    @Test
+    void aPayrollThatDoesNotExistIsAFourOhFour() {
+        when(listPayrollCalculationStepsUseCase.listByPayrollBusinessKey(
+                "ESP", "INTERNAL", "NOPE", "202504", "NORMAL", 1))
+                .thenReturn(Optional.empty());
+
+        ResponseEntity<List<PayrollCalculationStepResponse>> response = controller.getCalculationSteps(
+                "ESP", "INTERNAL", "NOPE", "202504", "NORMAL", 1);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+
+    private static PayrollCalculationStep step(int executionOrder, String conceptCode, String payslipOrderCode) {
+        return new PayrollCalculationStep(
+                executionOrder, conceptCode, conceptCode + "_MNEMO", "DIRECT_AMOUNT",
+                payslipOrderCode == null ? "TECHNICAL" : "EARNING",
+                PayrollCalculationStep.PERIOD_SCOPE, null, null,
+                new BigDecimal("10.00"), null, null, payslipOrderCode);
     }
 
     private Payroll payroll(PayrollStatus status, String statusReasonCode) {

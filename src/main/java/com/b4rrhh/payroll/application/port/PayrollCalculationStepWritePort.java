@@ -13,7 +13,8 @@ import java.util.List;
  * {@code company_profile}, el {@code ofDefault()} fiscal—, y aquí se evita por construcción: que el
  * código diga «esto no se lee todavía» no teniendo por dónde leerlo vale más que un comentario.
  *
- * <p>Cuando haya quien los lea, el puerto de lectura se añade entonces, con su consumidor delante.
+ * <p>Ese momento ya llegó: el {@link PayrollCalculationStepReadPort} se añadió en el
+ * {@code backend#97}, con su consumidor delante —el endpoint {@code /steps}— y no antes.
  */
 public interface PayrollCalculationStepWritePort {
 

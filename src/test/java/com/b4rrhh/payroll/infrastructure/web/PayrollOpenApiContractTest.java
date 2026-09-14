@@ -65,6 +65,39 @@ class PayrollOpenApiContractTest {
         assertTrue(contract.contains("Calculation run that produced this payroll"));
     }
 
+    /**
+     * Los pasos del calculo se sirven y se declaran, y el contrato dice lo que no se puede hacer
+     * con ellos ({@code backend#97}).
+     *
+     * <p>No es un candado de forma: es que las tres cosas que rompen este endpoint —reordenar,
+     * indexar por concepto y leer la lista vacia como «no hay conceptos»— no se ven mirando los
+     * campos. Un cliente generado de un contrato que no las diga las hara.
+     */
+    @Test
+    void theCalculationStepsEndpointIsDocumentedWithTheThreeThingsThatBreakIt() throws IOException {
+        String contract = contrato();
+
+        assertTrue(contract.contains("{presenceNumber}/steps:"));
+        assertTrue(contract.contains("listPayrollCalculationSteps"));
+        assertTrue(contract.contains("PayrollCalculationStepResponse"));
+
+        // 1. El orden es el de ejecucion y no se toca.
+        assertTrue(contract.contains("Items are ordered by executionOrder and that order is the whole point"));
+
+        // 2. La clave de fila es executionOrder, no conceptCode.
+        assertTrue(contract.contains("The row identity is executionOrder, never conceptCode"));
+        assertTrue(contract.contains("carries concept 101 twice"));
+
+        // 3. Y la lista vacia significa una cosa y solo una.
+        assertTrue(contract.contains("An empty array means \"this payroll was calculated before the engine stored its steps\""));
+        assertTrue(contract.contains("never \"this payroll has no concepts\""));
+        assertTrue(contract.contains("never filled in by deriving steps from the payslip lines"));
+
+        // Y el que llego al folio se distingue por el campo, no por la naturaleza.
+        assertTrue(contract.contains("payslipOrderCode is null when that step did not reach the payslip"));
+        assertTrue(contract.contains("the amount column must not be summed"));
+    }
+
     @Test
     void bulkInvalidateEndpointIsDocumented() throws IOException {
         String contract = contrato();

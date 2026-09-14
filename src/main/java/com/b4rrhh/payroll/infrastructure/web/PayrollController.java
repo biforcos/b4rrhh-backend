@@ -10,6 +10,7 @@ import com.b4rrhh.payroll.application.usecase.FinalizePayrollUseCase;
 import com.b4rrhh.payroll.application.usecase.GetPayrollByBusinessKeyUseCase;
 import com.b4rrhh.payroll.application.usecase.InvalidatePayrollCommand;
 import com.b4rrhh.payroll.application.usecase.InvalidatePayrollUseCase;
+import com.b4rrhh.payroll.application.usecase.ListPayrollCalculationStepsUseCase;
 import com.b4rrhh.payroll.application.usecase.PayrollLaunchEmployeeTarget;
 import com.b4rrhh.payroll.application.usecase.PayrollLaunchTargetSelection;
 import com.b4rrhh.payroll.application.usecase.ValidatePayrollCommand;
@@ -17,11 +18,13 @@ import com.b4rrhh.payroll.application.usecase.ValidatePayrollUseCase;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollConcept;
 import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
+import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollCalculationStepResponseAssembler;
 import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollResponseAssembler;
 import com.b4rrhh.payroll.infrastructure.web.dto.BulkInvalidatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.BulkInvalidatePayrollResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.CalculatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.InvalidatePayrollRequest;
+import com.b4rrhh.payroll.infrastructure.web.dto.PayrollCalculationStepResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollLaunchEmployeeTargetRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollLaunchTargetSelectionRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollResponse;
@@ -54,7 +57,9 @@ public class PayrollController {
     private final BulkInvalidatePayrollUseCase bulkInvalidatePayrollUseCase;
     private final SearchPayrollsUseCase searchPayrollsUseCase;
     private final RecalculatePayrollUseCase recalculatePayrollUseCase;
+    private final ListPayrollCalculationStepsUseCase listPayrollCalculationStepsUseCase;
     private final PayrollResponseAssembler payrollResponseAssembler;
+    private final PayrollCalculationStepResponseAssembler payrollCalculationStepResponseAssembler;
 
     public PayrollController(
             CalculatePayrollUseCase calculatePayrollUseCase,
@@ -65,7 +70,9 @@ public class PayrollController {
             BulkInvalidatePayrollUseCase bulkInvalidatePayrollUseCase,
             SearchPayrollsUseCase searchPayrollsUseCase,
             RecalculatePayrollUseCase recalculatePayrollUseCase,
-            PayrollResponseAssembler payrollResponseAssembler
+            ListPayrollCalculationStepsUseCase listPayrollCalculationStepsUseCase,
+            PayrollResponseAssembler payrollResponseAssembler,
+            PayrollCalculationStepResponseAssembler payrollCalculationStepResponseAssembler
     ) {
         this.calculatePayrollUseCase = calculatePayrollUseCase;
         this.getPayrollByBusinessKeyUseCase = getPayrollByBusinessKeyUseCase;
@@ -75,7 +82,9 @@ public class PayrollController {
         this.bulkInvalidatePayrollUseCase = bulkInvalidatePayrollUseCase;
         this.searchPayrollsUseCase = searchPayrollsUseCase;
         this.recalculatePayrollUseCase = recalculatePayrollUseCase;
+        this.listPayrollCalculationStepsUseCase = listPayrollCalculationStepsUseCase;
         this.payrollResponseAssembler = payrollResponseAssembler;
+        this.payrollCalculationStepResponseAssembler = payrollCalculationStepResponseAssembler;
     }
 
     @GetMapping("/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}")
@@ -96,6 +105,42 @@ public class PayrollController {
                 presenceNumber
         )
                 .map(payrollResponseAssembler::toResponse)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Los pasos con los que el motor calculó este recibo, en orden de ejecución.
+     *
+     * <p>Cuelga de la dirección del recibo y va fuera del {@code PayrollResponse} por dos motivos:
+     * son 35 o 39 filas por recibo que viajarían en cada apertura de ficha para que casi nadie las
+     * mire, y sobre todo porque la Valorización es un cajón que se abre a demanda —el momento de
+     * traerlos es cuando alguien pregunta, que es el gesto que este endpoint sirve
+     * ({@code backend#97}).
+     *
+     * <p>Los tres casos se distinguen y ninguno se confunde con otro: no hay recibo, {@code 404};
+     * hay recibo y hay pasos, {@code 200} con la lista; hay recibo y no hay ni un paso,
+     * {@code 200} con lista vacía, que es lo que devuelve todo recibo calculado antes de la
+     * {@code V129}. Esa lista vacía <b>no</b> se rellena derivándola de {@code payroll_concept}.
+     */
+    @GetMapping("/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}/steps")
+    public ResponseEntity<List<PayrollCalculationStepResponse>> getCalculationSteps(
+            @PathVariable String ruleSystemCode,
+            @PathVariable String employeeTypeCode,
+            @PathVariable String employeeNumber,
+            @PathVariable String payrollPeriodCode,
+            @PathVariable String payrollTypeCode,
+            @PathVariable Integer presenceNumber
+    ) {
+        return listPayrollCalculationStepsUseCase.listByPayrollBusinessKey(
+                ruleSystemCode,
+                employeeTypeCode,
+                employeeNumber,
+                payrollPeriodCode,
+                payrollTypeCode,
+                presenceNumber
+        )
+                .map(payrollCalculationStepResponseAssembler::toResponse)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
