@@ -29,12 +29,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * El recibo se queda con los 14 conceptos que tienen sitio en el folio. Los otros 22 —5 BASE y 17
+ * El recibo se queda con los 14 conceptos que tienen sitio en el folio. Los otros 21 —5 BASE y 16
  * TECHNICAL— se calculaban, alimentaban a los demas y se tiraban, y son justo los que explican de
  * donde sale el numero. Desde el backend#93 se guardan todos en payroll.payroll_calculation_step.
  *
- * <p>Sobre ESP y no sobre TST, a proposito: los numeros de este issue —36 conceptos, 4 de ambito
- * SEGMENT y 32 de ambito PERIOD— son los de la reglamentacion que siembran las migraciones, y un
+ * <p>Sobre ESP y no sobre TST, a proposito: los numeros de este issue —35 conceptos, 4 de ambito
+ * SEGMENT y 31 de ambito PERIOD— son los de la reglamentacion que siembran las migraciones, y un
  * fixture con quince conceptos de mentira no probaria el recuento que hay que probar.
  *
  * <p>Y el mes partido no es un adorno del test: con un solo tramo, cualquier identidad parece
@@ -53,17 +53,20 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
     private static final LocalDate APRIL_16 = LocalDate.of(2025, 4, 16);
     private static final LocalDate JANUARY_1 = LocalDate.of(2025, 1, 1);
 
-    /** Los que hay en el catalogo ESP: 4 de ambito SEGMENT y 32 de ambito PERIOD. */
-    private static final int CONCEPTS_IN_THE_ENGINE = 36;
+    /** Los que hay en el catalogo ESP: 4 de ambito SEGMENT y 31 de ambito PERIOD. */
+    private static final int CONCEPTS_IN_THE_ENGINE = 35;
     private static final int SEGMENT_SCOPED_CONCEPTS = 4;
 
     /**
-     * Y los que de verdad se ejecutan son 35, no 36.
+     * Y los 35 entran en algun plan, que es lo que cambio en el backend#96.
      *
-     * <p>{@code P_SS} (TIPO_SS) se quedo huerfano en la V91, cuando el porcentaje del 700 paso de
-     * leerlo a el a leer {@code P_SS_CC}: sigue en el catalogo, no esta asignado a nadie, no
-     * alimenta a nadie y no es operando de nadie, asi que ningun plan lo incluye. El test lo fija
-     * abajo para que el dia que alguien lo ate —o lo retire— esto se entere.
+     * <p>Hasta la V130 eran 36 en el catalogo y 35 alcanzables: {@code P_SS} (TIPO_SS) se quedo
+     * huerfano en la V91, cuando el porcentaje del 700 paso de leerlo a el a leer
+     * {@code P_SS_CC}, y desde entonces estaba en el catalogo sin que ningun plan lo pidiera. La
+     * V130 lo retira, asi que las dos cuentas vuelven a ser la misma.
+     *
+     * <p>El recuento de pasos no se movio: 35 en un mes entero y 39 en uno del mes partido, igual
+     * que antes. Retirar un concepto que nadie ejecutaba no puede anadir un paso.
      */
     private static final int CONCEPTS_IN_A_PLAN = 35;
 
@@ -118,11 +121,12 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
                         + " where o.rule_system_code = ? and c.payslip_order_code is not null",
                 Integer.class, RULE_SYSTEM), "conceptos con sitio en el folio");
 
-        // Y uno de los 36 no lo ejecuta nadie, que es de donde sale que un recibo tenga 35 pasos
-        // y no 36. Es un hecho, no un fallo de este issue; lo que no puede es estar sin decir.
-        assertEquals(List.of("P_SS"), conceptsInNoPlan(),
+        // Y ya no sobra ninguno: desde la V130 (backend#96) todo lo que esta en el catalogo lo
+        // alcanza algun plan. La lista se queda viva y vacia, que es lo que hace que el dia que
+        // aparezca otro huerfano se entere alguien; borrar el test seria quitar el aviso.
+        assertEquals(List.of(), conceptsInNoPlan(),
                 "conceptos que ni estan asignados, ni alimentan, ni son operando de nadie");
-        assertEquals(CONCEPTS_IN_THE_ENGINE - 1, CONCEPTS_IN_A_PLAN);
+        assertEquals(CONCEPTS_IN_THE_ENGINE, CONCEPTS_IN_A_PLAN);
     }
 
     @Test
@@ -135,10 +139,10 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
         // Un solo tramo: un paso por concepto ejecutado.
         assertEquals(CONCEPTS_IN_A_PLAN, countSteps(pid), "pasos guardados");
 
-        // Y los 22 que antes se tiraban estan, con nombre y apellido.
+        // Y los 21 que antes se tiraban estan, con nombre y apellido.
         assertEquals(5, countStepsWithNature(pid, "BASE"), "conceptos BASE");
         assertEquals(16, countStepsWithNature(pid, "TECHNICAL"),
-                "conceptos TECHNICAL: los 17 del catalogo menos el P_SS que no ejecuta nadie");
+                "conceptos TECHNICAL: los 16 del catalogo, desde que la V130 retiro el P_SS");
 
         // El recibo no cambia: sigue siendo las lineas de siempre, y son las que llevan orden.
         int payslipLines = jdbc.queryForObject(
@@ -149,8 +153,8 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
                         + " where payroll_id = ? and payslip_order_code is not null",
                 Integer.class, pid), "los pasos con orden de recibo son las lineas del recibo");
 
-        // El orden de ejecucion es una serie completa de 1 a 36, sin huecos ni repetidos: el
-        // recuento, el minimo y el maximo solo cuadran a la vez si estan los 36 y una sola vez.
+        // El orden de ejecucion es una serie completa de 1 a 35, sin huecos ni repetidos: el
+        // recuento, el minimo y el maximo solo cuadran a la vez si estan los 35 y una sola vez.
         assertEquals(1, (int) jdbc.queryForObject(
                 "select min(execution_order) from payroll.payroll_calculation_step where payroll_id = ?",
                 Integer.class, pid), "el primer paso es el 1");

@@ -67,7 +67,7 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
     private static final LocalDate APRIL_16 = LocalDate.of(2025, 4, 16);
     private static final LocalDate JANUARY_1 = LocalDate.of(2025, 1, 1);
 
-    /** Los pasos de un empleado de mes entero: los 36 del catalogo ESP menos el P_SS, que no ejecuta nadie. */
+    /** Los pasos de un empleado de mes entero: uno por cada concepto del catalogo ESP. */
     private static final int STEPS_IN_A_WHOLE_MONTH = 35;
 
     /** Y los de uno del mes partido: los 4 conceptos de ambito SEGMENT se evaluan una vez por tramo. */

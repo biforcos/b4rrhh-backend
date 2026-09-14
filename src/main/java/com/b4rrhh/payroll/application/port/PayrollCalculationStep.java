@@ -7,14 +7,20 @@ import java.util.Objects;
 /**
  * Un paso que el motor dio calculando un recibo.
  *
- * <p>Hay uno por cada evaluación de un concepto, y son los 36 del motor y no los 14 que llegan al
- * folio: los 22 que se quedaban fuera —5 {@code BASE} y 17 {@code TECHNICAL}— son justo los que
+ * <p>Hay uno por cada evaluación de un concepto, y son los 35 del motor y no los 14 que llegan al
+ * folio: los 21 que se quedaban fuera —5 {@code BASE} y 16 {@code TECHNICAL}— son justo los que
  * explican de dónde sale el número ({@code backend#93}).
  *
- * <p><b>36 conceptos no son 36 pasos.</b> Un concepto de ámbito {@code SEGMENT} se evalúa una vez
- * por segmento, así que un empleado normal deja 36 pasos y uno del mes partido 40, con el 101 dos
- * veces y con dos precios distintos. Por eso la identidad es el orden de ejecución y no el
- * concepto.
+ * <p><b>Un concepto no es un paso.</b> Un concepto de ámbito {@code SEGMENT} se evalúa una vez por
+ * segmento, así que los 35 del catálogo dejan 35 pasos en un empleado normal y 39 en uno del mes
+ * partido, con el 101 dos veces y con dos precios distintos. Por eso la identidad es el orden de
+ * ejecución y no el concepto.
+ *
+ * <p>Esta frase decía «36 pasos y 40», y no era un recuento sino la cuenta del catálogo puesta
+ * donde va la de los pasos: {@code P_SS} estaba en el catálogo de 36 y ningún plan lo pedía, así
+ * que nunca llegó a ser un paso. Lo medido siempre fue 35 y 39. La {@code V130} lo retira
+ * ({@code backend#96}) y las dos cuentas vuelven a ser la misma, pero el número de pasos no se
+ * movió ni podía moverse: retirar un concepto que nadie ejecuta no añade ninguno.
  *
  * <p>El {@code executionScope} va explícito y no se deduce de que las fechas vengan nulas. Como las
  * dos cosas tienen que decir lo mismo, el invariante se comprueba aquí y, otra vez, en el esquema:

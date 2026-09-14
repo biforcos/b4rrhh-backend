@@ -168,6 +168,17 @@ De ahí **tres reglas**:
   ESP sólo 35 entran en algún plan: `P_SS` (`TIPO_SS`) quedó huérfano en la `V91`, cuando el
   `PERCENTAGE` del 700 pasó de leerlo a él a leer `P_SS_CC`. No está asignado, no alimenta y no es operando de
   nadie. El test lo fija para que el recuento no siga diciendo algo que dejó de ser verdad.
+
+  > **14/09/2026 — `backend#96`.** Retirado. La `V130` se lleva `P_SS` y su calculador, así que el
+  > catálogo ESP tiene 35 conceptos y los 35 entran en algún plan. El test que lo fijaba sigue vivo,
+  > ahora afirmando la lista vacía. Los pasos de un recibo no cambian —35 y 39—: retirar un concepto
+  > que nadie ejecutaba no añade ninguno.
+
 - **Queda abierto —y no se hace aquí— servir los pasos y pintarlos.** El contrato no cambia en esta
   decisión. Cuando haya consumidor, el puerto de lectura y el endpoint son otro issue y probablemente
   otro ADR.
+
+  > **14/09/2026 — `backend#97`.** Hecho. `PayrollCalculationStepReadPort` y
+  > `GET .../{presenceNumber}/steps`, con el consumidor delante y fuera del `PayrollResponse`. El
+  > orden servido es el de ejecución, la clave de fila es `executionOrder` y un recibo sin pasos
+  > responde `200` con lista vacía, que no se rellena derivándola de `payroll_concept`.

@@ -207,8 +207,15 @@ cotización a `SEGMENT` sin entender esto, el recorte deja de cuadrar.
 2. **El IRPF es un 15 % fijo.** `IrpfWithholdingRateCalculator` lo dice en su javadoc: es un
    marcador de posición. El tipo real depende de los datos fiscales del empleado y se
    regulariza. La vertical `employee.tax_information` ya existe (V95); no está conectada.
-3. **`P_SS` (6,35 % todo en uno) quedó muerto** al partirse el 700 en V91. El concepto y su
-   `SsContributionRateCalculator` siguen en el árbol sin que nadie los referencie.
+3. ~~**`P_SS` (6,35 % todo en uno) quedó muerto** al partirse el 700 en V91. El concepto y su
+   `SsContributionRateCalculator` siguen en el árbol sin que nadie los referencie.~~
+   **Cerrado el 14/09/2026 (`backend#96`).** Se retiró: la `V130` borra el objeto y el concepto
+   —el `on delete cascade` de la `V78` se lleva el segundo con el primero— y
+   `SsContributionRateCalculator` sale del árbol. De las dos salidas que el issue dejaba abiertas
+   se eligió retirarlo y no atarlo como agregado de los cuatro: ese total sería un concepto nuevo
+   —hay que decidir su naturaleza, si alimenta al 980 y qué sitio ocupa en el folio— y nada de eso
+   estaba decidido. El catálogo ESP pasa de 36 conceptos a 35, y los 35 entran en algún plan. El
+   recuento de pasos de un recibo no se movió: 35 en un mes entero y 39 en uno del mes partido.
 4. **No hay accidentes de trabajo (725).** Requiere la tarifa por CNAE de cada empresa; queda
    aplazado explícitamente desde V88.
 5. **`B01` solo se alimenta del salario base.** Falta la prorrata de pagas extra y cualquier
@@ -236,7 +243,7 @@ cotización a `SEGMENT` sin entender esto, el recorte deja de cuadrar.
 |---|---|---|
 | 1 | `ss_cotizacion_tipos` no la lee nadie; los tipos son constantes Java | los 10 `*RateCalculator` |
 | 2 | IRPF fijo al 15 %, con `employee.tax_information` ya disponible | `IrpfWithholdingRateCalculator` |
-| 3 | `P_SS` y `SsContributionRateCalculator` muertos desde V91 | `payroll_engine` |
+| 3 | ~~`P_SS` y `SsContributionRateCalculator` muertos desde V91~~ — retirados en la `V130` (`backend#96`) | `payroll_engine` |
 | 4 | Sin AT/EP (725): falta tarifa CNAE por empresa | V88, aplazado |
 | 5 | `B01` incompleta: sin prorrata de extras ni otros devengos cotizables | grafo de feeds |
 
