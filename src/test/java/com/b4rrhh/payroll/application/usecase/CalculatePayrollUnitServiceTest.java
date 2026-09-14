@@ -87,6 +87,8 @@ class CalculatePayrollUnitServiceTest {
     private GetAgreementCategoryProfileUseCase getAgreementCategoryProfileUseCase;
     @Mock
     private EmployeeTaxInfoPayrollLookupPort employeeTaxInfoLookupPort;
+    @Mock
+    private com.b4rrhh.payroll.application.port.PayrollCalculationStepWritePort payrollCalculationStepWritePort;
     // Motor real, no mock: lo que se prueba aqui es como el servicio reparte cada concepto
     // entre tramos y periodo segun su execution_scope, y eso solo se ve evaluando de verdad.
     private final SegmentExecutionEngine segmentExecutionEngine = new DefaultSegmentExecutionEngine(
@@ -122,7 +124,8 @@ class CalculatePayrollUnitServiceTest {
             segmentExecutionEngine,
             employeePayrollInputLookupPort,
             getAgreementCategoryProfileUseCase,
-            employeeTaxInfoLookupPort
+            employeeTaxInfoLookupPort,
+            payrollCalculationStepWritePort
         );
 
         when(employeeTaxInfoLookupPort.findLatestOnOrBefore(
@@ -227,7 +230,8 @@ class CalculatePayrollUnitServiceTest {
             segmentExecutionEngine,
             employeePayrollInputLookupPort,
             getAgreementCategoryProfileUseCase,
-            employeeTaxInfoLookupPort
+            employeeTaxInfoLookupPort,
+            payrollCalculationStepWritePort
         );
 
         lenient().when(employeeTaxInfoLookupPort.findLatestOnOrBefore(
@@ -334,7 +338,8 @@ class CalculatePayrollUnitServiceTest {
             segmentExecutionEngine,
             employeePayrollInputLookupPort,
             getAgreementCategoryProfileUseCase,
-            employeeTaxInfoLookupPort
+            employeeTaxInfoLookupPort,
+            payrollCalculationStepWritePort
         );
 
         when(employeeTaxInfoLookupPort.findLatestOnOrBefore(

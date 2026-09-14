@@ -13,6 +13,8 @@ import com.b4rrhh.payroll.application.port.WorkCenterProfileLookupPort;
 import com.b4rrhh.payroll.application.port.CompanyProfileLookupPort;
 import com.b4rrhh.payroll.application.port.EmployeePersonalDataContext;
 import com.b4rrhh.payroll.application.port.EmployeePersonalDataLookupPort;
+import com.b4rrhh.payroll.application.port.PayrollCalculationStep;
+import com.b4rrhh.payroll.application.port.PayrollCalculationStepWritePort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputLookupPort;
 import com.b4rrhh.payroll.application.service.PayrollConceptExecutionContext;
@@ -39,6 +41,7 @@ import com.b4rrhh.payroll_engine.segment.domain.model.SegmentCalculationContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 
@@ -74,6 +77,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     private final EmployeePayrollInputLookupPort employeePayrollInputLookupPort;
     private final GetAgreementCategoryProfileUseCase getAgreementCategoryProfileUseCase;
     private final EmployeeTaxInfoPayrollLookupPort employeeTaxInfoLookupPort;
+    private final PayrollCalculationStepWritePort payrollCalculationStepWritePort;
 
     public CalculatePayrollUnitService(
             CalculatePayrollUseCase calculatePayrollUseCase,
@@ -88,7 +92,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             SegmentExecutionEngine segmentExecutionEngine,
             EmployeePayrollInputLookupPort employeePayrollInputLookupPort,
             GetAgreementCategoryProfileUseCase getAgreementCategoryProfileUseCase,
-            EmployeeTaxInfoPayrollLookupPort employeeTaxInfoLookupPort
+            EmployeeTaxInfoPayrollLookupPort employeeTaxInfoLookupPort,
+            PayrollCalculationStepWritePort payrollCalculationStepWritePort
     ) {
         this.calculatePayrollUseCase = calculatePayrollUseCase;
         this.payrollLaunchEligibleInputLookupPort = payrollLaunchEligibleInputLookupPort;
@@ -103,9 +108,17 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         this.employeePayrollInputLookupPort = employeePayrollInputLookupPort;
         this.getAgreementCategoryProfileUseCase = getAgreementCategoryProfileUseCase;
         this.employeeTaxInfoLookupPort = employeeTaxInfoLookupPort;
+        this.payrollCalculationStepWritePort = payrollCalculationStepWritePort;
     }
 
+    /**
+     * <p>Con {@code @Transactional} desde el {@code backend#93}: el recibo y sus pasos se guardan
+     * en dos escrituras y tienen que ir o no ir juntas. El lanzador no abre transaccion a
+     * proposito —sus contadores se guardan unidad a unidad— asi que sin esto la segunda escritura
+     * caeria en su propia transaccion y un fallo entre medias dejaria un recibo sin pasos.
+     */
     @Override
+    @Transactional
     public Payroll calculate(CalculatePayrollUnitCommand command) {
         return calculateEligibleReal(command);
     }
@@ -264,7 +277,12 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 grupoCotizacionCode, tipoNomina, precomputedDirectAmounts);
         SegmentExecutionState periodState = new SegmentExecutionState();
 
-        List<ConceptRow> payslipRows = new ArrayList<>();
+        // Una travesia y una proyeccion (backend#93). El recorrido arma un paso por evaluacion
+        // —un concepto de ambito SEGMENT se evalua una vez por segmento, asi que un mes partido
+        // deja mas pasos que conceptos— y las lineas del recibo salen despues, filtrando por
+        // payslip_order_code. No hay dos construcciones en paralelo que puedan divergir: hay una,
+        // y el recibo es una vista suya con la regla de presentacion encima.
+        List<PayrollCalculationStep> calculationSteps = new ArrayList<>();
         int step = 0;
         for (ConceptExecutionPlanEntry entry : plan) {
             step++;
@@ -286,7 +304,9 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                             step, plan.size(), conceptCode, entry.calculationType(),
                             seg.segmentStart(), seg.segmentEnd(), amount,
                             quantityOf(entry, state), rateOf(entry, state));
-                    addPayslipRow(payslipRows, engineConcept, entry, state, amount);
+                    calculationSteps.add(calculationStep(
+                            calculationSteps.size() + 1, engineConcept, entry, state, amount,
+                            seg.segmentStart(), seg.segmentEnd()));
                 }
                 periodState.storeResult(entry.identity(), composed);
                 if (segments.size() > 1) {
@@ -304,9 +324,19 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 log.info("[NÓMINA] [{}/{}] {} {} PERIOD → {} (q={} r={})",
                         step, plan.size(), conceptCode, entry.calculationType(), amount,
                         quantityOf(entry, periodState), rateOf(entry, periodState));
-                addPayslipRow(payslipRows, engineConcept, entry, periodState, amount);
+                calculationSteps.add(calculationStep(
+                        calculationSteps.size() + 1, engineConcept, entry, periodState, amount,
+                        null, null));
             }
         }
+
+        log.info("[NÓMINA] Pasos de cálculo: {} ({} conceptos, {} segmento(s))",
+                calculationSteps.size(), plan.size(), segments.size());
+
+        List<ConceptRow> payslipRows = calculationSteps.stream()
+                .filter(PayrollCalculationStep::isPayslipLine)
+                .map(this::toPayslipRow)
+                .collect(Collectors.toCollection(ArrayList::new));
 
         if (payrollLaunchExecutionProperties.isCollapseSegmentRows()) {
             int before = payslipRows.size();
@@ -368,8 +398,15 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 buildSnapshots(command, input),
                 payrollSegments
         ));
-        log.info("[NÓMINA] ✓ Cálculo completado | empleado={} periodo={} → {} líneas en recibo",
-                command.employeeNumber(), command.payrollPeriodCode(), payrollConcepts.size());
+
+        // Detras del recibo y no dentro: los pasos no son lineas de recibo y no cuelgan del
+        // agregado. Van en la misma transaccion, que es lo que impide que un recibo nuevo se quede
+        // con pasos viejos o sin ninguno (backend#93).
+        payrollCalculationStepWritePort.writeStepsOf(result.getId(), calculationSteps);
+
+        log.info("[NÓMINA] ✓ Cálculo completado | empleado={} periodo={} → {} líneas en recibo, {} pasos",
+                command.employeeNumber(), command.payrollPeriodCode(),
+                payrollConcepts.size(), calculationSteps.size());
         return result;
     }
 
@@ -468,25 +505,51 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         );
     }
 
-    private void addPayslipRow(
-            List<ConceptRow> payslipRows,
+    /**
+     * Un paso del recorrido: lo que el motor calculo, con su ambito y, si lo tiene, su segmento.
+     * Se guarda tenga o no sitio en el folio, que es de lo que va este issue.
+     */
+    private PayrollCalculationStep calculationStep(
+            int executionOrder,
             com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept engineConcept,
             ConceptExecutionPlanEntry entry,
             SegmentExecutionState state,
-            BigDecimal amount
+            BigDecimal amount,
+            LocalDate segmentStart,
+            LocalDate segmentEnd
     ) {
-        if (engineConcept.getPayslipOrderCode() == null) {
-            return;
-        }
-        int displayOrder = Integer.parseInt(engineConcept.getPayslipOrderCode());
-        payslipRows.add(new ConceptRow(
+        return new PayrollCalculationStep(
+                executionOrder,
                 engineConcept.getConceptCode(),
                 engineConcept.getConceptMnemonic(),
+                entry.calculationType().name(),
+                engineConcept.getFunctionalNature().name(),
+                engineConcept.getExecutionScope().name(),
+                segmentStart,
+                segmentEnd,
                 amount,
                 quantityOf(entry, state),
                 rateOf(entry, state),
-                engineConcept.getFunctionalNature().name(),
-                displayOrder));
+                engineConcept.getPayslipOrderCode());
+    }
+
+    /**
+     * La proyeccion: de paso calculado a linea de recibo.
+     *
+     * <p>Solo la hacen los pasos con {@code payslipOrderCode}, y no son copias. El
+     * {@code quantity} de una linea es una decision de presentacion —la CANTIDAD de un
+     * RATE_BY_QUANTITY, la BASE de un PERCENTAGE—, y esa regla vive aqui, en un sitio, en vez de
+     * estar implicita en que dos recorridos hagan lo mismo de dos maneras (backend#93).
+     */
+    private ConceptRow toPayslipRow(PayrollCalculationStep step) {
+        return new ConceptRow(
+                step.conceptCode(),
+                step.conceptMnemonic(),
+                step.amount(),
+                step.quantity(),
+                step.rate(),
+                step.functionalNature(),
+                Integer.parseInt(step.payslipOrderCode()));
     }
 
     /** The payslip "quantity": the QUANTITY of a RATE_BY_QUANTITY, the BASE of a PERCENTAGE. */
