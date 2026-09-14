@@ -52,8 +52,27 @@ public record EmployeeTaxInfoContext(
      * La situación por omisión: soltero, sin descendientes ni ascendientes, sin discapacidad y
      * territorio común.
      *
-     * <p>Se usa cuando no hay declaración vigente, y desde el {@code backend#92} se distingue de
-     * una declaración que dijera lo mismo.
+     * <p><b>Aquí vive la política fiscal por omisión, y es deliberado que viva en código.</b>
+     * Decidida en el {@code backend#92}: a quien no tiene declaración vigente se le calcula como
+     * soltero sin descendientes ni ascendientes, que es lo que hace cualquier nómina real con
+     * quien no ha presentado su modelo 145. Retirarla no es una opción: hoy los 873 recibos de la
+     * demo descansan sobre ella y sin valor por omisión serían 873 errores.
+     *
+     * <p><b>El valor por omisión es silencioso para el cálculo, y ruidoso para el lector.</b> El
+     * importe sale igual que antes del {@code backend#92}; lo único que cambia es que el snapshot
+     * dice que fue por omisión, porque el snapshot de ADR-059 es <em>lo que el motor tuvo
+     * delante</em> y una situación supuesta no puede guardarse con la misma forma que una
+     * declarada.
+     *
+     * <p><b>No es un {@code payroll_warning}, y no por descuido.</b> Con
+     * {@code employee.employee_tax_information} vacía el aviso saldría en el 100 % de los recibos,
+     * y un aviso que sale siempre no avisa de nada. El día que la semilla traiga datos fiscales el
+     * aviso distinguiría, y ese día merece la pena volver a mirarlo.
+     *
+     * <p><b>No hace falta versionar estos ocho valores.</b> Si mañana cambia la política, los
+     * recibos viejos seguirán diciendo cuál era la de entonces: el snapshot guarda los ocho campos
+     * al lado del {@code source}, así que la foto de hoy ya dice cuál era el defecto de hoy. Tiene
+     * la forma del hash de la reglamentación del {@code workspace#2}, pero no su problema.
      */
     public static EmployeeTaxInfoContext ofDefault() {
         return new EmployeeTaxInfoContext(
