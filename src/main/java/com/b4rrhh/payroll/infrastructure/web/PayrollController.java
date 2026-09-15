@@ -1,5 +1,8 @@
 package com.b4rrhh.payroll.infrastructure.web;
 
+import com.b4rrhh.payroll.application.usecase.BulkFinalizePayrollCommand;
+import com.b4rrhh.payroll.application.usecase.BulkFinalizePayrollResult;
+import com.b4rrhh.payroll.application.usecase.BulkFinalizePayrollUseCase;
 import com.b4rrhh.payroll.application.usecase.BulkInvalidatePayrollCommand;
 import com.b4rrhh.payroll.application.usecase.BulkInvalidatePayrollResult;
 import com.b4rrhh.payroll.application.usecase.BulkInvalidatePayrollUseCase;
@@ -16,6 +19,8 @@ import com.b4rrhh.payroll.application.usecase.ValidatePayrollUseCase;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollCalculationStepResponseAssembler;
 import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollResponseAssembler;
+import com.b4rrhh.payroll.infrastructure.web.dto.BulkFinalizePayrollRequest;
+import com.b4rrhh.payroll.infrastructure.web.dto.BulkFinalizePayrollResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.BulkInvalidatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.BulkInvalidatePayrollResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.InvalidatePayrollRequest;
@@ -50,6 +55,7 @@ public class PayrollController {
     private final ValidatePayrollUseCase validatePayrollUseCase;
     private final FinalizePayrollUseCase finalizePayrollUseCase;
     private final BulkInvalidatePayrollUseCase bulkInvalidatePayrollUseCase;
+    private final BulkFinalizePayrollUseCase bulkFinalizePayrollUseCase;
     private final SearchPayrollsUseCase searchPayrollsUseCase;
     private final RecalculatePayrollUseCase recalculatePayrollUseCase;
     private final ListPayrollCalculationStepsUseCase listPayrollCalculationStepsUseCase;
@@ -62,6 +68,7 @@ public class PayrollController {
             ValidatePayrollUseCase validatePayrollUseCase,
             FinalizePayrollUseCase finalizePayrollUseCase,
             BulkInvalidatePayrollUseCase bulkInvalidatePayrollUseCase,
+            BulkFinalizePayrollUseCase bulkFinalizePayrollUseCase,
             SearchPayrollsUseCase searchPayrollsUseCase,
             RecalculatePayrollUseCase recalculatePayrollUseCase,
             ListPayrollCalculationStepsUseCase listPayrollCalculationStepsUseCase,
@@ -73,6 +80,7 @@ public class PayrollController {
         this.validatePayrollUseCase = validatePayrollUseCase;
         this.finalizePayrollUseCase = finalizePayrollUseCase;
         this.bulkInvalidatePayrollUseCase = bulkInvalidatePayrollUseCase;
+        this.bulkFinalizePayrollUseCase = bulkFinalizePayrollUseCase;
         this.searchPayrollsUseCase = searchPayrollsUseCase;
         this.recalculatePayrollUseCase = recalculatePayrollUseCase;
         this.listPayrollCalculationStepsUseCase = listPayrollCalculationStepsUseCase;
@@ -231,6 +239,37 @@ public class PayrollController {
         ));
     }
 
+
+    /**
+     * El tercer verbo del periodo (backend#102). Cerrar en masa no cierra un periodo: aplica a
+     * muchos recibos el mismo verbo que /finalize aplica a uno, y por eso comparte el selector de
+     * objetivo con los otros dos y no inventa ninguna entidad nueva.
+     */
+    @PostMapping("/finalize-bulk")
+    public ResponseEntity<BulkFinalizePayrollResponse> finalizeBulk(
+            @RequestBody BulkFinalizePayrollRequest request
+    ) {
+        BulkFinalizePayrollResult result = bulkFinalizePayrollUseCase.finalizeBulk(
+                new BulkFinalizePayrollCommand(
+                        request.ruleSystemCode(),
+                        request.payrollPeriodCode(),
+                        request.payrollTypeCode(),
+                        toTargetSelection(request.targetSelection())
+                )
+        );
+
+        return ResponseEntity.ok(new BulkFinalizePayrollResponse(
+                result.ruleSystemCode(),
+                result.payrollPeriodCode(),
+                result.payrollTypeCode(),
+                result.totalCandidates(),
+                result.totalFound(),
+                result.totalFinalized(),
+                result.totalSkippedAlreadyDefinitive(),
+                result.totalSkippedNotEligibleByStatus(),
+                result.totalSkippedNotFound()
+        ));
+    }
 
     @GetMapping
     public ResponseEntity<List<PayrollSummaryResponse>> search(

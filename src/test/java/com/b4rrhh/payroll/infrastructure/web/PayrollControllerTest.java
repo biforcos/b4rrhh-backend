@@ -2,6 +2,7 @@ package com.b4rrhh.payroll.infrastructure.web;
 
 import com.b4rrhh.payroll.application.port.PayrollCalculationStep;
 import com.b4rrhh.payroll.application.usecase.BulkInvalidatePayrollResult;
+import com.b4rrhh.payroll.application.usecase.BulkFinalizePayrollUseCase;
 import com.b4rrhh.payroll.application.usecase.BulkInvalidatePayrollUseCase;
 import com.b4rrhh.payroll.application.usecase.FinalizePayrollCommand;
 import com.b4rrhh.payroll.application.usecase.FinalizePayrollUseCase;
@@ -64,6 +65,8 @@ class PayrollControllerTest {
     @Mock
     private BulkInvalidatePayrollUseCase bulkInvalidatePayrollUseCase;
     @Mock
+    private BulkFinalizePayrollUseCase bulkFinalizePayrollUseCase;
+    @Mock
     private SearchPayrollsUseCase searchPayrollsUseCase;
     @Mock
     private RecalculatePayrollUseCase recalculatePayrollUseCase;
@@ -80,6 +83,7 @@ class PayrollControllerTest {
                 validatePayrollUseCase,
                 finalizePayrollUseCase,
                 bulkInvalidatePayrollUseCase,
+                bulkFinalizePayrollUseCase,
                 searchPayrollsUseCase,
                 recalculatePayrollUseCase,
                 listPayrollCalculationStepsUseCase,

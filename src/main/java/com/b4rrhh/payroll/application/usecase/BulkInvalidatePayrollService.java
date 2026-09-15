@@ -1,9 +1,5 @@
 package com.b4rrhh.payroll.application.usecase;
 
-import com.b4rrhh.payroll.application.port.PayrollLaunchEmployeeContext;
-import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceContext;
-import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceLookupPort;
-import com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
@@ -11,44 +7,36 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class BulkInvalidatePayrollService implements BulkInvalidatePayrollUseCase {
 
-    private static final DateTimeFormatter PAYROLL_PERIOD_FORMATTER = DateTimeFormatter.ofPattern("yyyyMM");
-
     private final PayrollRepository payrollRepository;
-    private final PayrollLaunchPresenceLookupPort payrollLaunchPresenceLookupPort;
+    private final PayrollBulkTargetExpander targetExpander;
 
     public BulkInvalidatePayrollService(
             PayrollRepository payrollRepository,
-            PayrollLaunchPresenceLookupPort payrollLaunchPresenceLookupPort
+            PayrollBulkTargetExpander targetExpander
     ) {
         this.payrollRepository = payrollRepository;
-        this.payrollLaunchPresenceLookupPort = payrollLaunchPresenceLookupPort;
+        this.targetExpander = targetExpander;
     }
 
     @Override
     @Transactional
     public BulkInvalidatePayrollResult invalidateBulk(BulkInvalidatePayrollCommand command) {
-        String ruleSystemCode = normalizeCode(command.ruleSystemCode(), "ruleSystemCode", 5);
-        String payrollPeriodCode = normalizeCode(command.payrollPeriodCode(), "payrollPeriodCode", 30);
-        String payrollTypeCode = normalizeCode(command.payrollTypeCode(), "payrollTypeCode", 30);
-        String statusReasonCode = normalizeCode(command.statusReasonCode(), "statusReasonCode", 50);
-        PayrollLaunchTargetSelection targetSelection = normalizeTargetSelection(command.targetSelection());
-        LocalDate[] periodBounds = parsePayrollPeriodBounds(payrollPeriodCode);
-        LocalDate periodStart = periodBounds[0];
-        LocalDate periodEnd = periodBounds[1];
+        String ruleSystemCode = PayrollFieldNormalizer.code(command.ruleSystemCode(), "ruleSystemCode", 5);
+        String payrollPeriodCode = PayrollFieldNormalizer.code(command.payrollPeriodCode(), "payrollPeriodCode", 30);
+        String payrollTypeCode = PayrollFieldNormalizer.code(command.payrollTypeCode(), "payrollTypeCode", 30);
+        String statusReasonCode = PayrollFieldNormalizer.code(command.statusReasonCode(), "statusReasonCode", 50);
+        PayrollLaunchTargetSelection targetSelection = targetExpander.normalize(command.targetSelection());
+        LocalDate[] periodBounds = PayrollFieldNormalizer.periodBounds(payrollPeriodCode);
 
-        List<PayrollCalculationUnit> candidates = expandCandidates(
-                targetSelection, ruleSystemCode, payrollPeriodCode, payrollTypeCode, periodStart, periodEnd
+        List<PayrollCalculationUnit> candidates = targetExpander.expand(
+                targetSelection, ruleSystemCode, payrollPeriodCode, payrollTypeCode,
+                periodBounds[0], periodBounds[1]
         );
 
         int totalFound = 0;
@@ -82,7 +70,10 @@ public class BulkInvalidatePayrollService implements BulkInvalidatePayrollUseCas
             } else if (existing.getStatus() == PayrollStatus.NOT_VALID) {
                 totalSkippedAlreadyNotValid++;
             } else {
-                // EXPLICIT_VALIDATED or DEFINITIVE — protected, must not be bulk-invalidated
+                // EXPLICIT_VALIDATED o DEFINITIVE: protegidas, no se invalidan en masa. El
+                // contador llevaba meses valiendo 0 porque no habia forma de cerrar en masa;
+                // desde el backend#102 la hay, y este es el sitio donde los dos verbos se
+                // conocen.
                 totalSkippedProtected++;
             }
         }
@@ -99,131 +90,5 @@ public class BulkInvalidatePayrollService implements BulkInvalidatePayrollUseCas
                 totalSkippedNotFound,
                 statusReasonCode
         );
-    }
-
-    private List<PayrollCalculationUnit> expandCandidates(
-            PayrollLaunchTargetSelection targetSelection,
-            String ruleSystemCode,
-            String payrollPeriodCode,
-            String payrollTypeCode,
-            LocalDate periodStart,
-            LocalDate periodEnd
-    ) {
-        List<PayrollLaunchEmployeeTarget> employeeTargets = resolveEmployees(
-                targetSelection, ruleSystemCode, periodStart, periodEnd
-        );
-
-        List<PayrollCalculationUnit> units = new ArrayList<>();
-        for (PayrollLaunchEmployeeTarget employeeTarget : employeeTargets) {
-            List<PayrollLaunchPresenceContext> presences = payrollLaunchPresenceLookupPort.findRelevantPresences(
-                    ruleSystemCode,
-                    employeeTarget.employeeTypeCode(),
-                    employeeTarget.employeeNumber(),
-                    periodStart,
-                    periodEnd
-            );
-            for (PayrollLaunchPresenceContext presence : presences) {
-                units.add(new PayrollCalculationUnit(
-                        ruleSystemCode,
-                        presence.employeeTypeCode(),
-                        presence.employeeNumber(),
-                        payrollPeriodCode,
-                        payrollTypeCode,
-                        presence.presenceNumber()
-                ));
-            }
-        }
-        return units;
-    }
-
-    private List<PayrollLaunchEmployeeTarget> resolveEmployees(
-            PayrollLaunchTargetSelection targetSelection,
-            String ruleSystemCode,
-            LocalDate periodStart,
-            LocalDate periodEnd
-    ) {
-        List<PayrollLaunchEmployeeTarget> rawTargets = switch (targetSelection.selectionType()) {
-            case SINGLE_EMPLOYEE -> List.of(targetSelection.employee());
-            case EMPLOYEE_LIST -> targetSelection.employees();
-            case ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD -> payrollLaunchPresenceLookupPort
-                    .findEmployeesWithPresenceInPeriod(ruleSystemCode, periodStart, periodEnd)
-                    .stream()
-                    .map(emp -> new PayrollLaunchEmployeeTarget(emp.employeeTypeCode(), emp.employeeNumber()))
-                    .toList();
-        };
-
-        LinkedHashMap<String, PayrollLaunchEmployeeTarget> uniqueTargets = new LinkedHashMap<>();
-        for (PayrollLaunchEmployeeTarget rawTarget : rawTargets) {
-            String employeeTypeCode = normalizeCode(rawTarget.employeeTypeCode(), "targetSelection.employeeTypeCode", 30);
-            String employeeNumber = normalizeText(rawTarget.employeeNumber(), "targetSelection.employeeNumber", 15);
-            PayrollLaunchEmployeeTarget normalizedTarget = new PayrollLaunchEmployeeTarget(employeeTypeCode, employeeNumber);
-            uniqueTargets.put(employeeTypeCode + "|" + employeeNumber, normalizedTarget);
-        }
-        return List.copyOf(uniqueTargets.values());
-    }
-
-    private PayrollLaunchTargetSelection normalizeTargetSelection(PayrollLaunchTargetSelection targetSelection) {
-        if (targetSelection == null || targetSelection.selectionType() == null) {
-            throw new InvalidPayrollArgumentException("targetSelection.selectionType is required");
-        }
-
-        return switch (targetSelection.selectionType()) {
-            case SINGLE_EMPLOYEE -> {
-                if (targetSelection.employee() == null) {
-                    throw new InvalidPayrollArgumentException("targetSelection.employee is required for SINGLE_EMPLOYEE");
-                }
-                yield new PayrollLaunchTargetSelection(
-                        PayrollLaunchTargetSelectionType.SINGLE_EMPLOYEE,
-                        targetSelection.employee(),
-                        null
-                );
-            }
-            case EMPLOYEE_LIST -> {
-                if (targetSelection.employees() == null || targetSelection.employees().isEmpty()) {
-                    throw new InvalidPayrollArgumentException("targetSelection.employees is required for EMPLOYEE_LIST");
-                }
-                yield new PayrollLaunchTargetSelection(
-                        PayrollLaunchTargetSelectionType.EMPLOYEE_LIST,
-                        null,
-                        List.copyOf(targetSelection.employees())
-                );
-            }
-            case ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD -> {
-                if (targetSelection.employee() != null || targetSelection.employees() != null) {
-                    throw new InvalidPayrollArgumentException(
-                            "targetSelection.employee and targetSelection.employees must be null for ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD"
-                    );
-                }
-                yield new PayrollLaunchTargetSelection(
-                        PayrollLaunchTargetSelectionType.ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD,
-                        null,
-                        null
-                );
-            }
-        };
-    }
-
-    private LocalDate[] parsePayrollPeriodBounds(String payrollPeriodCode) {
-        try {
-            YearMonth yearMonth = YearMonth.parse(payrollPeriodCode, PAYROLL_PERIOD_FORMATTER);
-            return new LocalDate[]{yearMonth.atDay(1), yearMonth.atEndOfMonth()};
-        } catch (DateTimeParseException ex) {
-            throw new InvalidPayrollArgumentException("payrollPeriodCode must be in yyyyMM format, got: " + payrollPeriodCode);
-        }
-    }
-
-    private String normalizeCode(String value, String fieldName, int maxLength) {
-        return normalizeText(value, fieldName, maxLength).toUpperCase();
-    }
-
-    private String normalizeText(String value, String fieldName, int maxLength) {
-        if (value == null || value.trim().isEmpty()) {
-            throw new InvalidPayrollArgumentException(fieldName + " is required");
-        }
-        String normalized = value.trim();
-        if (normalized.length() > maxLength) {
-            throw new InvalidPayrollArgumentException(fieldName + " exceeds max length " + maxLength);
-        }
-        return normalized;
     }
 }

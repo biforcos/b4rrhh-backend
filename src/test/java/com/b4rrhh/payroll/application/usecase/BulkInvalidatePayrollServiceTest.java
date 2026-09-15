@@ -39,7 +39,8 @@ class BulkInvalidatePayrollServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new BulkInvalidatePayrollService(payrollRepository, payrollLaunchPresenceLookupPort);
+        service = new BulkInvalidatePayrollService(
+                payrollRepository, new PayrollBulkTargetExpander(payrollLaunchPresenceLookupPort));
     }
 
     // --- A: SINGLE_EMPLOYEE, existing CALCULATED -> totalInvalidated = 1 ---
