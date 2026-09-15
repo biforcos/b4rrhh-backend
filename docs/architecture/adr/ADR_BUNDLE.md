@@ -15991,14 +15991,53 @@ explicación en un misterio, y el misterio se paga en la pantalla siguiente.
 ## Consecuencias
 
 - El designer puede pintar las tablas de verdad. Cómo las pinte va en su propio issue.
-- `POST /payroll-engine/{ruleSystemCode}/tables` sigue creando un `payroll_object` de tipo `TABLE`,
-  que es una ranura y no una tabla. **Ese endpoint y este `GET` no son el par que parecen**, y ahí
-  queda un hueco por decidir: si crear una tabla debe ser crear filas, crear la vinculación, o las
-  dos cosas. Este ADR no lo cierra; lo deja escrito para que no se descubra otra vez.
+- ~~`POST /payroll-engine/{ruleSystemCode}/tables` sigue creando un `payroll_object` de tipo
+  `TABLE`, que es una ranura y no una tabla.~~ **Cerrado en `backend#98`** — ver abajo.
 - `objects?type=TABLE` no está mal y no se toca. Contesta otra pregunta —qué objetos del grafo son
   del tipo `TABLE`— y la contesta bien.
 - No se inventa ninguna vinculación para que una ranura huérfana deje de estarlo, ni se retira
   `P02_DAILY_AMOUNT_TABLE` de `payroll_object`: es un nodo que el motor necesita.
+
+---
+
+## Addendum (`backend#98`) — el hueco que este ADR dejó abierto, cerrado
+
+Este ADR dejó escrito, a propósito y sin decidir, que `POST .../tables` y `GET .../tables` **no
+eran el par que parecían**, y preguntaba qué debería ser «crear una tabla»: crear la ranura, crear
+filas, o las dos cosas atadas.
+
+**Es la primera: crear la ranura.** Lo que estaba mal no era la operación, era su nombre y su sitio.
+
+Tres cosas ordenaron la decisión, y las tres salieron de mirar y no de opinar:
+
+1. **La ranura es portante.** No es código muerto que se pueda borrar: un `payroll_object` de tipo
+   `TABLE` es el nodo del que cuelga la alimentación de un concepto. `P02_DAILY_AMOUNT_TABLE` es
+   justo eso — es el origen de un `payroll_concept_feed_relation` que alimenta a `P02`—, y sin él
+   ese camino del grafo no existe. Los otros dos roles atados en ESP no son objeto ninguno porque
+   **se alcanzan por otro camino**: un calculador `ENGINE_PROVIDED` del vertical `basesalary` lleva
+   el rol escrito en Java y va directo a `payroll_object_binding`. Ésa, y no una incoherencia, es la
+   explicación del «tres vinculaciones y una sola ranura» que este ADR anotó.
+2. **Atar no se puede ofrecer aquí.** Una ranura es del sistema de reglas; una vinculación es **de
+   un convenio** (`owner_type_code = AGREEMENT`). Un «crear tabla» que además atara tendría que
+   elegir a qué convenio, y convenios hay muchos: sería inventarse un flujo antes de saber si hace
+   falta.
+3. **Crear filas ya existe.** `POST .../tables/{tableCode}/rows` está y es correcto. Lo que faltaba
+   no era una operación, era una pantalla de tablas de verdad que la use — y eso lo habilita el
+   `GET` que este ADR decidió.
+
+### Lo que se hizo
+
+`POST /payroll-engine/{ruleSystemCode}/binding-roles`, con `bindingRoleCode` en el cuerpo. Se
+renombró en vez de documentarse, porque **una nota explicando un nombre equivocado es peor que el
+nombre corregido** y porque romperlo costaba un fichero en un repositorio.
+
+Y cambió de sitio: lo que crea es una fila del catálogo de objetos, así que vive con él
+(`payroll_engine.object`) y no con las tablas. El vertical de tablas habla de tablas y de sus filas,
+y una ranura no es ninguna de las dos. `PayrollTableManagementController` pasó a llamarse
+`PayrollTableListingController`, que es lo único que hace ya.
+
+La pantalla llegó antes que el contrato: el `designer#10` ya lo llamaba «Nueva ranura» y ya explicaba
+en el propio modal que no es una tabla de importes.
 
 <!-- END FILE: ADR-063-una-ranura-no-es-una-tabla.md -->
 
