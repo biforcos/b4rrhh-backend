@@ -201,6 +201,8 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
         vaciarLaSesion();
 
         Long firstId = payrollId(emp);
+        Long launchRunId = jdbc.queryForObject(
+                "select run_id from payroll.payroll where id = ?", Long.class, firstId);
         int stepsBefore = countSteps(firstId);
         int linesBefore = countLines(firstId);
         assertTrue(stepsBefore > 0 && linesBefore > 0);
@@ -216,7 +218,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
                 "invalidar no toca los pasos: el recibo sigue siendo el mismo");
 
         recalculate.recalculate(new RecalculatePayrollCommand(
-                RULE_SYSTEM, EMPLOYEE_TYPE, emp, PERIOD, PAYROLL_TYPE, 1));
+                RULE_SYSTEM, EMPLOYEE_TYPE, emp, PERIOD, PAYROLL_TYPE, 1, null));
         vaciarLaSesion();
 
         Long secondId = payrollId(emp);
@@ -235,6 +237,24 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
                 "select count(*) from payroll.payroll_calculation_step s"
                         + " where not exists (select 1 from payroll.payroll p where p.id = s.payroll_id)",
                 Integer.class), "pasos sin recibo");
+
+        // Y el recibo nuevo sabe de donde viene. Hasta el #99 nacia con run_id nulo y la pantalla
+        // decia «sin ejecucion registrada» justo despues del gesto que remata la demo. Se lee de la
+        // base y no del objeto devuelto: lo que hay que afirmar es que la columna quedo escrita.
+        Long runId = jdbc.queryForObject(
+                "select run_id from payroll.payroll where id = ?", Long.class, secondId);
+        assertNotNull(runId, "un recalculo es una ejecucion, y el recibo tiene que decir cual");
+        assertNotEquals(launchRunId, runId, "y no es la del lanzamiento, que no produjo este recibo");
+
+        Map<String, Object> run = jdbc.queryForMap(
+                "select status, total_candidates, total_calculated, target_selection_json,"
+                        + " finished_at from payroll.calculation_run where id = ?", runId);
+        assertEquals("COMPLETED", run.get("status"));
+        assertEquals(1, run.get("total_candidates"));
+        assertEquals(1, run.get("total_calculated"));
+        assertNotNull(run.get("finished_at"));
+        assertTrue(run.get("target_selection_json").toString().contains("SINGLE_CALCULATION_UNIT"),
+                "la ejecucion dice que unidad recalculo, que SINGLE_EMPLOYEE no diria");
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────

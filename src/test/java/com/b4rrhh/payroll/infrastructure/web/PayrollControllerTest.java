@@ -268,7 +268,7 @@ class PayrollControllerTest {
         when(recalculatePayrollUseCase.recalculate(any(RecalculatePayrollCommand.class))).thenReturn(recalculated);
 
         ResponseEntity<PayrollResponse> response = controller.recalculate(
-                "MAS", "EMP", "MAS000001", "202604", "NORMAL", 1
+                "MAS", "EMP", "MAS000001", "202604", "NORMAL", 1, null
         );
 
         assertEquals(HttpStatus.OK, response.getStatusCode());

@@ -36,6 +36,7 @@ import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollSummaryResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -316,11 +317,13 @@ public class PayrollController {
             @PathVariable String employeeNumber,
             @PathVariable String payrollPeriodCode,
             @PathVariable String payrollTypeCode,
-            @PathVariable Integer presenceNumber
+            @PathVariable Integer presenceNumber,
+            Authentication authentication
     ) {
         Payroll payroll = recalculatePayrollUseCase.recalculate(new RecalculatePayrollCommand(
                 ruleSystemCode, employeeTypeCode, employeeNumber,
-                payrollPeriodCode, payrollTypeCode, presenceNumber
+                payrollPeriodCode, payrollTypeCode, presenceNumber,
+                authentication == null ? null : authentication.getName()
         ));
         return ResponseEntity.ok(payrollResponseAssembler.toResponse(payroll));
     }
