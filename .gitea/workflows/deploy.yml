@@ -56,6 +56,41 @@ jobs:
           python3 docs/architecture/adr/build-adr-bundle.py
           git diff --exit-code
 
+      - name: Avisar a los consumidores del contrato
+        # El contrato vive aqui y lo consumen DOS repositorios. Ponerlos al dia
+        # es manual y ocurre en otro sitio, asi que dependia de que alguien se
+        # acordara; van tres veces que no (b4rrhh/workspace#5).
+        #
+        # El aviso sale de aqui porque aqui esta el dato: este es el unico
+        # repositorio que sabe que el contrato ha cambiado y quien lo consume.
+        # Y no se limita a recordar: se trae la copia de cada uno y dice cual
+        # esta atras, por su nombre y con la orden que lo arregla.
+        #
+        # Corre SIEMPRE y no solo cuando el commit toca openapi/. Mirar que ha
+        # cambiado exigiria historia, y el checkout es superficial: un
+        # `git diff` contra github.event.before no encuentra ese commit, falla,
+        # y el paso se saltaria en silencio — un guardarrail que no guarda, que
+        # es peor que ninguno. Costar, cuesta dos peticiones HTTP, y con los dos
+        # consumidores al dia son dos lineas de log. Ademas asi tambien se ve al
+        # consumidor que se quedo atras en un push anterior.
+        #
+        # AVISA Y NO FALLA, y no es tibieza: los consumidores se traen el
+        # contrato de main, asi que TIENEN que estar atras mientras este job
+        # corre. Fallar aqui seria fallar por una ventana que el propio orden
+        # obliga a abrir, y ademas en el job que despliega. La palanca, si algun
+        # dia se decide lo contrario, es `--fallar`.
+        #
+        # continue-on-error por si Gitea no contesta: que no se sepa el estado
+        # de un consumidor no es motivo para no desplegar el backend.
+        continue-on-error: true
+        env:
+          # La BASE de Gitea, no la URL de un fichero: aqui hay que pedir la
+          # copia de dos repositorios. Mismo host y puerto que el registry de
+          # arriba, con el que el runner ya habla en cada build.
+          GITEA_URL: http://192.168.1.104:3000
+          CONTRACT_TOKEN: ${{ secrets.CONTRACT_TOKEN }}
+        run: python3 openapi/avisar-consumidores.py
+
       - name: Levantar el Postgres de los tests
         run: |
           # Por si una ejecucion anterior del mismo commit dejo restos.
