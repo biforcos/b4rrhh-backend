@@ -30,8 +30,12 @@ import java.time.LocalDateTime;
  *       es lo que impide recalcular lo que alguien pudo validar. Mensaje
  *       {@code UNIT_NOT_ELIGIBLE}. Estas unidades <b>no</b> estan en
  *       {@code totalEligible}.</li>
- *   <li><b>{@code totalSkippedAlreadyClaimed}</b> — saltadas porque otra ejecucion tenia la
- *       reserva. Mensaje {@code UNIT_ALREADY_CLAIMED}.</li>
+ *   <li><b>{@code totalSkippedAlreadyClaimed}</b> — saltadas porque otro camino tenia la
+ *       unidad. Mensaje {@code UNIT_ALREADY_CLAIMED}. Son dos formas del mismo suceso: o la
+ *       reserva estaba tomada y no se consiguio, o se consiguio y el recibo ya aparecio
+ *       calculado por quien acababa de soltarla. En las dos la unidad estaba cogida y no fallo
+ *       ningun calculo; contarlas en {@code totalErrors} ponia una corrida entera en rojo por
+ *       un solo recalculo puntual (backend#101).</li>
  *   <li><b>{@code totalSkippedMissingInput}</b> — eran elegibles, se reservaron, y no se
  *       pudieron calcular porque faltaban datos. <b>Siempre pide que alguien mire.</b> Mensaje
  *       {@code UNIT_ELIGIBLE_REAL_SKIPPED_MISSING_INPUT}. Estas unidades <b>si</b> estan en

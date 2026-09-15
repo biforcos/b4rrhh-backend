@@ -121,6 +121,7 @@ class TwoWritersOnOnePayrollIntegrationTest {
                     "la clave de negocio admite un recibo y solo uno");
             assertOutcomeIsBusinessLevel(carrera.recalculationOutcome, bitacora);
             assertOutcomeIsBusinessLevel(carrera.launchUnitFailure, bitacora);
+            assertLaunchDidNotCallThisAnError(carrera.launchRunId, bitacora);
         }
 
         System.out.println("[backend#101] " + String.join("\n[backend#101] ", bitacora));
@@ -173,6 +174,46 @@ class TwoWritersOnOnePayrollIntegrationTest {
                 + String.join(System.lineSeparator() + "[backend#101 invalidar] ", bitacora));
     }
 
+    /**
+     * Criterio 3, direccion 2, y con el criterio 4 dentro: <b>un recalculo en marcha y una corrida
+     * masiva encima</b>.
+     *
+     * <p>El escenario se monta igual, con la reserva que un recalculo tiene tomada mientras calcula.
+     * Lo que se mide es la cuenta de la corrida, que es lo que el issue llama la explicacion falsa:
+     * la unidad se apuntaba como {@code UNIT_CALCULATION_ERROR}, sumaba a {@code totalErrors} y una
+     * nomina de mil empleados terminaba en {@code COMPLETED_WITH_ERRORS} por un clic en
+     * «Recalcular». Ahi no fallo ningun calculo: la unidad estaba cogida, y para eso existe
+     * {@code totalSkippedAlreadyClaimed} desde el backend#75.
+     */
+    @Test
+    void aLaunchThatOnlyLosesUnitsToAReservationDoesNotEndInRed() {
+        String employee = hire();
+        launch(employee);
+        invalidate(employee);
+
+        long recalculoEnMarcha = insertRunningRun();
+        insertClaim(recalculoEnMarcha, employee);
+
+        var run = launchPayrollCalculationUseCase.launch(new LaunchPayrollCalculationCommand(
+                RULE_SYSTEM, PERIOD, PAYROLL_TYPE, "ENGINE", "1.0",
+                new PayrollLaunchTargetSelection(
+                        PayrollLaunchTargetSelectionType.SINGLE_EMPLOYEE,
+                        new PayrollLaunchEmployeeTarget(EMPLOYEE_TYPE, employee),
+                        null),
+                "masiva"));
+
+        assertEquals(0, run.totalErrors(),
+                "perder la unidad por una reserva no es un error de calculo: " + runMessages(run.id()));
+        assertEquals(1, run.totalSkippedAlreadyClaimed(),
+                "y se cuenta donde va: " + runMessages(run.id()));
+        assertEquals("COMPLETED", run.status(),
+                "una corrida que solo pierde unidades por reserva no termina en rojo");
+        assertTrue(runMessages(run.id()).contains("UNIT_ALREADY_CLAIMED"),
+                "y lo que queda escrito lo dice: " + runMessages(run.id()));
+        assertEquals("NOT_VALID", currentStatus(employee),
+                "la unidad reservada no se toca");
+    }
+
     /** Dos hilos, una barrera, el mismo recibo. */
     private final class Carrera {
 
@@ -183,6 +224,7 @@ class TwoWritersOnOnePayrollIntegrationTest {
         private String launchOutcome;
         /** Con que se fue la unidad del lanzamiento, si se fue mal. */
         private String launchUnitFailure = "OK";
+        private Long launchRunId;
         private long recalculationStart;
         private long recalculationEnd;
         private long launchStart;
@@ -222,6 +264,7 @@ class TwoWritersOnOnePayrollIntegrationTest {
                                     new PayrollLaunchEmployeeTarget(EMPLOYEE_TYPE, employee),
                                     null),
                             "carrera"));
+                    launchRunId = run.id();
                     launchUnitFailure = unitFailureOf(run.id());
                     launchOutcome = "%s calculados=%d errores=%d reservados=%d yaReservados=%d | %s"
                             .formatted(run.status(), run.totalCalculated(), run.totalErrors(),
@@ -380,6 +423,72 @@ class TwoWritersOnOnePayrollIntegrationTest {
                         + " where run_id = ? and message_code = 'UNIT_CALCULATION_ERROR'",
                 String.class, runId);
         return tipos.isEmpty() ? "OK" : tipos.get(0);
+    }
+
+    /**
+     * Criterio 4 por el lado de la carrera de verdad: gane quien gane, <b>ninguna ronda deja la
+     * corrida en rojo</b>, porque en ninguna fallo un calculo. Y la particion de contadores del
+     * {@code CalculationRun} tiene que seguir cuadrando: si la unidad que se pierde no cae en
+     * ningun cajon, el informe deja de sumar y el descuadre es justo lo que nadie mira.
+     */
+    private void assertLaunchDidNotCallThisAnError(Long runId, List<String> bitacora) {
+        if (runId == null) {
+            return;
+        }
+        Map<String, Object> cuenta = jdbcTemplate.queryForMap("""
+                select status, total_candidates, total_skipped_not_eligible,
+                       total_skipped_already_claimed, total_skipped_missing_input,
+                       total_calculated, total_not_valid, total_errors
+                  from payroll.calculation_run where id = ?
+                """, runId);
+
+        assertEquals(0, ((Number) cuenta.get("total_errors")).intValue(),
+                "la corrida conto un error de calculo y ahi no fallo ningun calculo: " + cuenta
+                        + System.lineSeparator() + String.join(System.lineSeparator(), bitacora));
+        assertEquals("COMPLETED", cuenta.get("status"),
+                "la corrida termino en rojo sin que fallara nada: " + cuenta
+                        + System.lineSeparator() + String.join(System.lineSeparator(), bitacora));
+
+        int cajones = ((Number) cuenta.get("total_skipped_not_eligible")).intValue()
+                + ((Number) cuenta.get("total_skipped_already_claimed")).intValue()
+                + ((Number) cuenta.get("total_skipped_missing_input")).intValue()
+                + ((Number) cuenta.get("total_calculated")).intValue()
+                + ((Number) cuenta.get("total_not_valid")).intValue()
+                + ((Number) cuenta.get("total_errors")).intValue();
+        assertEquals(((Number) cuenta.get("total_candidates")).intValue(), cajones,
+                "la unidad que se perdio no cayo en ningun cajon: " + cuenta
+                        + System.lineSeparator() + String.join(System.lineSeparator(), bitacora));
+    }
+
+    /** Una ejecucion RUNNING cualquiera, para que una reserva pueda colgar de ella. */
+    private long insertRunningRun() {
+        return jdbcTemplate.queryForObject("""
+                insert into payroll.calculation_run (
+                    rule_system_code, payroll_period_code, payroll_type_code,
+                    calculation_engine_code, calculation_engine_version,
+                    requested_at, requested_by, status, target_selection_json, started_at)
+                values (?, ?, ?, 'ENGINE', '1.0', now(), 'otro', 'RUNNING',
+                        '{"selectionType":"SINGLE_CALCULATION_UNIT"}', now())
+                returning id
+                """, Long.class, RULE_SYSTEM, PERIOD, PAYROLL_TYPE);
+    }
+
+    /** La reserva que tiene tomada quien esta calculando esa unidad ahora mismo. */
+    private void insertClaim(long runId, String employee) {
+        jdbcTemplate.update("""
+                insert into payroll.calculation_claim (
+                    run_id, rule_system_code, employee_type_code, employee_number,
+                    payroll_period_code, payroll_type_code, presence_number, claimed_at, claimed_by)
+                values (?, ?, ?, ?, ?, ?, 1, now(), 'otro')
+                """, runId, RULE_SYSTEM, EMPLOYEE_TYPE, employee, PERIOD, PAYROLL_TYPE);
+    }
+
+    private int claimCount(String employee) {
+        return jdbcTemplate.queryForObject(
+                "select count(*) from payroll.calculation_claim"
+                        + " where rule_system_code = ? and employee_type_code = ? and employee_number = ?"
+                        + "   and payroll_period_code = ? and payroll_type_code = ? and presence_number = ?",
+                Integer.class, RULE_SYSTEM, EMPLOYEE_TYPE, employee, PERIOD, PAYROLL_TYPE, 1);
     }
 
     private int payrollRowCount(String employee) {

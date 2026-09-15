@@ -5,6 +5,7 @@ import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceLookupPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchWorkerPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEmployeeContext;
 import com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException;
+import com.b4rrhh.payroll.domain.exception.PayrollRecalculationNotAllowedException;
 import com.b4rrhh.payroll.domain.model.CalculationClaim;
 import com.b4rrhh.payroll.domain.model.CalculationRun;
 import com.b4rrhh.payroll.domain.model.CalculationRunMessage;
@@ -393,6 +394,25 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
             // es la lectura contraria: «ya estaba hecho» no pide nada de nadie y esto siempre
             // pide que alguien mire. El literal ya decia ELIGIBLE y sumaba a NOT_ELIGIBLE.
             return calculationRunRepository.save(run.incrementTotalSkippedMissingInput());
+        } catch (PayrollRecalculationNotAllowedException ex) {
+            // La unidad se la llevo otro: entre el filtro de elegibilidad de arriba y este
+            // calculo, alguien la dejo calculada. Eso no es un fallo de calculo —ahi no fallo
+            // nada— y contarlo como tal ponia en rojo una corrida de mil empleados por un clic
+            // en «Recalcular», con una explicacion falsa escrita al lado (backend#101).
+            //
+            // Y la reserva no lo evita, aunque desde el backend#101 la tomen los dos caminos:
+            // el recalculo la suelta al confirmar su transaccion, asi que esta unidad puede
+            // conseguirla justo despues y encontrarse el recibo ya CALCULATED. El contador de
+            // este caso es el mismo, porque el caso es el mismo: la unidad estaba cogida.
+            saveRunMessage(
+                    run,
+                    "UNIT_ALREADY_CLAIMED",
+                    "WARNING",
+                    "Payroll calculation unit was calculated by another path while this run held it",
+                    Map.of("reason", ex.getClass().getSimpleName()),
+                    unit
+            );
+            return calculationRunRepository.save(run.incrementTotalSkippedAlreadyClaimed());
         } catch (RuntimeException ex) {
             saveRunMessage(
                     run,
