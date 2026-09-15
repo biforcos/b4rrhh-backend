@@ -9,6 +9,7 @@ import com.b4rrhh.payroll.domain.exception.PayrollInvalidStateTransitionExceptio
 import com.b4rrhh.payroll.domain.exception.PayrollNotFoundException;
 import com.b4rrhh.payroll.domain.exception.PayrollRecalculationNotAllowedException;
 import com.b4rrhh.payroll.domain.exception.PayrollTypeInvalidException;
+import com.b4rrhh.payroll.domain.exception.PayrollUnitAlreadyClaimedException;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -45,6 +46,22 @@ public class PayrollExceptionHandler {
     })
     public ResponseEntity<PayrollErrorResponse> handleConflict(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(PayrollErrorResponse.of(ex.getMessage()));
+    }
+
+    /**
+     * Y el conflicto que no es de estado sino de momento: la unidad la esta calculando otro
+     * ahora mismo (backend#101).
+     *
+     * <p>409 como los demas conflictos, pero con codigo, porque este se puede reintentar y los
+     * otros no: un recibo validado no va a dejar de estarlo por esperar, y una unidad cogida se
+     * suelta en cuanto el otro termina. Quien lo pinte necesita distinguirlo sin leer la prosa
+     * inglesa del {@code message}, y el codigo es el mismo que el lanzamiento masivo escribe en
+     * el mensaje de la unidad, traducido ya por la V125.
+     */
+    @ExceptionHandler(PayrollUnitAlreadyClaimedException.class)
+    public ResponseEntity<PayrollErrorResponse> handleAlreadyClaimed(PayrollUnitAlreadyClaimedException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new PayrollErrorResponse(ex.getMessageCode(), ex.getMessage(), ex.getDetails()));
     }
 
     /**

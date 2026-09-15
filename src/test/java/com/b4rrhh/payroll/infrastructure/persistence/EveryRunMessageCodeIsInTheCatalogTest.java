@@ -2,6 +2,7 @@ package com.b4rrhh.payroll.infrastructure.persistence;
 
 import com.b4rrhh.payroll.application.usecase.PayrollLaunchInputMissingException;
 import com.b4rrhh.payroll.domain.exception.PayrollCalculationFailedException;
+import com.b4rrhh.payroll.domain.exception.PayrollUnitAlreadyClaimedException;
 import com.b4rrhh.support.TestSobreEsquemaReal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -106,8 +107,9 @@ class EveryRunMessageCodeIsInTheCatalogTest {
     /**
      * Y los que no se emiten guardando un mensaje, sino contestando a un cliente.
      *
-     * <p>Desde el #100 un recalculo que falla contesta 422 con el codigo del suceso, para que el
-     * mismo fallo se llame igual por las dos puertas. Eso pone el literal en dos sitios —la
+     * <p>Desde el #100 un recalculo que falla contesta 422 con el codigo del suceso, y desde el
+     * backend#101 uno que no consigue la reserva contesta 409 con el suyo, para que el mismo
+     * suceso se llame igual por las dos puertas. Eso pone el literal en dos sitios —la
      * excepcion y el emisor del lanzamiento—, y el patron de arriba solo ve el del emisor porque
      * alli va seguido de su severidad. Este test mira el otro: si alguien retoca uno de los dos,
      * o retira la fila del catalogo, aqui se ve.
@@ -116,7 +118,8 @@ class EveryRunMessageCodeIsInTheCatalogTest {
     void theCodesThatTheApiAnswersAreAlsoInTheCatalog() {
         Set<String> contestados = new TreeSet<>(Set.of(
                 PayrollCalculationFailedException.MESSAGE_CODE,
-                PayrollLaunchInputMissingException.MESSAGE_CODE
+                PayrollLaunchInputMissingException.MESSAGE_CODE,
+                PayrollUnitAlreadyClaimedException.MESSAGE_CODE
         ));
 
         Set<String> sinLiteral = new TreeSet<>(contestados);
@@ -124,7 +127,7 @@ class EveryRunMessageCodeIsInTheCatalogTest {
 
         assertThat(sinLiteral)
                 .withFailMessage("""
-                        Estos codigos los contesta /payrolls en un 422 y no estan en el catalogo %s: %s
+                        Estos codigos los contesta /payrolls en un 4xx y no estan en el catalogo %s: %s
 
                         Contestados: %s
                         Sembrados:   %s

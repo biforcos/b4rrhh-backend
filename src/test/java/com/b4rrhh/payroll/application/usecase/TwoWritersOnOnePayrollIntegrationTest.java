@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll.application.usecase;
 
+import com.b4rrhh.payroll.domain.exception.PayrollUnitAlreadyClaimedException;
 import com.b4rrhh.payroll.scenario.PayrollScenarioFixtures;
 import com.b4rrhh.support.TestWebSobreEsquemaReal;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +18,7 @@ import java.util.Map;
 import java.util.concurrent.CyclicBarrier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -172,6 +174,40 @@ class TwoWritersOnOnePayrollIntegrationTest {
 
         System.out.println("[backend#101 invalidar] "
                 + String.join(System.lineSeparator() + "[backend#101 invalidar] ", bitacora));
+    }
+
+    /**
+     * Criterio 3 del {@code backend#101}, direccion 1: <b>una corrida masiva en marcha y un
+     * recalculo encima</b>.
+     *
+     * <p>Sin hilos y sin suerte. Lo que hace que una corrida «este en marcha» sobre una unidad es
+     * exactamente una fila en {@code calculation_claim}, asi que el escenario se monta poniendo esa
+     * fila —una ejecucion {@code RUNNING} y su reserva— y llamando al recalculo encima. Es el mismo
+     * estado que deja el hilo del lanzamiento cuando gana la carrera, sin depender de ganarla.
+     *
+     * <p>Lo que se comprueba no es solo que falle: es que falle <b>diciendo lo que pasa</b>. Un 409
+     * con {@code UNIT_ALREADY_CLAIMED} se puede reintentar; un 422 «el calculo fallo» —que es por
+     * donde salia esto antes— manda a alguien a mirar una reglamentacion que esta perfecta.
+     */
+    @Test
+    void aRecalculationThatDoesNotGetTheReservationFailsFastSayingSo() {
+        String employee = hire();
+        launch(employee);
+        invalidate(employee);
+
+        long otraEjecucion = insertRunningRun();
+        insertClaim(otraEjecucion, employee);
+
+        PayrollUnitAlreadyClaimedException ex = assertThrows(PayrollUnitAlreadyClaimedException.class,
+                () -> recalculatePayrollUseCase.recalculate(new RecalculatePayrollCommand(
+                        RULE_SYSTEM, EMPLOYEE_TYPE, employee, PERIOD, PAYROLL_TYPE, 1, "visitante")));
+
+        assertEquals("UNIT_ALREADY_CLAIMED", ex.getMessageCode());
+        assertEquals(employee, ex.getDetails().get("employeeNumber"));
+        assertEquals("NOT_VALID", currentStatus(employee),
+                "el recibo se queda como estaba: el que no consigue la reserva no toca nada");
+        assertEquals(1, claimCount(employee),
+                "y no deja una reserva suya por el camino");
     }
 
     /**

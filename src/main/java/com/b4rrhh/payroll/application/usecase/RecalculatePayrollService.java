@@ -8,14 +8,18 @@ import com.b4rrhh.payroll.domain.exception.PayrollInvalidStateTransitionExceptio
 import com.b4rrhh.payroll.domain.exception.PayrollNotFoundException;
 import com.b4rrhh.payroll.domain.exception.PayrollRecalculationNotAllowedException;
 import com.b4rrhh.payroll.domain.exception.PayrollTypeInvalidException;
+import com.b4rrhh.payroll.domain.exception.PayrollUnitAlreadyClaimedException;
+import com.b4rrhh.payroll.domain.model.CalculationClaim;
 import com.b4rrhh.payroll.domain.model.CalculationRun;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
+import com.b4rrhh.payroll.domain.port.CalculationClaimRepository;
 import com.b4rrhh.payroll.domain.port.CalculationRunRepository;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
 import com.b4rrhh.payroll_engine.metamodel.domain.port.RuleSystemMetamodelRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +55,7 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
             PayrollInvalidStateTransitionException.class,
             PayrollRecalculationNotAllowedException.class,
             PayrollBusinessKeyConflictException.class,
+            PayrollUnitAlreadyClaimedException.class,
             PayrollLaunchInputMissingException.class
     );
 
@@ -65,6 +70,7 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
     private final CalculatePayrollUnitUseCase calculatePayrollUnitUseCase;
     private final RuleSystemMetamodelRepository ruleSystemMetamodelRepository;
     private final CalculationRunRepository calculationRunRepository;
+    private final CalculationClaimRepository calculationClaimRepository;
     private final ObjectMapper objectMapper;
 
     public RecalculatePayrollService(
@@ -72,12 +78,14 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
             CalculatePayrollUnitUseCase calculatePayrollUnitUseCase,
             RuleSystemMetamodelRepository ruleSystemMetamodelRepository,
             CalculationRunRepository calculationRunRepository,
+            CalculationClaimRepository calculationClaimRepository,
             ObjectMapper objectMapper
     ) {
         this.payrollRepository = payrollRepository;
         this.calculatePayrollUnitUseCase = calculatePayrollUnitUseCase;
         this.ruleSystemMetamodelRepository = ruleSystemMetamodelRepository;
         this.calculationRunRepository = calculationRunRepository;
+        this.calculationClaimRepository = calculationClaimRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -108,6 +116,8 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
         LocalDate periodEnd = periodStart.withDayOfMonth(periodStart.lengthOfMonth());
 
         CalculationRun run = abrirEjecucionDeUnaUnidad(command, payroll);
+        CalculationClaim claim = reservarLaUnidad(command, run);
+        run = calculationRunRepository.save(run.incrementTotalClaimed());
 
         // Un recalculo puntual tambien es una ejecucion, de una sola unidad: lee su
         // reglamentacion aqui y calcula contra ella. Por eso ve los cambios del grafo que
@@ -140,8 +150,58 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
             throw new PayrollCalculationFailedException(ex);
         }
 
+        calculationClaimRepository.deleteById(claim.id());
         cerrarEjecucionDeUnaUnidad(run, recalculado);
         return recalculado;
+    }
+
+    /**
+     * La reserva, que es lo unico que decide quien llego antes.
+     *
+     * <p>Hasta el backend#101 el recalculo no la tomaba, y el lanzamiento masivo si: o sea que la
+     * reserva se tomaba y no servia de nada, porque el otro camino no la consultaba. Los dos
+     * caminos escribian el mismo recibo a la vez. Eso <b>no</b> dejaba recibos mezclados —un
+     * calculo reemplaza el recibo entero en vez de editarlo, y {@code uk_payroll_business} admite
+     * una fila— pero dejaba al perdedor perdiendo por donde no era.
+     *
+     * <p>La politica es primero el que llegue, y no se espera: si la unidad esta cogida esto sale
+     * con un 409 en vez de quedarse esperando a que termine una nomina de mil empleados. La
+     * decision y su motivo estan en el backend#101; lo descartado fue dar prioridad a uno de los
+     * dos, que obliga a inventar un concepto de prioridad que no existe en el modelo.
+     *
+     * <p>Se toma <b>dentro</b> de la transaccion del recalculo, que es lo que le da el alcance
+     * justo: dura exactamente lo que dura el calculo y desaparece con el, gane o pierda. No hace
+     * falta recuperarla al arrancar como las del lanzamiento, porque no puede sobrevivir a nadie.
+     *
+     * <p>Y de ahi sale una asimetria que conviene saber, porque es la que se mide en
+     * {@code TwoWritersOnOnePayrollIntegrationTest}: esta fila no se ve desde fuera hasta que la
+     * transaccion confirma, asi que una corrida masiva que llegue a la misma unidad <b>espera</b>
+     * en su propio {@code insert} lo que tarde este calculo —una unidad, no una nomina— en vez de
+     * fallar en el acto. Al soltarse consigue la reserva y se encuentra el recibo ya
+     * {@code CALCULATED}, que es el otro sitio donde la corrida cuenta la unidad como cogida. Al
+     * reves no pasa: la reserva del lanzamiento ya esta confirmada, y esto sale con su 409
+     * inmediatamente, que es lo que la decision pedia.
+     */
+    private CalculationClaim reservarLaUnidad(RecalculatePayrollCommand command, CalculationRun run) {
+        try {
+            return calculationClaimRepository.save(new CalculationClaim(
+                    null,
+                    run.id(),
+                    command.ruleSystemCode(),
+                    command.employeeTypeCode(),
+                    command.employeeNumber(),
+                    command.payrollPeriodCode(),
+                    command.payrollTypeCode(),
+                    command.presenceNumber(),
+                    LocalDateTime.now(),
+                    command.requestedBy()
+            ));
+        } catch (DataIntegrityViolationException ex) {
+            throw new PayrollUnitAlreadyClaimedException(
+                    command.ruleSystemCode(), command.employeeTypeCode(), command.employeeNumber(),
+                    command.payrollPeriodCode(), command.payrollTypeCode(), command.presenceNumber()
+            );
+        }
     }
 
     /**
@@ -153,9 +213,8 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
      * <p>No pasa por la cola del lanzamiento —{@code PayrollLaunchWorkerPort}, un hilo y de una en
      * una— a proposito. Aquella cola existe para que dos corridas masivas no se peleen por las
      * reservas; hacer esperar el recalculo de un recibo detras de una nomina de mil empleados
-     * seria pagar el precio de un problema que no se tiene. Y tampoco toma reserva en
-     * {@code calculation_claim}: eso cambiaria lo que una corrida masiva hace con esta unidad, que
-     * es una decision aparte y este issue no la pidio.
+     * seria pagar el precio de un problema que no se tiene. Lo que si toma, desde el backend#101,
+     * es la reserva de {@code calculation_claim}: ver {@link #reservarLaUnidad}.
      */
     private CalculationRun abrirEjecucionDeUnaUnidad(RecalculatePayrollCommand command, Payroll payroll) {
         LocalDateTime ahora = LocalDateTime.now();
@@ -170,9 +229,9 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
                 command.requestedBy(),
                 CalculationRunStatuses.RUNNING,
                 targetSelectionJson(command),
-                // Un candidato, elegible —el recibo estaba NOT_VALID, que es lo unico desde lo que
-                // se recalcula— y sin reserva: el 0 de totalClaimed no es un hueco, es que no se
-                // tomo ninguna.
+                // Un candidato y elegible: el recibo estaba NOT_VALID, que es lo unico desde lo
+                // que se recalcula. La reserva se cuenta despues, cuando se consigue, porque
+                // conseguirla es justo lo que puede no pasar (backend#101).
                 1,
                 1,
                 0,

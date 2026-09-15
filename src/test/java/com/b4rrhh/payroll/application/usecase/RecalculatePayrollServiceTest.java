@@ -3,9 +3,12 @@ package com.b4rrhh.payroll.application.usecase;
 import com.b4rrhh.payroll.domain.exception.PayrollCalculationFailedException;
 import com.b4rrhh.payroll.domain.exception.PayrollNotFoundException;
 import com.b4rrhh.payroll.domain.exception.PayrollRecalculationNotAllowedException;
+import com.b4rrhh.payroll.domain.exception.PayrollUnitAlreadyClaimedException;
+import com.b4rrhh.payroll.domain.model.CalculationClaim;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.model.CalculationRun;
+import com.b4rrhh.payroll.domain.port.CalculationClaimRepository;
 import com.b4rrhh.payroll.domain.port.CalculationRunRepository;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
 import com.b4rrhh.payroll_engine.metamodel.domain.port.RuleSystemMetamodelRepository;
@@ -16,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,6 +40,8 @@ class RecalculatePayrollServiceTest {
     private RuleSystemMetamodelRepository ruleSystemMetamodelRepository;
     @Mock
     private CalculationRunRepository calculationRunRepository;
+    @Mock
+    private CalculationClaimRepository calculationClaimRepository;
 
     private RecalculatePayrollService service;
 
@@ -43,7 +49,10 @@ class RecalculatePayrollServiceTest {
     void setUp() {
         service = new RecalculatePayrollService(
                 payrollRepository, calculatePayrollUnitUseCase, ruleSystemMetamodelRepository,
-                calculationRunRepository, new ObjectMapper());
+                calculationRunRepository, calculationClaimRepository, new ObjectMapper());
+        // lenient: los tests que se caen antes de reservar no llegan a pedir la reserva.
+        lenient().when(calculationClaimRepository.save(any(CalculationClaim.class)))
+                .thenAnswer(invocation -> conIdDeReserva(invocation.getArgument(0)));
         // lenient: los tests que se caen antes de calcular no llegan a abrir ejecucion.
         lenient().when(calculationRunRepository.save(any(CalculationRun.class))).thenAnswer(invocation -> {
             CalculationRun run = invocation.getArgument(0);
@@ -211,10 +220,67 @@ class RecalculatePayrollServiceTest {
                 "no se cierra una ejecucion que no produjo recibo");
     }
 
+    /**
+     * La reserva, que desde el backend#101 toma tambien esta puerta. Lo que este test sujeta es que
+     * la pida para <b>su</b> unidad y colgando de <b>su</b> ejecucion: una reserva con otro runId no
+     * se limpiaria al terminar la ejecucion, y una reserva de otra unidad no protegeria nada.
+     */
+    @Test
+    void takesTheSameReservationTheBulkLaunchTakes() {
+        when(payrollRepository.findByBusinessKey(any(), any(), any(), any(), any(), any()))
+                .thenReturn(Optional.of(payroll("MAS000001", "202604", PayrollStatus.NOT_VALID, "ENG", "1")));
+        when(calculatePayrollUnitUseCase.calculate(any())).thenReturn(
+                payroll("MAS000001", "202604", PayrollStatus.CALCULATED, "ENG", "1"));
+
+        service.recalculate(command("MAS", "EMP", "MAS000001", "202604", "NORMAL", 1));
+
+        ArgumentCaptor<CalculationClaim> reserva = ArgumentCaptor.forClass(CalculationClaim.class);
+        verify(calculationClaimRepository).save(reserva.capture());
+        assertEquals(77L, reserva.getValue().runId(), "la reserva cuelga de la ejecucion del recalculo");
+        assertEquals("MAS000001", reserva.getValue().employeeNumber());
+        assertEquals("202604", reserva.getValue().payrollPeriodCode());
+        assertEquals(1, reserva.getValue().presenceNumber());
+
+        verify(calculationClaimRepository).deleteById(501L);
+        assertEquals(1, ejecucionesGuardadas().getLast().totalClaimed(),
+                "una reserva conseguida se cuenta, como en el lanzamiento masivo");
+    }
+
+    /**
+     * Y si no la consigue, no espera: primero el que llegue y quien pierde lo dice (backend#101).
+     *
+     * <p>Lo que sale no es un fallo de calculo. La diferencia no es de forma: un 422
+     * UNIT_CALCULATION_ERROR dice que hay algo que arreglar en la reglamentacion, y aqui no hay
+     * nada que arreglar — hay que volver a intentarlo en un momento.
+     */
+    @Test
+    void failsFastWhenTheUnitIsAlreadyClaimed() {
+        when(payrollRepository.findByBusinessKey(any(), any(), any(), any(), any(), any()))
+                .thenReturn(Optional.of(payroll("MAS000001", "202604", PayrollStatus.NOT_VALID, "ENG", "1")));
+        when(calculationClaimRepository.save(any(CalculationClaim.class)))
+                .thenThrow(new DataIntegrityViolationException("uk_calculation_claim_business"));
+
+        PayrollUnitAlreadyClaimedException ex = assertThrows(PayrollUnitAlreadyClaimedException.class, () ->
+                service.recalculate(command("MAS", "EMP", "MAS000001", "202604", "NORMAL", 1)));
+
+        assertEquals("UNIT_ALREADY_CLAIMED", ex.getMessageCode());
+        assertEquals("MAS000001", ex.getDetails().get("employeeNumber"));
+        verify(calculatePayrollUnitUseCase, never()).calculate(any());
+        assertTrue(ejecucionesGuardadas().stream().noneMatch(r -> "COMPLETED".equals(r.status())),
+                "no se cierra una ejecucion que nunca llego a calcular");
+    }
+
     private List<CalculationRun> ejecucionesGuardadas() {
         ArgumentCaptor<CalculationRun> captor = ArgumentCaptor.forClass(CalculationRun.class);
         verify(calculationRunRepository, atLeastOnce()).save(captor.capture());
         return captor.getAllValues();
+    }
+
+    private static CalculationClaim conIdDeReserva(CalculationClaim claim) {
+        return new CalculationClaim(
+                501L, claim.runId(), claim.ruleSystemCode(), claim.employeeTypeCode(),
+                claim.employeeNumber(), claim.payrollPeriodCode(), claim.payrollTypeCode(),
+                claim.presenceNumber(), claim.claimedAt(), claim.claimedBy());
     }
 
     private static CalculationRun conId(CalculationRun run, Long id) {
