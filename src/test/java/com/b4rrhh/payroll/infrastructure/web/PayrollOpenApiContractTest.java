@@ -10,15 +10,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PayrollOpenApiContractTest {
 
+    /**
+     * Lo que queda de aquel bloque: el endpoint temporal se retiro en el #90 y las afirmaciones
+     * que hablaban de el estan ahora en {@code TheTemporaryCalculateStubIsGoneOnPurposeTest}, que
+     * es donde se cuenta por que. Estas son las del lanzamiento, que sigue vivo y no era suyo.
+     */
     @Test
-    void calculateEndpointIsExplicitlyDocumentedAsTemporaryStub() throws IOException {
+    void launchEndpointIsDocumentedAsAcceptedAndNotAwaited() throws IOException {
         String contract = contrato();
 
-        assertTrue(contract.contains("/payrolls/calculate:"));
-        assertTrue(contract.contains("Temporary pipeline-validation stub endpoint"));
-        assertTrue(contract.contains("Temporary stub request used to materialize a payroll result during the pre-launch phase"));
-        assertTrue(contract.contains("Temporary stub-provided payroll concepts"));
-        assertTrue(contract.contains("Temporary stub-provided context snapshots"));
         assertTrue(contract.contains("/payroll/calculation-runs/launch:"));
         assertTrue(contract.contains("/payroll/calculation-runs/{runId}:"));
         assertTrue(contract.contains("/payroll/calculation-runs/{runId}/messages:"));
@@ -42,7 +42,10 @@ class PayrollOpenApiContractTest {
         String contract = contrato();
 
         assertTrue(contract.contains("Calculation run that produced this payroll"));
-        assertTrue(contract.contains("which is the case for the temporary calculate"));
+        // Nulo sigue siendo posible y el cliente tiene que tratarlo, pero ya no lo produce nada
+        // de lo que se sirve: el recalculo abre su ejecucion (#99) y el stub se retiro (#90).
+        assertTrue(contract.contains("Nothing served today produces such a payroll"));
+        assertTrue(contract.contains("a client must still handle null"));
     }
 
     // El endpoint de mensajes llevaba tiempo servido por el backend, escrito en payroll-api.yaml y

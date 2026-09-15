@@ -3,8 +3,6 @@ package com.b4rrhh.payroll.infrastructure.web;
 import com.b4rrhh.payroll.application.usecase.BulkInvalidatePayrollCommand;
 import com.b4rrhh.payroll.application.usecase.BulkInvalidatePayrollResult;
 import com.b4rrhh.payroll.application.usecase.BulkInvalidatePayrollUseCase;
-import com.b4rrhh.payroll.application.usecase.CalculatePayrollCommand;
-import com.b4rrhh.payroll.application.usecase.CalculatePayrollUseCase;
 import com.b4rrhh.payroll.application.usecase.FinalizePayrollCommand;
 import com.b4rrhh.payroll.application.usecase.FinalizePayrollUseCase;
 import com.b4rrhh.payroll.application.usecase.GetPayrollByBusinessKeyUseCase;
@@ -16,13 +14,10 @@ import com.b4rrhh.payroll.application.usecase.PayrollLaunchTargetSelection;
 import com.b4rrhh.payroll.application.usecase.ValidatePayrollCommand;
 import com.b4rrhh.payroll.application.usecase.ValidatePayrollUseCase;
 import com.b4rrhh.payroll.domain.model.Payroll;
-import com.b4rrhh.payroll.domain.model.PayrollConcept;
-import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
 import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollCalculationStepResponseAssembler;
 import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollResponseAssembler;
 import com.b4rrhh.payroll.infrastructure.web.dto.BulkInvalidatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.BulkInvalidatePayrollResponse;
-import com.b4rrhh.payroll.infrastructure.web.dto.CalculatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.InvalidatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollCalculationStepResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollLaunchEmployeeTargetRequest;
@@ -50,7 +45,6 @@ import java.util.List;
 @RequestMapping("/payrolls")
 public class PayrollController {
 
-    private final CalculatePayrollUseCase calculatePayrollUseCase;
     private final GetPayrollByBusinessKeyUseCase getPayrollByBusinessKeyUseCase;
     private final InvalidatePayrollUseCase invalidatePayrollUseCase;
     private final ValidatePayrollUseCase validatePayrollUseCase;
@@ -63,7 +57,6 @@ public class PayrollController {
     private final PayrollCalculationStepResponseAssembler payrollCalculationStepResponseAssembler;
 
     public PayrollController(
-            CalculatePayrollUseCase calculatePayrollUseCase,
             GetPayrollByBusinessKeyUseCase getPayrollByBusinessKeyUseCase,
             InvalidatePayrollUseCase invalidatePayrollUseCase,
             ValidatePayrollUseCase validatePayrollUseCase,
@@ -75,7 +68,6 @@ public class PayrollController {
             PayrollResponseAssembler payrollResponseAssembler,
             PayrollCalculationStepResponseAssembler payrollCalculationStepResponseAssembler
     ) {
-        this.calculatePayrollUseCase = calculatePayrollUseCase;
         this.getPayrollByBusinessKeyUseCase = getPayrollByBusinessKeyUseCase;
         this.invalidatePayrollUseCase = invalidatePayrollUseCase;
         this.validatePayrollUseCase = validatePayrollUseCase;
@@ -144,52 +136,6 @@ public class PayrollController {
                 .map(payrollCalculationStepResponseAssembler::toResponse)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-        // Temporary stub endpoint used to materialize payroll results before launch and real engine flows exist.
-        @PostMapping("/calculate")
-        public ResponseEntity<PayrollResponse> calculateTemporaryStub(@RequestBody CalculatePayrollRequest request) {
-        Payroll payroll = calculatePayrollUseCase.calculate(new CalculatePayrollCommand(
-                request.ruleSystemCode(),
-                request.employeeTypeCode(),
-                request.employeeNumber(),
-                request.payrollPeriodCode(),
-                request.payrollTypeCode(),
-                request.presenceNumber(),
-                request.status(),
-                request.statusReasonCode(),
-                request.calculatedAt(),
-                request.calculationEngineCode(),
-                request.calculationEngineVersion(),
-                // Endpoint temporal: materializa un recibo a mano, sin lanzamiento, asi que no hay
-                // ejecucion que anotar (backend#62).
-                null,
-                java.util.List.of(),
-                request.concepts().stream()
-                        .map(concept -> new PayrollConcept(
-                                concept.lineNumber(),
-                                concept.conceptCode(),
-                                concept.conceptLabel(),
-                                concept.amount(),
-                                concept.quantity(),
-                                concept.rate(),
-                                concept.conceptNatureCode(),
-                                concept.originPeriodCode(),
-                                concept.displayOrder()
-                        ))
-                        .toList(),
-                request.contextSnapshots().stream()
-                        .map(snapshot -> new PayrollContextSnapshot(
-                                snapshot.snapshotTypeCode(),
-                                snapshot.sourceVerticalCode(),
-                                snapshot.sourceBusinessKeyJson(),
-                                snapshot.snapshotPayloadJson()
-                        ))
-                        .toList(),
-                java.util.List.of()
-        ));
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(payrollResponseAssembler.toResponse(payroll));
     }
 
     @PostMapping("/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}/invalidate")

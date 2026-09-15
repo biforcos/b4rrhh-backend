@@ -3,8 +3,6 @@ package com.b4rrhh.payroll.infrastructure.web;
 import com.b4rrhh.payroll.application.port.PayrollCalculationStep;
 import com.b4rrhh.payroll.application.usecase.BulkInvalidatePayrollResult;
 import com.b4rrhh.payroll.application.usecase.BulkInvalidatePayrollUseCase;
-import com.b4rrhh.payroll.application.usecase.CalculatePayrollCommand;
-import com.b4rrhh.payroll.application.usecase.CalculatePayrollUseCase;
 import com.b4rrhh.payroll.application.usecase.FinalizePayrollCommand;
 import com.b4rrhh.payroll.application.usecase.FinalizePayrollUseCase;
 import com.b4rrhh.payroll.application.usecase.GetPayrollByBusinessKeyUseCase;
@@ -23,11 +21,8 @@ import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollResponseAssembler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.b4rrhh.payroll.infrastructure.web.dto.BulkInvalidatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.BulkInvalidatePayrollResponse;
-import com.b4rrhh.payroll.infrastructure.web.dto.CalculatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.InvalidatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollCalculationStepResponse;
-import com.b4rrhh.payroll.infrastructure.web.dto.PayrollConceptRequest;
-import com.b4rrhh.payroll.infrastructure.web.dto.PayrollContextSnapshotRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,8 +54,6 @@ import static org.mockito.Mockito.when;
 class PayrollControllerTest {
 
     @Mock
-    private CalculatePayrollUseCase calculatePayrollUseCase;
-    @Mock
     private GetPayrollByBusinessKeyUseCase getPayrollByBusinessKeyUseCase;
     @Mock
     private InvalidatePayrollUseCase invalidatePayrollUseCase;
@@ -82,7 +75,6 @@ class PayrollControllerTest {
     @BeforeEach
     void setUp() {
         controller = new PayrollController(
-                calculatePayrollUseCase,
                 getPayrollByBusinessKeyUseCase,
                 invalidatePayrollUseCase,
                 validatePayrollUseCase,
@@ -94,35 +86,6 @@ class PayrollControllerTest {
                 new PayrollResponseAssembler(new ObjectMapper()),
                 new PayrollCalculationStepResponseAssembler()
         );
-    }
-
-    @Test
-    void calculatesPayrollFromRequestBody() {
-        when(calculatePayrollUseCase.calculate(any(CalculatePayrollCommand.class))).thenReturn(payroll(PayrollStatus.CALCULATED, null));
-
-        ResponseEntity<PayrollResponse> response = controller.calculateTemporaryStub(new CalculatePayrollRequest(
-                "ESP",
-                "INTERNAL",
-                "EMP001",
-                "202501",
-                "NORMAL",
-                1,
-                PayrollStatus.CALCULATED,
-                null,
-                LocalDateTime.of(2026, 1, 31, 10, 15),
-                "ENGINE",
-                "1.0",
-                List.of(new PayrollConceptRequest(1, "BASE", "Base salary", new BigDecimal("1000.00"), null, null, "EARNING", "202501", 1)),
-                List.of(new PayrollContextSnapshotRequest("PRESENCE", "EMPLOYEE", "{\"presenceNumber\":1}", "{\"companyCode\":\"ES01\"}"))
-        ));
-
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals("ESP", response.getBody().ruleSystemCode());
-
-        ArgumentCaptor<CalculatePayrollCommand> captor = ArgumentCaptor.forClass(CalculatePayrollCommand.class);
-        verify(calculatePayrollUseCase).calculate(captor.capture());
-        assertEquals("NORMAL", captor.getValue().payrollTypeCode());
     }
 
     @Test
