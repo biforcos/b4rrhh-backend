@@ -93,20 +93,40 @@ lo segundo es un código que falta en `rule_entity`, y se da de alta con la vige
 puede omitir. La guardia afirma algo sobre las filas que tiene delante, y no sobre las que no
 tiene:
 
-- Sobre la base de mil empleados del loader, afirma algo sobre **catorce columnas de diecisiete** y
-  nada sobre tres: `cost_center.cost_center_code`, `employee_absence.absence_type_code` y
-  `employee_payroll_input.employee_type_code` no tienen ni una fila, porque el loader no las genera
-  (workforce-loader#5). Su cero es un no-dato. Y en tres de las catorce —convenio, subtipo de
-  contrato y tipo de empleado— hay **un solo código** en juego entre casi dos mil filas: la guardia
-  pasa en verde sin haber probado gran cosa.
-- **En el pipeline, menos aún.** Los tests sobre el esquema real corren sobre una base recién
-  migrada, y las migraciones no siembran ni una fila en `employee`. Allí la guardia comprueba lo que
-  siembran los fixtures de la propia suite, que se deshacen con cada transacción. Cazaría un `HIRE`
-  en un fixture —que es justo cómo empezó esto— pero no un dato roto en la demo. Para afirmar algo
-  sobre una base con datos hay que ejecutarla contra esa base, y hoy no hay camino escrito para eso.
+- Sobre la base de mil empleados del loader afirma algo sobre **dieciséis columnas de diecisiete**,
+  32.473 filas, y nada sobre una: `employee_payroll_input.employee_type_code` no tiene ni una fila,
+  porque el loader no la genera (workforce-loader#5). Su cero es un no-dato. Y en tres de las
+  dieciséis —convenio, subtipo de contrato y tipo de empleado— hay **un solo código** en juego entre
+  casi dos mil filas: la guardia pasa en verde sin haber probado gran cosa.
+
+  > Medido el 15/09/2026 contra `b4rrhh_semilla`, con el perfil `comprobar-catalogos`. Este párrafo
+  > decía «catorce de diecisiete» y nombraba `cost_center.cost_center_code` y
+  > `employee_absence.absence_type_code` entre las vacías; hoy tienen 2.192 y 6.660 filas. La cifra
+  > se queda escrita con su fecha justamente porque envejece: lo que no envejece es que **hay que
+  > medirla**, y ahora hay un comando que la mide.
+
+- **En el pipeline no ve ninguna fila.** Los tests sobre el esquema real corren sobre una base
+  recién migrada, ninguna de las migraciones inserta nada en `employee`, y los fixtures son de
+  otras clases y se deshacen con su transacción. Así que allí el test principal se ejecuta sobre
+  **cero filas y no puede fallar**: su verde no dice que los datos estén bien, dice que no hay
+  datos. El valor en el pipeline está entero en las tres sondas, que demuestran el mecanismo
+  insertando una fila rota dentro de la transacción. Eso lo deja escrito, y fallaría si dejara de
+  ser cierto, `theSuiteRunsThisCheckOverAnEmptySchemaAndThatIsNotAPass` (backend#44).
+
+  Esta viñeta decía que la guardia «comprueba lo que siembran los fixtures de la propia suite», que
+  era más suave que la verdad.
 
 Un ADR que dijera «la integridad de estos códigos está comprobada» sin estos dos párrafos sería
 precisamente el tipo de verdad a medias que este proyecto lleva meses cazando.
+
+**Y por eso el cálculo ya no vive en el test** (backend#44). Decía este ADR que «hoy no hay camino
+escrito» para apuntar la comprobación a una base con datos; ahora lo hay, y es el perfil
+`comprobar-catalogos`: la misma comprobación, ejecutable contra la base a la que apunte la
+configuración, con código de salida y con los recuentos publicados. La salida rápida habría sido
+copiar el SQL al repo de despliegue, y habría resucitado la segunda lista que el backend#43 acabó
+de eliminar: el día que entrara un vertical nuevo, la guardia del pipeline lo recogería sola y la
+de la demo no. La lista sigue saliendo de los participantes porque quien comprueba la demo es **la
+aplicación**.
 
 Lo demás:
 

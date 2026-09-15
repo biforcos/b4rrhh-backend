@@ -1,22 +1,13 @@
 package com.b4rrhh.rulesystem.application.usecase;
 
-import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeOwnedRuleEntityUsageParticipant;
-import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeOwnedRuleEntityUsageParticipant.CatalogColumnUsage;
-import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeOwnedRuleEntityUsageParticipant.RuleSystemSource;
-import com.b4rrhh.rulesystem.application.port.RuleEntityUsageParticipant;
+import com.b4rrhh.rulesystem.application.port.CatalogColumnIntegrity;
 import com.b4rrhh.support.DatosDePrueba;
 import com.b4rrhh.support.TestSobreEsquemaReal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.entry;
@@ -34,6 +25,14 @@ import static org.assertj.core.api.Assertions.entry;
  * declararse, y una segunda lista que alguien tuviera que mantener sería justo el registro central
  * que el patrón del ADR-047 existe para evitar.
  *
+ * <b>El cálculo ya no vive en este test</b>, sino en {@link CheckCatalogCodeIntegrityUseCase}
+ * (backend#44). El motivo es el mismo de siempre: la comprobación tiene que poder apuntarse a una
+ * base poblada —la demo— desde el despliegue, y dos implementaciones de la misma regla se separan.
+ * Aquí quedan las sondas, que son lo que demuestra el mecanismo, y el test principal, que en el
+ * pipeline se ejecuta sobre cero filas y por eso no puede fallar: eso lo dice
+ * {@link #theSuiteRunsThisCheckOverAnEmptySchemaAndThatIsNotAPass()}, en voz alta, en vez de
+ * dejarlo pasar por verde.
+ *
  * No hay clave ajena, a propósito (ADR-055): estas columnas guardan el código, no el id, y una
  * clave ajena no distingue «no existe» de «ya no está vigente». De ahí las dos reglas de la
  * comprobación: un código sólo existe dentro de su {@code rule_system_code} —propio en la tabla o
@@ -47,15 +46,15 @@ class EveryCatalogColumnPointsToAnExistingCodeTest {
     private JdbcTemplate jdbcTemplate;
 
     @Autowired
-    private List<RuleEntityUsageParticipant> participants;
+    private CheckCatalogCodeIntegrityUseCase checkCatalogCodeIntegrityUseCase;
 
     @Test
     void noRowInTheEmployeeSchemaPointsToACodeThatDoesNotExist() {
-        assertThat(declaredUsages()).as("los participantes declaran columnas").isNotEmpty();
+        CatalogCodeIntegrityReport report = checkCatalogCodeIntegrityUseCase.check();
 
-        List<Orphans> orphans = orphans();
+        assertThat(report.columns()).as("los participantes declaran columnas").isNotEmpty();
 
-        assertThat(orphans)
+        assertThat(report.orphanColumns())
                 .withFailMessage("""
                         Hay filas del esquema employee que apuntan a códigos que no existen en
                         rulesystem.rule_entity (columna, tipo de catálogo, filas y reglamentación/código):
@@ -66,8 +65,34 @@ class EveryCatalogColumnPointsToAnExistingCodeTest {
                         se juzga). Si es un residuo —de un fixture, de un script, de una migración—, hay
                         que corregir la fila. Los que nunca se limpian son los que acaban leyéndose mal
                         para siempre en el histórico.
-                        """, describe(orphans))
+                        """, report.describeOrphans())
                 .isEmpty();
+    }
+
+    /**
+     * Lo que el ADR-055 decía de más y el {@code backend#44} vino a corregir: en la suite esta
+     * comprobación <b>no ve ninguna fila</b>. Ninguna de las migraciones inserta nada en
+     * {@code employee}, y los fixtures de otras clases se deshacen con su transacción.
+     *
+     * <p>Así que el verde del test de arriba no dice que los datos estén bien: dice que no hay
+     * datos. El valor aquí está entero en las tres sondas de abajo, que demuestran el mecanismo.
+     * Comprobar el dato de verdad es lo que hace el perfil {@code comprobar-catalogos} contra una
+     * base poblada, y este test lo deja escrito para que nadie confunda una cosa con la otra.
+     */
+    @Test
+    void theSuiteRunsThisCheckOverAnEmptySchemaAndThatIsNotAPass() {
+        CatalogCodeIntegrityReport report = checkCatalogCodeIntegrityUseCase.check();
+
+        assertThat(report.totalRows())
+                .withFailMessage("""
+                        Esta comprobación ya ve filas en la suite (%d), y hasta hoy no veía ninguna.
+                        Si es a propósito —han entrado semillas en employee— hay que reescribir este
+                        test y la nota del ADR-055 que dice lo contrario. Si no es a propósito, hay
+                        un fixture escapándose de su transacción.
+                        Informe: %s
+                        """, report.totalRows(), report.summary())
+                .isZero();
+        assertThat(report.emptyColumns()).hasSameSizeAs(report.columns());
     }
 
     // La prueba de la guardia: una fila con un código inexistente aparece sola en el fallo, con su
@@ -81,18 +106,19 @@ class EveryCatalogColumnPointsToAnExistingCodeTest {
                 values (?, 1, 'ES01', 'ZZ_PROBE', date '2018-01-01', date '2018-12-31')
                 """, employeeId);
 
-        List<Orphans> orphans = orphans();
+        CatalogCodeIntegrityReport report = checkCatalogCodeIntegrityUseCase.check();
 
-        assertThat(orphans).singleElement().satisfies(found -> {
-            assertThat(found.usage().qualifiedColumn()).isEqualTo("presence.entry_reason_code");
-            assertThat(found.usage().ruleEntityTypeCode()).isEqualTo("EMPLOYEE_PRESENCE_ENTRY_REASON");
-            assertThat(found.rows()).isEqualTo(1);
-            assertThat(found.codes()).containsExactly(entry("ESP/ZZ_PROBE", 1L));
+        assertThat(report.orphanColumns()).singleElement().satisfies(found -> {
+            assertThat(found.qualifiedColumn()).isEqualTo("presence.entry_reason_code");
+            assertThat(found.ruleEntityTypeCode()).isEqualTo("EMPLOYEE_PRESENCE_ENTRY_REASON");
+            assertThat(found.orphanRows()).isEqualTo(1);
+            assertThat(found.orphanCodes()).containsExactly(entry("ESP/ZZ_PROBE", 1L));
         });
-        // Lo que se lee en el fallo: columna, tipo, cuántas y cuáles. Es lo que convierte el
-        // fallo en una decisión: no es lo mismo un residuo de fixture que doscientos convenios.
-        assertThat(describe(orphans)).isEqualTo(
-                "  presence.entry_reason_code (EMPLOYEE_PRESENCE_ENTRY_REASON): 1 fila(s): ESP/ZZ_PROBE (1)");
+        // Lo que se lee en el fallo: columna, tipo, cuántas de cuántas, y cuáles. Es lo que
+        // convierte el fallo en una decisión: no es lo mismo un residuo de fixture que doscientos
+        // convenios. El «de 1» es el denominador que el backend#44 añadió.
+        assertThat(report.describeOrphans()).isEqualTo(
+                "  presence.entry_reason_code (EMPLOYEE_PRESENCE_ENTRY_REASON): 1 de 1 fila(s): ESP/ZZ_PROBE (1)");
     }
 
     // El ámbito por reglamentación: el mismo código existe en FRA y no en ESP, y la fila es de un
@@ -110,9 +136,8 @@ class EveryCatalogColumnPointsToAnExistingCodeTest {
                 """, employeeId);
 
         assertThat(orphans()).singleElement().satisfies(found -> {
-            assertThat(found.usage().qualifiedColumn()).isEqualTo("contact.contact_type_code");
-            assertThat(found.usage().ruleSystemSource()).isEqualTo(RuleSystemSource.OWNER_EMPLOYEE);
-            assertThat(found.codes()).containsExactly(entry("ESP/ZZ_PROBE", 1L));
+            assertThat(found.qualifiedColumn()).isEqualTo("contact.contact_type_code");
+            assertThat(found.orphanCodes()).containsExactly(entry("ESP/ZZ_PROBE", 1L));
         });
     }
 
@@ -127,72 +152,12 @@ class EveryCatalogColumnPointsToAnExistingCodeTest {
                 """);
 
         assertThat(orphans()).singleElement().satisfies(found -> {
-            assertThat(found.usage().qualifiedColumn()).isEqualTo("employee_payroll_input.employee_type_code");
-            assertThat(found.usage().ruleSystemSource()).isEqualTo(RuleSystemSource.OWN_COLUMN);
-            assertThat(found.codes()).containsExactly(entry("ESP/ZZ_PROBE", 1L));
+            assertThat(found.qualifiedColumn()).isEqualTo("employee_payroll_input.employee_type_code");
+            assertThat(found.orphanCodes()).containsExactly(entry("ESP/ZZ_PROBE", 1L));
         });
     }
 
-    /** Una columna con filas huérfanas: cuántas, y cada {@code reglamentación/código} con su recuento. */
-    private record Orphans(CatalogColumnUsage usage, long rows, Map<String, Long> codes) {
-    }
-
-    private List<Orphans> orphans() {
-        return declaredUsages().stream()
-                .map(this::orphansOf)
-                .flatMap(Optional::stream)
-                .sorted(Comparator.comparingLong(Orphans::rows).reversed()
-                        .thenComparing(orphans -> orphans.usage().qualifiedColumn()))
-                .toList();
-    }
-
-    // Tabla, columna y tipo vienen del participante —constantes del vertical—, igual que en
-    // countReferences; el único parámetro de la petición es el tipo de catálogo.
-    private Optional<Orphans> orphansOf(CatalogColumnUsage usage) {
-        String ruleSystemCode = switch (usage.ruleSystemSource()) {
-            case OWN_COLUMN -> "owned.rule_system_code";
-            case OWNER_EMPLOYEE -> "e.rule_system_code";
-        };
-        String join = usage.ruleSystemSource() == RuleSystemSource.OWNER_EMPLOYEE
-                ? " join employee.employee e on e.id = owned.employee_id"
-                : "";
-        String sql = "select " + ruleSystemCode + " as rule_system_code, owned." + usage.column() + " as code, count(*) as n"
-                + " from employee." + usage.table() + " owned" + join
-                + " where owned." + usage.column() + " is not null"
-                + "   and not exists (select 1 from rulesystem.rule_entity re"
-                + "                    where re.rule_system_code = " + ruleSystemCode
-                + "                      and re.rule_entity_type_code = ?"
-                + "                      and re.code = owned." + usage.column() + ")"
-                + " group by 1, 2 order by 3 desc, 1, 2";
-
-        Map<String, Long> codes = new LinkedHashMap<>();
-        jdbcTemplate.query(sql, row -> {
-            codes.put(row.getString("rule_system_code") + "/" + row.getString("code"), row.getLong("n"));
-        }, usage.ruleEntityTypeCode());
-
-        if (codes.isEmpty()) {
-            return Optional.empty();
-        }
-        long rows = codes.values().stream().mapToLong(Long::longValue).sum();
-        return Optional.of(new Orphans(usage, rows, codes));
-    }
-
-    private Set<CatalogColumnUsage> declaredUsages() {
-        return participants.stream()
-                .filter(EmployeeOwnedRuleEntityUsageParticipant.class::isInstance)
-                .map(EmployeeOwnedRuleEntityUsageParticipant.class::cast)
-                .flatMap(participant -> participant.declaredUsages().stream())
-                .collect(Collectors.toUnmodifiableSet());
-    }
-
-    private static String describe(List<Orphans> orphans) {
-        return orphans.stream()
-                .map(found -> "  " + found.usage().qualifiedColumn()
-                        + " (" + found.usage().ruleEntityTypeCode() + "): "
-                        + found.rows() + " fila(s): "
-                        + found.codes().entrySet().stream()
-                                .map(code -> code.getKey() + " (" + code.getValue() + ")")
-                                .collect(Collectors.joining(", ")))
-                .collect(Collectors.joining("\n"));
+    private List<CatalogColumnIntegrity> orphans() {
+        return checkCatalogCodeIntegrityUseCase.check().orphanColumns();
     }
 }

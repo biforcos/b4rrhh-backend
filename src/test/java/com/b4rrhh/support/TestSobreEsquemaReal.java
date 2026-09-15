@@ -98,9 +98,11 @@ import com.b4rrhh.payroll_engine.eligibility.infrastructure.persistence.ConceptA
 import com.b4rrhh.payroll_engine.table.infrastructure.persistence.PayrollTableRowManagementAdapter;
 import com.b4rrhh.rulesystem.agreementprofile.infrastructure.persistence.AgreementCatalogLookupAdapter;
 import com.b4rrhh.rulesystem.agreementprofile.infrastructure.persistence.AgreementProfilePersistenceAdapter;
+import com.b4rrhh.rulesystem.application.usecase.CheckCatalogCodeIntegrityService;
 import com.b4rrhh.rulesystem.application.usecase.CreateRuleEntityService;
 import com.b4rrhh.rulesystem.application.usecase.DeleteRuleEntityService;
 import com.b4rrhh.rulesystem.employeeaddresstypeprofile.infrastructure.persistence.EmployeeAddressTypeProfilePersistenceAdapter;
+import com.b4rrhh.rulesystem.infrastructure.persistence.CatalogCodeIntegrityReadAdapter;
 import com.b4rrhh.rulesystem.infrastructure.persistence.RuleEntityPersistenceAdapter;
 import com.b4rrhh.rulesystem.infrastructure.persistence.RuleEntityExtensionPersistenceAdapter;
 import com.b4rrhh.rulesystem.infrastructure.persistence.RuleEntityTypeOwnEndpointAdapter;
@@ -269,6 +271,10 @@ import java.lang.annotation.Target;
         // rulesystem: borrado de codigos (backend#26)
         DeleteRuleEntityService.class,
         RuleEntityUsageCheckAdapter.class,
+        // rulesystem: la comprobacion de codigos contra el dato, la misma que corre el
+        // despliegue contra una base poblada (backend#44)
+        CheckCatalogCodeIntegrityService.class,
+        CatalogCodeIntegrityReadAdapter.class,
         // employee: donde cada vertical guarda codigos de catalogo (backend#28)
         AddressRuleEntityUsageParticipant.class,
         ContactRuleEntityUsageParticipant.class,
