@@ -225,7 +225,7 @@ class TheTwoContractsNeverDivergeInSilenceTest {
             return List.of();
         }
         List<String> salida = new ArrayList<>();
-        for (String componente : cabecera.group(1).split(",")) {
+        for (String componente : separarComponentes(cabecera.group(1))) {
             String limpio = componente.strip();
             if (limpio.isEmpty()) {
                 continue;
@@ -234,6 +234,37 @@ class TheTwoContractsNeverDivergeInSilenceTest {
             salida.add(partes[partes.length - 1]);
         }
         return salida;
+    }
+
+    /**
+     * Las comas que separan componentes, que no son todas las comas.
+     *
+     * <p>Partir la cabecera por {@code ","} a secas parte tambien por dentro de un generico:
+     * {@code Map<String, Object> details} sale como {@code Map<String} y {@code Object> details},
+     * y el primero se denuncia como un campo servido y no declarado que no existe. El control
+     * llevaba escrito desde el backend#80 y nunca habia visto un generico; se vio el dia que
+     * {@code PayrollErrorResponse} gano un {@code Map} (#100), y hasta ese dia el fichero decia
+     * que estaba protegido. Se cuenta la profundidad de {@code <>} y solo cortan las de fuera.
+     */
+    private static List<String> separarComponentes(String cabecera) {
+        List<String> componentes = new ArrayList<>();
+        StringBuilder actual = new StringBuilder();
+        int profundidad = 0;
+        for (char c : cabecera.toCharArray()) {
+            if (c == '<') {
+                profundidad++;
+            } else if (c == '>') {
+                profundidad--;
+            }
+            if (c == ',' && profundidad == 0) {
+                componentes.add(actual.toString());
+                actual.setLength(0);
+            } else {
+                actual.append(c);
+            }
+        }
+        componentes.add(actual.toString());
+        return componentes;
     }
 
     private static Object cargar(Path contrato) {
