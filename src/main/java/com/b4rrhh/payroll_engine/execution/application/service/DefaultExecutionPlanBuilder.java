@@ -1,6 +1,7 @@
 package com.b4rrhh.payroll_engine.execution.application.service;
 
 import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
+import com.b4rrhh.payroll_engine.concept.domain.model.ConceptRounding;
 import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConceptFeedRelation;
@@ -111,12 +112,15 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
             RuleSystemMetamodel metamodel
     ) {
         CalculationType calculationType = concept.getCalculationType();
+        // El redondeo viaja con la entrada del plan: la ejecucion por segmento no vuelve al
+        // repositorio, asi que lo que no entre aqui no lo ve el motor (backend#61).
+        ConceptRounding rounding = concept.getRounding();
 
         if (calculationType == CalculationType.AGGREGATE) {
             Set<ConceptNodeIdentity> graphDeps = graph.getDependenciesOf(identity);
             if (graphDeps.isEmpty()) {
                 log.debug("[ENGINE]     PLAN {} | AGGREGATE sin fuentes → resultado 0", identity.getConceptCode());
-                return new ConceptExecutionPlanEntry(identity, calculationType, Map.of(), List.of());
+                return new ConceptExecutionPlanEntry(identity, calculationType, Map.of(), List.of(), rounding);
             }
 
             Long targetObjectId = concept.getObject().getId();
@@ -148,12 +152,13 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
                     identity,
                     calculationType,
                     Map.of(),
-                    List.copyOf(sources)
+                    List.copyOf(sources),
+                    rounding
             );
         }
 
         if (calculationType == CalculationType.RATE_BY_QUANTITY) {
-            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType, metamodel,
+            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType, rounding, metamodel,
                     OperandRole.QUANTITY, OperandRole.RATE);
             log.debug("[ENGINE]     PLAN {} | RATE_BY_QUANTITY: QUANTITY={} RATE={}",
                     identity.getConceptCode(),
@@ -163,7 +168,7 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
         }
 
         if (calculationType == CalculationType.PERCENTAGE) {
-            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType, metamodel,
+            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType, rounding, metamodel,
                     OperandRole.BASE, OperandRole.PERCENTAGE);
             log.debug("[ENGINE]     PLAN {} | PERCENTAGE: BASE={} PCT={}",
                     identity.getConceptCode(),
@@ -173,7 +178,7 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
         }
 
         if (calculationType == CalculationType.GREATEST) {
-            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType, metamodel,
+            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType, rounding, metamodel,
                     OperandRole.LEFT, OperandRole.RIGHT);
             log.debug("[ENGINE]     PLAN {} | GREATEST: LEFT={} RIGHT={}",
                     identity.getConceptCode(),
@@ -183,7 +188,7 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
         }
 
         if (calculationType == CalculationType.LEAST) {
-            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType, metamodel,
+            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType, rounding, metamodel,
                     OperandRole.LEFT, OperandRole.RIGHT);
             log.debug("[ENGINE]     PLAN {} | LEAST: LEFT={} RIGHT={}",
                     identity.getConceptCode(),
@@ -193,7 +198,7 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
         }
 
         log.debug("[ENGINE]     PLAN {} | {} (sin operandos)", identity.getConceptCode(), calculationType);
-        return new ConceptExecutionPlanEntry(identity, calculationType);
+        return new ConceptExecutionPlanEntry(identity, calculationType, Map.of(), List.of(), rounding);
     }
 
     /**
@@ -207,6 +212,7 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
             ConceptDependencyGraph graph,
             ConceptNodeIdentity identity,
             CalculationType calculationType,
+            ConceptRounding rounding,
             RuleSystemMetamodel metamodel,
             OperandRole role1,
             OperandRole role2
@@ -231,7 +237,9 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
         return new ConceptExecutionPlanEntry(
                 identity,
                 calculationType,
-                Map.of(role1, id1, role2, id2)
+                Map.of(role1, id1, role2, id2),
+                List.of(),
+                rounding
         );
     }
 

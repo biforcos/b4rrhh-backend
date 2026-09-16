@@ -10,7 +10,6 @@ import com.b4rrhh.payroll_engine.segment.domain.model.SegmentCalculationContext;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.List;
 
 /**
@@ -95,6 +94,23 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
             SegmentExecutionState state,
             SegmentCalculationContext context
     ) {
+        return entry.rounding().apply(evaluateExact(entry, state, context));
+    }
+
+    /**
+     * El valor del concepto <b>antes</b> de redondear.
+     *
+     * <p>Separado del redondeo a proposito (backend#61, ADR-066). Hasta entonces cada resolutor
+     * redondeaba por su cuenta a 2 y {@code HALF_UP}: tres sitios distintos con la misma constante
+     * repetida, y ninguna forma de decir que el precio por dia necesita seis decimales y los dias
+     * ninguno. Ahora <b>el motor redondea una vez y aqui no se redondea nada</b>, que es lo que
+     * hace cierto el invariante de que nada se redondea dos veces.
+     */
+    private BigDecimal evaluateExact(
+            ConceptExecutionPlanEntry entry,
+            SegmentExecutionState state,
+            SegmentCalculationContext context
+    ) {
         return switch (entry.calculationType()) {
             case DIRECT_AMOUNT -> {
                 String conceptCode = entry.identity().getConceptCode();
@@ -123,7 +139,10 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
                     BigDecimal sourceAmount = state.getRequiredAmount(source.identity());
                     sum = sum.add(source.invertSign() ? sourceAmount.negate() : sourceAmount);
                 }
-                yield sum.setScale(2, RoundingMode.HALF_UP);
+                // Sin redondear: los sumandos ya vienen redondeados con sus decimales, y volver a
+                // redondear la suma seria la segunda vez. El motor le aplica una sola vez los
+                // decimales del propio agregado al salir.
+                yield sum;
             }
 
             case ENGINE_PROVIDED -> {

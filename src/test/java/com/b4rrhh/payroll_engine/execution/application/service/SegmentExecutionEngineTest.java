@@ -69,6 +69,27 @@ class SegmentExecutionEngineTest {
         );
     }
 
+    /**
+     * {@code T_PRECIO_DIA} declarando sus ocho decimales (backend#61).
+     *
+     * <p>Desde el #61 el motor redondea <b>todo</b> concepto con los decimales que el concepto
+     * declara, tambien los {@code DIRECT_AMOUNT} y los {@code ENGINE_PROVIDED}, que antes salian
+     * tal cual. Un precio intermedio que necesita ocho decimales los declara; lo que ya no puede
+     * pasar es que un valor lleve mas precision de la que dice llevar.
+     *
+     * <p>Sin esto, estos tests calcularian {@code 66,67} y arrastrarian el error hasta el salario:
+     * son la demostracion de que la propiedad se lee.
+     */
+    private ConceptExecutionPlanEntry precioDiaConOchoDecimales() {
+        return new ConceptExecutionPlanEntry(
+                node("T_PRECIO_DIA"),
+                CalculationType.DIRECT_AMOUNT,
+                java.util.Map.of(),
+                java.util.List.of(),
+                new com.b4rrhh.payroll_engine.concept.domain.model.ConceptRounding(
+                        8, java.math.RoundingMode.HALF_UP));
+    }
+
     /** Builds an AGGREGATE TOTAL_DEVENGOS_SEGMENTO entry sourced from SALARIO_BASE and PLUS_TRANSPORTE. */
     private static ConceptExecutionPlanEntry aggregateTotalDevengosEntry() {
         return new ConceptExecutionPlanEntry(
@@ -125,7 +146,7 @@ class SegmentExecutionEngineTest {
         // 2000 / 30 * 1.0 = 66.66666667 (scale 8)
         SegmentCalculationContext ctx = context100pct(30, 14, new BigDecimal("2000.00"));
         List<ConceptExecutionPlanEntry> plan = List.of(
-                new ConceptExecutionPlanEntry(node("T_PRECIO_DIA"), CalculationType.DIRECT_AMOUNT)
+                precioDiaConOchoDecimales()
         );
 
         SegmentExecutionState state = engine.execute(plan, ctx);
@@ -151,7 +172,7 @@ class SegmentExecutionEngineTest {
                 Map.of()
         );
         List<ConceptExecutionPlanEntry> plan = List.of(
-                new ConceptExecutionPlanEntry(node("T_PRECIO_DIA"), CalculationType.DIRECT_AMOUNT)
+                precioDiaConOchoDecimales()
         );
 
         SegmentExecutionState state = engine.execute(plan, ctx);
@@ -168,7 +189,7 @@ class SegmentExecutionEngineTest {
         SegmentCalculationContext ctx = context100pct(30, 14, new BigDecimal("2000.00"));
         List<ConceptExecutionPlanEntry> plan = List.of(
                 new ConceptExecutionPlanEntry(node("T_DIAS_PRESENCIA_SEGMENTO"), CalculationType.DIRECT_AMOUNT),
-                new ConceptExecutionPlanEntry(node("T_PRECIO_DIA"), CalculationType.DIRECT_AMOUNT),
+                precioDiaConOchoDecimales(),
                 enrichedSalarioBaseEntry()
         );
 
@@ -196,7 +217,7 @@ class SegmentExecutionEngineTest {
         );
         List<ConceptExecutionPlanEntry> plan = List.of(
                 new ConceptExecutionPlanEntry(node("T_DIAS_PRESENCIA_SEGMENTO"), CalculationType.DIRECT_AMOUNT),
-                new ConceptExecutionPlanEntry(node("T_PRECIO_DIA"), CalculationType.DIRECT_AMOUNT),
+                precioDiaConOchoDecimales(),
                 enrichedSalarioBaseEntry()
         );
 
@@ -248,7 +269,7 @@ class SegmentExecutionEngineTest {
         SegmentCalculationContext ctx = context100pct(30, 14, new BigDecimal("2000.00"));
         List<ConceptExecutionPlanEntry> plan = List.of(
                 new ConceptExecutionPlanEntry(node("T_DIAS_PRESENCIA_SEGMENTO"), CalculationType.DIRECT_AMOUNT),
-                new ConceptExecutionPlanEntry(node("T_PRECIO_DIA"), CalculationType.DIRECT_AMOUNT),
+                precioDiaConOchoDecimales(),
                 enrichedSalarioBaseEntry()
         );
 
@@ -268,7 +289,7 @@ class SegmentExecutionEngineTest {
         SegmentCalculationContext ctx = context100pct(30, 14, new BigDecimal("2000.00"));
         List<ConceptExecutionPlanEntry> plan = List.of(
                 new ConceptExecutionPlanEntry(node("T_DIAS_PRESENCIA_SEGMENTO"),  CalculationType.DIRECT_AMOUNT),
-                new ConceptExecutionPlanEntry(node("T_PRECIO_DIA"),              CalculationType.DIRECT_AMOUNT),
+                precioDiaConOchoDecimales(),
                 enrichedSalarioBaseEntry(),
                 new ConceptExecutionPlanEntry(node("T_PRECIO_TRANSPORTE"),       CalculationType.DIRECT_AMOUNT),
                 enrichedPlusTransporteEntry(),
@@ -315,7 +336,7 @@ class SegmentExecutionEngineTest {
         SegmentCalculationContext ctx = context100pct(30, 14, new BigDecimal("2000.00"));
         List<ConceptExecutionPlanEntry> plan = List.of(
                 new ConceptExecutionPlanEntry(node("T_DIAS_PRESENCIA_SEGMENTO"), CalculationType.DIRECT_AMOUNT),
-                new ConceptExecutionPlanEntry(node("T_PRECIO_DIA"),              CalculationType.DIRECT_AMOUNT),
+                precioDiaConOchoDecimales(),
                 enrichedSalarioBaseEntry(),
                 new ConceptExecutionPlanEntry(node("T_PRECIO_TRANSPORTE"),       CalculationType.DIRECT_AMOUNT),
                 enrichedPlusTransporteEntry(),

@@ -17,6 +17,8 @@ public class PayrollConcept {
     private final FunctionalNature functionalNature;
     private final String payslipOrderCode;
     private final ExecutionScope executionScope;
+    /** Cuantos decimales lleva su resultado y como redondea (backend#61). Nunca nulo. */
+    private final ConceptRounding rounding;
     private final String summary;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
@@ -46,6 +48,29 @@ public class PayrollConcept {
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
+        this(object, conceptMnemonic, calculationType, functionalNature, payslipOrderCode,
+                executionScope, ConceptRounding.DEFAULT, summary, createdAt, updatedAt);
+    }
+
+    /**
+     * El constructor completo, con el redondeo declarado.
+     *
+     * <p>Los otros dos delegan aqui con {@link ConceptRounding#DEFAULT}, que es lo que el motor
+     * hacia antes del backend#61. Un concepto sin redondeo declarado no es un concepto sin
+     * redondeo: es uno que se queda con el de siempre.
+     */
+    public PayrollConcept(
+            PayrollObject object,
+            String conceptMnemonic,
+            CalculationType calculationType,
+            FunctionalNature functionalNature,
+            String payslipOrderCode,
+            ExecutionScope executionScope,
+            ConceptRounding rounding,
+            String summary,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
+    ) {
         if (object == null) {
             throw new IllegalArgumentException("PayrollConcept requires a base PayrollObject");
         }
@@ -67,12 +92,16 @@ public class PayrollConcept {
         if (executionScope == null) {
             throw new IllegalArgumentException("executionScope is required");
         }
+        if (rounding == null) {
+            throw new IllegalArgumentException("rounding is required");
+        }
         this.object = object;
         this.conceptMnemonic = conceptMnemonic;
         this.calculationType = calculationType;
         this.functionalNature = functionalNature;
         this.payslipOrderCode = payslipOrderCode;
         this.executionScope = executionScope;
+        this.rounding = rounding;
         this.summary = summary;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -108,6 +137,10 @@ public class PayrollConcept {
 
     public ExecutionScope getExecutionScope() {
         return executionScope;
+    }
+
+    public ConceptRounding getRounding() {
+        return rounding;
     }
 
     public String getSummary() {

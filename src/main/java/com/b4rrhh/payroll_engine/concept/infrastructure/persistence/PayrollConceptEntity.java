@@ -1,6 +1,7 @@
 package com.b4rrhh.payroll_engine.concept.infrastructure.persistence;
 
 import com.b4rrhh.payroll_engine.object.infrastructure.persistence.PayrollObjectEntity;
+import com.b4rrhh.payroll_engine.concept.domain.model.ConceptRounding;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -39,6 +40,14 @@ public class PayrollConceptEntity {
 
     @Column(name = "execution_scope", nullable = false, length = 30)
     private String executionScope;
+
+    // Los mismos valores que el defecto de la columna y que ConceptRounding.DEFAULT: una entidad
+    // construida a mano se guarda igual que una que venga del dominio (backend#61).
+    @Column(name = "rounding_scale", nullable = false)
+    private Integer roundingScale = ConceptRounding.DEFAULT.scale();
+
+    @Column(name = "rounding_mode", nullable = false, length = 20)
+    private String roundingMode = ConceptRounding.DEFAULT.mode().name();
 
     @Column(name = "summary", columnDefinition = "TEXT")
     private String summary;
@@ -85,6 +94,22 @@ public class PayrollConceptEntity {
 
     public String getExecutionScope() { return executionScope; }
     public void setExecutionScope(String executionScope) { this.executionScope = executionScope; }
+
+    public Integer getRoundingScale() {
+        return roundingScale;
+    }
+
+    public void setRoundingScale(Integer roundingScale) {
+        this.roundingScale = roundingScale;
+    }
+
+    public String getRoundingMode() {
+        return roundingMode;
+    }
+
+    public void setRoundingMode(String roundingMode) {
+        this.roundingMode = roundingMode;
+    }
 
     public String getSummary() { return summary; }
     public void setSummary(String summary) { this.summary = summary; }

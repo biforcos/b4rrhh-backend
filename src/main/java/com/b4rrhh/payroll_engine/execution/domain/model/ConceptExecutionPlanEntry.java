@@ -1,6 +1,7 @@
 package com.b4rrhh.payroll_engine.execution.domain.model;
 
 import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
+import com.b4rrhh.payroll_engine.concept.domain.model.ConceptRounding;
 import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
 
@@ -33,7 +34,24 @@ public record ConceptExecutionPlanEntry(
         ConceptNodeIdentity identity,
         CalculationType calculationType,
         Map<OperandRole, ConceptNodeIdentity> operands,
-        List<AggregateSourceEntry> aggregateSources) {
+        List<AggregateSourceEntry> aggregateSources,
+        ConceptRounding rounding) {
+
+    /**
+     * El plan lleva el redondeo dentro porque es donde el motor puede leerlo sin volver al
+     * repositorio (backend#61): la ejecucion por segmento no accede a la base, y el redondeo es
+     * una propiedad del concepto como lo es su tipo de calculo.
+     *
+     * <p>Los constructores de conveniencia heredan {@link ConceptRounding#DEFAULT}, que es lo que
+     * el motor hacia antes. Sirven a los tests; el constructor del plan siempre pasa el declarado.
+     */
+    public ConceptExecutionPlanEntry(
+            ConceptNodeIdentity identity,
+            CalculationType calculationType,
+            Map<OperandRole, ConceptNodeIdentity> operands,
+            List<AggregateSourceEntry> aggregateSources) {
+        this(identity, calculationType, operands, aggregateSources, ConceptRounding.DEFAULT);
+    }
 
     /**
      * Convenience constructor for entries that do not require operand wiring

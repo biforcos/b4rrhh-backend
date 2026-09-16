@@ -1,6 +1,7 @@
 package com.b4rrhh.payroll_engine.concept.infrastructure.persistence;
 
 import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
+import com.b4rrhh.payroll_engine.concept.domain.model.ConceptRounding;
 import com.b4rrhh.payroll_engine.concept.domain.model.ExecutionScope;
 import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
@@ -94,6 +95,8 @@ public class PayrollConceptPersistenceAdapter implements PayrollConceptRepositor
         entity.setFunctionalNature(domain.getFunctionalNature().name());
         entity.setPayslipOrderCode(domain.getPayslipOrderCode());
         entity.setExecutionScope(domain.getExecutionScope().name());
+        entity.setRoundingScale(domain.getRounding().scale());
+        entity.setRoundingMode(domain.getRounding().mode().name());
         entity.setSummary(domain.getSummary());
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
@@ -117,6 +120,9 @@ public class PayrollConceptPersistenceAdapter implements PayrollConceptRepositor
                 FunctionalNature.valueOf(entity.getFunctionalNature()),
                 entity.getPayslipOrderCode(),
                 ExecutionScope.valueOf(entity.getExecutionScope()),
+                new ConceptRounding(
+                        entity.getRoundingScale(),
+                        java.math.RoundingMode.valueOf(entity.getRoundingMode())),
                 entity.getSummary(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()

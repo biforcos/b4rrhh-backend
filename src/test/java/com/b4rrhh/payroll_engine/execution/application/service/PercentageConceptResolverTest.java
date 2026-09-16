@@ -50,7 +50,7 @@ class PercentageConceptResolverTest {
 
     @Test
     void percentageComputationIsCorrectForReferenceSegmentOne() {
-        // 1038.33 × 15 / 100 = 155.7495 → scale 2 HALF_UP = 155.75
+        // 1038.33 × 15 / 100 = 155.7495, y el resolutor ya no lo redondea (backend#61)
         ConceptExecutionPlanEntry e = entry("RETENCION_IRPF_TRAMO", "TOTAL_DEVENGOS_SEGMENTO", "T_PCT_IRPF");
         SegmentExecutionState state = stateWith(
                 "TOTAL_DEVENGOS_SEGMENTO", new BigDecimal("1038.33"),
@@ -58,13 +58,13 @@ class PercentageConceptResolverTest {
 
         BigDecimal result = resolver.resolve(e, state);
 
-        assertEquals(0, new BigDecimal("155.75").compareTo(result),
-                "1038.33 × 15 / 100 = 155.75");
+        assertEquals(0, new BigDecimal("155.74950000").compareTo(result),
+                "sin redondear: 1038,33 x 15 / 100 = 155,7495");
     }
 
     @Test
     void percentageComputationIsCorrectForReferenceSegmentTwo() {
-        // 653.33 × 15 / 100 = 97.9995 → scale 2 HALF_UP = 98.00
+        // 653.33 × 15 / 100 = 97.9995, y el resolutor ya no lo redondea (backend#61)
         ConceptExecutionPlanEntry e = entry("RETENCION_IRPF_TRAMO", "TOTAL_DEVENGOS_SEGMENTO", "T_PCT_IRPF");
         SegmentExecutionState state = stateWith(
                 "TOTAL_DEVENGOS_SEGMENTO", new BigDecimal("653.33"),
@@ -72,8 +72,8 @@ class PercentageConceptResolverTest {
 
         BigDecimal result = resolver.resolve(e, state);
 
-        assertEquals(0, new BigDecimal("98.00").compareTo(result),
-                "653.33 × 15 / 100 = 98.00");
+        assertEquals(0, new BigDecimal("97.99950000").compareTo(result),
+                "sin redondear: 653,33 x 15 / 100 = 97,9995");
     }
 
     @Test
@@ -100,18 +100,25 @@ class PercentageConceptResolverTest {
         assertEquals(0, BigDecimal.ZERO.compareTo(result));
     }
 
+    /**
+     * El resultado sale <b>exacto</b> (backend#61).
+     *
+     * <p>La division entre 100 sigue con escala 8, porque es un paso intermedio de esta misma
+     * operacion; lo que ya no hace este resolutor es redondear el resultado del concepto. De eso se
+     * encarga el motor una vez, con los decimales que el concepto declara, y por eso la mitad de
+     * los porcentajes de una nomina pueden quedarse con mas de dos decimales si asi se declaran.
+     */
     @Test
-    void halfUpRoundingIsApplied() {
-        // 100.00 × 33 / 100 = 33.00 (exact), verify scale 2
+    void theResultIsExactAndTheEngineRoundsItLater() {
         ConceptExecutionPlanEntry e = entry("R", "B", "P");
         SegmentExecutionState state = stateWith(
                 "B", new BigDecimal("100.00"),
-                "P", new BigDecimal("33"));
+                "P", new BigDecimal("33.333"));
 
         BigDecimal result = resolver.resolve(e, state);
 
-        assertEquals(2, result.scale());
-        assertEquals(0, new BigDecimal("33.00").compareTo(result));
+        assertEquals(0, new BigDecimal("33.33300000").compareTo(result),
+                "el resolutor no redondea: 100 x 33,333 / 100 = 33,333");
     }
 
     // ── fail-fast: missing planned operand ─────────────────────────────────

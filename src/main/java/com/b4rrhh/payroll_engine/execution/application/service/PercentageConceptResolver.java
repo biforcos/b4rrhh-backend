@@ -35,13 +35,16 @@ import java.math.RoundingMode;
  * </ul>
  *
  * <h3>Rounding</h3>
- * <p>Intermediate division by 100 uses scale 8, HALF_UP. Final result is rounded to scale 2, HALF_UP.
+ * <p>La division entre 100 se hace con escala 8 y {@code HALF_UP}, y esa si se queda: es un paso
+ * intermedio de esta misma operacion, no el resultado del concepto. Lo que <b>no</b> se hace aqui es
+ * redondear el resultado: de eso se encarga el motor una sola vez, con los decimales que el concepto
+ * declara (backend#61, ADR-066).
  */
 @Component
 public class PercentageConceptResolver {
 
+    /** Escala de trabajo de la division entre 100, no del resultado. Ver la nota de arriba. */
     private static final int INTERMEDIATE_SCALE = 8;
-    private static final int AMOUNT_SCALE = 2;
     private static final RoundingMode ROUNDING = RoundingMode.HALF_UP;
 
     /**
@@ -50,7 +53,7 @@ public class PercentageConceptResolver {
      * @param entry plan entry for the PERCENTAGE concept; must carry BASE and PERCENTAGE
      *              operand wiring in {@link ConceptExecutionPlanEntry#operands()}
      * @param state current segment state; must already contain source concept amounts
-     * @return {@code base × percentage / 100}, rounded to scale 2 HALF_UP
+     * @return {@code base × percentage / 100}, sin redondear el resultado
      * @throws MissingPlannedOperandException if operand wiring is absent from the entry
      */
     public BigDecimal resolve(ConceptExecutionPlanEntry entry, SegmentExecutionState state) {
@@ -61,8 +64,7 @@ public class PercentageConceptResolver {
         BigDecimal percentage = state.getRequiredAmount(percentageId);
 
         return base.multiply(percentage)
-                .divide(BigDecimal.valueOf(100), INTERMEDIATE_SCALE, ROUNDING)
-                .setScale(AMOUNT_SCALE, ROUNDING);
+                .divide(BigDecimal.valueOf(100), INTERMEDIATE_SCALE, ROUNDING);
     }
 
     private ConceptNodeIdentity getPlannedOperand(ConceptExecutionPlanEntry entry, OperandRole role) {

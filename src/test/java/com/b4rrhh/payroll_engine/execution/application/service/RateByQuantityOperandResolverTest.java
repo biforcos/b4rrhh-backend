@@ -60,21 +60,30 @@ class RateByQuantityOperandResolverTest {
 
         BigDecimal result = resolver.resolve(enrichedEntry(), state);
 
-        assertEquals(0, new BigDecimal("933.33").compareTo(result));
+        assertEquals(0, new BigDecimal("933.33333338").compareTo(result),
+                "el resolutor devuelve el producto exacto: el motor lo redondea despues");
     }
 
+    /**
+     * El producto sale <b>exacto</b>, y eso es lo que cambio en el backend#61.
+     *
+     * <p>Este resolutor redondeaba a 2 y {@code HALF_UP} por su cuenta: era uno de los tres sitios
+     * donde el motor redondeaba a ciegas, sin poder decir que el precio por dia necesita seis
+     * decimales. Ahora devuelve {@code cantidad x tarifa} sin tocar, y el redondeo lo aplica el
+     * motor <b>una sola vez</b> con los decimales que el concepto declara. Que aqui no se redondee
+     * es la mitad del invariante de que nada se redondea dos veces.
+     */
     @Test
-    void resultIsRoundedToScale2HalfUp() {
-        // 10 * 0.555 = 5.55 (scale 8 product is 5.55000000 → scale 2 HALF_UP = 5.55)
+    void theProductIsExactAndTheEngineRoundsItLater() {
         SegmentExecutionState state = stateWithBoth(
                 new BigDecimal("10"),
-                new BigDecimal("0.555")
+                new BigDecimal("0.5555555")
         );
 
         BigDecimal result = resolver.resolve(enrichedEntry(), state);
 
-        assertEquals(2, result.scale());
-        assertEquals(0, new BigDecimal("5.55").compareTo(result));
+        assertEquals(0, new BigDecimal("5.5555550").compareTo(result),
+                "el resolutor no redondea: 10 x 0,5555555 sale entero");
     }
 
     // ── missing planned operand wiring ────────────────────────────────────────

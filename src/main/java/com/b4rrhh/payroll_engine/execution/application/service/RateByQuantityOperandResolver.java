@@ -8,7 +8,6 @@ import com.b4rrhh.payroll_engine.execution.domain.model.SegmentExecutionState;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 
 /**
  * Computes the result of a {@code RATE_BY_QUANTITY} execution from pre-resolved operand
@@ -31,13 +30,12 @@ import java.math.RoundingMode;
  * </ul>
  *
  * <h3>Rounding</h3>
- * <p>Result is rounded to scale 2, HALF_UP after multiplying quantity × rate.
+ * <p><b>No redondea.</b> Devuelve el producto exacto; el redondeo lo aplica una sola vez el motor
+ * con los decimales que el concepto declara (backend#61, ADR-066). Aqui habia un
+ * {@code setScale(2, HALF_UP)} que era uno de los tres sitios donde se redondeaba a ciegas.
  */
 @Component
 public class RateByQuantityOperandResolver {
-
-    private static final int AMOUNT_SCALE = 2;
-    private static final RoundingMode ROUNDING = RoundingMode.HALF_UP;
 
     /**
      * Computes quantity × rate for the given plan entry using amounts from execution state.
@@ -45,7 +43,7 @@ public class RateByQuantityOperandResolver {
      * @param entry plan entry for the RATE_BY_QUANTITY concept; must carry QUANTITY and RATE
      *              operand wiring in {@link ConceptExecutionPlanEntry#operands()}
      * @param state current segment state; must already contain source concept amounts
-     * @return quantity × rate, rounded to scale 2 HALF_UP
+     * @return quantity × rate, exacto y sin redondear
      * @throws MissingPlannedOperandException if operand wiring is absent from the entry
      */
     public BigDecimal resolve(ConceptExecutionPlanEntry entry, SegmentExecutionState state) {
@@ -55,7 +53,7 @@ public class RateByQuantityOperandResolver {
         BigDecimal quantity = state.getRequiredAmount(quantityId);
         BigDecimal rate     = state.getRequiredAmount(rateId);
 
-        return quantity.multiply(rate).setScale(AMOUNT_SCALE, ROUNDING);
+        return quantity.multiply(rate);
     }
 
     private ConceptNodeIdentity getPlannedOperand(ConceptExecutionPlanEntry entry, OperandRole role) {

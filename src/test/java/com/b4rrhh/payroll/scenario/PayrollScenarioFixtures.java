@@ -305,6 +305,19 @@ public class PayrollScenarioFixtures {
                 dailyRate, ruleSystemCode, TABLE_CODE, CATEGORY_CODE);
     }
 
+    /**
+     * Declara los decimales y el modo de redondeo de un concepto (backend#61).
+     *
+     * <p>El grafo de prueba se siembra con el defecto —2 y {@code HALF_UP}, lo que el motor hacia
+     * antes—, asi que un test que quiera medir el efecto de estas propiedades tiene que ponerlas.
+     */
+    public void setConceptRounding(String ruleSystemCode, String conceptCode, int scale, String mode) {
+        jdbc.update(
+                "update payroll_engine.payroll_concept set rounding_scale = ?, rounding_mode = ?"
+                        + " where object_id = ?",
+                scale, mode, objectId(ruleSystemCode, "CONCEPT", conceptCode));
+    }
+
     /** Declara el ambito de ejecucion de los conceptos dados. */
     public void setExecutionScope(String ruleSystemCode, String executionScope, String... conceptCodes) {
         for (String code : conceptCodes) {
