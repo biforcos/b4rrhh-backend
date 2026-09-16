@@ -347,6 +347,12 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             log.info("[NÓMINA] Colapso desactivado (collapse-segment-rows=false): {} lineas sin colapsar", payslipRows.size());
         }
 
+        int antesDelCero = payslipRows.size();
+        payslipRows.removeIf(CalculatePayrollUnitService::noSeImprimePorValerCero);
+        if (payslipRows.size() != antesDelCero) {
+            log.info("[NÓMINA] Regla del cero: {} → {} lineas", antesDelCero, payslipRows.size());
+        }
+
         payslipRows.sort(Comparator.comparingInt(ConceptRow::displayOrder));
 
         log.info("[NÓMINA] Filtro recibo | {} lineas en recibo → [{}]",
@@ -598,6 +604,44 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     private BigDecimal operandAmount(ConceptExecutionPlanEntry entry, SegmentExecutionState state, OperandRole role) {
         ConceptNodeIdentity source = entry.operands().get(role);
         return source == null ? null : state.getOptionalAmount(source).orElse(null);
+    }
+
+    /**
+     * La regla del cero ({@code backend#104}).
+     *
+     * <p><b>Una linea de concepto a cero no se imprime. Un total a cero, si.</b>
+     *
+     * <p>Un concepto que no aplica no sale en la nomina: nadie cobra una linea de cero euros. Sin
+     * esto, declarar un concepto ocasional —unas horas extra— estrenaria una primera linea de
+     * {@code 0,00} en los ~873 recibos de quien no las tenga, porque
+     * {@code payroll_engine.concept_assignment} acota por sociedad, convenio y tipo de empleado y
+     * <b>no por empleado</b>.
+     *
+     * <p>La excepcion de los totales hay que escribirla o alguien la rompera al «limpiar los ceros»:
+     * un liquido de {@code 0,00} es un dato —dice que ese mes no se cobro— mientras que un concepto
+     * a {@code 0,00} es ruido. {@code TOTAL_EARNING}, {@code TOTAL_DEDUCTION} y {@code NET_PAY} se
+     * imprimen siempre.
+     *
+     * <p><b>Y el paso sigue existiendo.</b> Esto vive en la proyeccion y no en el motor: un paso a
+     * cero es un calculo que ocurrio y dio cero, y borrarlo del motor seria mentir en la explicacion
+     * para arreglar el documento. La pestana «Calculo» lo sigue ensenando con su cero; lo que cambia
+     * es lo que el folio pinta, que es de lo que habla el ADR-062 §1.
+     *
+     * <p>Se aplica <b>despues</b> del colapso a proposito: lo que decide es el importe de la linea,
+     * no el de cada tramo. Un concepto con dos tramos que se compensan vale cero y no se imprime;
+     * filtrando antes, se habria comido un tramo y dejado la linea con la mitad.
+     */
+    private static boolean noSeImprimePorValerCero(ConceptRow row) {
+        if (esTotal(row.nature())) {
+            return false;
+        }
+        return row.amount() != null && row.amount().signum() == 0;
+    }
+
+    private static boolean esTotal(String nature) {
+        return "TOTAL_EARNING".equals(nature)
+                || "TOTAL_DEDUCTION".equals(nature)
+                || "NET_PAY".equals(nature);
     }
 
     private List<ConceptRow> collapsePayslipRows(List<ConceptRow> rows) {

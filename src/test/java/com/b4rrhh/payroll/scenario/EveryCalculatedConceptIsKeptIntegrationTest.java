@@ -29,13 +29,20 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * El recibo se queda con los 14 conceptos que tienen sitio en el folio. Los otros 21 —5 BASE y 16
- * TECHNICAL— se calculaban, alimentaban a los demas y se tiraban, y son justo los que explican de
- * donde sale el numero. Desde el backend#93 se guardan todos en payroll.payroll_calculation_step.
+ * El recibo se queda con los conceptos que tienen sitio en el folio. Los otros —los BASE, los
+ * TECHNICAL y los INFORMATIONAL sin orden— se calculaban, alimentaban a los demas y se tiraban, y
+ * son justo los que explican de donde sale el numero. Desde el backend#93 se guardan todos en
+ * payroll.payroll_calculation_step.
  *
- * <p>Sobre ESP y no sobre TST, a proposito: los numeros de este issue —35 conceptos, 4 de ambito
- * SEGMENT y 31 de ambito PERIOD— son los de la reglamentacion que siembran las migraciones, y un
+ * <p>Sobre ESP y no sobre TST, a proposito: los numeros de este issue —38 conceptos, 4 de ambito
+ * SEGMENT y 34 de ambito PERIOD— son los de la reglamentacion que siembran las migraciones, y un
  * fixture con quince conceptos de mentira no probaria el recuento que hay que probar.
+ *
+ * <p>Eran 35 hasta el backend#104, que declaro la cadena de las horas extra: {@code H01} (la
+ * cantidad que entra desde fuera), {@code P03} (el precio de la hora) y {@code 102} (lo que se
+ * cobra), los tres de ambito PERIOD. Y con ellos se rompio una identidad que este test daba por
+ * hecha sin decirlo: <b>los pasos con orden de recibo ya no son las lineas del recibo</b>, porque
+ * la regla del cero no imprime un {@code 102} que vale cero.
  *
  * <p>Y el mes partido no es un adorno del test: con un solo tramo, cualquier identidad parece
  * correcta. Es el caso en el que SALARIO_BASE sale dos veces, con dos precios, y en el que una
@@ -53,22 +60,41 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
     private static final LocalDate APRIL_16 = LocalDate.of(2025, 4, 16);
     private static final LocalDate JANUARY_1 = LocalDate.of(2025, 1, 1);
 
-    /** Los que hay en el catalogo ESP: 4 de ambito SEGMENT y 31 de ambito PERIOD. */
-    private static final int CONCEPTS_IN_THE_ENGINE = 35;
+    /** Los que hay en el catalogo ESP: 4 de ambito SEGMENT y 34 de ambito PERIOD. */
+    private static final int CONCEPTS_IN_THE_ENGINE = 38;
     private static final int SEGMENT_SCOPED_CONCEPTS = 4;
 
     /**
-     * Y los 35 entran en algun plan, que es lo que cambio en el backend#96.
+     * Y los 38 entran en algun plan, que es lo que cambio en el backend#96.
      *
      * <p>Hasta la V130 eran 36 en el catalogo y 35 alcanzables: {@code P_SS} (TIPO_SS) se quedo
      * huerfano en la V91, cuando el porcentaje del 700 paso de leerlo a el a leer
      * {@code P_SS_CC}, y desde entonces estaba en el catalogo sin que ningun plan lo pidiera. La
      * V130 lo retira, asi que las dos cuentas vuelven a ser la misma.
      *
-     * <p>El recuento de pasos no se movio: 35 en un mes entero y 39 en uno del mes partido, igual
-     * que antes. Retirar un concepto que nadie ejecutaba no puede anadir un paso.
+     * <p>El recuento de pasos no se movio con aquello: 35 en un mes entero y 39 en uno del mes
+     * partido, igual que antes. Retirar un concepto que nadie ejecutaba no puede anadir un paso.
+     * Declarar tres si: desde el backend#104 son 38 y 42.
      */
-    private static final int CONCEPTS_IN_A_PLAN = 35;
+    private static final int CONCEPTS_IN_A_PLAN = 38;
+
+    /**
+     * Los conceptos con orden de recibo: los que PUEDEN ser linea.
+     *
+     * <p>Eran 14 y son 15 desde que el backend#104 declaro el {@code 102}.
+     */
+    private static final int CONCEPTS_WITH_A_PAYSLIP_ORDER = 15;
+
+    /**
+     * Y las lineas que un empleado sin horas extra acaba teniendo en el folio, que son 14.
+     *
+     * <p>Este par de numeros era uno solo hasta el backend#104, y ahi estaba la trampa: coincidian
+     * porque todos los conceptos con orden valian algo en todos los recibos, no porque tuvieran
+     * que coincidir. La regla del cero los separa —una linea de concepto a cero no se imprime— y
+     * este empleado no declara horas, asi que el {@code 102} se calcula, se guarda y no se
+     * imprime.
+     */
+    private static final int PAYSLIP_LINES_WITHOUT_OVERTIME = 14;
 
     @Autowired
     private LaunchPayrollCalculationUseCase launch;
@@ -115,7 +141,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
         // entere aqui y no en un recuento que ya no prueba nada.
         assertEquals(CONCEPTS_IN_THE_ENGINE, countConcepts(null), "conceptos del motor en ESP");
         assertEquals(SEGMENT_SCOPED_CONCEPTS, countConcepts("SEGMENT"), "conceptos de ambito SEGMENT");
-        assertEquals(14, jdbc.queryForObject(
+        assertEquals(CONCEPTS_WITH_A_PAYSLIP_ORDER, jdbc.queryForObject(
                 "select count(*) from payroll_engine.payroll_concept c"
                         + " join payroll_engine.payroll_object o on o.id = c.object_id"
                         + " where o.rule_system_code = ? and c.payslip_order_code is not null",
@@ -130,7 +156,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
     }
 
     @Test
-    void aWholeMonthKeepsEveryStep_andOnly14OfThemReachThePayslip() {
+    void aWholeMonthKeepsEveryStep_andOnly14OfThemGetPrinted() {
         String emp = hireWholeMonth();
         assertEquals("COMPLETED", launchSingleEmployee(emp).status());
         vaciarLaSesion();
@@ -139,28 +165,38 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
         // Un solo tramo: un paso por concepto ejecutado.
         assertEquals(CONCEPTS_IN_A_PLAN, countSteps(pid), "pasos guardados");
 
-        // Y los 21 que antes se tiraban estan, con nombre y apellido.
-        assertEquals(5, countStepsWithNature(pid, "BASE"), "conceptos BASE");
+        // Y los que antes se tiraban estan, con nombre y apellido.
+        assertEquals(6, countStepsWithNature(pid, "BASE"),
+                "conceptos BASE: los 5 de siempre mas el P03, precio de la hora extra (backend#104)");
         assertEquals(16, countStepsWithNature(pid, "TECHNICAL"),
                 "conceptos TECHNICAL: los 16 del catalogo, desde que la V130 retiro el P_SS");
 
-        // El recibo no cambia: sigue siendo las lineas de siempre, y son las que llevan orden.
+        // El recibo sigue teniendo sus 14 lineas de siempre. Lo que ha cambiado es que ya no son
+        // TODOS los pasos con orden de recibo: hay 15, y el que sobra es el 102 valiendo cero.
         int payslipLines = jdbc.queryForObject(
                 "select count(*) from payroll.payroll_concept where payroll_id = ?", Integer.class, pid);
-        assertEquals(14, payslipLines, "lineas de recibo");
-        assertEquals(payslipLines, jdbc.queryForObject(
+        assertEquals(PAYSLIP_LINES_WITHOUT_OVERTIME, payslipLines, "lineas de recibo");
+        assertEquals(CONCEPTS_WITH_A_PAYSLIP_ORDER, jdbc.queryForObject(
                 "select count(*) from payroll.payroll_calculation_step"
                         + " where payroll_id = ? and payslip_order_code is not null",
-                Integer.class, pid), "los pasos con orden de recibo son las lineas del recibo");
+                Integer.class, pid), "los pasos que llevan orden de recibo");
 
-        // El orden de ejecucion es una serie completa de 1 a 35, sin huecos ni repetidos: el
-        // recuento, el minimo y el maximo solo cuadran a la vez si estan los 35 y una sola vez.
+        // Y la diferencia tiene nombre: es el 102, que se calculo, dio cero y no se imprimio. El
+        // paso existe —el calculo ocurrio— y la linea no. Esa es la regla del cero (backend#104).
+        assertEquals(List.of("102"), jdbc.queryForList(
+                "select concept_code from payroll.payroll_calculation_step"
+                        + " where payroll_id = ? and payslip_order_code is not null"
+                        + "   and payslip_line_number is null order by concept_code",
+                String.class, pid), "el unico paso con orden y sin linea es el 102 a cero");
+
+        // El orden de ejecucion es una serie completa desde 1, sin huecos ni repetidos: el
+        // recuento, el minimo y el maximo solo cuadran a la vez si estan todos y una sola vez.
         assertEquals(1, (int) jdbc.queryForObject(
                 "select min(execution_order) from payroll.payroll_calculation_step where payroll_id = ?",
                 Integer.class, pid), "el primer paso es el 1");
         assertEquals(CONCEPTS_IN_A_PLAN, (int) jdbc.queryForObject(
                 "select max(execution_order) from payroll.payroll_calculation_step where payroll_id = ?",
-                Integer.class, pid), "el ultimo paso es el 35");
+                Integer.class, pid), "el ultimo paso es el " + CONCEPTS_IN_A_PLAN);
     }
 
     @Test
@@ -170,7 +206,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
         vaciarLaSesion();
         Long pid = payrollId(emp);
 
-        // Los 4 conceptos SEGMENT se evaluan una vez por tramo: 31 + 4 x 2 = 39.
+        // Los 4 conceptos SEGMENT se evaluan una vez por tramo: 34 + 4 x 2 = 42.
         assertEquals(CONCEPTS_IN_A_PLAN + SEGMENT_SCOPED_CONCEPTS, countSteps(pid), "pasos guardados");
 
         // Y el 101 sale dos veces, con dos precios distintos. Es el caso que se comia cualquier

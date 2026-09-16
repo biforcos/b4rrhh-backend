@@ -38,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * ({@code backend#97}).
  *
  * <p>Sobre ESP y no sobre TST, por lo mismo que el
- * {@code EveryCalculatedConceptIsKeptIntegrationTest}: los recuentos que afirma —35 pasos y 39—
+ * {@code EveryCalculatedConceptIsKeptIntegrationTest}: los recuentos que afirma —38 pasos y 42—
  * son los de la reglamentacion que siembran las migraciones, y un fixture con quince conceptos de
  * mentira no probaria el numero que hay que probar.
  *
@@ -68,12 +68,28 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
     private static final LocalDate JANUARY_1 = LocalDate.of(2025, 1, 1);
 
     /** Los pasos de un empleado de mes entero: uno por cada concepto del catalogo ESP. */
-    private static final int STEPS_IN_A_WHOLE_MONTH = 35;
+    private static final int STEPS_IN_A_WHOLE_MONTH = 38;
 
     /** Y los de uno del mes partido: los 4 conceptos de ambito SEGMENT se evaluan una vez por tramo. */
-    private static final int STEPS_IN_A_SPLIT_MONTH = 39;
+    private static final int STEPS_IN_A_SPLIT_MONTH = 42;
 
-    /** Las lineas que llegan al folio, que son las que llevan orden de recibo. */
+    /**
+     * Los pasos que llevan orden de recibo: los que PUEDEN ser linea.
+     *
+     * <p>Eran 14 y son 15 desde el {@code backend#104}, que declaro las horas extra: el
+     * {@code 102} lleva orden de recibo como cualquier devengo.
+     */
+    private static final int STEPS_WITH_A_PAYSLIP_ORDER = 15;
+
+    /**
+     * Y las lineas que el folio acaba imprimiendo, que ya no son las mismas.
+     *
+     * <p>Hasta el {@code backend#104} estos dos numeros eran uno solo, y eso era una casualidad
+     * de la siembra: todos los conceptos con orden de recibo valian algo en todos los recibos. La
+     * regla del cero los separa —una linea de concepto a cero no se imprime— y este empleado no
+     * tiene horas extra, asi que el {@code 102} se calcula, se guarda como paso y no llega al
+     * papel. <b>Que estos dos numeros se hayan separado no es un fallo: es el issue.</b>
+     */
     private static final int PAYSLIP_LINES = 14;
 
     private static final String STEPS_URL =
@@ -110,25 +126,27 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
         List<Map<String, Object>> steps = getSteps(emp);
         assertEquals(STEPS_IN_A_WHOLE_MONTH, steps.size(), "pasos de un empleado de mes entero");
 
-        // El orden de ejecucion sale como una serie de 1 a 35, en ese orden y sin huecos. Un
+        // El orden de ejecucion sale como una serie completa, en ese orden y sin huecos. Un
         // "order by" que se cayera, o un assembler que agrupara, se ve aqui y solo aqui.
         assertEquals(
                 IntStream.rangeClosed(1, STEPS_IN_A_WHOLE_MONTH).boxed().toList(),
                 column(steps, "executionOrder"),
-                "los pasos salen en orden de ejecucion, del 1 al 35");
+                "los pasos salen en orden de ejecucion, del 1 al " + STEPS_IN_A_WHOLE_MONTH);
 
         // Y ese orden NO es el del folio. Si lo fuera, este endpoint no aportaria nada que el
         // recibo no tenga ya: la lista de importes ordenada para imprimir es el recibo.
         List<Object> ordenDeFolio = column(steps, "payslipOrderCode").stream()
                 .filter(Objects::nonNull).toList();
-        assertEquals(PAYSLIP_LINES, ordenDeFolio.size(), "los pasos que llegaron al folio");
+        assertEquals(STEPS_WITH_A_PAYSLIP_ORDER, ordenDeFolio.size(),
+                "los pasos que llevan orden de recibo");
         assertNotEquals(
                 ordenDeFolio.stream().map(String::valueOf).sorted().toList(),
                 ordenDeFolio.stream().map(String::valueOf).toList(),
                 "el orden de ejecucion no coincide con el del folio, que es el motivo de que este "
                         + "endpoint exista");
 
-        // El recibo no cambia: sigue siendo las 14 lineas de siempre.
+        // Y el recibo tiene una linea MENOS que pasos con orden: el 102 vale cero y no se imprime.
+        // Es la regla del cero del backend#104, y es lo que separa estos dos recuentos.
         assertEquals(PAYSLIP_LINES, (int) jdbc.queryForObject(
                 "select count(*) from payroll.payroll_concept where payroll_id = ?",
                 Integer.class, payrollId(emp)), "lineas de recibo");
@@ -184,7 +202,7 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
      * <p>El escenario se fabrica borrando los pasos de un recibo recien calculado, que es
      * exactamente el estado en que esta hoy la semilla entera: 873 recibos calculados antes de que
      * la tabla existiera. La lista vacia no puede leerse como «este recibo no tiene conceptos», y
-     * no se rellena derivandola de {@code payroll_concept}: sus 14 lineas no son 35 pasos.
+     * no se rellena derivandola de {@code payroll_concept}: sus 14 lineas no son 38 pasos.
      */
     @Test
     @WithMockUser(roles = "ADMIN")

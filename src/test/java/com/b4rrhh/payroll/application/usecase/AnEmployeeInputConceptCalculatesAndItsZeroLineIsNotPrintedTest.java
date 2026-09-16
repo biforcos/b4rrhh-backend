@@ -13,38 +13,42 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * La cadena del {@code EMPLOYEE_INPUT}, recorrida entera (workforce-loader#5).
+ * La cadena del {@code EMPLOYEE_INPUT}, recorrida entera (workforce-loader#5, {@code backend#104}).
  *
- * <p>El issue se quedó abierto por una sola cosa: {@code employee.employee_payroll_input} está a
- * cero y sembrarla exigiría un concepto que la consuma, porque de los 35 conceptos del motor
- * ninguno declara {@code EMPLOYEE_INPUT}. La conclusión de entonces fue que lo que falta es
- * «declarar un concepto, no diseñar un mecanismo». Este test recorre la cadena con un concepto
- * declarado a propósito, y mide las dos cosas que decidían si eso basta.
+ * <p>El {@code workforce-loader#5} se quedó abierto por una sola cosa:
+ * {@code employee.employee_payroll_input} está a cero y sembrarla exigiría un concepto que la
+ * consuma, porque de los 35 conceptos del motor ninguno declaraba {@code EMPLOYEE_INPUT}. La
+ * conclusión de entonces fue que lo que falta es «declarar un concepto, no diseñar un mecanismo».
+ * Este test recorre la cadena con un concepto declarado a propósito, y mide las dos cosas que
+ * decidían si eso basta.
  *
  * <p><b>1. El motor lo calcula.</b> Con una fila de entrada, el concepto sale con
  * {@code cantidad × precio}. La cadena está entera y funciona; lo que faltaba era la fila del
  * catálogo, tal cual estaba dicho.
  *
- * <p><b>2. Y sin fila de entrada, imprime una línea a cero.</b> Ésta es la que no estaba medida.
- * {@code isPayslipLine()} es {@code payslipOrderCode != null} y nada mira el importe, así que un
- * concepto ocasional sale en el recibo de todo el mundo aunque valga cero. Y no se puede dar sólo a
- * quien tenga horas: {@code payroll_engine.concept_assignment} acota por sociedad, convenio y tipo
- * de empleado — <b>no por empleado</b>.
+ * <p><b>2. Y sin fila de entrada, el cero no se imprime.</b> Ésta es la que no estaba medida, y
+ * durante un tiempo este test afirmó <b>lo contrario</b>: que la línea salía igual, valiendo cero.
+ * Era verdad y era el hueco — {@code isPayslipLine()} miraba {@code payslipOrderCode != null} y
+ * nada miraba el importe, así que un concepto ocasional salía en el recibo de todo el mundo. Y no
+ * se puede dar sólo a quien tenga horas: {@code payroll_engine.concept_assignment} acota por
+ * sociedad, convenio y tipo de empleado — <b>no por empleado</b>.
  *
- * <p>Lo que eso significa para el issue está en su comentario: sobre la semilla de hoy, 12.227
- * líneas de recibo y <b>ninguna</b> a cero; declarar el concepto pondría la primera en unos 873
- * recibos. Hace falta una decisión más —una regla de «a cero no imprime», que por el ADR-062 §1
- * vive en la proyección del recibo— antes de sembrar nada.
+ * <p>Lo cerró la regla del cero del {@code backend#104}: una línea de concepto a cero no se
+ * imprime, y eso vive en la proyección del recibo y no en el motor (ADR-062 §1). Este test está
+ * dado la vuelta a propósito, y el párrafo que decía «el día que esa regla exista, este test se
+ * pondrá rojo» se ha borrado porque ese día fue éste.
  *
- * <p><b>Este test documenta el hueco, no lo bendice.</b> El día que esa regla exista, el segundo
- * test se pondrá rojo: eso es lo que se busca. Entonces se cambia la afirmación por la contraria y
- * se borra este párrafo.
+ * <p><b>Lo que NO cambió es el paso.</b> El concepto se sigue calculando, sigue dando cero y sigue
+ * guardado en {@code payroll_calculation_step} con su orden de recibo. Lo que falta es su línea. Es
+ * la diferencia entre «no se calculó» y «se calculó y dio cero», y el tercer test la mide.
  */
 @TestWebSobreEsquemaReal
-class AnEmployeeInputConceptCalculatesAndAlsoPrintsAZeroLineTest {
+class AnEmployeeInputConceptCalculatesAndItsZeroLineIsNotPrintedTest {
 
     private static final String RULE_SYSTEM = "EIN";
     private static final String EMPLOYEE_TYPE = "INTERNAL";
@@ -98,23 +102,52 @@ class AnEmployeeInputConceptCalculatesAndAlsoPrintsAZeroLineTest {
     }
 
     /**
-     * Y el hueco: sin fila de entrada, el mismo concepto sale igual, valiendo cero.
+     * Y sin fila de entrada, el concepto no estrena una línea de {@code 0,00} en el recibo.
      *
-     * <p>Si este test se pone rojo porque la línea ya no aparece, <b>es una buena noticia</b>: quiere
-     * decir que existe la regla de «a cero no imprime» y que este test hay que darle la vuelta.
+     * <p>Es la regla del cero del {@code backend#104}. Sin ella, declarar un concepto que le aplica
+     * a unos pocos le pone una línea vacía a todos los demás, que es exactamente lo que impedía
+     * sembrar las horas extra.
      */
     @Test
-    void withoutAnInputRowItStillPrintsALineWorthZero() {
+    void withoutAnInputRowNoZeroLineIsPrinted() {
         String employee = hire();
 
         launch(employee);
 
         Map<String, BigDecimal> lineas = payslipLines(employee);
-        assertTrue(lineas.containsKey(EARNING_CONCEPT),
-                "si esta linea ha dejado de salir, lee el javadoc: el hueco esta arreglado y este"
-                        + " test hay que darle la vuelta. Lineas: " + lineas);
-        assertEquals(0, BigDecimal.ZERO.compareTo(lineas.get(EARNING_CONCEPT)),
-                "la linea sale, y sale a cero: " + lineas);
+        assertFalse(lineas.containsKey(EARNING_CONCEPT),
+                "un concepto que vale cero no se imprime, y este vale cero: " + lineas);
+    }
+
+    /**
+     * Pero el paso está, y dice cero. Es la mitad que la regla del cero no puede tocar.
+     *
+     * <p>«No se imprimió» y «no se calculó» son dos cosas distintas, y quien mire la pestaña
+     * «Cálculo» para entender un recibo necesita poder distinguirlas. La regla vive en la
+     * proyección: borrar el paso del motor sería mentir en la explicación para arreglar el
+     * documento.
+     */
+    @Test
+    void butTheStepIsThere_andItSaysZero() {
+        String employee = hire();
+
+        launch(employee);
+
+        Map<String, Object> paso = jdbcTemplate.queryForMap("""
+                select s.amount, s.payslip_order_code, s.payslip_line_number
+                  from payroll.payroll_calculation_step s
+                  join payroll.payroll p on p.id = s.payroll_id
+                 where p.rule_system_code = ? and p.employee_number = ?
+                   and p.payroll_period_code = ? and p.payroll_type_code = ?
+                   and s.concept_code = ?
+                """, RULE_SYSTEM, employee, PERIOD, PAYROLL_TYPE, EARNING_CONCEPT);
+
+        assertEquals(0, BigDecimal.ZERO.compareTo((BigDecimal) paso.get("amount")),
+                "el calculo ocurrio y dio cero: " + paso);
+        assertEquals(EARNING_CONCEPT, paso.get("payslip_order_code"),
+                "y el paso sigue diciendo que tiene sitio en el folio: " + paso);
+        assertNull(paso.get("payslip_line_number"),
+                "lo que no tiene es linea, porque no se imprimio: " + paso);
     }
 
     /**

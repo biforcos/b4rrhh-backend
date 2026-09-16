@@ -143,9 +143,16 @@ class AMergedPayslipLineSaysWhichStepsItMergesTest {
                 "sin fusiones, cada paso impreso va a su propia linea: " + impresos);
     }
 
-    /** Y los pasos que no llegan al folio no tienen linea: la columna dice exactamente eso. */
+    /**
+     * Y un paso con linea es siempre un paso que se imprime.
+     *
+     * <p>La implicacion va en un solo sentido, y el otro se cayo con el {@code backend#104}: desde
+     * la regla del cero, un paso puede tener orden de folio y <b>no</b> tener linea, porque su linea
+     * valia cero y no se imprimio. Lo que no puede pasar nunca es lo contrario — una linea apuntada
+     * por un paso que el folio no conoce.
+     */
     @Test
-    void stepsThatNeverReachThePayslipCarryNoLine() {
+    void aStepWithALineIsAlwaysAStepThatGetsPrinted() {
         String employee = hireWithOneWindow();
         launch(employee);
 
@@ -154,10 +161,11 @@ class AMergedPayslipLineSaysWhichStepsItMergesTest {
                   from payroll.payroll_calculation_step s
                   join payroll.payroll p on p.id = s.payroll_id
                  where p.rule_system_code = ? and p.employee_number = ?
-                   and (s.payslip_order_code is null) <> (s.payslip_line_number is null)
+                   and s.payslip_line_number is not null
+                   and s.payslip_order_code is null
                 """, RULE_SYSTEM, employee);
         assertTrue(descuadres.isEmpty(),
-                "un paso tiene linea si y solo si se imprime: " + descuadres);
+                "un paso con linea tiene que tener orden de folio: " + descuadres);
     }
 
     private String hireWithFourWindows() {

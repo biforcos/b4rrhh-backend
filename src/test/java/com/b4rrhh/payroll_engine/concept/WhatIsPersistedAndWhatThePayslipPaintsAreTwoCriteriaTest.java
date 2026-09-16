@@ -22,8 +22,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * lo tiene y es una línea, no lo tiene y es un paso de cálculo que se guarda pero no se imprime.
  * El folio, en cambio, <b>filtra por naturaleza</b>: {@code recibos-folio.component.ts} pinta
  * {@code EARNING} y {@code DEDUCTION} en el cuerpo y busca los tres totales uno a uno. Son dos
- * preguntas distintas con dos respuestas distintas, y hoy <b>no coinciden</b>: se persisten 14 y
- * se pintan 9.
+ * preguntas distintas con dos respuestas distintas, y hoy <b>no coinciden</b>: se persisten 15 y
+ * se pintan 10.
+ *
+ * <p>Y desde el {@code backend#104} hay una tercera pregunta que no es ninguna de estas dos:
+ * <b>cuantas lineas salen impresas en un recibo concreto</b>. Este censo es del catalogo —quien
+ * PUEDE ser linea— y la regla del cero decide, recibo a recibo, quien lo es. El {@code 102}
+ * (horas extra) cuenta aqui y no sale impreso en quien no tenga horas.
  *
  * <h3>Por qué esto es un test y no un {@code check} de esquema</h3>
  *
@@ -72,7 +77,7 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
 
     static {
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("DEDUCTION", 5);        // 700, 701, 702, 703, 800
-        PERSISTED_WITH_A_PAYSLIP_ORDER.put("EARNING", 1);          // 101
+        PERSISTED_WITH_A_PAYSLIP_ORDER.put("EARNING", 2);          // 101, 102
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("INFORMATIONAL", 5);    // 720 a 724
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("NET_PAY", 1);          // 990
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("TOTAL_DEDUCTION", 1);  // 980
@@ -192,25 +197,30 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
     }
 
     /**
-     * Y las dos particiones, puestas una al lado de la otra: se persisten 14 y se pintan 9.
+     * Y las dos particiones, puestas una al lado de la otra: se persisten 15 y se pintan 10.
      *
      * <p>No es una comprobación distinta de las de arriba —sale de sumarlas— pero es el número
      * que resume de qué va este issue, y el que hay que poder decir en voz alta: cinco
-     * naturalezas de ocho se pintan, y cinco conceptos de los catorce persistidos no llegan al
+     * naturalezas de ocho se pintan, y cinco conceptos de los quince persistidos no llegan al
      * papel.
+     *
+     * <p>Eran catorce y nueve hasta el {@code backend#104}, que declaró las horas extra: el
+     * {@code 102} es {@code EARNING} y lleva orden de recibo, así que entra en los dos lados.
+     * <b>Pintable no es impreso</b>: en un recibo sin horas vale cero y la regla del cero no lo
+     * imprime. Este censo no lo sabe ni tiene por qué saberlo — habla del catálogo.
      */
     @Test
-    void fourteenAreKeptAndNineArePainted() {
+    void fifteenAreKeptAndTenArePainted() {
         int persisted = censusByNature().values().stream().mapToInt(Integer::intValue).sum();
         int painted = censusByNature().entrySet().stream()
                 .filter(entry -> PAINTED_BY_THE_PAYSLIP.contains(entry.getKey()))
                 .mapToInt(Map.Entry::getValue)
                 .sum();
 
-        assertEquals(14, persisted, "conceptos con sitio en el recibo");
-        assertEquals(9, painted,
+        assertEquals(15, persisted, "conceptos con sitio en el recibo");
+        assertEquals(10, painted,
                 """
-                Los conceptos que el folio pinta han dejado de ser nueve.
+                Los conceptos que el folio pinta han dejado de ser diez.
 
                 Persistidos y pintados son dos criterios distintos y por eso este numero no tiene \
                 por que ser el de arriba. Si ha subido, el folio pinta mas cosas y probablemente \

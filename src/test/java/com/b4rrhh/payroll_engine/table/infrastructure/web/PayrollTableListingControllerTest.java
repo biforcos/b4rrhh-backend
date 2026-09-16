@@ -16,9 +16,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Contra el esquema real, que es donde las tres tablas de ESP y sus tres
- * vinculaciones vienen de las migraciones (V66, V67, V69, V70, V75) y no de
- * una copia sembrada aqui.
+ * Contra el esquema real, que es donde las cuatro tablas de ESP y sus cuatro
+ * vinculaciones vienen de las migraciones (V66, V67, V69, V70, V75, V133) y no
+ * de una copia sembrada aqui.
+ *
+ * La cuarta es P03_99002405011982, el precio de la hora extra por categoria, y
+ * la trae el backend#104. Que este recuento se mueva al declarar una tabla es
+ * justo lo que se le pide: dice cuantas hay, no cuantas habia.
  *
  * Lo que se afirma es la diferencia que abrio el backend#95: esto lista
  * TABLAS, y la ranura P02_DAILY_AMOUNT_TABLE -que es lo unico que devuelve
@@ -34,11 +38,12 @@ class PayrollTableListingControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    void listaLasTresTablasDeEspConSusFilasYSuVinculacion() throws Exception {
+    void listaLasCuatroTablasDeEspConSusFilasYSuVinculacion() throws Exception {
         mockMvc.perform(get("/payroll-engine/{ruleSystemCode}/tables", RULE_SYSTEM_CODE))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[*].tableCode", contains(
-                        "P02_99002405011982", "PC_99002405011982", "SB_99002405011982")))
+                        "P02_99002405011982", "P03_99002405011982",
+                        "PC_99002405011982", "SB_99002405011982")))
                 .andExpect(jsonPath("$[*].ruleSystemCode", everyItem(org.hamcrest.Matchers.is(RULE_SYSTEM_CODE))))
                 .andExpect(jsonPath("$[?(@.tableCode == 'SB_99002405011982')].rowCount", contains(3)))
                 .andExpect(jsonPath("$[?(@.tableCode == 'SB_99002405011982')].activeRowCount", contains(3))
@@ -59,7 +64,9 @@ class PayrollTableListingControllerTest {
                 .andExpect(jsonPath("$[?(@.tableCode == 'PC_99002405011982')].bindings[0].bindingRoleCode",
                         contains("AGREEMENT_PLUS_TABLE")))
                 .andExpect(jsonPath("$[?(@.tableCode == 'P02_99002405011982')].bindings[0].bindingRoleCode",
-                        contains("P02_DAILY_AMOUNT_TABLE")));
+                        contains("P02_DAILY_AMOUNT_TABLE")))
+                .andExpect(jsonPath("$[?(@.tableCode == 'P03_99002405011982')].bindings[0].bindingRoleCode",
+                        contains("P03_HOURLY_OVERTIME_TABLE")));
     }
 
     @Test
