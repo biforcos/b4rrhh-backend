@@ -2,6 +2,22 @@
 
 > A personnel administration system and configurable payroll engine built around domain-driven design, hexagonal architecture, and temporal data integrity — with zero tolerance for shortcuts.
 
+## What you get when you clone this
+
+**An empty product.** Start PostgreSQL and run it (see *Running the project* below): Flyway
+applies the 133 migrations and leaves you a schema, three rule systems, 187 catalogue
+entities (85 of them `ESP`, including one real collective agreement from the Spanish BOE),
+38 payroll-engine concepts with their assignments and salary tables — and **zero
+employees**. Nothing is calculated, because there is nobody to calculate.
+
+Filling it is a documented, reproducible run, not a dump you are handed:
+**`FABRICAR-SEMILLA.md`, in the `b4rrhh/deploy` repository**. Seven steps — blank database,
+migrations, bulk hire, full-month calculation — and it states up front the row counts that
+have to come out, so you can tell a good seed from a plausible one.
+
+What this product is when you take the public demo away, and what it still lacks, is in
+`PRODUCTO.md` (workspace root).
+
 ---
 
 ## What problem does this solve?
@@ -247,29 +263,40 @@ Full bundle: [`docs/architecture/adr/ADR_BUNDLE.md`](docs/architecture/adr/ADR_B
 
 ## Domain coverage — Spain, Régimen General
 
-The system models real Spanish HR and payroll law through the concept graph — nothing hardcoded:
+The system models real Spanish HR and payroll law through the concept graph:
 
 - **Grupo de cotización** (SS contribution group, 1–11) — drives salary tables and contribution rates
 - **SS employer contributions**: contingencias comunes, desempleo (empresa), FOGASA, formación profesional, MEI
-- **SS worker deductions**: CC trabajador (4.70%), desempleo (1.55%), FP (0.10%), MEI (0.10%)
-- **IRPF withholding** with configurable rates per employee
+- **SS worker deductions**: CC trabajador (4.70%), desempleo (1.55%), FP (0.10%), MEI (0.11%)
+- **IRPF withholding** as a line on the payslip
 - **Convenio colectivo** — agreement category profiles with real salary tables
 - Topes de cotización (contribution floors and caps via `GREATEST` / `LEAST`)
+
+Two honest caveats, because the shape and the values are not equally finished. The
+**shape** is data: what feeds what, in what order, and at what scope, all lives in the
+concept graph. The **rates** are not: ten `ENGINE_PROVIDED` calculators return a constant
+written in Java, and the IRPF one is a flat 15% placeholder that never looks at the
+employee's declared tax situation. The parameterised table (`payroll_engine.ss_cotizacion_tipos`,
+nine contingencies with validity dates) exists and nothing reads it. Only the two
+contribution caps read from a table. See `PRODUCTO.md` §2 in the workspace root.
 
 ---
 
 ## By the numbers
 
+Counted against the tree on 2026-09-16, not from memory.
+
 | Metric | Value |
 |--------|-------|
-| Java source files | ~1,400 |
-| Test files | ~270 |
-| Flyway migrations | 91 |
-| Architecture Decision Records | 31 |
-| Payroll engine modules | 8 |
+| Java source files | 1,675 |
+| Test files | 405 |
+| Flyway migrations | 133 |
+| Architecture Decision Records | 65 |
+| Payroll engine modules | 9 |
 | Calculation types | 8 |
-| Bounded contexts | 2 |
-| Employee domain verticals | 11 |
+| Bounded contexts | 5, plus a deliberately small `shared` |
+| Employee domain verticals | 18 |
+| Declared API paths / operations | 91 / 152 |
 
 ---
 
@@ -293,7 +320,9 @@ mvn spring-boot:run "-Dspring-boot.run.profiles=local"
 # $env:SPRING_PROFILES_ACTIVE='local'; mvn spring-boot:run   (PowerShell)
 # SPRING_PROFILES_ACTIVE=local mvn spring-boot:run            (bash)
 
-# 3. Run all tests (H2 in-memory — no Docker required)
+# 3. Run all tests. They run against REAL PostgreSQL, not H2: Testcontainers
+#    starts one (so Docker must be running), or set TEST_DB_HOST to supply
+#    your own — which is what the pipeline does.
 mvn test
 
 # Run a specific test class
@@ -340,7 +369,7 @@ docs/
 
 ## Status
 
-Active development. The payroll engine is the current focus: concept graph construction, segmentation, and real SS/IRPF calculations are working. The launch orchestration model (`calculation_run` + `calculation_claim`) is designed and partially implemented.
+Active development. The payroll engine is the current focus: concept graph construction, segmentation, and the SS/IRPF concept chain all work end to end — with the rate caveat noted under *Domain coverage*. The launch orchestration model (`calculation_run` + `calculation_claim`) is implemented and runs the whole workforce in one go.
 
 This is a solo project. The pace is deliberate — correctness over speed.
 
