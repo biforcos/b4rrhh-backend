@@ -63,6 +63,10 @@ public class PayrollCalculationStepEntity {
     @Column(name = "payslip_order_code", length = 30)
     private String payslipOrderCode;
 
+    /** La linea del folio en la que quedo este paso, o null si no llego (backend#103). */
+    @Column(name = "payslip_line_number")
+    private Integer payslipLineNumber;
+
     public Long getPayrollId() { return payrollId; }
     public void setPayrollId(Long payrollId) { this.payrollId = payrollId; }
     public Integer getExecutionOrder() { return executionOrder; }
@@ -89,4 +93,6 @@ public class PayrollCalculationStepEntity {
     public void setRate(BigDecimal rate) { this.rate = rate; }
     public String getPayslipOrderCode() { return payslipOrderCode; }
     public void setPayslipOrderCode(String payslipOrderCode) { this.payslipOrderCode = payslipOrderCode; }
+    public Integer getPayslipLineNumber() { return payslipLineNumber; }
+    public void setPayslipLineNumber(Integer payslipLineNumber) { this.payslipLineNumber = payslipLineNumber; }
 }

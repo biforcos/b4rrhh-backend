@@ -52,6 +52,10 @@ public class PayrollConceptEntity {
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder;
 
+    /** De cuantos pasos del motor viene esta linea. Uno salvo que el folio haya fundido. */
+    @Column(name = "merged_step_count", nullable = false)
+    private Integer mergedStepCount = 1;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public PayrollEntity getPayroll() { return payroll; }
@@ -74,6 +78,8 @@ public class PayrollConceptEntity {
     public void setOriginPeriodCode(String originPeriodCode) { this.originPeriodCode = originPeriodCode; }
     public Integer getDisplayOrder() { return displayOrder; }
     public void setDisplayOrder(Integer displayOrder) { this.displayOrder = displayOrder; }
+    public Integer getMergedStepCount() { return mergedStepCount; }
+    public void setMergedStepCount(Integer mergedStepCount) { this.mergedStepCount = mergedStepCount; }
 
     @Override
     public boolean equals(Object other) {

@@ -58,6 +58,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase {
@@ -352,11 +353,16 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 payslipRows.size(),
                 payslipRows.stream().map(ConceptRow::conceptCode).collect(Collectors.joining(", ")));
 
+        // El numero de linea se decide aqui, y aqui es donde hay que devolverselo a los pasos que
+        // la componen: la relacion linea<->paso la conoce la proyeccion en este instante y en
+        // ningun otro (backend#103, ADR-062 §1).
         List<PayrollConcept> payrollConcepts = new ArrayList<>();
+        Map<Integer, Integer> lineaPorPaso = new HashMap<>();
         for (int i = 0; i < payslipRows.size(); i++) {
             ConceptRow r = payslipRows.get(i);
+            int lineNumber = i + 1;
             payrollConcepts.add(new PayrollConcept(
-                    i + 1,
+                    lineNumber,
                     r.conceptCode(),
                     r.mnemonic(),
                     r.amount(),
@@ -364,9 +370,17 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     r.rate(),
                     r.nature(),
                     command.payrollPeriodCode(),
-                    r.displayOrder()
+                    r.displayOrder(),
+                    r.sourceExecutionOrders().size()
             ));
+            for (Integer executionOrder : r.sourceExecutionOrders()) {
+                lineaPorPaso.put(executionOrder, lineNumber);
+            }
         }
+        calculationSteps.replaceAll(calculado -> {
+            Integer lineNumber = lineaPorPaso.get(calculado.executionOrder());
+            return lineNumber == null ? calculado : calculado.enLinea(lineNumber);
+        });
 
         LocalDate presenceStart = input.presenceStartDate();
         LocalDate presenceEnd = input.presenceEndDate();
@@ -410,6 +424,15 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         return result;
     }
 
+    /**
+     * Una linea del folio, y de que pasos viene ({@code backend#103}).
+     *
+     * <p>{@code sourceExecutionOrders} no es informacion de mas: una linea puede ser la suma de
+     * varios pasos —el folio agrupa por {@code concepto|tarifa}— y hasta el backend#103 nada lo
+     * decia. Con dos tramos al mismo precio, aunque no sean contiguos, el folio ensena una linea
+     * donde el calculo dio dos, y la pestana «Calculo» ensena las dos: las dos pantallas
+     * discrepaban en el numero de filas sin que nada explicara por que.
+     */
     private record ConceptRow(
             String conceptCode,
             String mnemonic,
@@ -417,7 +440,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             BigDecimal quantity,
             BigDecimal rate,
             String nature,
-            int displayOrder
+            int displayOrder,
+            List<Integer> sourceExecutionOrders
     ) {}
 
     private record SegmentSpec(
@@ -549,7 +573,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 step.quantity(),
                 step.rate(),
                 step.functionalNature(),
-                Integer.parseInt(step.payslipOrderCode()));
+                Integer.parseInt(step.payslipOrderCode()),
+                List.of(step.executionOrder()));
     }
 
     /** The payslip "quantity": the QUANTITY of a RATE_BY_QUANTITY, the BASE of a PERCENTAGE. */
@@ -589,7 +614,11 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                             : existing.quantity(),
                     existing.rate(),
                     existing.nature(),
-                    existing.displayOrder()
+                    existing.displayOrder(),
+                    // Los pasos que esta linea funde, en orden de ejecucion. Es lo unico que hay
+                    // que llevarse de la fusion: el resto ya lo dice la suma.
+                    Stream.concat(existing.sourceExecutionOrders().stream(),
+                                  incoming.sourceExecutionOrders().stream()).toList()
             ));
         }
         return new ArrayList<>(collapsed.values());

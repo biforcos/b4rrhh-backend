@@ -15,6 +15,14 @@ public class PayrollConcept {
     private final String conceptNatureCode;
     private final String originPeriodCode;
     private final Integer displayOrder;
+    /**
+     * De cuantos pasos del motor viene esta linea ({@code backend#103}).
+     *
+     * <p>Uno en la inmensa mayoria. Mas de uno cuando el folio ha fundido varios tramos del
+     * mismo concepto al mismo precio, que pueden <b>no ser contiguos</b>: la linea es correcta
+     * y cuenta una historia falsa si nada dice que es una suma.
+     */
+    private final Integer mergedStepCount;
 
     public PayrollConcept(
             Integer lineNumber,
@@ -27,6 +35,23 @@ public class PayrollConcept {
             String originPeriodCode,
             Integer displayOrder
     ) {
+        this(lineNumber, conceptCode, conceptLabel, amount, quantity, rate, conceptNatureCode,
+                originPeriodCode, displayOrder, 1);
+    }
+
+    /** El constructor completo, con los pasos que la linea funde. */
+    public PayrollConcept(
+            Integer lineNumber,
+            String conceptCode,
+            String conceptLabel,
+            BigDecimal amount,
+            BigDecimal quantity,
+            BigDecimal rate,
+            String conceptNatureCode,
+            String originPeriodCode,
+            Integer displayOrder,
+            Integer mergedStepCount
+    ) {
         this.lineNumber = requirePositive(lineNumber, "lineNumber");
         this.conceptCode = requireCode(conceptCode, "conceptCode", 30);
         this.conceptLabel = requireText(conceptLabel, "conceptLabel", 200);
@@ -36,6 +61,7 @@ public class PayrollConcept {
         this.conceptNatureCode = requireCode(conceptNatureCode, "conceptNatureCode", 30);
         this.originPeriodCode = normalizeOptional(originPeriodCode, "originPeriodCode", 30);
         this.displayOrder = requirePositive(displayOrder, "displayOrder");
+        this.mergedStepCount = requirePositive(mergedStepCount, "mergedStepCount");
     }
 
     private static Integer requirePositive(Integer value, String fieldName) {
@@ -124,6 +150,15 @@ public class PayrollConcept {
 
     public String getOriginPeriodCode() {
         return originPeriodCode;
+    }
+
+    public Integer getMergedStepCount() {
+        return mergedStepCount;
+    }
+
+    /** Si esta linea es la suma de varios pasos y por tanto tiene que decirlo. */
+    public boolean isMerged() {
+        return mergedStepCount != null && mergedStepCount > 1;
     }
 
     public Integer getDisplayOrder() {

@@ -38,8 +38,44 @@ public record PayrollCalculationStep(
         BigDecimal amount,
         BigDecimal quantity,
         BigDecimal rate,
-        String payslipOrderCode
+        String payslipOrderCode,
+        /**
+         * El numero de linea del folio al que fue a parar este paso, o {@code null} si no llego al
+         * folio ({@code backend#103}).
+         *
+         * <p>Es lo que hace explicita la relacion entre un paso y una linea, y va en las dos
+         * direcciones: de la linea a sus pasos —los que llevan su numero— y del paso a su linea.
+         * Varios pasos pueden compartir numero, y eso <b>es</b> la fusion: el folio agrupa por
+         * {@code concepto|tarifa} y suma, asi que dos tramos al mismo precio salen en una sola
+         * linea aunque no sean contiguos.
+         *
+         * <p>Se persiste en vez de derivarse, y el motivo es el ADR-062 §1: la relacion la conoce
+         * la proyeccion en el momento de fusionar, y volver a deducirla despues obligaria a repetir
+         * la regla de agrupacion en un segundo sitio — que es exactamente lo que aquel ADR existe
+         * para impedir.
+         */
+        Integer payslipLineNumber
 ) {
+
+    /** El paso tal como sale del motor: todavia no sabe si ira al folio ni a que linea. */
+    public PayrollCalculationStep(
+            int executionOrder,
+            String conceptCode,
+            String conceptMnemonic,
+            String calculationType,
+            String functionalNature,
+            String executionScope,
+            LocalDate segmentStartDate,
+            LocalDate segmentEndDate,
+            BigDecimal amount,
+            BigDecimal quantity,
+            BigDecimal rate,
+            String payslipOrderCode
+    ) {
+        this(executionOrder, conceptCode, conceptMnemonic, calculationType, functionalNature,
+                executionScope, segmentStartDate, segmentEndDate, amount, quantity, rate,
+                payslipOrderCode, null);
+    }
 
     /** El ámbito cuyo paso cubre todo el periodo y, por eso, no tiene fechas de segmento. */
     public static final String PERIOD_SCOPE = "PERIOD";
@@ -70,6 +106,13 @@ public record PayrollCalculationStep(
             throw new IllegalArgumentException(
                     "Segment start is after segment end for step " + conceptCode);
         }
+    }
+
+    /** El mismo paso, sabiendo ya en que linea del folio quedo. */
+    public PayrollCalculationStep enLinea(int payslipLineNumber) {
+        return new PayrollCalculationStep(executionOrder, conceptCode, conceptMnemonic,
+                calculationType, functionalNature, executionScope, segmentStartDate, segmentEndDate,
+                amount, quantity, rate, payslipOrderCode, payslipLineNumber);
     }
 
     /** Si este paso, además de calcularse, llegó al folio como línea de recibo. */

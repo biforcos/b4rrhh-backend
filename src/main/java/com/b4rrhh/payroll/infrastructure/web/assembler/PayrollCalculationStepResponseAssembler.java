@@ -33,7 +33,8 @@ public class PayrollCalculationStepResponseAssembler {
                 step.amount(),
                 step.quantity(),
                 step.rate(),
-                step.payslipOrderCode()
+                step.payslipOrderCode(),
+                step.payslipLineNumber()
         );
     }
 }

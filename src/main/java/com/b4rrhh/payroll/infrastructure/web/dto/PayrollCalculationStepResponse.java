@@ -13,6 +13,15 @@ import java.time.LocalDate;
  *
  * <p>{@code payslipOrderCode} nulo significa que ese paso no llegó al folio. Viaja aquí para que el
  * cliente marque las líneas del recibo sin cruzar dos listas ni adivinarlo por la naturaleza.
+ *
+ * <p>{@code payslipLineNumber} dice <b>en qué línea</b> quedó ({@code backend#103}). Dos pasos con el
+ * mismo número son los que esa línea funde: mismo concepto, mismo precio, y el folio los suma en una
+ * sola fila aunque sus tramos no sean contiguos. Es lo que permite que desde un paso repetido se
+ * pueda decir por qué es dos —precios distintos, o el mismo precio por caminos distintos— en vez de
+ * dejarlo a que alguien compare las tarifas a ojo.
+ *
+ * <p>Es nulo exactamente cuando {@code payslipOrderCode} lo es, salvo en los recibos calculados antes
+ * del {@code backend#103}, que se quedan sin él hasta que se recalculen.
  */
 public record PayrollCalculationStepResponse(
         Integer executionOrder,
@@ -26,6 +35,7 @@ public record PayrollCalculationStepResponse(
         BigDecimal amount,
         BigDecimal quantity,
         BigDecimal rate,
-        String payslipOrderCode
+        String payslipOrderCode,
+        Integer payslipLineNumber
 ) {
 }

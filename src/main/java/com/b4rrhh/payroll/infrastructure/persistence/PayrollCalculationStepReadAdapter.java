@@ -44,7 +44,8 @@ public class PayrollCalculationStepReadAdapter implements PayrollCalculationStep
                 entity.getAmount(),
                 entity.getQuantity(),
                 entity.getRate(),
-                entity.getPayslipOrderCode()
+                entity.getPayslipOrderCode(),
+                entity.getPayslipLineNumber()
         );
     }
 }
