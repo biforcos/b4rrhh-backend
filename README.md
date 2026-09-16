@@ -1,397 +1,204 @@
-# B4RRHH — HR & Payroll Engine
+# B4RRHH — backend
 
-> A personnel administration system and configurable payroll engine built around domain-driven design, hexagonal architecture, and temporal data integrity — with zero tolerance for shortcuts.
+**B4RRHH is a personnel administration system and a configurable payroll engine.**
+Employment history is temporal by construction — the domain itself refuses overlaps and
+gaps instead of hoping the database will catch them — and payroll is computed from a
+dependency graph that is configuration rather than code, so any amount on a payslip can be
+opened all the way down to the step that produced it.
 
-## What you get when you clone this
-
-**An empty product.** Start PostgreSQL and run it (see *Running the project* below): Flyway
-applies the 133 migrations and leaves you a schema, three rule systems, 187 catalogue
-entities (85 of them `ESP`, including one real collective agreement from the Spanish BOE),
-38 payroll-engine concepts with their assignments and salary tables — and **zero
-employees**. Nothing is calculated, because there is nobody to calculate.
-
-Filling it is a documented, reproducible run, not a dump you are handed:
-**`FABRICAR-SEMILLA.md`, in the `b4rrhh/deploy` repository**. Seven steps — blank database,
-migrations, bulk hire, full-month calculation — and it states up front the row counts that
-have to come out, so you can tell a good seed from a plausible one.
-
-What this product is when you take the public demo away, and what it still lacks, is in
-`PRODUCTO.md` (workspace root).
+This repository is the backend: the domain, the engine, and the OpenAPI contract that the
+backoffice and the designer generate their clients from. Everything else — the other
+repositories and the documents they share — starts at **`b4rrhh/workspace`**, which is
+[`../README.md`](../README.md) once it is laid out beside this one.
 
 ---
 
-## What problem does this solve?
+## What you get when you clone
 
-HR and payroll systems tend to collapse under one of two failure modes:
+**An empty product.** Start the database and run it: Flyway applies the migrations and
+leaves you a schema, the rule systems, the `ESP` catalogue — including one real collective
+agreement from the Spanish BOE — and the payroll engine's concepts with their assignments
+and salary tables. And **nobody**. Nothing is calculated, because there is no one to
+calculate.
 
-- **Over-engineering early**: event buses, microservices, CQRS — before the domain is understood.
-- **Under-engineering late**: CRUD controllers that accumulate business logic until the system is unmaintainable.
+Filling it is a documented run, not a dump you are handed: `FABRICAR-SEMILLA.md`, in the
+`b4rrhh/deploy` repository. It states the row counts that have to come out before you
+start, so you can tell a good seed from a plausible one.
 
-B4RRHH takes a different path. It models **the actual domain** — employee lifecycle, temporal employment data, a graph-based payroll calculation engine — before introducing any infrastructure abstraction. The architecture follows from the domain, not from a framework tutorial.
+## Running it
+
+**You need** a JDK 21 or newer and Docker.
+
+```bash
+# 1. PostgreSQL and MinIO (employee photos go straight to the object store)
+cd docker/postgres && docker compose up -d
+
+# 2. The application. Flyway migrates on startup.
+mvn spring-boot:run -Dspring-boot.run.profiles=local
+
+# On PowerShell the -D argument has to be quoted whole, or the shell eats it:
+#   mvn spring-boot:run "-Dspring-boot.run.profiles=local"
+```
+
+The database is `b4rrhh / b4rrhh` at `localhost:5432/b4rrhh`. The `local` profile opens a
+development token endpoint; there is no user table behind it, and what that means is in
+`PRODUCTO.md` §2 in the workspace root.
+
+```bash
+mvn test                  # everything
+mvn test -Dtest=SomeTest  # one class — quote the whole -D on PowerShell
+```
+
+Tests run against **real PostgreSQL**, not H2. Testcontainers starts one, so Docker must
+be running; or set `TEST_DB_HOST` and supply your own, which is what the pipeline does.
+The schema under test is the real Flyway schema: no test declares a table.
 
 ---
 
-## Architecture at a glance
+## The architecture
 
-```
-bounded context → vertical (domain slice) → hexagonal layer
-```
+One package name carries the whole map:
 
 ```
 com.b4rrhh.employee.contract.application.usecase.ReplaceContractFromDateService
            ^^^^^^^^ ^^^^^^^^ ^^^^^^^^^^^
-           context  vertical     layer
+           context  vertical    layer
 ```
 
-Two bounded contexts:
+| Bounded context | What lives there |
+|---|---|
+| `employee` | The facts about a person, sliced into verticals: presence, contract, address, cost centre, working time, absences, journey, lifecycle… |
+| `rulesystem` | The configurable catalogue: rule systems, entity types and entities, companies, agreements, catalogue bindings. |
+| `payroll_engine` | The metamodel — how a payroll is calculated: concepts, operands, feeds, eligibility, the dependency graph, planning, execution. |
+| `payroll` | An already calculated payroll: the result, its concept lines, its runs, its steps. |
+| `authorization` | Hierarchical resources, semantic actions, reusable permission profiles. |
+| `shared` | Deliberately small. |
 
-| Context | Verticals |
-|---------|-----------|
-| `employee` | employee, presence, contact, address, identifier, contract, labor\_classification, cost\_center, work\_center, working\_time, payroll\_input |
-| `rulesystem` | company, company\_profile, work\_center, catalog\_binding, catalog\_option, rule\_entity |
+The border between the last two payroll contexts is ADR-042, and it is one sentence: what
+defines **how** a payroll is calculated belongs to `payroll_engine`; an **already
+calculated** payroll belongs to `payroll`.
 
-Hard rules enforced throughout:
-- Domain classes have **zero** Spring or JPA imports
-- Business logic never touches controllers or repositories
-- APIs expose **business keys only** — no surrogate IDs, ever
+Inside a vertical: `domain/model` and `domain/port`, `application/usecase`,
+`infrastructure/persistence` and `infrastructure/web`. No JPA entity or Spring Data
+repository ever appears in a domain package, and the API never exposes a domain object.
+Keeping Spring itself out of the domain is convention and review rather than a test, which
+is the honest version: the rule is not free.
 
----
+## Time is inside the model, not beside it
 
-## The Payroll Engine
+Most employee data is a timeline, and several verticals write through the same planner
+(`employee/temporal/`). It holds two invariants that the domain enforces and the database
+does not: **no overlap**, and **no gap inside the presence**.
 
-This is the core of the system. It is not a calculator. It is a **configurable, graph-based execution engine** for payroll concepts.
+That is why `replaceFromDate` is not an update. It plans: an exact match replaces, a
+mid-period change splits and recalculates boundaries, and something that would leave a
+hole is rejected as a domain error rather than written and regretted.
 
-### Eight modules with clear responsibilities
+ADR-057 is the decision underneath: a time series is governed by its invariants, not by
+the operations offered on it.
 
-```
-payroll_engine/
-├── concept      — concept catalog: calculation type, operands, feed relations
-├── object       — payroll objects (assignable salary tables)
-├── table        — salary value lookup tables
-├── eligibility  — determines which concepts apply to a payroll unit
-├── dependency   — builds the DAG of concept dependencies with cycle detection
-├── planning     — resolves topological execution order
-├── segment      — splits the calculation period at intra-period changes
-└── execution    — runs calculators per segment, accumulates results
-```
+## Lifecycle is a workflow, not a POST
 
-### Calculation types
+Hiring is not `POST /employees`. Hire, terminate and rehire are orchestrated flows built
+on the participant pattern (ADR-047): the orchestrating service knows nothing about the
+verticals, and each vertical registers a participant with an explicit `order()`. Adding a
+vertical to a flow means writing a participant, never editing the orchestrator.
 
-Every payroll concept declares exactly how it computes its value:
+**The order is load-bearing.** On termination the presence closes *first*, and everything
+derived from it closes after. Closing from the inside out — like a destructor — is the
+intuitive reading, and it is the one that used to be here: it does not work, because every
+other vertical validates its periods against the presence, so while the presence still ran
+to 9999-12-31 the coverage never added up and closing the contract was rejected as a gap.
+`TerminationCoversEveryPresenceVerticalTest` reads the source tree and fails if a closable
+vertical that depends on presence is missing from the flow.
 
-| Type | Description |
-|------|-------------|
-| `DIRECT_AMOUNT` | Fixed amount from salary table lookup |
-| `RATE_BY_QUANTITY` | Rate × quantity (e.g. hours worked) |
-| `PERCENTAGE` | Percentage of another concept's result |
-| `AGGREGATE` | Sum of other concepts |
-| `ENGINE_PROVIDED` | Value injected by the engine (SS group, payroll type) |
-| `EMPLOYEE_INPUT` | Employee-declared value (e.g. voluntary pension) |
-| `GREATEST` | max(computed, floor) — used for SS contribution floors |
-| `LEAST` | min(computed, cap) — used for SS contribution caps |
+## The payroll engine
 
-### Execution flow
+It calculates by graph, not by a service per concept.
 
-```
-Payroll Unit
-    │
-    ▼
-Eligibility Filter          ← which concepts apply to this employee?
-    │
-    ▼
-Dependency Graph Build      ← DAG construction, cycle detection
-    │
-    ▼
-Topological Sort            ← resolves execution order across the graph
-    │
-    ▼
-Segmentation                ← splits month at mid-period changes
-    │  (contract change on the 15th → two independent segments)
-    ▼
-Calculator Execution        ← runs per segment, per concept, in dependency order
-    │
-    ▼
-Result Accumulation         ← merges segments into final payroll totals
-```
+A concept declares how it computes — a direct amount, a rate by quantity, a percentage of
+another concept, an aggregate, a greatest or a least, a value the engine provides, a value
+the employee declares — and which other concepts feed it. Eligibility is resolved from
+assignments, dependencies are expanded, the graph is checked for cycles, and the
+topological plan is built **once** per execution.
 
-No concept executes before its dependencies. No hardcoded payroll logic anywhere in the codebase.
+How often each concept is then evaluated is its own declaration. A `SEGMENT` concept is
+evaluated once per temporal segment and its results composed; a `PERIOD` concept is
+evaluated once over the whole period. So a month split in two by a working-time change
+leaves **more calculation steps than there are concepts** — which is why the unit of the
+execution trace is a step and not a concept (`payroll.payroll_calculation_step`), and why
+a payslip line knows which steps it merges.
 
-```mermaid
-flowchart TB
-    Launch[["POST /payrolls/launch"]]
+Two rules that took a while to find their words:
 
-    subgraph Orchestration["Launch Orchestration"]
-        Run[calculation_run\ncreated + persisted]
-        Claim[calculation_claim\nunit-level mutex]
-    end
+- **No operand crosses from segment to period** (ADR-058). If it did, the same number
+  would mean two things depending on where you read it.
+- **Rounding happens where a rate is applied, and nothing is rounded twice** (ADR-066).
 
-    subgraph Selection["Population Resolution"]
-        Employees[Employee records]
-        Presences[Presence periods]
-        Inputs[Payroll inputs]
-    end
+**A new payroll concept is parameterisation, not Java**: an object, a concept, its operands
+or feeds, and an assignment. The one exception is the `ENGINE_PROVIDED` technical
+calculators, which may resolve values looked up or derived from the execution context —
+rates, limits, days — and must never calculate an economic concept.
 
-    subgraph Engine["Payroll Engine"]
-        direction TB
-        Eligibility["Eligibility Filter\nwhich concepts apply?"]
-        Graph["Dependency Graph\nDAG + cycle detection"]
-        Topo["Topological Sort\nexecution order"]
-        Segments["Segmentation\nsplit at mid-period changes"]
-        Calc["Calculator Execution\nper segment · per concept · in order"]
-    end
+The shape is data. The **rates are not yet**: several of those calculators still return a
+constant written in Java while the parameterised table sits there unread, and the IRPF one
+is a flat placeholder. That, and everything else this does not do yet, is written down
+honestly in `PRODUCTO.md` §2 — read it before believing any of the above is finished.
 
-    subgraph Config["Engine Configuration (DB)"]
-        Concepts["Concepts\n8 calculation types"]
-        Assignments[Assignments]
-        Tables[Salary tables]
-        Feeds[Feed relations]
-        Operands[Operands]
-    end
+## A receipt is a view of what the engine calculated
 
-    subgraph Result["Payroll Result"]
-        Root[payroll root\nimmutable]
-        Lines[concept lines]
-        Snapshot[context snapshot]
-        Status["status workflow\nNOT_VALID → CALCULATED → CLOSED"]
-    end
+`NOT_VALID → CALCULATED → EXPLICIT_VALIDATED → DEFINITIVE`. Invalidating returns to
+`NOT_VALID`, and recalculating only leaves from there; nothing moves inside a definitive
+receipt. The engine decides whether a receipt is *valid*; people decide whether it is
+*closed* (ADR-059). Invalidating asks for a reason, because it is a decision about
+something that was fine; closing does not, because it keeps the one the receipt had.
 
-    Launch --> Run
-    Run --> Claim
-    Claim --> Selection
-    Selection --> Eligibility
-    Config --> Eligibility
-    Eligibility --> Graph
-    Feeds --> Graph
-    Operands --> Graph
-    Graph --> Topo
-    Topo --> Segments
-    Segments --> Calc
-    Tables --> Calc
-    Calc --> Root
-    Root --> Lines & Snapshot & Status
-```
+Launching is accepted, not awaited (ADR-060): a run is persisted, and a per-unit claim
+means two concurrent runs cannot calculate the same payroll unit. First one in wins, and
+the one that loses says so (ADR-065). The regulation a run loaded is immutable inside it
+(ADR-061).
 
-### Concurrent safety
+## The API
 
-Payroll launches are protected by an explicit domain model — not a `synchronized` block:
+There is **one** contract: `openapi/personnel-administration-api.yaml`.
 
-- **`calculation_run`** — persisted record of a launch: population, progress, status
-- **`calculation_claim`** — unit-level mutex; two concurrent runs cannot calculate the same payroll unit
+There used to be two, and they drifted in silence for five months until they left an
+endpoint served and invisible to the generated client. They were merged, and the rule that
+remains is: *what is served is declared, and declared in one place.*
+`TheTwoContractsNeverDivergeInSilenceTest` is what keeps it that way — it checks that what
+the backend serves is declared, and that there is still only one file.
 
----
-
-## Temporal data integrity
-
-Most employee data is historized. The system enforces this without exception.
-
-### Strong Timeline Replace
-
-A reusable pattern (`StrongTimelineReplacePlanner`) governs any `replaceFromDate` operation across all temporal verticals:
-
-```
-Existing periods:     [Jan ─────────── Jun] [Jul ─────────── Dec]
-replaceFromDate(Mar):
-Result:               [Jan ── Feb] [Mar ──── Jun] [Jul ─────────── Dec]
-                                    ^^^^^^^^^^^^
-                                    new period, boundaries recalculated
-```
-
-Three outcomes — all handled, none silently ignored:
-
-- **Exact match** — new period replaces existing at the same start date
-- **Split** — existing period is divided; new period takes over from effective date
-- **No coverage** — rejected; gaps in the timeline are a domain error
-
-This same logic governs contracts, labor classifications, cost centers, work centers, and working time.
-
----
-
-## Employee lifecycle as explicit workflows
-
-Creating an employee is not a POST to `/employees`. It is a **Hire workflow** that coordinates multiple verticals atomically:
-
-```
-HireEmployee
-├── create employee record
-├── open presence period
-├── assign contract
-├── assign labor classification
-├── assign cost center
-├── assign work center
-└── assign working time
-```
-
-`TerminateEmployee` and `RehireEmployee` follow the same discipline. Each workflow enforces cross-vertical consistency and temporal rules that cannot be expressed as independent CRUD operations.
-
----
-
-## API design
-
-The API operates entirely on **functional identifiers**:
+Identity is functional. Business keys, never surrogate ids:
 
 ```http
-GET  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contract
-PUT  /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/labor-classification/replace-from-date
-GET  /payrolls/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}
+GET /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/contract
+PUT /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/labor-classification/replace-from-date
 ```
 
-No `id` path variable exists anywhere in this API. This is intentional and documented in [ADR-001](docs/architecture/adr/ADR-001-vertical-architecture-and-api-identity.md).
+No `id` path variable exists anywhere in it (ADR-001). Errors carry a code, a message and
+a detail (ADR-064).
 
----
+Two repositories consume this contract and version their own copy of it, checking it
+against `main` on every build. Keeping them up to date is a manual step that happens
+somewhere else, so this repository does not rely on anyone remembering:
+`openapi/avisar-consumidores.py` looks at each consumer's copy after a contract change and
+names the one that is behind, with the command that fixes it.
 
-## Architecture Decision Records
+## Where the decisions are
 
-Every non-obvious decision is documented. There are currently **31 ADRs** covering:
+Every non-obvious decision has an ADR, in `docs/architecture/adr/`, regenerated into
+[`ADR_BUNDLE.md`](docs/architecture/adr/ADR_BUNDLE.md). Read it before proposing an
+architectural change — most of what looks missing was decided, and says why.
 
-- Vertical architecture and API identity strategy
-- Employee business key design
-- Rule entity metamodel
-- Employee lifecycle workflows
-- Strong timeline replace pattern
-- Employee journey model
-- Cost center design
-- Company as enriched, rule-anchored catalog
-- Payroll status workflow and state machine
-- Payroll root model (immutable result, not editable record)
-- Concurrent launch orchestration with calculation\_run and claim
-- Hierarchical authorization model
-- UI interaction contracts per vertical
+If an ADR and the tree disagree, **the tree wins**: the thing to do is write the note or
+the successor ADR that says so, not implement a stale document.
 
-Full bundle: [`docs/architecture/adr/ADR_BUNDLE.md`](docs/architecture/adr/ADR_BUNDLE.md)
+## Tech
 
----
-
-## Domain coverage — Spain, Régimen General
-
-The system models real Spanish HR and payroll law through the concept graph:
-
-- **Grupo de cotización** (SS contribution group, 1–11) — drives salary tables and contribution rates
-- **SS employer contributions**: contingencias comunes, desempleo (empresa), FOGASA, formación profesional, MEI
-- **SS worker deductions**: CC trabajador (4.70%), desempleo (1.55%), FP (0.10%), MEI (0.11%)
-- **IRPF withholding** as a line on the payslip
-- **Convenio colectivo** — agreement category profiles with real salary tables
-- Topes de cotización (contribution floors and caps via `GREATEST` / `LEAST`)
-
-Two honest caveats, because the shape and the values are not equally finished. The
-**shape** is data: what feeds what, in what order, and at what scope, all lives in the
-concept graph. The **rates** are not: ten `ENGINE_PROVIDED` calculators return a constant
-written in Java, and the IRPF one is a flat 15% placeholder that never looks at the
-employee's declared tax situation. The parameterised table (`payroll_engine.ss_cotizacion_tipos`,
-nine contingencies with validity dates) exists and nothing reads it. Only the two
-contribution caps read from a table. See `PRODUCTO.md` §2 in the workspace root.
-
----
-
-## By the numbers
-
-Counted against the tree on 2026-09-16, not from memory.
-
-| Metric | Value |
-|--------|-------|
-| Java source files | 1,675 |
-| Test files | 405 |
-| Flyway migrations | 133 |
-| Architecture Decision Records | 65 |
-| Payroll engine modules | 9 |
-| Calculation types | 8 |
-| Bounded contexts | 5, plus a deliberately small `shared` |
-| Employee domain verticals | 18 |
-| Declared API paths / operations | 91 / 152 |
-
----
-
-## Running the project
-
-**Requirements:** Java 21, Docker
-
-```bash
-# 1. Start PostgreSQL
-cd docker/postgres && docker compose up -d
-
-# 2. Run the application (Flyway migrations run automatically on startup)
-
-# Linux / macOS / Git Bash:
-mvn spring-boot:run -Dspring-boot.run.profiles=local
-
-# Windows PowerShell (the -D flag must be quoted):
-mvn spring-boot:run "-Dspring-boot.run.profiles=local"
-
-# Alternatively, set the env var (works everywhere):
-# $env:SPRING_PROFILES_ACTIVE='local'; mvn spring-boot:run   (PowerShell)
-# SPRING_PROFILES_ACTIVE=local mvn spring-boot:run            (bash)
-
-# 3. Run all tests. They run against REAL PostgreSQL, not H2: Testcontainers
-#    starts one (so Docker must be running), or set TEST_DB_HOST to supply
-#    your own — which is what the pipeline does.
-mvn test
-
-# Run a specific test class
-mvn test -Dtest=CalculatePayrollUnitServiceTest
-```
-
-Credentials: `b4rrhh / b4rrhh` at `localhost:5432/b4rrhh`
-
----
-
-## Project structure
-
-```
-src/main/java/com/b4rrhh/
-├── employee/           ← 11 domain verticals
-├── rulesystem/         ← catalog and configuration management
-├── payroll/            ← payroll domain (launch, run, claim, result)
-├── payroll_engine/     ← 8-module graph-based calculation engine
-├── authorization/      ← JWT + role-based access (ADMIN, HR_MANAGER, HR_VIEWER)
-└── shared/             ← minimal cross-cutting abstractions
-
-src/main/resources/
-└── db/migration/       ← 91 Flyway migrations (schema evolution + seed data)
-
-openapi/
-└── personnel-administration-api.yaml   ← source of truth for the API contract
-
-docs/
-└── architecture/adr/   ← 31 Architecture Decision Records
-```
-
----
-
-## Tech stack
-
-- **Java 21** — records, sealed classes, pattern matching
-- **Spring Boot 3.3** — web, data JPA, security
-- **PostgreSQL** — primary store
-- **Flyway** — schema versioning and seed data
-- **Docker** — local database
-- **H2** — test isolation (no external dependencies in CI)
-
----
-
-## Status
-
-Active development. The payroll engine is the current focus: concept graph construction, segmentation, and the SS/IRPF concept chain all work end to end — with the rate caveat noted under *Domain coverage*. The launch orchestration model (`calculation_run` + `calculation_claim`) is implemented and runs the whole workforce in one go.
-
-This is a solo project. The pace is deliberate — correctness over speed.
-
----
-
-## Why this exists
-
-Most HR backends I have seen were either too simple (CRUD over employee tables) or too complex (event sourcing, CQRS, microservices) for a domain that doesn't need that complexity yet.
-
-This project is an exploration of what it looks like to model a genuinely complex domain — temporal employment data, payroll calculation graphs, lifecycle workflows — with enough discipline that the system stays comprehensible as it grows.
-
-The answer, so far: vertical slices + hexagonal architecture + explicit temporal patterns + documented decisions.
-
----
+Java 21, Spring Boot, PostgreSQL, Flyway, MinIO for photos, Docker for both locally.
 
 ## License
 
-This project is distributed under a **Business Source License (BSL)**.
-
-Source code is publicly visible for learning, evaluation, and non-commercial use.  
-Commercial use — including SaaS, hosted services, or revenue-generating products — is **not permitted** without an explicit commercial license.
-
-See [`LICENSE.md`](LICENSE.md) for full terms and [`NOTICE.md`](NOTICE.md) for authorship details.
-
-For commercial licensing inquiries, contact the author.
+Business Source License. The source is visible for learning and evaluation; commercial use
+— SaaS, hosted services, revenue-generating products — needs an explicit licence. See
+[`LICENSE.md`](LICENSE.md) and [`NOTICE.md`](NOTICE.md).
