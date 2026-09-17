@@ -60,9 +60,15 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
     private static final LocalDate APRIL_16 = LocalDate.of(2025, 4, 16);
     private static final LocalDate JANUARY_1 = LocalDate.of(2025, 1, 1);
 
-    /** Los que hay en el catalogo ESP: 4 de ambito SEGMENT y 34 de ambito PERIOD. */
+    /**
+     * Los que hay en el catalogo ESP: 5 de ambito SEGMENT y 33 de ambito PERIOD.
+     *
+     * <p>Eran 4 y 34 hasta el {@code backend#47}: la {@code V135} paso {@code P02} a
+     * {@code SEGMENT} porque el precio del dia sale de una fila que se busca por categoria, y un
+     * empleado que cambia de categoria a mitad de mes tiene dos precios en el mismo mes.
+     */
     private static final int CONCEPTS_IN_THE_ENGINE = 38;
-    private static final int SEGMENT_SCOPED_CONCEPTS = 4;
+    private static final int SEGMENT_SCOPED_CONCEPTS = 5;
 
     /**
      * Y los 38 entran en algun plan, que es lo que cambio en el backend#96.
@@ -74,7 +80,8 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      *
      * <p>El recuento de pasos no se movio con aquello: 35 en un mes entero y 39 en uno del mes
      * partido, igual que antes. Retirar un concepto que nadie ejecutaba no puede anadir un paso.
-     * Declarar tres si: desde el backend#104 son 38 y 42.
+     * Declarar tres si: desde el backend#104 son 38 y 42, y desde el backend#47 son 38 y 43 —
+     * cambiar un ambito no anade conceptos, anade evaluaciones.
      */
     private static final int CONCEPTS_IN_A_PLAN = 38;
 
@@ -206,7 +213,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
         vaciarLaSesion();
         Long pid = payrollId(emp);
 
-        // Los 4 conceptos SEGMENT se evaluan una vez por tramo: 34 + 4 x 2 = 42.
+        // Los 5 conceptos SEGMENT se evaluan una vez por tramo: 33 + 5 x 2 = 43.
         assertEquals(CONCEPTS_IN_A_PLAN + SEGMENT_SCOPED_CONCEPTS, countSteps(pid), "pasos guardados");
 
         // Y el 101 sale dos veces, con dos precios distintos. Es el caso que se comia cualquier

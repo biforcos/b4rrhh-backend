@@ -69,7 +69,9 @@ public class PayrollScenarioFixtures {
         jdbc.update(cSql, idD01,       "DIAS_DEVENGO",            "ENGINE_PROVIDED",  "TECHNICAL",       null,  "SEGMENT");
         jdbc.update(cSql, idJ01,       "COEFICIENTE_JORNADA",     "ENGINE_PROVIDED",  "TECHNICAL",       null,  "SEGMENT");
         jdbc.update(cSql, idP01,       "PRECIO_DIA",              "RATE_BY_QUANTITY", "BASE",            null,  "SEGMENT");
-        jdbc.update(cSql, idP02,       "PRECIO_DIA_PLENO",        "DIRECT_AMOUNT",    "BASE",            null,  "PERIOD");
+        // SEGMENT desde la V135 (backend#47): el precio del dia sale de una fila que se busca por
+        // categoria, asi que un empleado que cambia de categoria a mitad de mes tiene dos.
+        jdbc.update(cSql, idP02,       "PRECIO_DIA_PLENO",        "DIRECT_AMOUNT",    "BASE",            null,  "SEGMENT");
         jdbc.update(cSql, idB01,       "BASE_COTIZABLE",          "AGGREGATE",        "BASE",            null,  "PERIOD");
         jdbc.update(cSql, idPSSCC,     "TIPO_CC_TRABAJADOR",      "ENGINE_PROVIDED",  "TECHNICAL",       null,  "PERIOD");
         jdbc.update(cSql, idPSSDESEMP, "TIPO_DESEMPLEO_TRABAJADOR","ENGINE_PROVIDED", "TECHNICAL",       null,  "PERIOD");
@@ -216,11 +218,59 @@ public class PayrollScenarioFixtures {
      * encontraba ninguna vigente (backend#73).
      */
     public void insertLaborClassification(long employeeId, LocalDate from, LocalDate to) {
+        insertLaborClassification(employeeId, from, to, CATEGORY_CODE);
+    }
+
+    /**
+     * Un tramo de clasificacion con la categoria que se le diga ({@code backend#47}).
+     *
+     * <p>Hace falta para el caso que este issue existe para arreglar: un cambio de categoria a
+     * mitad de mes. Con la categoria fija no se puede montar, y sin poder montarlo el fallo —un
+     * precio puesto en dias que se pagaron a otro— no se ve.
+     */
+    public void insertLaborClassification(
+            long employeeId, LocalDate from, LocalDate to, String agreementCategoryCode) {
         jdbc.update(
                 "insert into employee.labor_classification" +
                 " (employee_id, agreement_code, agreement_category_code, start_date, end_date, created_at, updated_at)" +
                 " values (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                employeeId, AGREEMENT_CODE, CATEGORY_CODE, from, to);
+                employeeId, AGREEMENT_CODE, agreementCategoryCode, from, to);
+    }
+
+    /** Un tramo de contrato. No lo lee ningun concepto: esta para que rompa el periodo. */
+    public void insertContract(
+            long employeeId, LocalDate from, LocalDate to, String contractCode) {
+        jdbc.update(
+                "insert into employee.contract" +
+                " (employee_id, contract_code, contract_subtype_code, start_date, end_date, created_at, updated_at)" +
+                " values (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                employeeId, contractCode, contractCode, from, to);
+    }
+
+    /**
+     * Otra categoria de convenio, con su perfil y su fila de precio dia.
+     *
+     * <p>La siembra base trae una sola, y con una sola categoria un cambio a mitad de mes no se
+     * puede montar: hacen falta dos con precios distintos para que el error se vea en el numero.
+     */
+    public void seedAgreementCategory(String ruleSystemCode, String categoryCode, BigDecimal dailyRate) {
+        jdbc.update(
+                "insert into rulesystem.rule_entity" +
+                " (rule_system_code, rule_entity_type_code, code, name, active, start_date, created_at, updated_at)" +
+                " values (?, ?, ?, ?, ?, DATE '2025-01-01', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                ruleSystemCode, "AGREEMENT_CATEGORY", categoryCode, categoryCode, true);
+        Long categoryId = jdbc.queryForObject(
+                "select id from rulesystem.rule_entity where rule_system_code = ? and rule_entity_type_code = ? and code = ?",
+                Long.class, ruleSystemCode, "AGREEMENT_CATEGORY", categoryCode);
+        jdbc.update(
+                "insert into rulesystem.agreement_category_profile" +
+                " (agreement_category_rule_entity_id, grupo_cotizacion_code, tipo_nomina, created_at, updated_at)" +
+                " values (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                categoryId, "05", "MENSUAL");
+        jdbc.update(
+                "insert into payroll.payroll_table_row (rule_system_code, table_code, search_code, start_date, end_date, daily_value, active)" +
+                " values (?, ?, ?, DATE '2025-01-01', null, ?, ?)",
+                ruleSystemCode, TABLE_CODE, categoryCode, dailyRate, true);
     }
 
     /**

@@ -83,9 +83,11 @@ class ExecutionScopeOnSplitMonthIntegrationTest {
 
     @Test
     void salarioBaseInPeriodScope_splitWorkingTime_yieldsOneRowOverTheWholePeriod() {
-        // Se cambia el ambito de los cuatro conceptos de la cadena, no solo el del 101: un
-        // PERIOD no puede leer un operando SEGMENT (backend#63).
-        fixtures.setExecutionScope(RULE_SYSTEM, "PERIOD", "101", "D01", "J01", "P01");
+        // Se cambia el ambito de la CADENA ENTERA, no solo el del 101: un PERIOD no puede leer un
+        // operando SEGMENT (backend#63). Son cinco desde el backend#47, no cuatro: el precio dia
+        // pleno paso a SEGMENT en la V135 porque sale de una fila que se busca por categoria, y un
+        // empleado que cambia de categoria a mitad de mes tiene dos.
+        fixtures.setExecutionScope(RULE_SYSTEM, "PERIOD", "101", "D01", "J01", "P01", "P02");
         String emp = hireWithSplitWorkingTime(new BigDecimal("100.00"), new BigDecimal("50.00"));
 
         CalculationRun run = launchSingleEmployee(emp);

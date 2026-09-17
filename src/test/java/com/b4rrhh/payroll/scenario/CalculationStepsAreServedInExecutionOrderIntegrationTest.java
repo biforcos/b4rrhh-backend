@@ -38,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * ({@code backend#97}).
  *
  * <p>Sobre ESP y no sobre TST, por lo mismo que el
- * {@code EveryCalculatedConceptIsKeptIntegrationTest}: los recuentos que afirma —38 pasos y 42—
+ * {@code EveryCalculatedConceptIsKeptIntegrationTest}: los recuentos que afirma —38 pasos y 43—
  * son los de la reglamentacion que siembran las migraciones, y un fixture con quince conceptos de
  * mentira no probaria el numero que hay que probar.
  *
@@ -70,8 +70,14 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
     /** Los pasos de un empleado de mes entero: uno por cada concepto del catalogo ESP. */
     private static final int STEPS_IN_A_WHOLE_MONTH = 38;
 
-    /** Y los de uno del mes partido: los 4 conceptos de ambito SEGMENT se evaluan una vez por tramo. */
-    private static final int STEPS_IN_A_SPLIT_MONTH = 42;
+    /**
+     * Y los de uno del mes partido: los conceptos de ambito SEGMENT se evaluan una vez por tramo.
+     *
+     * <p>Eran 42 y son 43 desde el {@code backend#47}: la {@code V135} paso {@code P02} a
+     * {@code SEGMENT}, asi que los conceptos por tramo son cinco. El importe no se mueve —con una
+     * sola categoria los dos tramos leen la misma fila— y lo que se anade es el paso que lo dice.
+     */
+    private static final int STEPS_IN_A_SPLIT_MONTH = 43;
 
     /**
      * Los pasos que llevan orden de recibo: los que PUEDEN ser linea.
