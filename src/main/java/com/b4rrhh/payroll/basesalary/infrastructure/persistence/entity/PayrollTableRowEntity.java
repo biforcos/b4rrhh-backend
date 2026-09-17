@@ -3,6 +3,7 @@ package com.b4rrhh.payroll.basesalary.infrastructure.persistence.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * JPA entity for payroll.payroll_table_row table.
@@ -45,6 +46,23 @@ public class PayrollTableRowEntity {
 
     @Column(name = "active", nullable = false)
     private Boolean active;
+
+    /**
+     * Cuando se toco esta fila por ultima vez.
+     *
+     * <p>La columna existe desde la V64 y hasta el backend#107 nadie la mapeaba, asi que editar una
+     * fila por la API dejaba la marca de tiempo en la del dia de la siembra. Ahora se mantiene,
+     * porque es la mitad de la comparacion que dice si un recibo puede haber dejado de reflejar
+     * las reglas: la otra mitad es su {@code calculated_at}.
+     */
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    @PreUpdate
+    void stampUpdatedAt() {
+        this.updatedAt = LocalDateTime.now();
+    }
 
     // Getters and setters
     public Long getId() {
@@ -133,5 +151,9 @@ public class PayrollTableRowEntity {
 
     public void setActive(Boolean active) {
         this.active = active;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
     }
 }

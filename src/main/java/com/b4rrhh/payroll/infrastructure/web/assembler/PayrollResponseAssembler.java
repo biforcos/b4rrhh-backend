@@ -32,7 +32,13 @@ public class PayrollResponseAssembler {
         this.objectMapper = objectMapper;
     }
 
-    public PayrollResponse toResponse(Payroll payroll) {
+    /**
+     * @param rulesChangedSinceCalculation llega hecho de la capa de aplicación, porque no es un
+     *                                     dato del recibo: es una comparación contra la
+     *                                     reglamentación de hoy, y un ensamblador no consulta
+     *                                     ({@code backend#107})
+     */
+    public PayrollResponse toResponse(Payroll payroll, boolean rulesChangedSinceCalculation) {
         List<PayrollContextSnapshot> snapshots = payroll.getContextSnapshots();
         return new PayrollResponse(
                 payroll.getRuleSystemCode(),
@@ -84,7 +90,8 @@ public class PayrollResponseAssembler {
                 extractPresenceEndDate(snapshots),
                 extractSeniorityDate(snapshots),
                 extractWorkCenterCode(snapshots),
-                extractWorkCenterName(snapshots)
+                extractWorkCenterName(snapshots),
+                rulesChangedSinceCalculation
         );
     }
 

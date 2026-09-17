@@ -16,6 +16,7 @@ import com.b4rrhh.payroll.application.usecase.PayrollLaunchEmployeeTarget;
 import com.b4rrhh.payroll.application.usecase.PayrollLaunchTargetSelection;
 import com.b4rrhh.payroll.application.usecase.ValidatePayrollCommand;
 import com.b4rrhh.payroll.application.usecase.ValidatePayrollUseCase;
+import com.b4rrhh.payroll.application.service.PayrollRuleFreshness;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollCalculationStepResponseAssembler;
 import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollResponseAssembler;
@@ -61,6 +62,7 @@ public class PayrollController {
     private final ListPayrollCalculationStepsUseCase listPayrollCalculationStepsUseCase;
     private final PayrollResponseAssembler payrollResponseAssembler;
     private final PayrollCalculationStepResponseAssembler payrollCalculationStepResponseAssembler;
+    private final PayrollRuleFreshness payrollRuleFreshness;
 
     public PayrollController(
             GetPayrollByBusinessKeyUseCase getPayrollByBusinessKeyUseCase,
@@ -73,7 +75,8 @@ public class PayrollController {
             RecalculatePayrollUseCase recalculatePayrollUseCase,
             ListPayrollCalculationStepsUseCase listPayrollCalculationStepsUseCase,
             PayrollResponseAssembler payrollResponseAssembler,
-            PayrollCalculationStepResponseAssembler payrollCalculationStepResponseAssembler
+            PayrollCalculationStepResponseAssembler payrollCalculationStepResponseAssembler,
+            PayrollRuleFreshness payrollRuleFreshness
     ) {
         this.getPayrollByBusinessKeyUseCase = getPayrollByBusinessKeyUseCase;
         this.invalidatePayrollUseCase = invalidatePayrollUseCase;
@@ -86,6 +89,21 @@ public class PayrollController {
         this.listPayrollCalculationStepsUseCase = listPayrollCalculationStepsUseCase;
         this.payrollResponseAssembler = payrollResponseAssembler;
         this.payrollCalculationStepResponseAssembler = payrollCalculationStepResponseAssembler;
+        this.payrollRuleFreshness = payrollRuleFreshness;
+    }
+
+    /**
+     * El recibo servido, con la marca de si las reglas han cambiado desde que se calculó
+     * ({@code backend#107}).
+     *
+     * <p>Por aquí pasan las cinco salidas que devuelven un recibo, y pasan a propósito: la marca no
+     * es de la pantalla del recibo, es del recibo. Anular, validar, cerrar y recalcular devuelven
+     * uno igual que la consulta, y si sólo la consulta la trajera, el mismo recibo diría una cosa u
+     * otra según por dónde se hubiera llegado a él.
+     */
+    private PayrollResponse toResponse(Payroll payroll) {
+        return payrollResponseAssembler.toResponse(
+                payroll, payrollRuleFreshness.rulesChangedSinceCalculation(payroll));
     }
 
     @GetMapping("/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}")
@@ -105,7 +123,7 @@ public class PayrollController {
                 payrollTypeCode,
                 presenceNumber
         )
-                .map(payrollResponseAssembler::toResponse)
+                .map(this::toResponse)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -166,7 +184,7 @@ public class PayrollController {
                 request.statusReasonCode()
         ));
 
-        return ResponseEntity.ok(payrollResponseAssembler.toResponse(payroll));
+        return ResponseEntity.ok(toResponse(payroll));
     }
 
     @PostMapping("/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}/validate")
@@ -187,7 +205,7 @@ public class PayrollController {
                 presenceNumber
         ));
 
-        return ResponseEntity.ok(payrollResponseAssembler.toResponse(payroll));
+        return ResponseEntity.ok(toResponse(payroll));
     }
 
     @PostMapping("/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}/finalize")
@@ -208,7 +226,7 @@ public class PayrollController {
                 presenceNumber
         ));
 
-        return ResponseEntity.ok(payrollResponseAssembler.toResponse(payroll));
+        return ResponseEntity.ok(toResponse(payroll));
     }
 
     @PostMapping("/invalidate-bulk")
@@ -310,7 +328,7 @@ public class PayrollController {
                 payrollPeriodCode, payrollTypeCode, presenceNumber,
                 authentication == null ? null : authentication.getName()
         ));
-        return ResponseEntity.ok(payrollResponseAssembler.toResponse(payroll));
+        return ResponseEntity.ok(toResponse(payroll));
     }
 
     private PayrollLaunchTargetSelection toTargetSelection(PayrollLaunchTargetSelectionRequest request) {
