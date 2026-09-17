@@ -17,6 +17,7 @@ import com.b4rrhh.payroll.application.port.PayrollCalculationStep;
 import com.b4rrhh.payroll.application.port.PayrollCalculationStepWritePort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputLookupPort;
+import com.b4rrhh.payroll.application.port.TableRowOrigin;
 import com.b4rrhh.payroll.application.service.PayrollConceptExecutionContext;
 import com.b4rrhh.payroll.application.service.PayrollConceptExecutionResult;
 import com.b4rrhh.payroll.application.service.PayrollConceptGraphCalculator;
@@ -228,6 +229,12 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         // Pre-compute DIRECT_AMOUNT concepts once: their value comes from the rule system,
         // not from the segment, so it is the same wherever the concept is evaluated.
         Map<String, BigDecimal> precomputedDirectAmounts = new HashMap<>();
+        // De que fila de tabla salio cada uno de esos importes, cuando salio de alguna. Se anota
+        // aqui porque es el unico instante en que se sabe: la busqueda es por vigencia y por
+        // categoria, y repetirla mas tarde contesta donde estaria hoy el valor, no de donde salio
+        // (backend#107). La mayoria de los conceptos no aparecen en este mapa, y eso es lo que
+        // significa que su paso no venga de ninguna fila.
+        Map<String, TableRowOrigin> filaLeidaPorConcepto = new HashMap<>();
         for (ConceptExecutionPlanEntry entry : plan) {
             if (entry.calculationType() == CalculationType.DIRECT_AMOUNT) {
                 String conceptCode = entry.identity().getConceptCode();
@@ -235,6 +242,12 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                         payrollConceptGraphCalculator.calculateConceptResult(
                                 conceptCode, calcContext, command.metamodel());
                 precomputedDirectAmounts.put(conceptCode, directResult.amount());
+                if (directResult.sourceTableRow() != null) {
+                    filaLeidaPorConcepto.put(conceptCode, directResult.sourceTableRow());
+                    log.debug("[NOMINA] {} leido de la tabla {}, fila {}", conceptCode,
+                            directResult.sourceTableRow().tableCode(),
+                            directResult.sourceTableRow().rowId());
+                }
                 log.debug("[NOMINA] Pre-calculado DIRECT_AMOUNT {} = {}", conceptCode, directResult.amount());
             }
         }
@@ -307,7 +320,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                             quantityOf(entry, state), rateOf(entry, state));
                     calculationSteps.add(calculationStep(
                             calculationSteps.size() + 1, engineConcept, entry, state, amount,
-                            seg.segmentStart(), seg.segmentEnd()));
+                            seg.segmentStart(), seg.segmentEnd(), filaLeidaPorConcepto));
                 }
                 periodState.storeResult(entry.identity(), composed);
                 if (segments.size() > 1) {
@@ -327,7 +340,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                         quantityOf(entry, periodState), rateOf(entry, periodState));
                 calculationSteps.add(calculationStep(
                         calculationSteps.size() + 1, engineConcept, entry, periodState, amount,
-                        null, null));
+                        null, null, filaLeidaPorConcepto));
             }
         }
 
@@ -546,7 +559,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             SegmentExecutionState state,
             BigDecimal amount,
             LocalDate segmentStart,
-            LocalDate segmentEnd
+            LocalDate segmentEnd,
+            Map<String, TableRowOrigin> filaLeidaPorConcepto
     ) {
         return new PayrollCalculationStep(
                 executionOrder,
@@ -560,7 +574,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 amount,
                 quantityOf(entry, state),
                 rateOf(entry, state),
-                engineConcept.getPayslipOrderCode());
+                engineConcept.getPayslipOrderCode(),
+                filaLeidaPorConcepto.get(engineConcept.getConceptCode()));
     }
 
     /**

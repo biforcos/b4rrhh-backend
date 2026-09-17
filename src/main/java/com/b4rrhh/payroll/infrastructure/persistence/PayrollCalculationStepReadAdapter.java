@@ -2,6 +2,7 @@ package com.b4rrhh.payroll.infrastructure.persistence;
 
 import com.b4rrhh.payroll.application.port.PayrollCalculationStep;
 import com.b4rrhh.payroll.application.port.PayrollCalculationStepReadPort;
+import com.b4rrhh.payroll.application.port.TableRowOrigin;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -45,7 +46,19 @@ public class PayrollCalculationStepReadAdapter implements PayrollCalculationStep
                 entity.getQuantity(),
                 entity.getRate(),
                 entity.getPayslipOrderCode(),
-                entity.getPayslipLineNumber()
+                entity.getPayslipLineNumber(),
+                sourceTableRowOf(entity)
         );
+    }
+
+    /**
+     * Las dos columnas van juntas o no van, y el esquema lo comprueba: media direccion no lleva a
+     * ningun sitio ({@code backend#107}).
+     */
+    private static TableRowOrigin sourceTableRowOf(PayrollCalculationStepEntity entity) {
+        if (entity.getSourceTableCode() == null || entity.getSourceTableRowId() == null) {
+            return null;
+        }
+        return new TableRowOrigin(entity.getSourceTableCode(), entity.getSourceTableRowId());
     }
 }

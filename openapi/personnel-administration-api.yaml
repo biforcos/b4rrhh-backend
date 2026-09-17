@@ -10965,6 +10965,23 @@ components:
             reached by different paths — instead of leaving the reader to compare rates by eye. It
             is null exactly when payslipOrderCode is, except in payrolls calculated before this
             field existed, which carry null until they are recalculated.
+        sourceTableCode:
+          type: string
+          nullable: true
+          description: >-
+            Payroll table this step read its value from, or null when the value did not come from
+            a table. Most steps carry null and that is what it means: an AGGREGATE reads no table.
+        sourceTableRowId:
+          type: integer
+          format: int64
+          nullable: true
+          description: >-
+            Row of that table the engine actually read. It is recorded when the value is produced,
+            not resolved when it is read: resolving it again would answer where the value would be
+            looked up today, and a change of validity or category in between would silently point
+            at a different row. The row may have been deleted since, so a client must handle the
+            address leading nowhere. Null exactly when sourceTableCode is, plus in payrolls
+            calculated before this field existed, which carry null until they are recalculated.
 
     PayrollConceptResponse:
       type: object

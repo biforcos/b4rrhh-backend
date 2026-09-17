@@ -22,6 +22,12 @@ import java.time.LocalDate;
  *
  * <p>Es nulo exactamente cuando {@code payslipOrderCode} lo es, salvo en los recibos calculados antes
  * del {@code backend#103}, que se quedan sin él hasta que se recalculen.
+ *
+ * <p>{@code sourceTableCode} y {@code sourceTableRowId} dicen <b>de qué fila de tabla</b> leyó este
+ * paso su valor ({@code backend#107}). Van juntos o no van, y lo normal es que no vayan: de los 38
+ * pasos de un recibo ESP leen una fila dos. Son la dirección que el motor tenía delante al
+ * calcular, no la que la misma búsqueda daría hoy, y por eso la fila puede haber desaparecido:
+ * quien ofrezca el salto tiene que saber tratar una dirección que ya no lleva a ninguna parte.
  */
 public record PayrollCalculationStepResponse(
         Integer executionOrder,
@@ -36,6 +42,8 @@ public record PayrollCalculationStepResponse(
         BigDecimal quantity,
         BigDecimal rate,
         String payslipOrderCode,
-        Integer payslipLineNumber
+        Integer payslipLineNumber,
+        String sourceTableCode,
+        Long sourceTableRowId
 ) {
 }

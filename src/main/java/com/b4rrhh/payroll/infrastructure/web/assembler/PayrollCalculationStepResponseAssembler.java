@@ -34,7 +34,9 @@ public class PayrollCalculationStepResponseAssembler {
                 step.quantity(),
                 step.rate(),
                 step.payslipOrderCode(),
-                step.payslipLineNumber()
+                step.payslipLineNumber(),
+                step.sourceTableRow() == null ? null : step.sourceTableRow().tableCode(),
+                step.sourceTableRow() == null ? null : step.sourceTableRow().rowId()
         );
     }
 }

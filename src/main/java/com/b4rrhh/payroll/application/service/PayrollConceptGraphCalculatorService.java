@@ -1,7 +1,9 @@
 package com.b4rrhh.payroll.application.service;
 
+import com.b4rrhh.payroll.application.port.TableRowOrigin;
 import com.b4rrhh.payroll.basesalary.domain.PayrollObjectBindingLookupPort;
 import com.b4rrhh.payroll.basesalary.domain.PayrollTableRowLookupPort;
+import com.b4rrhh.payroll.basesalary.domain.PayrollTableRowRead;
 import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
 import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
@@ -99,9 +101,9 @@ public class PayrollConceptGraphCalculatorService implements PayrollConceptGraph
                     concept.getObject().getObjectCode(),
                     resolveConstantValue(relation, concept.getObject().getObjectCode())
             );
-            case TABLE -> directAmountResult(
+            case TABLE -> tableAmountResult(
                     concept.getObject().getObjectCode(),
-                    resolveTableValue(relation.getSourceObject().getObjectCode(), context)
+                    resolveTableRow(relation.getSourceObject().getObjectCode(), context)
             );
             default -> throw new IllegalStateException(
                     "Configuration error: Unsupported DIRECT_AMOUNT source type "
@@ -118,7 +120,11 @@ public class PayrollConceptGraphCalculatorService implements PayrollConceptGraph
         return relation.getFeedValue();
     }
 
-    private BigDecimal resolveTableValue(
+    /**
+     * La fila aplicable, y no solo su valor: lo que el motor tiene delante en este instante es lo
+     * unico que contesta «de donde salio este numero» ({@code backend#107}).
+     */
+    private PayrollTableRowRead resolveTableRow(
             String bindingRoleCode,
             PayrollConceptExecutionContext context
     ) {
@@ -132,7 +138,7 @@ public class PayrollConceptGraphCalculatorService implements PayrollConceptGraph
                         + context.agreementCode() + " and role " + bindingRoleCode
         ));
 
-        return tableRowLookup.resolveDailyValue(
+        return tableRowLookup.findApplicableRow(
                 context.ruleSystemCode(),
                 tableCode,
                 context.categoryCode(),
@@ -146,6 +152,17 @@ public class PayrollConceptGraphCalculatorService implements PayrollConceptGraph
 
         private PayrollConceptExecutionResult directAmountResult(String conceptCode, BigDecimal amount) {
                 return new PayrollConceptExecutionResult(conceptCode, amount, null, null);
+        }
+
+        /** El mismo importe, sabiendo ademas de que fila salio ({@code backend#107}). */
+        private PayrollConceptExecutionResult tableAmountResult(String conceptCode, PayrollTableRowRead row) {
+                return new PayrollConceptExecutionResult(
+                                conceptCode,
+                                row.dailyValue(),
+                                null,
+                                null,
+                                new TableRowOrigin(row.tableCode(), row.rowId())
+                );
         }
 
         private PayrollConceptExecutionResult calculateRateByQuantity(

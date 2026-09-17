@@ -1,18 +1,18 @@
 package com.b4rrhh.payroll.basesalary.infrastructure.persistence;
 
 import com.b4rrhh.payroll.basesalary.domain.PayrollTableRowLookupPort;
+import com.b4rrhh.payroll.basesalary.domain.PayrollTableRowRead;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.entity.PayrollTableRowEntity;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.repository.PayrollTableRowRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
 
 /**
  * Adapter implementing PayrollTableRowLookupPort.
- * Resolves payroll table row values from persistence.
+ * Resolves payroll table rows from persistence.
  */
 @Component
 public class PayrollTableRowLookupAdapter implements PayrollTableRowLookupPort {
@@ -24,7 +24,7 @@ public class PayrollTableRowLookupAdapter implements PayrollTableRowLookupPort {
     }
 
     @Override
-    public Optional<BigDecimal> resolveMonthlyValue(
+    public Optional<PayrollTableRowRead> findApplicableRow(
             String ruleSystemCode,
             String tableCode,
             String searchCode,
@@ -36,22 +36,15 @@ public class PayrollTableRowLookupAdapter implements PayrollTableRowLookupPort {
                 searchCode,
                 effectiveDate,
                 PageRequest.of(0, 1)
-        ).stream().findFirst().map(PayrollTableRowEntity::getMonthlyValue);
+        ).stream().findFirst().map(PayrollTableRowLookupAdapter::toRead);
     }
 
-    @Override
-    public Optional<BigDecimal> resolveDailyValue(
-            String ruleSystemCode,
-            String tableCode,
-            String searchCode,
-            LocalDate effectiveDate
-    ) {
-        return repository.findLatestValidByRuleSystemCodeAndTableCodeAndSearchCodeAndEffectiveDate(
-                ruleSystemCode,
-                tableCode,
-                searchCode,
-                effectiveDate,
-                PageRequest.of(0, 1)
-        ).stream().findFirst().map(PayrollTableRowEntity::getDailyValue);
+    private static PayrollTableRowRead toRead(PayrollTableRowEntity entity) {
+        return new PayrollTableRowRead(
+                entity.getId(),
+                entity.getTableCode(),
+                entity.getMonthlyValue(),
+                entity.getDailyValue()
+        );
     }
 }

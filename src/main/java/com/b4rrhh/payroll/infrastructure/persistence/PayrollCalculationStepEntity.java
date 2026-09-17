@@ -67,6 +67,14 @@ public class PayrollCalculationStepEntity {
     @Column(name = "payslip_line_number")
     private Integer payslipLineNumber;
 
+    /** La tabla de la que leyo su valor, o null si no lo leyo de ninguna (backend#107). */
+    @Column(name = "source_table_code", length = 100)
+    private String sourceTableCode;
+
+    /** La fila que leyo dentro de esa tabla. Las dos columnas van juntas o no van. */
+    @Column(name = "source_table_row_id")
+    private Long sourceTableRowId;
+
     public Long getPayrollId() { return payrollId; }
     public void setPayrollId(Long payrollId) { this.payrollId = payrollId; }
     public Integer getExecutionOrder() { return executionOrder; }
@@ -95,4 +103,8 @@ public class PayrollCalculationStepEntity {
     public void setPayslipOrderCode(String payslipOrderCode) { this.payslipOrderCode = payslipOrderCode; }
     public Integer getPayslipLineNumber() { return payslipLineNumber; }
     public void setPayslipLineNumber(Integer payslipLineNumber) { this.payslipLineNumber = payslipLineNumber; }
+    public String getSourceTableCode() { return sourceTableCode; }
+    public void setSourceTableCode(String sourceTableCode) { this.sourceTableCode = sourceTableCode; }
+    public Long getSourceTableRowId() { return sourceTableRowId; }
+    public void setSourceTableRowId(Long sourceTableRowId) { this.sourceTableRowId = sourceTableRowId; }
 }

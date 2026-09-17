@@ -54,7 +54,22 @@ public record PayrollCalculationStep(
          * la regla de agrupacion en un segundo sitio — que es exactamente lo que aquel ADR existe
          * para impedir.
          */
-        Integer payslipLineNumber
+        Integer payslipLineNumber,
+        /**
+         * La fila de tabla de la que este paso leyo su valor, o {@code null} si no lo leyo de
+         * ninguna ({@code backend#107}).
+         *
+         * <p>El nulo es el caso normal y significa algo: un {@code AGGREGATE} no lee tablas, un
+         * {@code PERCENTAGE} multiplica una base por un tipo y un {@code ENGINE_PROVIDED} deriva
+         * del contexto. De los 38 pasos de un recibo ESP leen una fila dos: el precio del dia y
+         * el de la hora extra.
+         *
+         * <p>Se guarda en vez de volver a resolverse al leer, y esa es toda la diferencia: la
+         * busqueda es por vigencia y por categoria, asi que repetirla contesta <b>donde estaria
+         * hoy</b> ese valor y no de donde salio. Es el defecto por el que se descarto la puerta
+         * del {@code explain} en el {@code backend#93}.
+         */
+        TableRowOrigin sourceTableRow
 ) {
 
     /** El paso tal como sale del motor: todavia no sabe si ira al folio ni a que linea. */
@@ -74,7 +89,28 @@ public record PayrollCalculationStep(
     ) {
         this(executionOrder, conceptCode, conceptMnemonic, calculationType, functionalNature,
                 executionScope, segmentStartDate, segmentEndDate, amount, quantity, rate,
-                payslipOrderCode, null);
+                payslipOrderCode, null, null);
+    }
+
+    /** El mismo paso recien salido del motor, sabiendo de que fila de tabla leyo su valor. */
+    public PayrollCalculationStep(
+            int executionOrder,
+            String conceptCode,
+            String conceptMnemonic,
+            String calculationType,
+            String functionalNature,
+            String executionScope,
+            LocalDate segmentStartDate,
+            LocalDate segmentEndDate,
+            BigDecimal amount,
+            BigDecimal quantity,
+            BigDecimal rate,
+            String payslipOrderCode,
+            TableRowOrigin sourceTableRow
+    ) {
+        this(executionOrder, conceptCode, conceptMnemonic, calculationType, functionalNature,
+                executionScope, segmentStartDate, segmentEndDate, amount, quantity, rate,
+                payslipOrderCode, null, sourceTableRow);
     }
 
     /** El ámbito cuyo paso cubre todo el periodo y, por eso, no tiene fechas de segmento. */
@@ -112,11 +148,12 @@ public record PayrollCalculationStep(
     public PayrollCalculationStep enLinea(int payslipLineNumber) {
         return new PayrollCalculationStep(executionOrder, conceptCode, conceptMnemonic,
                 calculationType, functionalNature, executionScope, segmentStartDate, segmentEndDate,
-                amount, quantity, rate, payslipOrderCode, payslipLineNumber);
+                amount, quantity, rate, payslipOrderCode, payslipLineNumber, sourceTableRow);
     }
 
     /** Si este paso, además de calcularse, llegó al folio como línea de recibo. */
     public boolean isPayslipLine() {
         return payslipOrderCode != null;
     }
+
 }

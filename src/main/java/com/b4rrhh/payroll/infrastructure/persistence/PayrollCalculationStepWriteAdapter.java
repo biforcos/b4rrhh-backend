@@ -57,6 +57,10 @@ public class PayrollCalculationStepWriteAdapter implements PayrollCalculationSte
         entity.setRate(step.rate());
         entity.setPayslipOrderCode(step.payslipOrderCode());
         entity.setPayslipLineNumber(step.payslipLineNumber());
+        if (step.sourceTableRow() != null) {
+            entity.setSourceTableCode(step.sourceTableRow().tableCode());
+            entity.setSourceTableRowId(step.sourceTableRow().rowId());
+        }
         return entity;
     }
 }
