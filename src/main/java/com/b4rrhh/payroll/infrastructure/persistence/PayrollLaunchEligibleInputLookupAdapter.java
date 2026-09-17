@@ -1,5 +1,9 @@
 package com.b4rrhh.payroll.infrastructure.persistence;
 
+import com.b4rrhh.employee.contract.infrastructure.persistence.ContractEntity;
+import com.b4rrhh.employee.contract.infrastructure.persistence.SpringDataContractRepository;
+import com.b4rrhh.employee.labor_classification.infrastructure.persistence.LaborClassificationEntity;
+import com.b4rrhh.employee.labor_classification.infrastructure.persistence.SpringDataLaborClassificationRepository;
 import com.b4rrhh.employee.presence.infrastructure.persistence.PresenceEntity;
 import com.b4rrhh.employee.presence.infrastructure.persistence.SpringDataPresenceRepository;
 import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeBusinessKeyLookupSupport;
@@ -8,6 +12,8 @@ import com.b4rrhh.employee.working_time.infrastructure.persistence.EmployeeAgree
 import com.b4rrhh.employee.working_time.infrastructure.persistence.SpringDataWorkingTimeRepository;
 import com.b4rrhh.employee.working_time.infrastructure.persistence.WorkingTimeEntity;
 import com.b4rrhh.employee.workcenter.infrastructure.persistence.SpringDataWorkCenterRepository;
+import com.b4rrhh.payroll.application.port.PayrollLaunchAgreementWindowContext;
+import com.b4rrhh.payroll.application.port.PayrollLaunchContractWindowContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputLookupPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchWorkingTimeWindowContext;
@@ -28,6 +34,8 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
     private final EmployeeAgreementCategoryRepository agreementCategoryRepository;
     private final SpringDataWorkingTimeRepository workingTimeRepository;
     private final SpringDataWorkCenterRepository workCenterRepository;
+    private final SpringDataLaborClassificationRepository laborClassificationRepository;
+    private final SpringDataContractRepository contractRepository;
 
     public PayrollLaunchEligibleInputLookupAdapter(
             EmployeeBusinessKeyLookupSupport employeeLookupSupport,
@@ -35,7 +43,9 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
             EmployeeAgreementContextRepository agreementContextRepository,
             EmployeeAgreementCategoryRepository agreementCategoryRepository,
             SpringDataWorkingTimeRepository workingTimeRepository,
-            SpringDataWorkCenterRepository workCenterRepository
+            SpringDataWorkCenterRepository workCenterRepository,
+            SpringDataLaborClassificationRepository laborClassificationRepository,
+            SpringDataContractRepository contractRepository
     ) {
         this.employeeLookupSupport = employeeLookupSupport;
         this.presenceRepository = presenceRepository;
@@ -43,6 +53,8 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
         this.agreementCategoryRepository = agreementCategoryRepository;
         this.workingTimeRepository = workingTimeRepository;
         this.workCenterRepository = workCenterRepository;
+        this.laborClassificationRepository = laborClassificationRepository;
+        this.contractRepository = contractRepository;
     }
 
     @Override
@@ -96,6 +108,21 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
                 .map(this::toWorkingTimeWindow)
                 .toList();
 
+        // Los TRAMOS, y no solo el vigente a una fecha: son los que parten el periodo (backend#47).
+        // Se piden contra el periodo entero y no contra la presencia porque el recorte contra la
+        // presencia lo hace la particion, que es donde estan las dos fechas a la vez.
+        List<PayrollLaunchAgreementWindowContext> agreementWindows = laborClassificationRepository
+                .findOverlappingByEmployeeIdAndPeriodOrdered(employeeId, periodStart, periodEnd)
+                .stream()
+                .map(PayrollLaunchEligibleInputLookupAdapter::toAgreementWindow)
+                .toList();
+
+        List<PayrollLaunchContractWindowContext> contractWindows = contractRepository
+                .findOverlappingByEmployeeIdAndPeriodOrdered(employeeId, periodStart, periodEnd)
+                .stream()
+                .map(PayrollLaunchEligibleInputLookupAdapter::toContractWindow)
+                .toList();
+
         String workCenterCode = workCenterRepository
                 .findActiveByEmployeeIdAndReferenceDate(employeeId, referenceDate, PageRequest.of(0, 1))
                 .stream().findFirst()
@@ -113,6 +140,8 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
                 agreementCode,
                 agreementCategoryCode,
                 windows,
+                agreementWindows,
+                contractWindows,
                 presence.getStartDate(),
                 presence.getEndDate(),
                 workCenterCode,
@@ -124,16 +153,16 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
      * La fecha a la que se resuelve el contexto vigente de la unidad: el ultimo dia que el
      * empleado estuvo presente dentro del periodo.
      *
-     * APANO ACOTADO, y lo sustituye el backend#47. Esto se preguntaba a fin de periodo, y quien
-     * cesa el 15 tiene la clasificacion cerrada con el cese: a fin de mes no hay ninguna vigente,
-     * el lanzador lo contaba como entrada que falta y no le hacia recibo (backend#73).
+     * Esto se preguntaba a fin de periodo, y quien cesa el 15 tiene la clasificacion cerrada con el
+     * cese: a fin de mes no habia ninguna vigente, el lanzador lo contaba como entrada que falta y
+     * no le hacia recibo (backend#73).
      *
-     * Arregla el cese, y no arregla el cambio de categoria a mitad de mes: ahi sigue ganando el
-     * ultimo tramo para todo el periodo, que da un numero equivocado en vez de una ausencia. La
-     * salida buena es que las fechas de corte salgan de la union de los puntos de cambio de las
-     * verticales (backend#47), y entonces nadie pregunta por el convenio de un tramo que no
-     * existe. Ese issue tiene dos decisiones de negocio abiertas —que verticales rompen y que
-     * pasa con SegmentSpec.workingTimePercentage—, y el cese no podia esperarlas.
+     * LO QUE ESTA FECHA DECIDE, DESDE EL backend#47, YA NO ES EL PRECIO DE CADA DIA. El precio sale
+     * de los tramos, que parten el periodo y resuelven su categoria cada uno. Esta fecha resuelve
+     * lo que es del PERIODO y no del tramo: el convenio con el que se arma el plan de conceptos
+     * —que conceptos entran— y la foto del contexto que se guarda con el recibo. Que un empleado
+     * cambie de categoria a mitad de mes no cambia que conceptos se le calculan; cambia a que
+     * precio, y eso ya no se pregunta aqui.
      */
     private LocalDate lastDayInsidePresence(PresenceEntity presence, LocalDate periodEnd) {
         LocalDate presenceEnd = presence.getEndDate();
@@ -148,6 +177,16 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
     ) {
         return !sourceStart.isAfter(queryEnd)
                 && (sourceEnd == null || !sourceEnd.isBefore(queryStart));
+    }
+
+    private static PayrollLaunchAgreementWindowContext toAgreementWindow(LaborClassificationEntity e) {
+        return new PayrollLaunchAgreementWindowContext(
+                e.getStartDate(), e.getEndDate(), e.getAgreementCode(), e.getAgreementCategoryCode());
+    }
+
+    private static PayrollLaunchContractWindowContext toContractWindow(ContractEntity e) {
+        return new PayrollLaunchContractWindowContext(
+                e.getStartDate(), e.getEndDate(), e.getContractCode(), e.getContractSubtypeCode());
     }
 
     private PayrollLaunchWorkingTimeWindowContext toWorkingTimeWindow(WorkingTimeEntity workingTime) {

@@ -15,8 +15,11 @@ import com.b4rrhh.payroll.application.port.EmployeePersonalDataContext;
 import com.b4rrhh.payroll.application.port.EmployeePersonalDataLookupPort;
 import com.b4rrhh.payroll.application.port.PayrollCalculationStep;
 import com.b4rrhh.payroll.application.port.PayrollCalculationStepWritePort;
+import com.b4rrhh.payroll.application.port.PayrollLaunchAgreementWindowContext;
+import com.b4rrhh.payroll.application.port.PayrollLaunchContractWindowContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputLookupPort;
+import com.b4rrhh.payroll.application.port.PayrollLaunchWorkingTimeWindowContext;
 import com.b4rrhh.payroll.application.port.TableRowOrigin;
 import com.b4rrhh.payroll.application.service.PayrollConceptExecutionContext;
 import com.b4rrhh.payroll.application.service.PayrollConceptExecutionResult;
@@ -36,6 +39,7 @@ import com.b4rrhh.payroll_engine.eligibility.domain.model.EmployeeAssignmentCont
 import com.b4rrhh.payroll_engine.execution.application.service.SegmentExecutionEngine;
 import com.b4rrhh.payroll_engine.execution.domain.model.ConceptExecutionPlanEntry;
 import com.b4rrhh.payroll_engine.execution.domain.model.SegmentExecutionState;
+import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import com.b4rrhh.payroll_engine.planning.application.service.BuildEligibleExecutionPlanUseCase;
 import com.b4rrhh.payroll_engine.planning.domain.model.EligibleExecutionPlanResult;
 import com.b4rrhh.payroll_engine.segment.domain.model.SegmentCalculationContext;
@@ -208,15 +212,11 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                                 c -> c
                         ));
 
-        PayrollConceptExecutionContext calcContext = new PayrollConceptExecutionContext(
-                command.ruleSystemCode(),
-                input.agreementCode(),
-                input.agreementCategoryCode(),
-                command.periodEnd()
-        );
-
+        // Los segmentos ya no son «de jornada»: salen de la union de los puntos de cambio de las
+        // verticales que afectan al calculo —jornada, clasificacion laboral y contrato— (backend#47).
         List<SegmentSpec> segments = buildSegments(input, command.periodStart(), command.periodEnd());
-        log.info("[NÓMINA] Segmentos de jornada: {}", segments.size());
+        log.info("[NÓMINA] Segmentos del periodo: {} → {}", segments.size(),
+                segments.stream().map(SegmentSpec::describe).collect(Collectors.joining(" | ")));
 
         int period = command.periodStart().getYear() * 100 + command.periodStart().getMonthValue();
         Map<String, BigDecimal> employeeInputsForPeriod = employeePayrollInputLookupPort.findInputsByPeriod(
@@ -226,30 +226,17 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 period
         );
 
-        // Pre-compute DIRECT_AMOUNT concepts once: their value comes from the rule system,
-        // not from the segment, so it is the same wherever the concept is evaluated.
-        Map<String, BigDecimal> precomputedDirectAmounts = new HashMap<>();
-        // De que fila de tabla salio cada uno de esos importes, cuando salio de alguna. Se anota
-        // aqui porque es el unico instante en que se sabe: la busqueda es por vigencia y por
-        // categoria, y repetirla mas tarde contesta donde estaria hoy el valor, no de donde salio
-        // (backend#107). La mayoria de los conceptos no aparecen en este mapa, y eso es lo que
-        // significa que su paso no venga de ninguna fila.
-        Map<String, TableRowOrigin> filaLeidaPorConcepto = new HashMap<>();
-        for (ConceptExecutionPlanEntry entry : plan) {
-            if (entry.calculationType() == CalculationType.DIRECT_AMOUNT) {
-                String conceptCode = entry.identity().getConceptCode();
-                PayrollConceptExecutionResult directResult =
-                        payrollConceptGraphCalculator.calculateConceptResult(
-                                conceptCode, calcContext, command.metamodel());
-                precomputedDirectAmounts.put(conceptCode, directResult.amount());
-                if (directResult.sourceTableRow() != null) {
-                    filaLeidaPorConcepto.put(conceptCode, directResult.sourceTableRow());
-                    log.debug("[NOMINA] {} leido de la tabla {}, fila {}", conceptCode,
-                            directResult.sourceTableRow().tableCode(),
-                            directResult.sourceTableRow().rowId());
-                }
-                log.debug("[NOMINA] Pre-calculado DIRECT_AMOUNT {} = {}", conceptCode, directResult.amount());
-            }
+        // Los DIRECT_AMOUNT se precalculan UNA VEZ POR CONTEXTO DE CONVENIO, no una para todo el
+        // periodo (backend#47). Su valor no depende del tramo, pero si de la categoria, que es la
+        // clave con la que se busca la fila de tabla: dos segmentos con categorias distintas tienen
+        // precios distintos, y resolverlos una sola vez ponia el precio del ultimo tramo en los dias
+        // del primero. Dos segmentos con la misma categoria comparten el precalculo, porque la
+        // busqueda es la misma y la respuesta tambien.
+        Map<String, PrecalculoDirecto> precalculoPorContexto = new HashMap<>();
+        for (SegmentSpec seg : segments) {
+            precalculoPorContexto.computeIfAbsent(
+                    claveDePrecalculo(seg),
+                    clave -> precalculoDirecto(plan, contextoDe(command, seg), command.metamodel()));
         }
         long daysInPeriod = ChronoUnit.DAYS.between(command.periodStart(), command.periodEnd()) + 1;
         BigDecimal monthlySalary = Objects.requireNonNullElse(
@@ -263,8 +250,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         List<SegmentExecutionState> segmentStates = new ArrayList<>(segments.size());
         for (int segIdx = 0; segIdx < segments.size(); segIdx++) {
             SegmentSpec seg = segments.get(segIdx);
-            log.info("[NOMINA] Segmento {} de {} ({} dias, jornada={}%)",
-                    seg.segmentStart(), seg.segmentEnd(), seg.daysInSegment(), seg.workingTimePercentage());
+            log.info("[NOMINA] Segmento {} de {} ({} dias, {})",
+                    seg.segmentStart(), seg.segmentEnd(), seg.daysInSegment(), seg.describe());
             segmentContexts.add(new SegmentCalculationContext(
                     command.ruleSystemCode(),
                     command.employeeTypeCode(),
@@ -282,13 +269,19 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     employeeInputsForPeriod,
                     grupoCotizacionCode,
                     tipoNomina,
-                    precomputedDirectAmounts
+                    precalculoPorContexto.get(claveDePrecalculo(seg)).importes()
             ));
             segmentStates.add(new SegmentExecutionState());
         }
+        // Lo que es del PERIODO se resuelve con el contexto del ULTIMO segmento, que es el ultimo
+        // dia que el empleado estuvo presente. Es lo que se hacia antes para todo, y aqui sigue
+        // siendo lo correcto: un concepto de ambito PERIOD tiene su regla definida sobre el periodo
+        // entero (ADR-058), asi que no hay un tramo suyo al que preguntarle.
+        PrecalculoDirecto precalculoDelPeriodo =
+                precalculoPorContexto.get(claveDePrecalculo(segments.getLast()));
         SegmentCalculationContext periodContext = periodContext(
                 command, segments, daysInPeriod, monthlySalary, employeeInputsForPeriod,
-                grupoCotizacionCode, tipoNomina, precomputedDirectAmounts);
+                grupoCotizacionCode, tipoNomina, precalculoDelPeriodo.importes());
         SegmentExecutionState periodState = new SegmentExecutionState();
 
         // Una travesia y una proyeccion (backend#93). El recorrido arma un paso por evaluacion
@@ -320,7 +313,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                             quantityOf(entry, state), rateOf(entry, state));
                     calculationSteps.add(calculationStep(
                             calculationSteps.size() + 1, engineConcept, entry, state, amount,
-                            seg.segmentStart(), seg.segmentEnd(), filaLeidaPorConcepto));
+                            seg.segmentStart(), seg.segmentEnd(),
+                            precalculoPorContexto.get(claveDePrecalculo(seg)).filas()));
                 }
                 periodState.storeResult(entry.identity(), composed);
                 if (segments.size() > 1) {
@@ -340,7 +334,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                         quantityOf(entry, periodState), rateOf(entry, periodState));
                 calculationSteps.add(calculationStep(
                         calculationSteps.size() + 1, engineConcept, entry, periodState, amount,
-                        null, null, filaLeidaPorConcepto));
+                        null, null, precalculoDelPeriodo.filas()));
             }
         }
 
@@ -463,13 +457,81 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             List<Integer> sourceExecutionOrders
     ) {}
 
+    /**
+     * Un tramo del periodo, con lo que estaba vigente en el ({@code backend#47}).
+     *
+     * <p>Antes esto llevaba el porcentaje de jornada como campo propio, y eso era decir que la
+     * jornada es la unica causa por la que un periodo se parte. Ahora lleva las vigencias de todas
+     * las verticales que parten, y la jornada es una de ellas: anadir una cuarta es anadir un campo
+     * aqui, no volver a escribir la particion.
+     */
     private record SegmentSpec(
             LocalDate segmentStart,
             LocalDate segmentEnd,
             long daysInSegment,
-            BigDecimal workingTimePercentage
+            Vigencias vigencias
+    ) {
+        BigDecimal workingTimePercentage() {
+            return vigencias.workingTimePercentage();
+        }
+
+        String describe() {
+            return segmentStart + ".." + segmentEnd
+                    + " jornada=" + vigencias.workingTimePercentage() + "%"
+                    + " categoria=" + vigencias.agreementCategoryCode()
+                    + " contrato=" + vigencias.contractCode();
+        }
+    }
+
+    /**
+     * Lo que cada vertical tenia vigente durante un segmento.
+     *
+     * <p>Son campos y no un mapa a proposito: quien calcula pregunta por la categoria, no por «la
+     * vertical numero dos». Lo que hace que esto escale no es la forma de este registro sino que la
+     * particion no lo mire: parte por fechas y no sabe que hay aqui dentro.
+     */
+    private record Vigencias(
+            BigDecimal workingTimePercentage,
+            String agreementCode,
+            String agreementCategoryCode,
+            String contractCode,
+            String contractSubtypeCode
     ) {}
 
+    /**
+     * Los importes de los conceptos {@code DIRECT_AMOUNT} de un contexto, y de que fila salio cada
+     * uno.
+     *
+     * <p>Los dos mapas van juntos porque se llenan en la misma pasada y describen lo mismo: el
+     * importe, y de donde se leyo ({@code backend#107}). La mayoria de los conceptos no aparecen en
+     * el segundo, y eso es lo que significa que su paso no venga de ninguna fila.
+     */
+    private record PrecalculoDirecto(
+            Map<String, BigDecimal> importes,
+            Map<String, TableRowOrigin> filas
+    ) {}
+
+    /**
+     * Parte el periodo por los puntos de cambio de las verticales que afectan al calculo
+     * ({@code backend#47}).
+     *
+     * <p>Cada vertical aporta <b>sus fechas de corte</b>, se unen, se ordenan, y los segmentos son
+     * los intervalos entre cortes consecutivos recortados contra la presencia. Este metodo ya no
+     * recorre las ventanas de una vertical: la particion es de {@link PayrollPeriodSegmentation} y
+     * solo sabe de fechas, asi que <b>anadir una cuarta vertical no es volver a tocarla</b>.
+     *
+     * <h4>Que verticales rompen, y por que estas</h4>
+     *
+     * <p>La lista es una decision de negocio y el issue la fija en su minimo: jornada, clasificacion
+     * laboral y contrato. El centro de trabajo y la distribucion de coste se quedan fuera <b>hasta
+     * que alguien decida que entran</b>, no porque no quepan: caben con una linea aqui y otra en
+     * {@code vigenciasEn}.
+     *
+     * <h4>La jornada sin ventanas</h4>
+     *
+     * <p>Un empleado sin ventanas de jornada se calcula al 100 %, que es lo que se hacia antes y lo
+     * que hace que esto no mueva ni un recibo de los que ya salian bien.
+     */
     private List<SegmentSpec> buildSegments(
             PayrollLaunchEligibleInputContext input,
             LocalDate periodStart,
@@ -480,27 +542,94 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         LocalDate presenceEnd = input.presenceEndDate() != null && input.presenceEndDate().isBefore(periodEnd)
                 ? input.presenceEndDate() : periodEnd;
 
-        if (input.workingTimeWindows() == null || input.workingTimeWindows().isEmpty()) {
-            long days = ChronoUnit.DAYS.between(presenceStart, presenceEnd) + 1;
-            return List.of(new SegmentSpec(presenceStart, presenceEnd, days, BigDecimal.valueOf(100)));
-        }
+        List<LocalDate> cortes = new ArrayList<>();
+        cortes.addAll(PayrollPeriodSegmentation.cutsOf(input.workingTimeWindows()));
+        cortes.addAll(PayrollPeriodSegmentation.cutsOf(input.agreementWindows()));
+        cortes.addAll(PayrollPeriodSegmentation.cutsOf(input.contractWindows()));
 
-        List<SegmentSpec> segments = new ArrayList<>();
-        for (var window : input.workingTimeWindows()) {
-            LocalDate windowStart = window.startDate() != null && window.startDate().isAfter(presenceStart)
-                    ? window.startDate() : presenceStart;
-            LocalDate windowEnd = window.endDate() != null && window.endDate().isBefore(presenceEnd)
-                    ? window.endDate() : presenceEnd;
-            if (!windowStart.isAfter(windowEnd)) {
-                long days = ChronoUnit.DAYS.between(windowStart, windowEnd) + 1;
-                segments.add(new SegmentSpec(windowStart, windowEnd, days, window.workingTimePercentage()));
-            }
+        return PayrollPeriodSegmentation.split(presenceStart, presenceEnd, cortes).stream()
+                .map(tramo -> new SegmentSpec(
+                        tramo.start(), tramo.end(), tramo.days(), vigenciasEn(input, tramo.start())))
+                .toList();
+    }
+
+    /**
+     * Lo que cada vertical tenia vigente el primer dia del segmento.
+     *
+     * <p>El primer dia y no cualquiera: dentro de un segmento no hay cambios <b>por construccion</b>
+     * —si los hubiera, ese dia seria un corte y habria dos segmentos—, asi que preguntar por el
+     * primero contesta por todos.
+     */
+    private Vigencias vigenciasEn(PayrollLaunchEligibleInputContext input, LocalDate dia) {
+        PayrollLaunchWorkingTimeWindowContext jornada = enVigor(input.workingTimeWindows(), dia);
+        PayrollLaunchAgreementWindowContext convenio = enVigor(input.agreementWindows(), dia);
+        PayrollLaunchContractWindowContext contrato = enVigor(input.contractWindows(), dia);
+
+        return new Vigencias(
+                jornada != null ? jornada.workingTimePercentage() : BigDecimal.valueOf(100),
+                // Sin tramo de clasificacion se cae en lo que el lanzador resolvio para el periodo,
+                // que es lo unico que hay. No es lo mismo que no haber preguntado: un empleado sin
+                // clasificacion ninguna no llega hasta aqui, lo para la comprobacion de entradas.
+                convenio != null ? convenio.agreementCode() : input.agreementCode(),
+                convenio != null ? convenio.agreementCategoryCode() : input.agreementCategoryCode(),
+                contrato != null ? contrato.contractCode() : null,
+                contrato != null ? contrato.contractSubtypeCode() : null);
+    }
+
+    /** El ultimo tramo que cubre ese dia, o {@code null} si ninguno lo cubre. */
+    private <T extends PayrollPeriodSegmentation.DatedWindow> T enVigor(List<T> windows, LocalDate dia) {
+        if (windows == null) return null;
+        T vigente = null;
+        for (T window : windows) {
+            boolean empezado = window.startDate() == null || !window.startDate().isAfter(dia);
+            boolean sinCerrar = window.endDate() == null || !window.endDate().isBefore(dia);
+            if (empezado && sinCerrar) vigente = window;
         }
-        return segments.isEmpty()
-                ? List.of(new SegmentSpec(presenceStart, presenceEnd,
-                        ChronoUnit.DAYS.between(presenceStart, presenceEnd) + 1,
-                        BigDecimal.valueOf(100)))
-                : segments;
+        return vigente;
+    }
+
+    /**
+     * Que segmentos comparten precalculo de {@code DIRECT_AMOUNT}.
+     *
+     * <p>La categoria y el convenio, que son las dos partes con las que se busca la fila de tabla, y
+     * el ultimo dia del segmento, que es la fecha a la que se busca. La jornada no entra: no se usa
+     * para buscar nada, se aplica despues.
+     */
+    private String claveDePrecalculo(SegmentSpec seg) {
+        return seg.vigencias().agreementCode() + "|" + seg.vigencias().agreementCategoryCode()
+                + "|" + seg.segmentEnd();
+    }
+
+    private PayrollConceptExecutionContext contextoDe(CalculatePayrollUnitCommand command, SegmentSpec seg) {
+        return new PayrollConceptExecutionContext(
+                command.ruleSystemCode(),
+                seg.vigencias().agreementCode(),
+                seg.vigencias().agreementCategoryCode(),
+                seg.segmentEnd());
+    }
+
+    private PrecalculoDirecto precalculoDirecto(
+            List<ConceptExecutionPlanEntry> plan,
+            PayrollConceptExecutionContext context,
+            RuleSystemMetamodel metamodel
+    ) {
+        Map<String, BigDecimal> importes = new HashMap<>();
+        Map<String, TableRowOrigin> filas = new HashMap<>();
+        for (ConceptExecutionPlanEntry entry : plan) {
+            if (entry.calculationType() != CalculationType.DIRECT_AMOUNT) continue;
+            String conceptCode = entry.identity().getConceptCode();
+            PayrollConceptExecutionResult resultado =
+                    payrollConceptGraphCalculator.calculateConceptResult(conceptCode, context, metamodel);
+            importes.put(conceptCode, resultado.amount());
+            if (resultado.sourceTableRow() != null) {
+                filas.put(conceptCode, resultado.sourceTableRow());
+                log.debug("[NOMINA] {} leido de la tabla {}, fila {}", conceptCode,
+                        resultado.sourceTableRow().tableCode(), resultado.sourceTableRow().rowId());
+            }
+            log.debug("[NOMINA] Pre-calculado DIRECT_AMOUNT {} = {} (categoria {})",
+                    conceptCode, resultado.amount(), context.categoryCode());
+        }
+        return new PrecalculoDirecto(importes, filas);
     }
 
     /**

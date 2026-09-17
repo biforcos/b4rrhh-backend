@@ -145,6 +145,8 @@ class CalculatePayrollUnitServiceTest {
                 null,
                 new BigDecimal("100")
             )),
+            List.of(),
+            List.of(),
             LocalDate.of(2025, 1, 1),
             null,
             null,
@@ -251,6 +253,8 @@ class CalculatePayrollUnitServiceTest {
                 null,
                 new BigDecimal("100")
             )),
+            List.of(),
+            List.of(),
             LocalDate.of(2025, 1, 1),
             null,
             null,
@@ -360,6 +364,8 @@ class CalculatePayrollUnitServiceTest {
                 new PayrollLaunchWorkingTimeWindowContext(
                     LocalDate.of(2026, 9, 16), null, new BigDecimal("50"))
             ),
+            List.of(),
+            List.of(),
             LocalDate.of(2023, 2, 6),
             null,
             null,
