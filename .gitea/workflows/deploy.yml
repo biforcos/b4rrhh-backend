@@ -215,6 +215,141 @@ jobs:
           ssh -i ~/.ssh/deploy deploy@${{ env.SERVIDOR }} \
             "cd /opt/b4rrhh && docker compose ps --format '{{.Name}} {{.Status}}'"
 
+      - name: Decir si la demo se queda con la semilla atrasada
+        # No falla el despliegue, y esa es la decision del paso: desplegar una
+        # API mas nueva que la semilla es legitimo -casi todos los despliegues
+        # lo son- y a veces es justo lo que quieres. Lo que no es legitimo es no
+        # enterarse (deploy#13).
+        #
+        # Por que importa desde el backend#107: la marca de "las reglas han
+        # cambiado" compara el updated_at de la reglamentacion con el
+        # calculated_at del recibo. Una migracion que toque payroll_engine deja
+        # el primero en esta madrugada -el reinicio de las 4:30 restaura el
+        # volcado viejo y Flyway vuelve a aplicarla al arrancar- y el segundo en
+        # el dia que se capturo la semilla. La marca sale entonces en TODOS los
+        # recibos, todas las mananas, y tiene razon: estan calculados con reglas
+        # que el motor ya no tiene. Una marca que sale siempre no dice nada, que
+        # es justo el escenario que el backend#107 descarto al elegir como medir
+        # el cambio.
+        #
+        # La direccion contraria -un volcado mas nuevo que la API- la vigila el
+        # sembrar-demo.yml del repositorio deploy, y aquella si para: Flyway
+        # encuentra en flyway_schema_history migraciones que su jar no conoce y
+        # se niega a arrancar. Esta no rompe nada, asi que solo habla.
+        continue-on-error: true
+        run: |
+          # Sin -e a proposito: se quieren las dos mitades y el veredicto, no la
+          # primera que falle. Cada camino dice lo suyo y termina en 0; el
+          # continue-on-error de arriba es la red para lo que no este previsto,
+          # porque a estas alturas la API YA esta desplegada y marcar en rojo un
+          # despliegue que salio bien es mentir en la otra direccion.
+          set -uo pipefail
+
+          en_la_ct() { ssh -o BatchMode=yes -o ConnectTimeout=10 -i ~/.ssh/deploy deploy@${{ env.SERVIDOR }} "$1"; }
+
+          # La que la API VA a conocer se lee de los ficheros de migracion de
+          # este arbol, que es exactamente lo que viaja dentro del jar que se
+          # acaba de subir. No se le pregunta a la base de la demo a proposito:
+          # ahi Flyway ya ha aplicado lo que faltaba al arrancar, asi que las dos
+          # mitades de la comparacion saldrian del mismo sitio y coincidirian por
+          # construccion, que es la forma de comprobar que no comprueba nada.
+          #
+          # El sort no es alfabetico: en texto '99' es mayor que '135'. Y por
+          # campos numericos separados por punto, que una version puede ser '1.2'.
+          DE_LA_API=$(ls src/main/resources/db/migration/V*__*.sql 2>/dev/null \
+                      | sed -n 's|.*/V\([0-9][0-9.]*\)__.*|\1|p' \
+                      | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)
+          [ -n "$DE_LA_API" ] || DE_LA_API=NO-SE-SABE
+
+          COMPOSE='docker compose --env-file .env --env-file .env.api-tag --env-file .env.web-tag --env-file .env.designer-tag'
+          MIRADOR=b4rrhh_mirando_semilla_api
+
+          # La version del volcado va DENTRO del volcado (deploy#4), asi que para
+          # leerla hay que restaurarlo. Solo --schema=deploy, que son unas pocas
+          # filas frente a una base de mil empleados, y a una base de usar y
+          # tirar: la de la demo no se toca. El || true es porque pg_restore
+          # protesta si el esquema no esta, y que no este es un caso previsto.
+          #
+          # El 'create schema deploy' NO sobra, y costo encontrarlo: con
+          # --schema=deploy, pg_restore selecciona los objetos QUE ESTAN EN ese
+          # esquema, y la entrada que lo crea no esta en ninguno -sale como
+          # "SCHEMA - deploy"-, asi que queda fuera del filtro. Sin crearlo
+          # antes, el CREATE TABLE falla con 'schema "deploy" does not exist',
+          # el || true se lo traga, y la tabla no llega: la comparacion sale
+          # "NO-SE-SABE" SIEMPRE y este paso no avisa nunca. Se vio provocandolo
+          # (criterio 3 del deploy#13); leyendo el script no se ve.
+          en_la_ct "cd /opt/b4rrhh && $COMPOSE exec -T postgres psql -qX -U b4rrhh -d postgres -c 'drop database if exists $MIRADOR' -c 'create database $MIRADOR owner b4rrhh'" >/dev/null 2>&1
+          en_la_ct "cd /opt/b4rrhh && $COMPOSE exec -T postgres psql -qX -U b4rrhh -d $MIRADOR -c 'create schema if not exists deploy'" >/dev/null 2>&1
+          en_la_ct "cd /opt/b4rrhh && $COMPOSE exec -T postgres pg_restore -U b4rrhh -d $MIRADOR --no-owner --schema=deploy < demo-seed.dump" >/dev/null 2>&1 || true
+
+          preguntar() { en_la_ct "cd /opt/b4rrhh && $COMPOSE exec -T postgres psql -tAX -U b4rrhh -d $MIRADOR -c \"$1\" 2>/dev/null" | tr -d '[:space:]'; }
+
+          # En dos veces y no con un CASE: Postgres planifica la consulta entera
+          # antes de ejecutarla, asi que una rama que nombra deploy.semilla falla
+          # igual cuando la tabla no esta, y ese fallo se leeria como "no se pudo
+          # preguntar" en vez de como "el volcado no lo trae".
+          DEL_VOLCADO=NO-SE-SABE
+          if [ -n "$(preguntar "select coalesce(to_regclass('deploy.semilla')::text, '')")" ]; then
+            LEIDO=$(preguntar "select coalesce(max(esquema_version), '') from deploy.semilla")
+            [ -n "$LEIDO" ] && DEL_VOLCADO="$LEIDO"
+          fi
+
+          en_la_ct "cd /opt/b4rrhh && $COMPOSE exec -T postgres psql -qX -U b4rrhh -d postgres -c 'drop database if exists $MIRADOR'" >/dev/null 2>&1
+
+          # "no se sabe" se escribe como lo que es y no como "vNO-SE-SABE", que
+          # se lee a medias como si fuera un numero de version.
+          comover() { if [ "$1" = "NO-SE-SABE" ]; then printf 'no se sabe'; else printf 'v%s' "$1"; fi; }
+
+          echo "Ultima migracion que conoce la API recien desplegada: $(comover "$DE_LA_API")"
+          echo "Esquema con el que se capturo la semilla de la CT:     $(comover "$DEL_VOLCADO")"
+          echo
+
+          # "No se sabe" no es "no cuadra", y no se disfraza de nada: un volcado
+          # capturado antes del deploy#4 no trae deploy.semilla, y leer eso como
+          # un descuadre seria inventarse una alarma.
+          if [ "$DEL_VOLCADO" = "NO-SE-SABE" ] || [ "$DE_LA_API" = "NO-SE-SABE" ]; then
+            echo "No se ha podido comparar: falta una de las dos mitades."
+            echo "Esto NO dice que la semilla este al dia ni que no lo este;"
+            echo "dice que no se sabe. Si al volcado le falta deploy.semilla, la"
+            echo "proxima captura con crear-semilla.sh ya la traera (deploy#4)."
+            exit 0
+          fi
+
+          if [ "$DEL_VOLCADO" = "$DE_LA_API" ]; then
+            echo "La semilla de la demo esta al dia con esta API. Nada que hacer."
+            exit 0
+          fi
+
+          MAS_ALTA=$(printf '%s\n%s\n' "$DEL_VOLCADO" "$DE_LA_API" | sort -V | tail -1)
+
+          if [ "$MAS_ALTA" = "$DEL_VOLCADO" ]; then
+            echo "La semilla de la CT (v$DEL_VOLCADO) es MAS NUEVA que esta API (v$DE_LA_API)."
+            echo "Esa es la direccion que rompe: si alguien reinicia la demo ahora,"
+            echo "Flyway encontrara migraciones que este jar no conoce y la API no"
+            echo "arrancara. El sembrar-demo.yml del repositorio deploy no deja"
+            echo "sembrar asi; esto solo lo dice, porque el despliegue ya esta hecho."
+            exit 0
+          fi
+
+          echo "AVISO: la demo se queda con la semilla atrasada."
+          echo
+          echo "Esta API conoce hasta la v$DE_LA_API y el volcado que sirve la CT se"
+          echo "capturo con la v$DEL_VOLCADO. No rompe nada: Flyway aplica lo que falta"
+          echo "al arrancar. Pero los recibos del volcado siguen calculados con las"
+          echo "reglas de la v$DEL_VOLCADO, asi que si alguna de las migraciones nuevas"
+          echo "toca la reglamentacion, la demo ensenara la marca de 'las reglas han"
+          echo "cambiado' en todos los recibos, cada manana, y ademas los importes"
+          echo "viejos."
+          echo
+          echo "Como se arregla: lanzar a mano, en el repositorio deploy,"
+          echo "  Gitea > Actions > \"Sembrar la demo desde un volcado\""
+          echo "con un demo-seed.dump capturado con la v$DE_LA_API. Fabricarlo esta en"
+          echo "el FABRICAR-SEMILLA.md de ese repositorio."
+          echo
+          echo "No se hace solo a proposito: pisar la base de la demo es un gesto"
+          echo "que se decide (deploy#13)."
+          exit 0
+
       - name: Recoger los contenedores de los tests y podar el runner
         if: always()
         run: |
