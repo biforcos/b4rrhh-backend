@@ -280,7 +280,25 @@ jobs:
           # (criterio 3 del deploy#13); leyendo el script no se ve.
           en_la_ct "cd /opt/b4rrhh && $COMPOSE exec -T postgres psql -qX -U b4rrhh -d postgres -c 'drop database if exists $MIRADOR' -c 'create database $MIRADOR owner b4rrhh'" >/dev/null 2>&1
           en_la_ct "cd /opt/b4rrhh && $COMPOSE exec -T postgres psql -qX -U b4rrhh -d $MIRADOR -c 'create schema if not exists deploy'" >/dev/null 2>&1
-          en_la_ct "cd /opt/b4rrhh && $COMPOSE exec -T postgres pg_restore -U b4rrhh -d $MIRADOR --no-owner --schema=deploy < demo-seed.dump" >/dev/null 2>&1 || true
+          # El codigo de salida se mira, y no por simetria: con '|| true' a
+          # secas, un restore que falla de verdad y un volcado que no trae la
+          # tabla dan los dos NO-SE-SABE, o sea la misma frase para un fallo y
+          # para un caso legitimo. Es la forma exacta del b4rrhh/deploy#15, y
+          # ese barrido pasa tambien por aqui. pg_restore sale con 0 cuando el
+          # volcado no trae el esquema, asi que un codigo distinto de 0 es
+          # siempre un fallo de verdad.
+          RESTAURA_RC=0
+          SALIDA_RESTAURA=$(en_la_ct "cd /opt/b4rrhh && $COMPOSE exec -T postgres pg_restore -U b4rrhh -d $MIRADOR --no-owner --schema=deploy < demo-seed.dump" 2>&1) || RESTAURA_RC=$?
+
+          if [ "$RESTAURA_RC" != "0" ]; then
+            echo "No se ha podido leer el volcado de la CT para compararlo:"
+            printf '%s\n' "$SALIDA_RESTAURA" | head -5
+            echo
+            echo "pg_restore salio con $RESTAURA_RC. Eso NO es 'el volcado no trae"
+            echo "deploy.semilla' ni 'la semilla esta al dia': es que no se sabe."
+            echo "El despliegue esta hecho y no se toca por esto."
+            exit 0
+          fi
 
           preguntar() { en_la_ct "cd /opt/b4rrhh && $COMPOSE exec -T postgres psql -tAX -U b4rrhh -d $MIRADOR -c \"$1\" 2>/dev/null" | tr -d '[:space:]'; }
 
