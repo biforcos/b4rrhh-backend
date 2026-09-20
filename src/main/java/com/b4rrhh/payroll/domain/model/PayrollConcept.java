@@ -38,6 +38,18 @@ public class PayrollConcept {
     private final String originPeriodCode;
     private final Integer displayOrder;
     /**
+     * El bloque del modelo oficial en el que se imprimio esta linea ({@code backend#109}).
+     *
+     * <p>Viaja congelado como {@code displayOrder} y como la naturaleza, y por lo mismo: el bloque
+     * en el que sale una linea es parte del documento, no una decision que se tome al pintarlo. El
+     * PDF lee el recibo y no le pregunta nada al catalogo.
+     *
+     * <p><b>Puede ser nulo</b>, y entonces hay que verlo: significa que la naturaleza del concepto
+     * no tenia seccion declarada. Colocar la linea por defecto en un bloque donde no pinta nada
+     * seria esconder eso.
+     */
+    private final String payslipSectionCode;
+    /**
      * De cuantos pasos del motor viene esta linea ({@code backend#103}).
      *
      * <p>Uno en la inmensa mayoria. Mas de uno cuando el folio ha fundido varios tramos del
@@ -59,10 +71,9 @@ public class PayrollConcept {
             Integer displayOrder
     ) {
         this(lineNumber, conceptCode, conceptMnemonic, conceptLabel, amount, quantity, rate,
-                conceptNatureCode, originPeriodCode, displayOrder, 1);
+                conceptNatureCode, originPeriodCode, displayOrder, 1, null);
     }
 
-    /** El constructor completo, con los pasos que la linea funde. */
     public PayrollConcept(
             Integer lineNumber,
             String conceptCode,
@@ -76,6 +87,25 @@ public class PayrollConcept {
             Integer displayOrder,
             Integer mergedStepCount
     ) {
+        this(lineNumber, conceptCode, conceptMnemonic, conceptLabel, amount, quantity, rate,
+                conceptNatureCode, originPeriodCode, displayOrder, mergedStepCount, null);
+    }
+
+    /** El constructor completo, con los pasos que la linea funde y el bloque en el que sale. */
+    public PayrollConcept(
+            Integer lineNumber,
+            String conceptCode,
+            String conceptMnemonic,
+            String conceptLabel,
+            BigDecimal amount,
+            BigDecimal quantity,
+            BigDecimal rate,
+            String conceptNatureCode,
+            String originPeriodCode,
+            Integer displayOrder,
+            Integer mergedStepCount,
+            String payslipSectionCode
+    ) {
         this.lineNumber = requirePositive(lineNumber, "lineNumber");
         this.conceptCode = requireCode(conceptCode, "conceptCode", 30);
         this.conceptMnemonic = requireText(conceptMnemonic, "conceptMnemonic", 50);
@@ -87,6 +117,7 @@ public class PayrollConcept {
         this.originPeriodCode = normalizeOptional(originPeriodCode, "originPeriodCode", 30);
         this.displayOrder = requirePositive(displayOrder, "displayOrder");
         this.mergedStepCount = requirePositive(mergedStepCount, "mergedStepCount");
+        this.payslipSectionCode = normalizeOptional(payslipSectionCode, "payslipSectionCode", 30);
     }
 
     private static Integer requirePositive(Integer value, String fieldName) {
@@ -192,5 +223,9 @@ public class PayrollConcept {
 
     public Integer getDisplayOrder() {
         return displayOrder;
+    }
+
+    public String getPayslipSectionCode() {
+        return payslipSectionCode;
     }
 }

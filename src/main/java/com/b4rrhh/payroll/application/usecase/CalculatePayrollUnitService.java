@@ -36,6 +36,7 @@ import com.b4rrhh.payroll_engine.concept.domain.model.ConceptLabelLanguage;
 import com.b4rrhh.payroll_engine.concept.domain.model.ExecutionScope;
 import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
 import com.b4rrhh.payroll_engine.concept.domain.port.ConceptLabelRepository;
+import com.b4rrhh.payroll_engine.concept.domain.port.PayslipSectionRepository;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
 import com.b4rrhh.payroll_engine.eligibility.domain.model.EmployeeAssignmentContext;
 import com.b4rrhh.payroll_engine.execution.application.service.SegmentExecutionEngine;
@@ -87,6 +88,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     private final EmployeeTaxInfoPayrollLookupPort employeeTaxInfoLookupPort;
     private final PayrollCalculationStepWritePort payrollCalculationStepWritePort;
     private final ConceptLabelRepository conceptLabelRepository;
+    private final PayslipSectionRepository payslipSectionRepository;
 
     public CalculatePayrollUnitService(
             CalculatePayrollUseCase calculatePayrollUseCase,
@@ -103,7 +105,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             GetAgreementCategoryProfileUseCase getAgreementCategoryProfileUseCase,
             EmployeeTaxInfoPayrollLookupPort employeeTaxInfoLookupPort,
             PayrollCalculationStepWritePort payrollCalculationStepWritePort,
-            ConceptLabelRepository conceptLabelRepository
+            ConceptLabelRepository conceptLabelRepository,
+            PayslipSectionRepository payslipSectionRepository
     ) {
         this.calculatePayrollUseCase = calculatePayrollUseCase;
         this.payrollLaunchEligibleInputLookupPort = payrollLaunchEligibleInputLookupPort;
@@ -120,6 +123,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         this.employeeTaxInfoLookupPort = employeeTaxInfoLookupPort;
         this.payrollCalculationStepWritePort = payrollCalculationStepWritePort;
         this.conceptLabelRepository = conceptLabelRepository;
+        this.payslipSectionRepository = payslipSectionRepository;
     }
 
     /**
@@ -224,6 +228,13 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         // mnemonico, que es una ausencia que se ve.
         Map<String, String> conceptLabels = conceptLabelRepository.findLabelsByRuleSystemCode(
                 command.ruleSystemCode(), ConceptLabelLanguage.DEFAULT);
+
+        // Y en que bloque del modelo oficial va cada naturaleza, tambien declarado y tambien una
+        // vez (backend#109). Lo que coloca una linea no es el rango de su codigo —que 101 sea
+        // devengo y 700 deduccion es una costumbre de numeracion, no una regla— sino su
+        // naturaleza, que es lo unico que dice lo que el concepto ES.
+        Map<String, String> sectionByNature =
+                payslipSectionRepository.findSectionCodeByNature(command.ruleSystemCode());
 
         // Los segmentos ya no son «de jornada»: salen de la union de los puntos de cambio de las
         // verticales que afectan al calculo —jornada, clasificacion laboral y contrato— (backend#47).
@@ -398,7 +409,10 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     r.nature(),
                     command.payrollPeriodCode(),
                     r.displayOrder(),
-                    r.sourceExecutionOrders().size()
+                    r.sourceExecutionOrders().size(),
+                    // Nulo si la naturaleza no tiene seccion declarada, y eso se ve. Colocarla
+                    // por defecto en un bloque cualquiera seria esconderlo.
+                    sectionByNature.get(r.nature())
             ));
             for (Integer executionOrder : r.sourceExecutionOrders()) {
                 lineaPorPaso.put(executionOrder, lineNumber);

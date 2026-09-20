@@ -90,6 +90,25 @@ class ThePayslipLineFreezesTheNameItWasCalculatedWithTest {
     }
 
     /**
+     * Criterio 5, visto desde la linea: el bloque del modelo oficial viaja con ella.
+     *
+     * <p>Y viene de la naturaleza declarada, no del rango del codigo: el {@code 101} y el
+     * {@code 970} salen los dos en devengos, y el {@code 800} —que numericamente esta al lado del
+     * 970— no.
+     */
+    @Test
+    void theLineCarriesTheBlockOfTheOfficialModelItWasPrintedIn() {
+        String employee = hire();
+        launch(employee);
+
+        assertEquals("DEVENGOS", section(employee, "101"));
+        assertEquals("DEVENGOS", section(employee, "970"));
+        assertEquals("DEDUCCIONES", section(employee, "800"));
+        assertEquals("DEDUCCIONES", section(employee, "980"));
+        assertEquals("LIQUIDO", section(employee, "990"));
+    }
+
+    /**
      * Criterios 2 y 3, provocado por los dos lados.
      *
      * <p>El mismo cambio de catalogo, mirado en dos recibos: el que ya estaba calculado y el que
@@ -159,6 +178,15 @@ class ThePayslipLineFreezesTheNameItWasCalculatedWithTest {
     private String label(String employee, String conceptCode) {
         return jdbcTemplate.queryForObject("""
                 select c.concept_label
+                  from payroll.payroll_concept c
+                  join payroll.payroll p on p.id = c.payroll_id
+                 where p.rule_system_code = ? and p.employee_number = ? and c.concept_code = ?
+                """, String.class, RULE_SYSTEM, employee, conceptCode);
+    }
+
+    private String section(String employee, String conceptCode) {
+        return jdbcTemplate.queryForObject("""
+                select c.payslip_section_code
                   from payroll.payroll_concept c
                   join payroll.payroll p on p.id = c.payroll_id
                  where p.rule_system_code = ? and p.employee_number = ? and c.concept_code = ?

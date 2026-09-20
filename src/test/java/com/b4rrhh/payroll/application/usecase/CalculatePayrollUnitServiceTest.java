@@ -98,6 +98,13 @@ class CalculatePayrollUnitServiceTest {
      */
     @Mock
     private com.b4rrhh.payroll_engine.concept.domain.port.ConceptLabelRepository conceptLabelRepository;
+    /**
+     * Sin agrupaciones declaradas, que es la otra mitad del mismo caso: el mapa viene vacio, las
+     * lineas salen sin seccion y no pasa nada. Las secciones de verdad se prueban con el catalogo
+     * puesto, en {@code ThePayslipLineFreezesTheNameItWasCalculatedWithTest}.
+     */
+    @Mock
+    private com.b4rrhh.payroll_engine.concept.domain.port.PayslipSectionRepository payslipSectionRepository;
     // Motor real, no mock: lo que se prueba aqui es como el servicio reparte cada concepto
     // entre tramos y periodo segun su execution_scope, y eso solo se ve evaluando de verdad.
     private final SegmentExecutionEngine segmentExecutionEngine = new DefaultSegmentExecutionEngine(
@@ -135,7 +142,8 @@ class CalculatePayrollUnitServiceTest {
             getAgreementCategoryProfileUseCase,
             employeeTaxInfoLookupPort,
             payrollCalculationStepWritePort,
-            conceptLabelRepository
+            conceptLabelRepository,
+            payslipSectionRepository
         );
 
         when(employeeTaxInfoLookupPort.findLatestOnOrBefore(
@@ -244,7 +252,8 @@ class CalculatePayrollUnitServiceTest {
             getAgreementCategoryProfileUseCase,
             employeeTaxInfoLookupPort,
             payrollCalculationStepWritePort,
-            conceptLabelRepository
+            conceptLabelRepository,
+            payslipSectionRepository
         );
 
         lenient().when(employeeTaxInfoLookupPort.findLatestOnOrBefore(
@@ -355,7 +364,8 @@ class CalculatePayrollUnitServiceTest {
             getAgreementCategoryProfileUseCase,
             employeeTaxInfoLookupPort,
             payrollCalculationStepWritePort,
-            conceptLabelRepository
+            conceptLabelRepository,
+            payslipSectionRepository
         );
 
         when(employeeTaxInfoLookupPort.findLatestOnOrBefore(

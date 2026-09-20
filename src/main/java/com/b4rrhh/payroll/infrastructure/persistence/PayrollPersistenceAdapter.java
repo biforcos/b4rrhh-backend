@@ -112,7 +112,8 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
                                 concept.getConceptNatureCode(),
                                 concept.getOriginPeriodCode(),
                                 concept.getDisplayOrder(),
-                                concept.getMergedStepCount()
+                                concept.getMergedStepCount(),
+                                concept.getPayslipSectionCode()
                         ))
                         .toList(),
                 entity.getContextSnapshots().stream()
@@ -179,6 +180,7 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
         entity.setOriginPeriodCode(concept.getOriginPeriodCode());
         entity.setDisplayOrder(concept.getDisplayOrder());
         entity.setMergedStepCount(concept.getMergedStepCount());
+        entity.setPayslipSectionCode(concept.getPayslipSectionCode());
         return entity;
     }
 

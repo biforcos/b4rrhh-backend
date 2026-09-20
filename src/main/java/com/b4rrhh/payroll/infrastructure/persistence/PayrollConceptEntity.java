@@ -57,6 +57,10 @@ public class PayrollConceptEntity {
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder;
 
+    /** El bloque del modelo oficial en el que salio esta linea. Nulo si la naturaleza no tenia. */
+    @Column(name = "payslip_section_code", length = 30)
+    private String payslipSectionCode;
+
     /** De cuantos pasos del motor viene esta linea. Uno salvo que el folio haya fundido. */
     @Column(name = "merged_step_count", nullable = false)
     private Integer mergedStepCount = 1;
@@ -85,6 +89,8 @@ public class PayrollConceptEntity {
     public void setOriginPeriodCode(String originPeriodCode) { this.originPeriodCode = originPeriodCode; }
     public Integer getDisplayOrder() { return displayOrder; }
     public void setDisplayOrder(Integer displayOrder) { this.displayOrder = displayOrder; }
+    public String getPayslipSectionCode() { return payslipSectionCode; }
+    public void setPayslipSectionCode(String payslipSectionCode) { this.payslipSectionCode = payslipSectionCode; }
     public Integer getMergedStepCount() { return mergedStepCount; }
     public void setMergedStepCount(Integer mergedStepCount) { this.mergedStepCount = mergedStepCount; }
 

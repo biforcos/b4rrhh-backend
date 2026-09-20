@@ -5179,6 +5179,38 @@ paths:
         '404':
           description: Not found
 
+  /payroll-engine/{ruleSystemCode}/payslip-sections:
+    get:
+      tags:
+        - Payroll Engine
+      summary: List the payslip sections of the official model
+      description: >-
+        The blocks of the official payslip — earnings, deductions, net pay, contribution bases,
+        employer contribution — and the order they print in. They are declared here, not inferred
+        from the numeric range of a concept code: that a 1xx is an earning and a 7xx a deduction
+        is a numbering habit, not a rule, and it breaks silently the day someone numbers an
+        earning in the 750s. What puts a line in a block is its conceptNatureCode; each payslip
+        line already carries the resulting payslipSectionCode frozen, and this endpoint is what
+        gives that code a name and a position.
+      operationId: listPayslipSections
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The declared sections, in printing order
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PayslipSectionResponse'
+
   /payroll-engine/{ruleSystemCode}/concepts/{conceptCode}/label:
     patch:
       tags:
@@ -11106,6 +11138,17 @@ components:
           description: >-
             How many engine steps this line merges. One means the line is one step, and a client
             must not draw any mark: a mark that shows up on every line marks nothing.
+        payslipSectionCode:
+          type: string
+          nullable: true
+          example: "DEVENGOS"
+          description: >-
+            The block of the official payslip model this line was printed in, frozen with the
+            line. Group by this and order the groups by the displayOrder that
+            GET /payroll-engine/{ruleSystemCode}/payslip-sections gives each section: never infer
+            the block from the concept code's numeric range. Null when the concept's nature had
+            no section declared — show that, do not default it into some block, because a line
+            nobody declared a home for is exactly what needs to be noticed.
     PayrollSummaryResponse:
       type: object
       required:
@@ -11224,6 +11267,26 @@ components:
         summary:
           type: string
           nullable: true
+
+    PayslipSectionResponse:
+      type: object
+      description: >-
+        One block of the official payslip model. A payslip line belongs to it through its
+        conceptNatureCode, not through its concept code.
+      required: [sectionCode, label, displayOrder]
+      properties:
+        sectionCode:
+          type: string
+          example: "DEVENGOS"
+        label:
+          type: string
+          example: "Devengos"
+        displayOrder:
+          type: integer
+          format: int32
+          description: >-
+            Where this block goes relative to the others. Order the blocks by this, and the lines
+            inside each block by their own displayOrder.
 
     UpdateConceptLabelRequest:
       type: object

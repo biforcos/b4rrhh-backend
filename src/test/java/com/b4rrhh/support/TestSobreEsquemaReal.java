@@ -95,6 +95,7 @@ import com.b4rrhh.payroll.infrastructure.persistence.PayrollLaunchEligibleInputL
 import com.b4rrhh.payroll_engine.concept.infrastructure.persistence.ConceptLabelPersistenceAdapter;
 import com.b4rrhh.payroll_engine.concept.infrastructure.persistence.PayrollConceptOperandPersistenceAdapter;
 import com.b4rrhh.payroll_engine.concept.infrastructure.persistence.PayrollConceptPersistenceAdapter;
+import com.b4rrhh.payroll_engine.concept.infrastructure.persistence.PayslipSectionPersistenceAdapter;
 import com.b4rrhh.payroll_engine.eligibility.infrastructure.persistence.ConceptAssignmentPersistenceAdapter;
 import com.b4rrhh.payroll_engine.table.infrastructure.persistence.PayrollTableRowManagementAdapter;
 import com.b4rrhh.rulesystem.agreementprofile.infrastructure.persistence.AgreementCatalogLookupAdapter;
@@ -252,6 +253,8 @@ import java.lang.annotation.Target;
         PayrollConceptPersistenceAdapter.class,
         // payroll_engine: el nombre de un concepto, que no es su mnemonico (backend#109)
         ConceptLabelPersistenceAdapter.class,
+        // payroll_engine: las agrupaciones del recibo oficial, declaradas (backend#109)
+        PayslipSectionPersistenceAdapter.class,
         // payroll_engine: las aristas de operandos, para el guardian de ADR-058 (backend#63)
         PayrollConceptOperandPersistenceAdapter.class,
         ConceptAssignmentPersistenceAdapter.class,

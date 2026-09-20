@@ -73,7 +73,8 @@ public class PayrollResponseAssembler {
                                 concept.getConceptNatureCode(),
                                 concept.getOriginPeriodCode(),
                                 concept.getDisplayOrder(),
-                                concept.getMergedStepCount()
+                                concept.getMergedStepCount(),
+                                concept.getPayslipSectionCode()
                         ))
                         .toList(),
                 snapshots.stream()

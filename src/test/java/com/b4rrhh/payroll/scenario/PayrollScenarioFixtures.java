@@ -149,6 +149,9 @@ public class PayrollScenarioFixtures {
                 " (agreement_category_rule_entity_id, grupo_cotizacion_code, tipo_nomina, created_at, updated_at)" +
                 " values (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 categoryId, "05", "MENSUAL");
+
+        // Un sistema de reglas completo declara tambien sus agrupaciones de folio (backend#109).
+        seedPayslipSections(ruleSystemCode);
     }
 
     /** Inserts one employee row; returns the generated surrogate id. */
@@ -366,6 +369,44 @@ public class PayrollScenarioFixtures {
                 "update payroll_engine.payroll_concept set rounding_scale = ?, rounding_mode = ?"
                         + " where object_id = ?",
                 scale, mode, objectId(ruleSystemCode, "CONCEPT", conceptCode));
+    }
+
+    /**
+     * Las cinco secciones del modelo oficial, como las siembra la V138 para ESP
+     * ({@code backend#109}).
+     *
+     * <p>Sin esto las lineas del escenario saldrian sin seccion, que es un caso legitimo pero no
+     * el que estos escenarios representan: reproducen un sistema de reglas completo.
+     */
+    public void seedPayslipSections(String ruleSystemCode) {
+        String[][] secciones = {
+                {"DEVENGOS",               "Devengos",                                 "10"},
+                {"DEDUCCIONES",            "Deducciones",                              "20"},
+                {"LIQUIDO",                "Liquido total a percibir",                 "30"},
+                {"BASES",                  "Determinacion de las bases de cotizacion", "40"},
+                {"APORTACION_EMPRESARIAL", "Aportacion empresarial",                   "50"},
+        };
+        for (String[] s : secciones) {
+            jdbc.update("insert into payroll_engine.payslip_section"
+                    + " (rule_system_code, section_code, section_label, display_order,"
+                    + "  created_at, updated_at)"
+                    + " values (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                    ruleSystemCode, s[0], s[1], Integer.valueOf(s[2]));
+        }
+        String[][] naturalezas = {
+                {"EARNING",         "DEVENGOS"},
+                {"TOTAL_EARNING",   "DEVENGOS"},
+                {"DEDUCTION",       "DEDUCCIONES"},
+                {"TOTAL_DEDUCTION", "DEDUCCIONES"},
+                {"NET_PAY",         "LIQUIDO"},
+                {"BASE",            "BASES"},
+                {"INFORMATIONAL",   "APORTACION_EMPRESARIAL"},
+        };
+        for (String[] n : naturalezas) {
+            jdbc.update("insert into payroll_engine.payslip_section_nature"
+                    + " (rule_system_code, functional_nature, section_code) values (?, ?, ?)",
+                    ruleSystemCode, n[0], n[1]);
+        }
     }
 
     /**
