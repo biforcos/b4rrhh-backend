@@ -17,8 +17,11 @@ import com.b4rrhh.payroll.domain.port.CalculationRunRepository;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
 import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import com.b4rrhh.payroll_engine.metamodel.domain.port.RuleSystemMetamodelRepository;
+import com.b4rrhh.payroll_engine.planning.application.service.UnreachableConceptFinder;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
@@ -37,7 +40,12 @@ import java.util.concurrent.RejectedExecutionException;
 @Service
 public class LaunchPayrollCalculationService implements LaunchPayrollCalculationUseCase {
 
+    private static final Logger log = LoggerFactory.getLogger(LaunchPayrollCalculationService.class);
+
     private static final DateTimeFormatter PAYROLL_PERIOD_FORMATTER = DateTimeFormatter.ofPattern("yyyyMM");
+
+    /** Cuantos codigos caben en el texto del aviso antes de remitir al detalle. */
+    private static final int CONCEPTOS_INALCANZABLES_EN_EL_TEXTO = 10;
 
     private final CalculationRunRepository calculationRunRepository;
     private final CalculationClaimRepository calculationClaimRepository;
@@ -47,6 +55,7 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
     private final CalculatePayrollUnitUseCase calculatePayrollUnitUseCase;
     private final PayrollLaunchWorkerPort payrollLaunchWorkerPort;
     private final RuleSystemMetamodelRepository ruleSystemMetamodelRepository;
+    private final UnreachableConceptFinder unreachableConceptFinder;
     private final ObjectMapper objectMapper;
 
     public LaunchPayrollCalculationService(
@@ -58,6 +67,7 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
             CalculatePayrollUnitUseCase calculatePayrollUnitUseCase,
             PayrollLaunchWorkerPort payrollLaunchWorkerPort,
             RuleSystemMetamodelRepository ruleSystemMetamodelRepository,
+            UnreachableConceptFinder unreachableConceptFinder,
             ObjectMapper objectMapper
     ) {
         this.calculationRunRepository = calculationRunRepository;
@@ -68,6 +78,7 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
         this.calculatePayrollUnitUseCase = calculatePayrollUnitUseCase;
         this.payrollLaunchWorkerPort = payrollLaunchWorkerPort;
         this.ruleSystemMetamodelRepository = ruleSystemMetamodelRepository;
+        this.unreachableConceptFinder = unreachableConceptFinder;
         this.objectMapper = objectMapper;
     }
 
@@ -184,6 +195,8 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                     normalizedLaunch.ruleSystemCode(),
                     normalizedLaunch.periodEnd()
             );
+
+            avisarDeConceptosInalcanzables(run, metamodel);
 
             List<PayrollCalculationUnit> units = expandUnits(
                     run,
@@ -534,6 +547,71 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                     "payroll launch V1 requires payrollPeriodCode in YYYYMM format"
             );
         }
+    }
+
+    /**
+     * Deja dicho, si los hay, qué conceptos de la reglamentación no alcanza ninguna asignación
+     * ({@code backend#110}).
+     *
+     * <h3>Por qué aquí y no al sembrar ni en un {@code lint} del catálogo</h3>
+     *
+     * <p>Porque es aquí donde duele. El caso que esto arregla es: alguien añade conceptos, lanza,
+     * la corrida contesta 202, termina {@code COMPLETED}, salen los 873 recibos y <b>ni uno solo
+     * cambia</b>. El momento en que esa persona va a mirar algo es el de la ejecución, y la
+     * ejecución ya tiene dónde decirlo —sus mensajes— y una pantalla que los pinta.
+     *
+     * <p>Al sembrar no sirve: media reglamentación se escribe desde el diseñador y no pasa por
+     * ninguna migración. Como comprobación aparte del catálogo tampoco basta por sí sola: sería
+     * un sitio más al que hay que acordarse de ir, y el problema es justamente que nadie sospecha
+     * que hay algo que mirar. La consulta queda hecha y reutilizable
+     * ({@link UnreachableConceptFinder}), así que ponerla además en un {@code lint} el día que
+     * haya uno es una línea.
+     *
+     * <h3>Avisa y no tumba</h3>
+     *
+     * <p>{@code WARNING}, no {@code ERROR}, y la ejecución sigue. Un concepto inalcanzable puede
+     * ser transitorio —se declara hoy y se asigna mañana—, y parar la nómina de 873 personas por
+     * eso sería cambiar un silencio por un portazo.
+     *
+     * <p>Por lo mismo, si la comprobación misma revienta, revienta ella sola. La expansión falla
+     * cuando un operando apunta a un concepto que no está declarado, y esa avería la denuncia el
+     * cálculo de la primera unidad que la necesite: que un <b>aviso</b> se lleve por delante una
+     * corrida entera sería peor que el silencio que vino a quitar. Queda en el registro, que no
+     * es lo mismo que callarse.
+     */
+    private void avisarDeConceptosInalcanzables(CalculationRun run, RuleSystemMetamodel metamodel) {
+        List<String> inalcanzables;
+        try {
+            inalcanzables = unreachableConceptFinder.unreachableConceptsIn(metamodel);
+        } catch (RuntimeException ex) {
+            log.warn("[ENGINE] No se pudo comprobar si hay conceptos inalcanzables en {} | {}: {}",
+                    metamodel.ruleSystemCode(), ex.getClass().getSimpleName(), ex.getMessage());
+            return;
+        }
+
+        if (inalcanzables.isEmpty()) {
+            return;
+        }
+
+        // El texto lleva los primeros y el detalle los lleva todos: `message` es varchar(500) y
+        // un catalogo recien montado puede dejar veinte inalcanzables de una vez. Recortar el
+        // texto y guardar la lista entera en el JSON deja las dos cosas: un mensaje que se lee y
+        // un dato que no miente.
+        List<String> primeros = inalcanzables.stream().limit(CONCEPTOS_INALCANZABLES_EN_EL_TEXTO).toList();
+        String resto = inalcanzables.size() > primeros.size()
+                ? " (y " + (inalcanzables.size() - primeros.size()) + " mas, en el detalle)"
+                : "";
+
+        saveRunMessage(run, "UNREACHABLE_CONCEPTS", "WARNING",
+                "Estos conceptos de " + metamodel.ruleSystemCode() + " no los alcanza ninguna "
+                        + "asignacion, asi que no se han ejecutado: "
+                        + String.join(", ", primeros) + resto,
+                Map.of(
+                        "ruleSystemCode", metamodel.ruleSystemCode(),
+                        "conceptCodes", inalcanzables,
+                        "totalUnreachable", inalcanzables.size()
+                ),
+                null);
     }
 
     private void saveRunMessage(

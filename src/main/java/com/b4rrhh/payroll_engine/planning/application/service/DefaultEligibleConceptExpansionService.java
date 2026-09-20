@@ -85,6 +85,21 @@ public class DefaultEligibleConceptExpansionService implements EligibleConceptEx
             // AGGREGATE sources are optional contributors, not structural dependencies.
             // Pulling them in here would include non-eligible concepts whenever they have
             // a feed relation to an eligible aggregate — defeating the eligibility gate.
+            //
+            // Esto es deliberado y se queda (backend#110). Un agregado suma lo que se le ha
+            // asignado; ir a buscar sus fuentes y ejecutarlas por su cuenta seria que el catalogo
+            // decidiera que se calcula, y eso lo decide la asignacion.
+            //
+            // La consecuencia hay que saberla, porque no es evidente y costo medio dia:
+            //
+            //   Un concepto que SOLO existe como fuente de un AGGREGATE, y que no esta asignado a
+            //   nadie por su cuenta, NO SE EJECUTA NUNCA. No falla nada: la corrida termina
+            //   COMPLETED y los recibos salen identicos a los de antes.
+            //
+            // Y un recibo identico no se distingue de «este cambio no tenia que mover nada», que
+            // es un caso legitimo. Por eso el silencio no se queda: UnreachableConceptFinder hace
+            // esa pregunta sobre la reglamentacion entera y el lanzamiento la avisa. Lo que no
+            // hace —ni debe— es expandir aqui para taparlo.
             if (current.getCalculationType() == CalculationType.AGGREGATE) {
                 log.debug("[ENGINE]     {} AGGREGATE, omitiendo expansión de fuentes", currentCode);
                 continue;

@@ -16,6 +16,8 @@ import com.b4rrhh.payroll.domain.port.CalculationRunRepository;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
 import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import com.b4rrhh.payroll_engine.metamodel.domain.port.RuleSystemMetamodelRepository;
+import com.b4rrhh.payroll_engine.planning.application.service.DefaultEligibleConceptExpansionService;
+import com.b4rrhh.payroll_engine.planning.application.service.UnreachableConceptFinder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -84,6 +86,10 @@ class LaunchPayrollCalculationServiceTest {
                 calculatePayrollUnitUseCase,
                 worker,
                 ruleSystemMetamodelRepository,
+                // El de verdad y no un doble: no tiene estado, su respuesta sale del metamodelo
+                // que este test ya construye, y para una reglamentacion sin conceptos es la lista
+                // vacia. Un mock aqui solo anadiria una linea que mantener (backend#110).
+                new UnreachableConceptFinder(new DefaultEligibleConceptExpansionService()),
                 new ObjectMapper()
         );
 

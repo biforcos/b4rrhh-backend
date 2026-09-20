@@ -126,6 +126,36 @@ public final class RuleSystemMetamodel {
         return List.copyOf(found);
     }
 
+    /**
+     * Todos los conceptos declarados en esta reglamentación, en el orden en que se cargaron.
+     *
+     * <p>Es el catálogo entero y no el de nadie en particular. Sirve para preguntas sobre la
+     * reglamentación —cuántos hay, a cuáles no llega ninguna asignación (`backend#110`)— y no para
+     * calcular: lo que se calcula de un empleado sale de {@link #applicableAssignments} y de
+     * expandir desde ahí.
+     */
+    public List<PayrollConcept> concepts() {
+        return List.copyOf(conceptsByCode.values());
+    }
+
+    /**
+     * Los conceptos que alguna asignación trae, <b>sin mirar a qué empleado</b>.
+     *
+     * <p>Es la unión de todas las asignaciones vigentes, o sea el punto de partida más generoso
+     * posible: si un concepto no está aquí ni se alcanza expandiendo desde aquí, no lo alcanza
+     * ningún empleado de este sistema de reglas, porque un empleado concreto parte siempre de un
+     * subconjunto de esto.
+     *
+     * <p>Una asignación que apunte a un concepto que no está declarado se cae de la lista, y no se
+     * confunde con un concepto sin asignación: eso es una asignación rota, que es otra cosa.
+     */
+    public List<PayrollConcept> assignedConcepts() {
+        return findConcepts(assignments.stream()
+                .map(ConceptAssignment::getConceptCode)
+                .distinct()
+                .toList());
+    }
+
     /** Los operandos declarados por el concepto indicado, ordenados por rol. */
     public List<PayrollConceptOperand> operandsOf(String conceptCode) {
         return operandsByConceptCode.getOrDefault(conceptCode, List.of());
