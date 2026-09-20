@@ -82,10 +82,12 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
     /**
      * Los pasos que llevan orden de recibo: los que PUEDEN ser linea.
      *
-     * <p>Eran 14 y son 15 desde el {@code backend#104}, que declaro las horas extra: el
-     * {@code 102} lleva orden de recibo como cualquier devengo.
+     * <p>Eran 14 y fueron 15 desde el {@code backend#104}, que declaro las horas extra: el
+     * {@code 102} lleva orden de recibo como cualquier devengo. Son 17 desde el
+     * {@code backend#111}, que imprimio el recuadro de bases: {@code B_CC} y {@code B01} se
+     * calculaban desde siempre y ahora ademas llevan orden.
      */
-    private static final int STEPS_WITH_A_PAYSLIP_ORDER = 15;
+    private static final int STEPS_WITH_A_PAYSLIP_ORDER = 17;
 
     /**
      * Y las lineas que el folio acaba imprimiendo, que ya no son las mismas.
@@ -95,8 +97,12 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
      * regla del cero los separa —una linea de concepto a cero no se imprime— y este empleado no
      * tiene horas extra, asi que el {@code 102} se calcula, se guarda como paso y no llega al
      * papel. <b>Que estos dos numeros se hayan separado no es un fallo: es el issue.</b>
+     *
+     * <p>Eran 14 y son 16 desde el {@code backend#111}: las dos bases del recuadro de cotizacion
+     * valen algo en cualquier recibo con presencia, asi que suben los dos recuentos a la vez y
+     * la diferencia entre ellos sigue siendo la misma, el {@code 102} a cero.
      */
-    private static final int PAYSLIP_LINES = 14;
+    private static final int PAYSLIP_LINES = 16;
 
     private static final String STEPS_URL =
             "/payrolls/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}"

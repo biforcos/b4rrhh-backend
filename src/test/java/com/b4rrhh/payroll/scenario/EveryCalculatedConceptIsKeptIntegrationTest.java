@@ -88,20 +88,25 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
     /**
      * Los conceptos con orden de recibo: los que PUEDEN ser linea.
      *
-     * <p>Eran 14 y son 15 desde que el backend#104 declaro el {@code 102}.
+     * <p>Eran 14 y fueron 15 desde que el backend#104 declaro el {@code 102}. Son 17 desde el
+     * backend#111, que imprimio el recuadro de bases de cotizacion: {@code B_CC} y {@code B01}
+     * se calculaban desde siempre y ahora ademas salen en el papel.
      */
-    private static final int CONCEPTS_WITH_A_PAYSLIP_ORDER = 15;
+    private static final int CONCEPTS_WITH_A_PAYSLIP_ORDER = 17;
 
     /**
-     * Y las lineas que un empleado sin horas extra acaba teniendo en el folio, que son 14.
+     * Y las lineas que un empleado sin horas extra acaba teniendo en el folio, que son 16.
      *
      * <p>Este par de numeros era uno solo hasta el backend#104, y ahi estaba la trampa: coincidian
      * porque todos los conceptos con orden valian algo en todos los recibos, no porque tuvieran
      * que coincidir. La regla del cero los separa —una linea de concepto a cero no se imprime— y
      * este empleado no declara horas, asi que el {@code 102} se calcula, se guarda y no se
      * imprime.
+     *
+     * <p>Eran 14 hasta el backend#111 y son 16: las dos bases del recuadro de cotizacion valen
+     * algo en cualquier recibo con presencia, asi que suman linea en los dos sitios.
      */
-    private static final int PAYSLIP_LINES_WITHOUT_OVERTIME = 14;
+    private static final int PAYSLIP_LINES_WITHOUT_OVERTIME = 16;
 
     @Autowired
     private LaunchPayrollCalculationUseCase launch;
@@ -163,7 +168,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
     }
 
     @Test
-    void aWholeMonthKeepsEveryStep_andOnly14OfThemGetPrinted() {
+    void aWholeMonthKeepsEveryStep_andOnly16OfThemGetPrinted() {
         String emp = hireWholeMonth();
         assertEquals("COMPLETED", launchSingleEmployee(emp).status());
         vaciarLaSesion();
@@ -178,8 +183,9 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
         assertEquals(16, countStepsWithNature(pid, "TECHNICAL"),
                 "conceptos TECHNICAL: los 16 del catalogo, desde que la V130 retiro el P_SS");
 
-        // El recibo sigue teniendo sus 14 lineas de siempre. Lo que ha cambiado es que ya no son
-        // TODOS los pasos con orden de recibo: hay 15, y el que sobra es el 102 valiendo cero.
+        // El recibo tiene 16 lineas: las 14 de siempre mas las dos bases que el backend#111 saco
+        // al papel. Siguen sin ser TODOS los pasos con orden de recibo: hay 17, y el que sobra es
+        // el 102 valiendo cero.
         int payslipLines = jdbc.queryForObject(
                 "select count(*) from payroll.payroll_concept where payroll_id = ?", Integer.class, pid);
         assertEquals(PAYSLIP_LINES_WITHOUT_OVERTIME, payslipLines, "lineas de recibo");
@@ -195,6 +201,26 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
                         + " where payroll_id = ? and payslip_order_code is not null"
                         + "   and payslip_line_number is null order by concept_code",
                 String.class, pid), "el unico paso con orden y sin linea es el 102 a cero");
+
+        // El recuadro de bases, por los dos lados (backend#111).
+        //
+        // Las dos que el modelo oficial imprime salen, en su bloque y con su nombre. Y los otros
+        // cuatro BASE siguen sin salir: el B_CC_MAX es el paso intermedio entre las dos, y P01,
+        // P02 y P03 son precios que llevan naturaleza BASE porque el motor los usa como operando.
+        //
+        // Las dos mitades van juntas a proposito. Con solo la primera, darles orden de recibo a
+        // los seis pasaria igual; es la segunda la que hace que «no tiene orden» siga
+        // significando «no va al papel» y no «se me olvido».
+        assertEquals(List.of("B_CC", "B01"), jdbc.queryForList(
+                "select c.concept_code from payroll.payroll_concept c"
+                        + " where c.payroll_id = ? and c.payslip_section_code = 'BASES'"
+                        + " order by c.display_order",
+                String.class, pid), "el recuadro de bases: la de cotizacion y la sujeta a IRPF");
+        assertEquals(List.of("B_CC_MAX", "P01", "P02", "P03"), jdbc.queryForList(
+                "select s.concept_code from payroll.payroll_calculation_step s"
+                        + " where s.payroll_id = ? and s.functional_nature = 'BASE'"
+                        + "   and s.payslip_order_code is null order by s.concept_code",
+                String.class, pid), "los BASE que se calculan y no van al papel");
 
         // El orden de ejecucion es una serie completa desde 1, sin huecos ni repetidos: el
         // recuento, el minimo y el maximo solo cuadran a la vez si estan todos y una sola vez.
