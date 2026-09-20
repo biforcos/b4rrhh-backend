@@ -42,7 +42,9 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @SpringBootTest(
-        classes = B4rrhhBackendApplication.class,
+        // El almacen de documentos va en memoria: ningun test de aqui va de MinIO, y sin esto la
+        // suite entera necesitaria un servidor de objetos levantado. Ver AlmacenDeDocumentosEnMemoria.
+        classes = {B4rrhhBackendApplication.class, AlmacenDeDocumentosEnMemoria.class},
         properties = {
                 "spring.jpa.hibernate.ddl-auto=none",
                 "spring.flyway.enabled=false"
