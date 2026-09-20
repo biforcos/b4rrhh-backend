@@ -92,6 +92,7 @@ import com.b4rrhh.employee.working_time.infrastructure.persistence.WorkingTimePr
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollObjectBindingLookupAdapter;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollTableRowLookupAdapter;
 import com.b4rrhh.payroll.infrastructure.persistence.PayrollLaunchEligibleInputLookupAdapter;
+import com.b4rrhh.payroll_engine.concept.infrastructure.persistence.ConceptLabelPersistenceAdapter;
 import com.b4rrhh.payroll_engine.concept.infrastructure.persistence.PayrollConceptOperandPersistenceAdapter;
 import com.b4rrhh.payroll_engine.concept.infrastructure.persistence.PayrollConceptPersistenceAdapter;
 import com.b4rrhh.payroll_engine.eligibility.infrastructure.persistence.ConceptAssignmentPersistenceAdapter;
@@ -249,6 +250,8 @@ import java.lang.annotation.Target;
         PayrollTableRowLookupAdapter.class,
         // payroll_engine
         PayrollConceptPersistenceAdapter.class,
+        // payroll_engine: el nombre de un concepto, que no es su mnemonico (backend#109)
+        ConceptLabelPersistenceAdapter.class,
         // payroll_engine: las aristas de operandos, para el guardian de ADR-058 (backend#63)
         PayrollConceptOperandPersistenceAdapter.class,
         ConceptAssignmentPersistenceAdapter.class,

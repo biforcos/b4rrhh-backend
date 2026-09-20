@@ -5179,6 +5179,47 @@ paths:
         '404':
           description: Not found
 
+  /payroll-engine/{ruleSystemCode}/concepts/{conceptCode}/label:
+    patch:
+      tags:
+        - Payroll Engine
+      summary: Name a payroll concept
+      description: >-
+        Sets what the concept is called. It does not touch any payroll already calculated: a
+        payslip line freezes its literal at calculation time, because the line is a document and
+        not a view of the catalogue. What this changes is what the next calculation will say.
+      operationId: updatePayrollConceptLabel
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: conceptCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateConceptLabelRequest'
+      responses:
+        '200':
+          description: Named
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayrollConceptDesignerResponse'
+        '400':
+          description: Blank or oversized label
+        '404':
+          description: Not found
+
   /payroll-engine/{ruleSystemCode}/concepts/{conceptCode}:
     delete:
       tags:
@@ -11120,6 +11161,11 @@ components:
 
     PayrollConceptDesignerResponse:
       type: object
+      description: >-
+        An engine concept. conceptMnemonic and label are two different things and both are here.
+        The mnemonic is the IDENTIFIER: it is what rules reference to find the concept, and it is
+        what the graph and the calculation trace key on. The label is what the concept is called.
+        A client must never show one in place of the other.
       required: [ruleSystemCode, conceptCode, conceptMnemonic, calculationType, functionalNature, executionScope]
       properties:
         ruleSystemCode:
@@ -11128,6 +11174,15 @@ components:
           type: string
         conceptMnemonic:
           type: string
+        label:
+          type: string
+          nullable: true
+          example: "Salario base"
+          description: >-
+            What this concept is called, in the single language the engine resolves today. Null
+            when the concept has no name yet, which happens whenever someone adds a concept and
+            forgets the literal. A client showing this must fall back to conceptMnemonic rather
+            than paint a gap: a visible absence is better than an invisible one.
         calculationType:
           type: string
         functionalNature:
@@ -11147,6 +11202,20 @@ components:
         summary:
           type: string
           nullable: true
+
+    UpdateConceptLabelRequest:
+      type: object
+      required: [label]
+      properties:
+        label:
+          type: string
+          maxLength: 200
+          example: "Salario base"
+          description: >-
+            What the concept is called. Required and not blank: a blank literal is not "no name",
+            it is a gap. Changing it does NOT move any payroll already calculated — each payslip
+            line froze its literal when it was calculated — it changes what the next calculation
+            will say.
 
     UpdateConceptOperandsRequest:
       type: object

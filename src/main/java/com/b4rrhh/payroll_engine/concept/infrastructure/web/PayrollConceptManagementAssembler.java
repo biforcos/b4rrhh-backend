@@ -10,11 +10,17 @@ import org.springframework.stereotype.Component;
 @Component
 public class PayrollConceptManagementAssembler {
 
-    public PayrollConceptDesignerResponse toResponse(PayrollConcept concept) {
+    /**
+     * @param label como se llama el concepto, o nulo si todavia no tiene nombre. Es un parametro
+     *              y no un campo del dominio a proposito: el nombre vive en su propia tabla, por
+     *              idioma, y quien arma la respuesta ya lo ha pedido ({@code backend#109}).
+     */
+    public PayrollConceptDesignerResponse toResponse(PayrollConcept concept, String label) {
         return new PayrollConceptDesignerResponse(
                 concept.getRuleSystemCode(),
                 concept.getConceptCode(),
                 concept.getConceptMnemonic(),
+                label,
                 concept.getCalculationType().name(),
                 concept.getFunctionalNature().name(),
                 concept.getExecutionScope().name(),
