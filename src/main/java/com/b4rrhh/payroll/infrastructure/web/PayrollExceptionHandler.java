@@ -1,6 +1,9 @@
 package com.b4rrhh.payroll.infrastructure.web;
 
 import com.b4rrhh.payroll.application.usecase.PayrollLaunchInputMissingException;
+import com.b4rrhh.payroll.document.domain.exception.PayslipDocumentNotArchivedException;
+import com.b4rrhh.payroll.document.domain.exception.PayslipDocumentStorageUnavailableException;
+import com.b4rrhh.payroll.document.infrastructure.web.PayslipDocumentController;
 import com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException;
 import com.b4rrhh.payroll.domain.exception.PayrollBusinessKeyConflictException;
 import com.b4rrhh.payroll.domain.exception.PayrollCalculationFailedException;
@@ -19,7 +22,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@RestControllerAdvice(assignableTypes = {PayrollController.class, PayrollCalculationRunController.class})
+@RestControllerAdvice(assignableTypes = {
+        PayrollController.class,
+        PayrollCalculationRunController.class,
+        PayslipDocumentController.class
+})
 public class PayrollExceptionHandler {
 
     @ExceptionHandler({
@@ -28,6 +35,34 @@ public class PayrollExceptionHandler {
     })
     public ResponseEntity<PayrollErrorResponse> handleNotFound(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(PayrollErrorResponse.of(ex.getMessage()));
+    }
+
+    /**
+     * El almacen de documentos no contesta ({@code backend#112}).
+     *
+     * <p>503 y no 500: no es que el recibo este mal, es que la pieza que guarda los papeles no
+     * esta. Quien lo reciba <b>puede reintentar</b> y eso es lo que separa este fallo de los otros
+     * — decirlo con el codigo evita que la pantalla invente un mensaje de catastrofe para algo que
+     * se arregla volviendo a darle al boton.
+     */
+    @ExceptionHandler(PayslipDocumentStorageUnavailableException.class)
+    public ResponseEntity<PayrollErrorResponse> handleStorageUnavailable(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new PayrollErrorResponse(
+                "PAYSLIP_DOCUMENT_STORAGE_UNAVAILABLE", ex.getMessage(), null));
+    }
+
+    /**
+     * Un recibo cerrado al que le falta su documento ({@code backend#112}).
+     *
+     * <p>409 porque el recibo existe y esta en un estado que no cuadra con lo que se le pide, y
+     * con codigo porque no se parece a nada: no es que no haya recibo —eso es 404— ni que el
+     * almacen este caido —eso es 503—. Es que este recibo se cerro antes de que cerrar emitiera el
+     * papel, y <b>no se regenera</b>: seria otro documento del mismo recibo.
+     */
+    @ExceptionHandler(PayslipDocumentNotArchivedException.class)
+    public ResponseEntity<PayrollErrorResponse> handleDocumentNotArchived(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new PayrollErrorResponse(
+                "PAYSLIP_DOCUMENT_NOT_ARCHIVED", ex.getMessage(), null));
     }
 
     @ExceptionHandler({

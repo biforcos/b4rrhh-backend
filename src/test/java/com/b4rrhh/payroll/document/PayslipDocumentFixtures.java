@@ -61,6 +61,38 @@ final class PayslipDocumentFixtures {
                 """);
     }
 
+    /**
+     * El mismo recibo con otro nombre en la linea del 101.
+     *
+     * <p>Es lo que un cambio de literal en el catalogo produce <b>despues de recalcular</b>: el
+     * nombre viaja congelado en la linea desde el {@code backend#109}, asi que un recibo que no se
+     * recalcula no lo ve cambiar. Sirve para mirar los dos lados del criterio 2.
+     */
+    static Payroll emp000001ConLiteral(String literalDelSalarioBase) {
+        Payroll original = emp000001();
+        List<PayrollConcept> conNombreNuevo = new ArrayList<>();
+        for (PayrollConcept concept : original.getConcepts()) {
+            conNombreNuevo.add("101".equals(concept.getConceptCode())
+                    ? new PayrollConcept(
+                            concept.getLineNumber(), concept.getConceptCode(),
+                            concept.getConceptMnemonic(), literalDelSalarioBase,
+                            concept.getAmount(), concept.getQuantity(), concept.getRate(),
+                            concept.getConceptNatureCode(), concept.getOriginPeriodCode(),
+                            concept.getDisplayOrder(), concept.getMergedStepCount(),
+                            concept.getPayslipSectionCode())
+                    : concept);
+        }
+        return Payroll.rehydrate(
+                original.getId(), original.getRuleSystemCode(), original.getEmployeeTypeCode(),
+                original.getEmployeeNumber(), original.getPayrollPeriodCode(),
+                original.getPayrollTypeCode(), original.getPresenceNumber(), original.getStatus(),
+                original.getStatusReasonCode(), original.getCalculatedAt(),
+                original.getCalculationEngineCode(), original.getCalculationEngineVersion(),
+                original.getRunId(), original.getWarnings(), conNombreNuevo,
+                original.getContextSnapshots(), original.getSegments(),
+                original.getCreatedAt(), original.getUpdatedAt());
+    }
+
     /** El mas largo de la semilla: dieciocho lineas, con horas extraordinarias. */
     static Payroll emp000005() {
         return recibo("EMP000005", 1, PayrollStatus.CALCULATED, """

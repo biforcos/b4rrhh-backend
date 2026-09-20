@@ -1,5 +1,7 @@
 package com.b4rrhh.payroll.application.usecase;
 
+import com.b4rrhh.payroll.document.domain.exception.PayslipDocumentNotArchivedException;
+import com.b4rrhh.payroll.document.domain.exception.PayslipDocumentStorageUnavailableException;
 import com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException;
 import com.b4rrhh.payroll.domain.exception.PayrollBusinessKeyConflictException;
 import com.b4rrhh.payroll.domain.exception.PayrollCalculationFailedException;
@@ -45,6 +47,12 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
      * {@code RecalculateOnlyDisguisesWhatNobodyAnswersTest}. Si manana el manejador aprende a
      * contestar otra excepcion y aqui no se anade, ese test se pone rojo — que es lo unico que
      * impide que un error con respuesta propia acabe saliendo como «el calculo fallo».
+     *
+     * <p>Las dos del documento ({@code backend#112}) entran por ese cruce y no porque el recalculo
+     * pueda producirlas: recalcular no archiva nada, asi que hoy no llegan hasta aqui. La lista no
+     * es «lo que el recalculo lanza», es «lo que no se puede disfrazar», y el dia que recalcular
+     * toque el almacen —o que otra pieza de este camino lo toque— disfrazar un 503 reintentable de
+     * 422 «el calculo fallo» seria exactamente el error que este cruce existe para evitar.
      */
     static final List<Class<? extends RuntimeException>> YA_TIENE_RESPUESTA = List.of(
             PayrollNotFoundException.class,
@@ -56,7 +64,9 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
             PayrollRecalculationNotAllowedException.class,
             PayrollBusinessKeyConflictException.class,
             PayrollUnitAlreadyClaimedException.class,
-            PayrollLaunchInputMissingException.class
+            PayrollLaunchInputMissingException.class,
+            PayslipDocumentStorageUnavailableException.class,
+            PayslipDocumentNotArchivedException.class
     );
 
     /**
