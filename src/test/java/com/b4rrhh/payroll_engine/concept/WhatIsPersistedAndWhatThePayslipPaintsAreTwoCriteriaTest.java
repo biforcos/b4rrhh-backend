@@ -20,10 +20,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *
  * <p>El reparto —qué concepto tiene sitio en el recibo— se hace por {@code payslip_order_code}:
  * lo tiene y es una línea, no lo tiene y es un paso de cálculo que se guarda pero no se imprime.
- * El folio, en cambio, <b>filtra por naturaleza</b>: {@code recibos-folio.component.ts} pinta
- * {@code EARNING} y {@code DEDUCTION} en el cuerpo y busca los tres totales uno a uno. Son dos
- * preguntas distintas con dos respuestas distintas, y hoy <b>no coinciden</b>: se persisten 15 y
- * se pintan 10.
+ * El folio, en cambio, coloca cada línea en el bloque que declara su sección.
+ *
+ * <p><b>Hasta el {@code b4rrhh/frontend#76} el folio filtraba por naturaleza</b>, y los dos
+ * criterios no coincidían: se persistían 15 y se pintaban 10. Los cinco que faltaban eran la
+ * aportación empresarial, y esto lo llamaba «la divergencia conocida» dándola por buena. No lo
+ * era: el recibo omitía un bloque del modelo oficial y parecía completo. Hoy los dos números son
+ * 15, pero siguen siendo dos criterios y por eso este censo sigue haciendo falta.
  *
  * <p>Y desde el {@code backend#104} hay una tercera pregunta que no es ninguna de estas dos:
  * <b>cuantas lineas salen impresas en un recibo concreto</b>. Este censo es del catalogo —quien
@@ -48,12 +51,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *
  * <h3>Entonces, ¿cuándo es legítimo romper este test?</h3>
  *
- * <p><b>Cuando el folio empiece a pintar el bloque de bases de cotización</b>, o la aportación
- * empresarial a la Seguridad Social, que es el otro recuadro que a una nómina de verdad le falta.
- * Ese día un {@code BASE} llevará orden de recibo, o los cinco {@code INFORMATIONAL} del 720 al
- * 724 dejarán de ser la divergencia conocida, y este test se pondrá rojo con razón. Lo que hay
- * que hacer entonces es <b>actualizar el censo</b>, no borrarlo: quien lo rompa tiene que
- * encontrarse aquí con el motivo por el que puede tener derecho a romperlo.
+ * <p>La mitad de esta respuesta ya se gastó: la aportación empresarial dejó de ser la divergencia
+ * conocida en el {@code b4rrhh/frontend#76}, y el censo se actualizó en vez de borrarse, que es
+ * lo que esta sección mandaba hacer.
+ *
+ * <p>Queda la otra: <b>cuando el folio empiece a pintar el bloque de bases de cotización</b> —base
+ * de contingencias comunes, de AT y EP, y sujeta a IRPF—. Ese día un {@code BASE} llevará orden
+ * de recibo y este test se pondrá rojo con razón. La sección {@code BASES} ya está declarada
+ * desde la {@code V138} y el folio ya sabría colocarla: lo que falta es que esos conceptos
+ * tengan sitio en el recibo. Lo que hay que hacer entonces es <b>actualizar el censo</b>, no
+ * borrarlo: quien lo rompa tiene que encontrarse aquí con el motivo por el que puede tener
+ * derecho a romperlo.
  *
  * <h3>La otra mitad vive en el frontend</h3>
  *
@@ -85,19 +93,36 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
     }
 
     /**
-     * Las cinco naturalezas que el folio pinta, de las ocho que hay.
+     * Las naturalezas que el folio pinta: <b>todas las que tienen bloque declarado</b>
+     * ({@code b4rrhh/frontend#76}).
      *
      * <p>Copia de un hecho que vive en {@code b4rrhh/frontend}, en
-     * {@code recibos-folio.component.ts}: {@code bodyConcepts} filtra por {@code EARNING} y
-     * {@code DEDUCTION}, y {@code netPayConcept}, {@code totalEarningConcept} y
-     * {@code totalDeductionConcept} buscan uno de cada. Si esta copia se queda atrás, quien lo
-     * dirá es el test de allí; aquí sirve para poder nombrar la divergencia.
+     * {@code recibos-folio.component.ts}. <b>Era una lista de cinco</b> —{@code bodyConcepts}
+     * filtraba por {@code EARNING} y {@code DEDUCTION} y tres getters buscaban un total de cada
+     * clase— y esa lista era el defecto: dejaba fuera {@code INFORMATIONAL}, o sea las cinco
+     * líneas de aportación empresarial, que se calculaban y no se pintaban.
+     *
+     * <p>Ahora el folio no filtra por naturaleza: coloca cada línea por su
+     * {@code payslip_section_code}, que declara la {@code V138}. Así que esta copia ya no es una
+     * lista de naturalezas admitidas, es la de las que tienen sección — y coincide exactamente
+     * con las que llegan al recibo. Si esta copia se queda atrás, quien lo dirá es el test de
+     * allí.
      */
-    private static final List<String> PAINTED_BY_THE_PAYSLIP =
-            List.of("EARNING", "DEDUCTION", "TOTAL_EARNING", "TOTAL_DEDUCTION", "NET_PAY");
+    private static final List<String> PAINTED_BY_THE_PAYSLIP = List.of(
+            "EARNING", "DEDUCTION", "INFORMATIONAL", "TOTAL_EARNING", "TOTAL_DEDUCTION", "NET_PAY");
 
-    /** Las que se persisten en el recibo sin que el folio las pinte, y por qué se acepta. */
-    private static final List<String> PERSISTED_BUT_NOT_PAINTED = List.of("INFORMATIONAL");
+    /**
+     * Las que se persisten en el recibo sin que el folio las pinte: <b>ninguna</b>.
+     *
+     * <p>Hasta el {@code b4rrhh/frontend#76} había una, {@code INFORMATIONAL}, y estaba escrita
+     * aquí como «la divergencia conocida» y aceptada como una decisión de maquetación pendiente.
+     * No lo era: era que el recibo omitía un bloque del modelo oficial.
+     *
+     * <p>Que esta lista esté vacía es lo que hay que defender. Una naturaleza que vuelva a
+     * aparecer aquí es una que llega al recibo y no se ve, que es exactamente como se perdieron
+     * las cinco anteriores.
+     */
+    private static final List<String> PERSISTED_BUT_NOT_PAINTED = List.of();
 
     /** Los cinco de la aportación empresarial, que son la divergencia entera. */
     private static final List<String> THE_KNOWN_DIVERGENCE =
@@ -157,34 +182,36 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
     }
 
     /**
-     * La divergencia conocida —los cinco {@code INFORMATIONAL} del 720 al 724— es la única.
+     * Ya no hay divergencia: <b>todo lo que llega al recibo se pinta</b>
+     * ({@code b4rrhh/frontend#76}).
      *
-     * <p>Son la aportación empresarial a la Seguridad Social: se persisten bien y el folio hace
-     * bien en no pintarlos, porque en una nómina de verdad van en su propio recuadro al pie y no
-     * entre las líneas. No están mal y no hay que «arreglarlos».
+     * <p>La había, y eran los cinco {@code INFORMATIONAL} del 720 al 724 —la aportación
+     * empresarial—, aceptados aquí como una decisión de maquetación pendiente. Lo que escondían
+     * era peor: se calculaban bien, viajaban en la respuesta y un {@code if} del cliente los
+     * tiraba, así que el recibo omitía un bloque entero del modelo oficial pareciendo completo.
      *
-     * <p>Lo que este test impide es que aparezca <b>una sexta naturaleza</b> persistida y no
-     * pintada sin que nadie se entere. Ése es el único caso en el que la diferencia entre los dos
-     * criterios pasa de ser una decisión de maquetación a ser un descuido.
+     * <p>Lo que este test impide ahora es que vuelva a aparecer <b>cualquier</b> naturaleza
+     * persistida y no pintada. No hay ninguna que esté bien: el folio coloca por sección
+     * declarada, así que una naturaleza sin pintar es una a la que se le olvidó declararle
+     * bloque en la {@code V138}.
      */
     @Test
-    void theOnlyNaturePersistedAndNotPaintedIsTheEmployerContribution_andItIsTheseFiveConcepts() {
+    void everyNatureThatReachesThePayslipIsPainted_thereIsNoDivergenceLeft() {
         List<String> persistedButNotPainted = censusByNature().keySet().stream()
                 .filter(nature -> !PAINTED_BY_THE_PAYSLIP.contains(nature))
                 .toList();
 
         assertEquals(PERSISTED_BUT_NOT_PAINTED, persistedButNotPainted,
                 """
-                Ha aparecido una naturaleza que se persiste en el recibo y el folio no pinta, \
-                ademas de la que ya se conocia.
+                Hay una naturaleza que se persiste en el recibo y el folio no pinta.
 
-                La conocida es INFORMATIONAL: los cinco de la aportacion empresarial a la \
-                Seguridad Social, que van en su propio recuadro al pie y no entre las lineas. Esa \
-                esta bien y no hay que tocarla.
+                Hasta el b4rrhh/frontend#76 habia una aceptada —INFORMATIONAL, la aportacion \
+                empresarial— y resulto ser un bloque del modelo oficial que el recibo omitia. Ya \
+                no hay ninguna que este bien.
 
-                Una sexta es otra cosa. O el folio tiene que aprender a pintarla (y eso es un \
-                issue de b4rrhh/frontend y una decision de maquetacion) o le has dado orden de \
-                recibo a algo que no va al recibo. Lo que no vale es dejarla sin decidir.""");
+                El folio coloca cada linea por su payslip_section_code. Si una naturaleza no se \
+                pinta es que no tiene seccion declarada: decláresela en una migracion nueva, o \
+                quitale el orden de recibo si de verdad no va al recibo.""");
 
         assertEquals(THE_KNOWN_DIVERGENCE, conceptsWithPayslipOrderOfNature("INFORMATIONAL"),
                 """
@@ -197,12 +224,17 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
     }
 
     /**
-     * Y las dos particiones, puestas una al lado de la otra: se persisten 15 y se pintan 10.
+     * Y las dos particiones, puestas una al lado de la otra: se persisten 15 y se pintan
+     * <b>15</b>.
      *
-     * <p>No es una comprobación distinta de las de arriba —sale de sumarlas— pero es el número
-     * que resume de qué va este issue, y el que hay que poder decir en voz alta: cinco
-     * naturalezas de ocho se pintan, y cinco conceptos de los quince persistidos no llegan al
-     * papel.
+     * <p>Eran 15 y 10 hasta el {@code b4rrhh/frontend#76}. Los cinco que faltaban eran la
+     * aportación empresarial, y que los dos números coincidan es el resultado de aquel issue: lo
+     * que tiene sitio en el recibo sale impreso.
+     *
+     * <p><b>Que coincidan no hace el test redundante.</b> Siguen siendo dos criterios distintos
+     * —el sitio lo da {@code payslip_order_code} y el bloque lo da la sección declarada— y pueden
+     * volver a separarse en cuanto alguien dé orden de recibo a una naturaleza sin sección. El
+     * día que estos dos números dejen de ser el mismo, hay algo que se imprime menos.
      *
      * <p>Eran catorce y nueve hasta el {@code backend#104}, que declaró las horas extra: el
      * {@code 102} es {@code EARNING} y lleva orden de recibo, así que entra en los dos lados.
@@ -210,7 +242,7 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
      * imprime. Este censo no lo sabe ni tiene por qué saberlo — habla del catálogo.
      */
     @Test
-    void fifteenAreKeptAndTenArePainted() {
+    void fifteenAreKeptAndFifteenArePainted() {
         int persisted = censusByNature().values().stream().mapToInt(Integer::intValue).sum();
         int painted = censusByNature().entrySet().stream()
                 .filter(entry -> PAINTED_BY_THE_PAYSLIP.contains(entry.getKey()))
@@ -218,14 +250,18 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
                 .sum();
 
         assertEquals(15, persisted, "conceptos con sitio en el recibo");
-        assertEquals(10, painted,
+        assertEquals(15, painted,
                 """
-                Los conceptos que el folio pinta han dejado de ser diez.
+                Los conceptos que el folio pinta han dejado de ser quince.
 
-                Persistidos y pintados son dos criterios distintos y por eso este numero no tiene \
-                por que ser el de arriba. Si ha subido, el folio pinta mas cosas y probablemente \
-                sea el bloque de bases o la aportacion empresarial: bienvenido, actualiza el \
-                censo. Si ha bajado, algo que se imprimia ha dejado de imprimirse.""");
+                Persistidos y pintados siguen siendo dos criterios distintos —el sitio lo da \
+                payslip_order_code y el bloque lo da la seccion declarada en la V138— y desde el \
+                b4rrhh/frontend#76 dan el mismo numero porque todo lo que tiene sitio tiene \
+                bloque.
+
+                Si ha bajado, hay algo con orden de recibo cuya naturaleza no tiene seccion \
+                declarada: se guarda y no se imprime, que es como se perdieron los cinco de la \
+                aportacion empresarial durante meses.""");
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
