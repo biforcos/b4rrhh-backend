@@ -104,6 +104,7 @@ class SpringDataPayrollRepositoryFlywayIntegrationTest {
         PayrollConceptEntity concept = new PayrollConceptEntity();
         concept.setLineNumber(1);
         concept.setConceptCode("BASE");
+        concept.setConceptMnemonic("SALARIO_BASE");
         concept.setConceptLabel("Base salary");
         concept.setAmount(new BigDecimal("1000.00"));
         concept.setConceptNatureCode("EARNING");

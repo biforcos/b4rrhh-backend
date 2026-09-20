@@ -8,6 +8,28 @@ public class PayrollConcept {
 
     private final Integer lineNumber;
     private final String conceptCode;
+    /**
+     * El identificador del concepto en el motor ({@code backend#109}).
+     *
+     * <p>Esta junto al literal y no en su lugar: <b>dos campos, dos trabajos</b>. El mnemonico es
+     * lo que las reglas referencian para encontrar un concepto y lo que el grafo y la pestana
+     * «Calculo» usan para casar una linea con sus pasos. Hasta el backend#109 era lo unico que
+     * habia, ocupando el hueco del nombre.
+     */
+    private final String conceptMnemonic;
+    /**
+     * Como se llamaba el concepto cuando se calculo esta linea ({@code backend#109}).
+     *
+     * <p><b>Se congela y no se resuelve al leer.</b> En cuanto exista el PDF, el recibo tiene un
+     * gemelo fisico fuera del sistema: el papel que tiene el empleado dice «Salario base». Si la
+     * pantalla dijera otra cosa porque alguien toco el catalogo, la pantalla estaria mintiendo
+     * sobre lo que se entrego.
+     *
+     * <p>No hace falta ninguna regla nueva para eso: se congela por el mismo acto que congela
+     * todo lo demas —el calculo— y el cierre lo hace permanente (ADR-059, ADR-062). Un recibo
+     * {@code CALCULADA} que se recalcula coge el literal nuevo, y esta bien, porque todavia no se
+     * ha entregado nada.
+     */
     private final String conceptLabel;
     private final BigDecimal amount;
     private final BigDecimal quantity;
@@ -27,6 +49,7 @@ public class PayrollConcept {
     public PayrollConcept(
             Integer lineNumber,
             String conceptCode,
+            String conceptMnemonic,
             String conceptLabel,
             BigDecimal amount,
             BigDecimal quantity,
@@ -35,14 +58,15 @@ public class PayrollConcept {
             String originPeriodCode,
             Integer displayOrder
     ) {
-        this(lineNumber, conceptCode, conceptLabel, amount, quantity, rate, conceptNatureCode,
-                originPeriodCode, displayOrder, 1);
+        this(lineNumber, conceptCode, conceptMnemonic, conceptLabel, amount, quantity, rate,
+                conceptNatureCode, originPeriodCode, displayOrder, 1);
     }
 
     /** El constructor completo, con los pasos que la linea funde. */
     public PayrollConcept(
             Integer lineNumber,
             String conceptCode,
+            String conceptMnemonic,
             String conceptLabel,
             BigDecimal amount,
             BigDecimal quantity,
@@ -54,6 +78,7 @@ public class PayrollConcept {
     ) {
         this.lineNumber = requirePositive(lineNumber, "lineNumber");
         this.conceptCode = requireCode(conceptCode, "conceptCode", 30);
+        this.conceptMnemonic = requireText(conceptMnemonic, "conceptMnemonic", 50);
         this.conceptLabel = requireText(conceptLabel, "conceptLabel", 200);
         this.amount = requireAmount(amount, "amount");
         this.quantity = normalizeDecimal(quantity, "quantity");
@@ -126,6 +151,10 @@ public class PayrollConcept {
 
     public String getConceptCode() {
         return conceptCode;
+    }
+
+    public String getConceptMnemonic() {
+        return conceptMnemonic;
     }
 
     public String getConceptLabel() {

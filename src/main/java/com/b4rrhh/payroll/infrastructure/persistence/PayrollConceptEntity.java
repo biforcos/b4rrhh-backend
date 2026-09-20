@@ -31,6 +31,11 @@ public class PayrollConceptEntity {
     @Column(name = "concept_code", nullable = false, length = 30)
     private String conceptCode;
 
+    /** Lo que las reglas y el grafo usan. Va junto al literal, no en su lugar (backend#109). */
+    @Column(name = "concept_mnemonic", nullable = false, length = 50)
+    private String conceptMnemonic;
+
+    /** Como se llamaba el concepto al calcular esta linea. Congelado, no resuelto al leer. */
     @Column(name = "concept_label", nullable = false, length = 200)
     private String conceptLabel;
 
@@ -64,6 +69,8 @@ public class PayrollConceptEntity {
     public void setLineNumber(Integer lineNumber) { this.lineNumber = lineNumber; }
     public String getConceptCode() { return conceptCode; }
     public void setConceptCode(String conceptCode) { this.conceptCode = conceptCode; }
+    public String getConceptMnemonic() { return conceptMnemonic; }
+    public void setConceptMnemonic(String conceptMnemonic) { this.conceptMnemonic = conceptMnemonic; }
     public String getConceptLabel() { return conceptLabel; }
     public void setConceptLabel(String conceptLabel) { this.conceptLabel = conceptLabel; }
     public BigDecimal getAmount() { return amount; }

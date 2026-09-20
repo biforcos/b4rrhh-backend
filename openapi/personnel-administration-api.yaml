@@ -11052,9 +11052,17 @@ components:
         payslip screen and the calculation screen disagree on the number of rows with nothing
         explaining why. To get from a line to its steps, take the steps of that payroll whose
         payslipLineNumber equals this lineNumber: no grouping has to be reconstructed.
+
+
+        conceptMnemonic and conceptLabel are two different things and both are here. The mnemonic
+        is the concept's IDENTIFIER in the engine — what rules and the graph reference — and the
+        label is what the concept was called WHEN THIS LINE WAS CALCULATED. The label is frozen,
+        not resolved on read: a payslip is a document, not a view of the catalogue, and renaming a
+        concept must not change what an already delivered payslip says.
       required:
         - lineNumber
         - conceptCode
+        - conceptMnemonic
         - conceptLabel
         - conceptNatureCode
         - displayOrder
@@ -11064,8 +11072,22 @@ components:
           type: integer
         conceptCode:
           type: string
+        conceptMnemonic:
+          type: string
+          example: "SALARIO_BASE"
+          description: >-
+            The concept's identifier in the engine, frozen with the line. This is what to key on
+            to reach the concept, its graph node or its steps — never conceptLabel, which is a
+            name and may differ between two payrolls of the same concept.
         conceptLabel:
           type: string
+          example: "Salario base"
+          description: >-
+            What the concept was called when this line was calculated. It is what to show. Two
+            payslips of the same concept may carry different labels if the catalogue was renamed
+            in between, and that is correct: each says what it said when it was produced. A line
+            whose concept had no name falls back to its mnemonic, so a label that looks like an
+            identifier means the name is missing, not that the field is wrong.
         amount:
           type: number
         quantity:

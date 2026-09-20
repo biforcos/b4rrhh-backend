@@ -89,6 +89,15 @@ class CalculatePayrollUnitServiceTest {
     private EmployeeTaxInfoPayrollLookupPort employeeTaxInfoLookupPort;
     @Mock
     private com.b4rrhh.payroll.application.port.PayrollCalculationStepWritePort payrollCalculationStepWritePort;
+    /**
+     * Sin nombres puestos, que es el caso del criterio 4 ({@code backend#109}): un mock de Mockito
+     * devuelve un mapa vacio, o sea ningun concepto tiene literal. Lo que estos tests ven en el
+     * literal de la linea es entonces el mnemonico, que es exactamente el comportamiento que se
+     * pide cuando falta el nombre. El literal de verdad se prueba con el catalogo puesto, en
+     * {@code ThePayslipLineFreezesTheNameItWasCalculatedWithTest}.
+     */
+    @Mock
+    private com.b4rrhh.payroll_engine.concept.domain.port.ConceptLabelRepository conceptLabelRepository;
     // Motor real, no mock: lo que se prueba aqui es como el servicio reparte cada concepto
     // entre tramos y periodo segun su execution_scope, y eso solo se ve evaluando de verdad.
     private final SegmentExecutionEngine segmentExecutionEngine = new DefaultSegmentExecutionEngine(
@@ -125,7 +134,8 @@ class CalculatePayrollUnitServiceTest {
             employeePayrollInputLookupPort,
             getAgreementCategoryProfileUseCase,
             employeeTaxInfoLookupPort,
-            payrollCalculationStepWritePort
+            payrollCalculationStepWritePort,
+            conceptLabelRepository
         );
 
         when(employeeTaxInfoLookupPort.findLatestOnOrBefore(
@@ -233,7 +243,8 @@ class CalculatePayrollUnitServiceTest {
             employeePayrollInputLookupPort,
             getAgreementCategoryProfileUseCase,
             employeeTaxInfoLookupPort,
-            payrollCalculationStepWritePort
+            payrollCalculationStepWritePort,
+            conceptLabelRepository
         );
 
         lenient().when(employeeTaxInfoLookupPort.findLatestOnOrBefore(
@@ -343,7 +354,8 @@ class CalculatePayrollUnitServiceTest {
             employeePayrollInputLookupPort,
             getAgreementCategoryProfileUseCase,
             employeeTaxInfoLookupPort,
-            payrollCalculationStepWritePort
+            payrollCalculationStepWritePort,
+            conceptLabelRepository
         );
 
         when(employeeTaxInfoLookupPort.findLatestOnOrBefore(

@@ -104,6 +104,7 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
                         .map(concept -> new PayrollConcept(
                                 concept.getLineNumber(),
                                 concept.getConceptCode(),
+                                concept.getConceptMnemonic(),
                                 concept.getConceptLabel(),
                                 concept.getAmount(),
                                 concept.getQuantity(),
@@ -169,6 +170,7 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
         PayrollConceptEntity entity = new PayrollConceptEntity();
         entity.setLineNumber(concept.getLineNumber());
         entity.setConceptCode(concept.getConceptCode());
+        entity.setConceptMnemonic(concept.getConceptMnemonic());
         entity.setConceptLabel(concept.getConceptLabel());
         entity.setAmount(concept.getAmount());
         entity.setQuantity(concept.getQuantity());

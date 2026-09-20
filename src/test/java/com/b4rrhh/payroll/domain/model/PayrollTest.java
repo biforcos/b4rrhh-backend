@@ -71,6 +71,7 @@ class PayrollTest {
                 () -> new PayrollConcept(
                         0,
                         "BASE",
+                        "SALARIO_BASE",
                         "Base salary",
                         new BigDecimal("100.00"),
                         null,
@@ -102,6 +103,7 @@ class PayrollTest {
                                 new PayrollConcept(
                                         1,
                                         "BASE",
+                                        "SALARIO_BASE",
                                         "Base salary",
                                         new BigDecimal("1000.00"),
                                         new BigDecimal("1.00"),
@@ -140,6 +142,7 @@ class PayrollTest {
                         new PayrollConcept(
                                 1,
                                 "BASE",
+                                "SALARIO_BASE",
                                 "Base salary",
                                 new BigDecimal("1000.00"),
                                 new BigDecimal("1.00"),

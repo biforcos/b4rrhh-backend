@@ -56,7 +56,7 @@ class PayrollPersistenceAdapterTest {
                 LocalDateTime.of(2026, 1, 31, 10, 15),
                 "ENGINE",
                 "1.0",
-                List.of(new PayrollConcept(1, "BASE", "Base salary", new BigDecimal("1000.00"), null, null, "EARNING", "202501", 1)),
+                List.of(new PayrollConcept(1, "BASE", "SALARIO_BASE", "Base salary", new BigDecimal("1000.00"), null, null, "EARNING", "202501", 1)),
                 List.of(new PayrollContextSnapshot("PRESENCE", "EMPLOYEE", "{\"presenceNumber\":1}", "{\"companyCode\":\"ES01\"}")),
                 LocalDateTime.of(2026, 1, 31, 10, 15),
                 LocalDateTime.of(2026, 1, 31, 10, 15)
@@ -96,7 +96,7 @@ class PayrollPersistenceAdapterTest {
                 "1.0",
                 41L,
                 List.of(),
-                List.of(new PayrollConcept(1, "BASE", "Base salary", new BigDecimal("1000.00"), null, null, "EARNING", "202501", 1)),
+                List.of(new PayrollConcept(1, "BASE", "SALARIO_BASE", "Base salary", new BigDecimal("1000.00"), null, null, "EARNING", "202501", 1)),
                 List.of(new PayrollContextSnapshot("PRESENCE", "EMPLOYEE", "{\"presenceNumber\":1}", "{\"companyCode\":\"ES01\"}")),
                 List.of()
         );
@@ -135,6 +135,7 @@ class PayrollPersistenceAdapterTest {
         PayrollConceptEntity concept = new PayrollConceptEntity();
         concept.setLineNumber(1);
         concept.setConceptCode("BASE");
+        concept.setConceptMnemonic("SALARIO_BASE");
         concept.setConceptLabel("Base salary");
         concept.setAmount(new BigDecimal("1000.00"));
         concept.setConceptNatureCode("EARNING");

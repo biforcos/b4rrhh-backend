@@ -282,7 +282,7 @@ class BulkInvalidatePayrollServiceTest {
                 LocalDateTime.of(2026, 1, 31, 10, 0),
                 "ENGINE",
                 "1.0",
-                List.of(new PayrollConcept(1, "BASE", "Base salary", new BigDecimal("1000.00"), null, null, "EARNING", "202501", 1)),
+                List.of(new PayrollConcept(1, "BASE", "SALARIO_BASE", "Base salary", new BigDecimal("1000.00"), null, null, "EARNING", "202501", 1)),
                 List.of(new PayrollContextSnapshot("PRESENCE", "EMPLOYEE", "{\"presenceNumber\":1}", "{\"companyCode\":\"ES01\"}")),
                 LocalDateTime.now(),
                 LocalDateTime.now()

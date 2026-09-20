@@ -326,7 +326,7 @@ class PayrollControllerTest {
                 "1.0",
                 41L,
                 warnings,
-                List.of(new PayrollConcept(1, "BASE", "Base salary", new BigDecimal("1000.00"), null, null, "EARNING", "202501", 1)),
+                List.of(new PayrollConcept(1, "BASE", "SALARIO_BASE", "Base salary", new BigDecimal("1000.00"), null, null, "EARNING", "202501", 1)),
                 List.of(new PayrollContextSnapshot("PRESENCE", "EMPLOYEE", "{\"presenceNumber\":1}", "{\"companyCode\":\"ES01\"}")),
                 List.of(),
                 LocalDateTime.now(),

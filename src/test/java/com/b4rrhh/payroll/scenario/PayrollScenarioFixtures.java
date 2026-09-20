@@ -368,6 +368,26 @@ public class PayrollScenarioFixtures {
                 scale, mode, objectId(ruleSystemCode, "CONCEPT", conceptCode));
     }
 
+    /**
+     * Le pone nombre en espanol a un concepto, como haria el catalogo ({@code backend#109}).
+     *
+     * <p>Sustituye el que hubiera: un concepto tiene un nombre por idioma, no una pila.
+     */
+    public void setConceptLabel(String ruleSystemCode, String conceptCode, String label) {
+        Long objectId = objectId(ruleSystemCode, "CONCEPT", conceptCode);
+        jdbc.update("delete from payroll_engine.payroll_concept_label"
+                + " where object_id = ? and language_code = 'es'", objectId);
+        jdbc.update("insert into payroll_engine.payroll_concept_label"
+                + " (object_id, language_code, label, created_at, updated_at)"
+                + " values (?, 'es', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)", objectId, label);
+    }
+
+    /** Le quita el nombre a un concepto: el caso de quien anade uno y se olvida del literal. */
+    public void removeConceptLabel(String ruleSystemCode, String conceptCode) {
+        jdbc.update("delete from payroll_engine.payroll_concept_label where object_id = ?",
+                objectId(ruleSystemCode, "CONCEPT", conceptCode));
+    }
+
     /** Declara el ambito de ejecucion de los conceptos dados. */
     public void setExecutionScope(String ruleSystemCode, String executionScope, String... conceptCodes) {
         for (String code : conceptCodes) {

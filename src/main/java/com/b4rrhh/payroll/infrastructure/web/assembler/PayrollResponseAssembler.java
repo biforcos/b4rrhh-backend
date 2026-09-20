@@ -65,6 +65,7 @@ public class PayrollResponseAssembler {
                         .map(concept -> new PayrollConceptResponse(
                                 concept.getLineNumber(),
                                 concept.getConceptCode(),
+                                concept.getConceptMnemonic(),
                                 concept.getConceptLabel(),
                                 concept.getAmount(),
                                 concept.getQuantity(),

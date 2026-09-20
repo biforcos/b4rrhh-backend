@@ -32,8 +32,10 @@ import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.model.PayrollWarning;
 import com.b4rrhh.payroll.infrastructure.config.PayrollLaunchExecutionProperties;
 import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
+import com.b4rrhh.payroll_engine.concept.domain.model.ConceptLabelLanguage;
 import com.b4rrhh.payroll_engine.concept.domain.model.ExecutionScope;
 import com.b4rrhh.payroll_engine.concept.domain.model.OperandRole;
+import com.b4rrhh.payroll_engine.concept.domain.port.ConceptLabelRepository;
 import com.b4rrhh.payroll_engine.dependency.domain.model.ConceptNodeIdentity;
 import com.b4rrhh.payroll_engine.eligibility.domain.model.EmployeeAssignmentContext;
 import com.b4rrhh.payroll_engine.execution.application.service.SegmentExecutionEngine;
@@ -84,6 +86,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     private final GetAgreementCategoryProfileUseCase getAgreementCategoryProfileUseCase;
     private final EmployeeTaxInfoPayrollLookupPort employeeTaxInfoLookupPort;
     private final PayrollCalculationStepWritePort payrollCalculationStepWritePort;
+    private final ConceptLabelRepository conceptLabelRepository;
 
     public CalculatePayrollUnitService(
             CalculatePayrollUseCase calculatePayrollUseCase,
@@ -99,7 +102,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             EmployeePayrollInputLookupPort employeePayrollInputLookupPort,
             GetAgreementCategoryProfileUseCase getAgreementCategoryProfileUseCase,
             EmployeeTaxInfoPayrollLookupPort employeeTaxInfoLookupPort,
-            PayrollCalculationStepWritePort payrollCalculationStepWritePort
+            PayrollCalculationStepWritePort payrollCalculationStepWritePort,
+            ConceptLabelRepository conceptLabelRepository
     ) {
         this.calculatePayrollUseCase = calculatePayrollUseCase;
         this.payrollLaunchEligibleInputLookupPort = payrollLaunchEligibleInputLookupPort;
@@ -115,6 +119,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         this.getAgreementCategoryProfileUseCase = getAgreementCategoryProfileUseCase;
         this.employeeTaxInfoLookupPort = employeeTaxInfoLookupPort;
         this.payrollCalculationStepWritePort = payrollCalculationStepWritePort;
+        this.conceptLabelRepository = conceptLabelRepository;
     }
 
     /**
@@ -211,6 +216,14 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                                 c -> c.getConceptCode(),
                                 c -> c
                         ));
+
+        // Los nombres del catalogo, una vez y enteros (backend#109). Lo que se lee aqui es lo que
+        // se congela en las lineas de ESTE recibo: leerlo al pintar convertiria el documento en
+        // una vista del catalogo, y un recibo entregado no puede cambiar porque alguien renombre
+        // un concepto. Un concepto sin nombre no esta en el mapa y la linea se queda con su
+        // mnemonico, que es una ausencia que se ve.
+        Map<String, String> conceptLabels = conceptLabelRepository.findLabelsByRuleSystemCode(
+                command.ruleSystemCode(), ConceptLabelLanguage.DEFAULT);
 
         // Los segmentos ya no son «de jornada»: salen de la union de los puntos de cambio de las
         // verticales que afectan al calculo —jornada, clasificacion laboral y contrato— (backend#47).
@@ -343,7 +356,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
 
         List<ConceptRow> payslipRows = calculationSteps.stream()
                 .filter(PayrollCalculationStep::isPayslipLine)
-                .map(this::toPayslipRow)
+                .map(calculado -> toPayslipRow(calculado, conceptLabels))
                 .collect(Collectors.toCollection(ArrayList::new));
 
         if (payrollLaunchExecutionProperties.isCollapseSegmentRows()) {
@@ -378,6 +391,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     lineNumber,
                     r.conceptCode(),
                     r.mnemonic(),
+                    r.label(),
                     r.amount(),
                     r.quantity(),
                     r.rate(),
@@ -449,6 +463,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     private record ConceptRow(
             String conceptCode,
             String mnemonic,
+            /** Como se llama el concepto, ya resuelto y listo para congelarse (backend#109). */
+            String label,
             BigDecimal amount,
             BigDecimal quantity,
             BigDecimal rate,
@@ -715,10 +731,14 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
      * RATE_BY_QUANTITY, la BASE de un PERCENTAGE—, y esa regla vive aqui, en un sitio, en vez de
      * estar implicita en que dos recorridos hagan lo mismo de dos maneras (backend#93).
      */
-    private ConceptRow toPayslipRow(PayrollCalculationStep step) {
+    private ConceptRow toPayslipRow(PayrollCalculationStep step, Map<String, String> conceptLabels) {
         return new ConceptRow(
                 step.conceptCode(),
                 step.conceptMnemonic(),
+                // El nombre del concepto, o su mnemonico si nadie se lo ha puesto (backend#109).
+                // El dia que alguien anada un concepto y se olvide del literal, el recibo no se
+                // rompe y no ensena un hueco: ensena la clave y se nota que falta.
+                conceptLabels.getOrDefault(step.conceptCode(), step.conceptMnemonic()),
                 step.amount(),
                 step.quantity(),
                 step.rate(),
@@ -796,6 +816,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             collapsed.merge(key, row, (existing, incoming) -> new ConceptRow(
                     existing.conceptCode(),
                     existing.mnemonic(),
+                    existing.label(),
                     existing.amount().add(incoming.amount()),
                     existing.quantity() != null && incoming.quantity() != null
                             ? existing.quantity().add(incoming.quantity())

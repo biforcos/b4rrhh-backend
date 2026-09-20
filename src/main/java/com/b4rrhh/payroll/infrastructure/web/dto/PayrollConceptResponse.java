@@ -13,10 +13,17 @@ import java.math.BigDecimal;
  *
  * <p>Para llegar de la linea a sus pasos: los pasos de ese recibo cuyo {@code payslipLineNumber} sea
  * este {@code lineNumber}. No hay que reconstruir ninguna agrupacion.
+ *
+ * <p>{@code conceptMnemonic} y {@code conceptLabel} son dos cosas y las dos estan
+ * ({@code backend#109}). El mnemonico es el <b>identificador</b> del concepto en el motor —lo que
+ * las reglas y el grafo referencian— y el literal es como se llamaba el concepto <b>cuando se
+ * calculo esta linea</b>. El literal no se resuelve al leer: viene congelado, porque el recibo es
+ * un documento y no una vista del catalogo.
  */
 public record PayrollConceptResponse(
         Integer lineNumber,
         String conceptCode,
+        String conceptMnemonic,
         String conceptLabel,
         BigDecimal amount,
         BigDecimal quantity,

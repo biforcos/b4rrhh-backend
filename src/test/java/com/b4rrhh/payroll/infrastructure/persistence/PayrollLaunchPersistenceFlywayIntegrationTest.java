@@ -168,9 +168,10 @@ class PayrollLaunchPersistenceFlywayIntegrationTest {
         );
 
         jdbcTemplate.update(
-                "insert into payroll.payroll_concept (payroll_id, line_number, concept_code, concept_label, amount, quantity, rate, concept_nature_code, origin_period_code, display_order) values ((select max(id) from payroll.payroll), ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "insert into payroll.payroll_concept (payroll_id, line_number, concept_code, concept_mnemonic, concept_label, amount, quantity, rate, concept_nature_code, origin_period_code, display_order) values ((select max(id) from payroll.payroll), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 1,
                 "BASE",
+                "SALARIO_BASE",
                 "Base salary",
                 new BigDecimal("1000.00"),
                 null,
