@@ -19,6 +19,7 @@ import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.model.PayrollWarning;
 import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollCalculationStepResponseAssembler;
 import com.b4rrhh.payroll.application.service.PayrollRuleFreshness;
+import com.b4rrhh.payroll.application.service.PayrollSnapshotProfiles;
 import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollResponseAssembler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.b4rrhh.payroll.infrastructure.web.dto.BulkInvalidatePayrollRequest;
@@ -90,7 +91,7 @@ class PayrollControllerTest {
                 searchPayrollsUseCase,
                 recalculatePayrollUseCase,
                 listPayrollCalculationStepsUseCase,
-                new PayrollResponseAssembler(new ObjectMapper()),
+                new PayrollResponseAssembler(new PayrollSnapshotProfiles(new ObjectMapper())),
                 new PayrollCalculationStepResponseAssembler(),
                 payrollRuleFreshness
         );

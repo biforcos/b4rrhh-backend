@@ -92,6 +92,18 @@
             <artifactId>minio</artifactId>
             <version>8.5.9</version>
         </dependency>
+        <!-- El PDF del recibo, que es el primer artefacto que sale del sistema
+             (backend#112). Se elige PDFBox y no se hereda: no habia ninguna
+             libreria de PDF aqui. Apache-2.0, sin condiciones de licencia que
+             arrastrar, y trae PDFTextStripper, que es lo que permite que los
+             tests LEAN el PDF ya generado en vez de dar por buena la llamada
+             que lo genero. Con cualquier otra haria falta un segundo extractor
+             de texto solo para la suite. -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.5</version>
+        </dependency>
         <!-- Los contratos OpenAPI de openapi/ son la fuente de la que el frontend
              genera su cliente, y nada del build los leia: un YAML roto pasaba la
              suite entera y reventaba en el otro repo (issue #67). Este parser es

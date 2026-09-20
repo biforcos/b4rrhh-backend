@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll.infrastructure.web.assembler;
 
+import com.b4rrhh.payroll.application.service.PayrollSnapshotProfiles;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollAgreementProfileResponse;
@@ -10,26 +11,23 @@ import com.b4rrhh.payroll.infrastructure.web.dto.PayrollEmployeeProfileResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollSummaryResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollWarningResponse;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Map;
 
 @Component
 public class PayrollResponseAssembler {
 
-    private static final String COMPANY_DATA = "COMPANY_DATA";
-    private static final String EMPLOYEE_DATA = "EMPLOYEE_DATA";
-    private static final String AGREEMENT_DATA = "AGREEMENT_DATA";
-    private static final String EMPLOYEE_PAYROLL_CONTEXT = "EMPLOYEE_PAYROLL_CONTEXT";
-    private static final String WORK_CENTER_DATA = "WORK_CENTER_DATA";
+    /**
+     * Quien lee las fotos del contexto, y lo hace una sola vez ({@code backend#112}).
+     *
+     * <p>Esta extraccion la pidio el PDF: es una segunda salida del mismo documento y tiene que
+     * decir lo mismo que esta. Dos lectores del mismo JSON no lo garantizan.
+     */
+    private final PayrollSnapshotProfiles profiles;
 
-    private final ObjectMapper objectMapper;
-
-    public PayrollResponseAssembler(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
+    public PayrollResponseAssembler(PayrollSnapshotProfiles profiles) {
+        this.profiles = profiles;
     }
 
     /**
@@ -111,126 +109,55 @@ public class PayrollResponseAssembler {
     }
 
     private PayrollCompanyProfileResponse extractCompanyProfile(List<PayrollContextSnapshot> snapshots) {
-        return snapshots.stream()
-                .filter(s -> COMPANY_DATA.equals(s.getSnapshotTypeCode()))
-                .findFirst()
-                .map(s -> parseCompanyProfile(s.getSnapshotPayloadJson()))
-                .orElse(null);
+        PayrollSnapshotProfiles.Company company = profiles.company(snapshots);
+        return company == null ? null : new PayrollCompanyProfileResponse(
+                company.legalName(),
+                company.taxIdentifier(),
+                company.street(),
+                company.city(),
+                company.postalCode()
+        );
     }
 
     private PayrollEmployeeProfileResponse extractEmployeeProfile(List<PayrollContextSnapshot> snapshots) {
-        return snapshots.stream()
-                .filter(s -> EMPLOYEE_DATA.equals(s.getSnapshotTypeCode()))
-                .findFirst()
-                .map(s -> parseEmployeeProfile(s.getSnapshotPayloadJson()))
-                .orElse(null);
-    }
-
-    private PayrollCompanyProfileResponse parseCompanyProfile(String json) {
-        try {
-            Map<String, String> map = objectMapper.readValue(json, new TypeReference<>() {});
-            return new PayrollCompanyProfileResponse(
-                    map.get("legalName"),
-                    map.get("taxIdentifier"),
-                    map.get("street"),
-                    map.get("city"),
-                    map.get("postalCode")
-            );
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private PayrollEmployeeProfileResponse parseEmployeeProfile(String json) {
-        try {
-            Map<String, String> map = objectMapper.readValue(json, new TypeReference<>() {});
-            return new PayrollEmployeeProfileResponse(
-                    map.get("fullName"),
-                    map.get("nif"),
-                    map.get("street"),
-                    map.get("city"),
-                    map.get("postalCode")
-            );
-        } catch (Exception e) {
-            return null;
-        }
+        PayrollSnapshotProfiles.Employee employee = profiles.employee(snapshots);
+        return employee == null ? null : new PayrollEmployeeProfileResponse(
+                employee.fullName(),
+                employee.nif(),
+                employee.street(),
+                employee.city(),
+                employee.postalCode()
+        );
     }
 
     private PayrollAgreementProfileResponse extractAgreementProfile(List<PayrollContextSnapshot> snapshots) {
-        return snapshots.stream()
-                .filter(s -> AGREEMENT_DATA.equals(s.getSnapshotTypeCode()))
-                .findFirst()
-                .map(s -> parseAgreementProfile(s.getSnapshotPayloadJson()))
-                .orElse(null);
-    }
-
-    private PayrollAgreementProfileResponse parseAgreementProfile(String json) {
-        try {
-            Map<String, String> map = objectMapper.readValue(json, new TypeReference<>() {});
-            return new PayrollAgreementProfileResponse(
-                    map.get("officialAgreementNumber"),
-                    map.get("displayName"),
-                    map.get("shortName"),
-                    map.get("annualHours"),
-                    map.get("agreementCategoryCode")
-            );
-        } catch (Exception e) {
-            return null;
-        }
+        PayrollSnapshotProfiles.Agreement agreement = profiles.agreement(snapshots);
+        return agreement == null ? null : new PayrollAgreementProfileResponse(
+                agreement.officialAgreementNumber(),
+                agreement.displayName(),
+                agreement.shortName(),
+                agreement.annualHours(),
+                agreement.agreementCategoryCode()
+        );
     }
 
     private String extractPresenceStartDate(List<PayrollContextSnapshot> snapshots) {
-        return snapshots.stream()
-                .filter(s -> EMPLOYEE_PAYROLL_CONTEXT.equals(s.getSnapshotTypeCode()))
-                .findFirst()
-                .map(s -> extractStringField(s.getSnapshotPayloadJson(), "presenceStartDate"))
-                .orElse(null);
-    }
-
-    /**
-     * La antiguedad que la foto guardo al calcular (backend#91). Nula en los recibos anteriores
-     * al issue, y esa nulidad significa «no se sabe»: no se sustituye por presenceStartDate, que
-     * es la fecha que esta al lado y da un numero distinto para todo readmitido.
-     */
-    private String extractSeniorityDate(List<PayrollContextSnapshot> snapshots) {
-        return snapshots.stream()
-                .filter(s -> EMPLOYEE_PAYROLL_CONTEXT.equals(s.getSnapshotTypeCode()))
-                .findFirst()
-                .map(s -> extractStringField(s.getSnapshotPayloadJson(), "seniorityDate"))
-                .orElse(null);
+        return profiles.presenceStartDate(snapshots);
     }
 
     private String extractPresenceEndDate(List<PayrollContextSnapshot> snapshots) {
-        return snapshots.stream()
-                .filter(s -> EMPLOYEE_PAYROLL_CONTEXT.equals(s.getSnapshotTypeCode()))
-                .findFirst()
-                .map(s -> extractStringField(s.getSnapshotPayloadJson(), "presenceEndDate"))
-                .orElse(null);
+        return profiles.presenceEndDate(snapshots);
+    }
+
+    private String extractSeniorityDate(List<PayrollContextSnapshot> snapshots) {
+        return profiles.seniorityDate(snapshots);
     }
 
     private String extractWorkCenterCode(List<PayrollContextSnapshot> snapshots) {
-        return snapshots.stream()
-                .filter(s -> WORK_CENTER_DATA.equals(s.getSnapshotTypeCode()))
-                .findFirst()
-                .map(s -> extractStringField(s.getSnapshotPayloadJson(), "workCenterCode"))
-                .orElse(null);
+        return profiles.workCenterCode(snapshots);
     }
 
     private String extractWorkCenterName(List<PayrollContextSnapshot> snapshots) {
-        return snapshots.stream()
-                .filter(s -> WORK_CENTER_DATA.equals(s.getSnapshotTypeCode()))
-                .findFirst()
-                .map(s -> extractStringField(s.getSnapshotPayloadJson(), "workCenterName"))
-                .orElse(null);
-    }
-
-    private String extractStringField(String json, String field) {
-        try {
-            Map<String, Object> map = objectMapper.readValue(json, new TypeReference<>() {});
-            Object value = map.get(field);
-            return value != null ? value.toString() : null;
-        } catch (Exception e) {
-            return null;
-        }
+        return profiles.workCenterName(snapshots);
     }
 }
