@@ -89,3 +89,11 @@ minio:
   secret-key: ${MINIO_SECRET_KEY:b4rrhh123}
   bucket-name: b4rrhh-employee-photos
   presigned-url-expiry-minutes: 10
+
+# Los documentos de los recibos cerrados (backend#112). Cubo aparte del de las
+# fotos a proposito: aquel se sirve publico y un recibo de nomina no se sirve a
+# nadie que no pase por el API autenticado. El cubo lo crea el adaptador la
+# primera vez que hace falta, no el docker-compose, porque no lleva politica que
+# poner.
+payslip-document:
+  bucket-name: ${PAYSLIP_DOCUMENT_BUCKET:b4rrhh-payslip-documents}

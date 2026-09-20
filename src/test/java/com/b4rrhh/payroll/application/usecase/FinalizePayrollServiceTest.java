@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll.application.usecase;
 
+import com.b4rrhh.payroll.document.application.service.PayslipDocumentArchiver;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
@@ -24,12 +25,14 @@ class FinalizePayrollServiceTest {
 
     @Mock
     private PayrollRepository payrollRepository;
+    @Mock
+    private PayslipDocumentArchiver payslipDocumentArchiver;
 
     private FinalizePayrollService service;
 
     @BeforeEach
     void setUp() {
-        service = new FinalizePayrollService(payrollRepository);
+        service = new FinalizePayrollService(payrollRepository, payslipDocumentArchiver);
     }
 
     @Test

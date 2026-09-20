@@ -2,6 +2,7 @@ package com.b4rrhh.payroll.application.usecase;
 
 import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceLookupPort;
+import com.b4rrhh.payroll.document.application.service.PayslipDocumentArchiver;
 import com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
@@ -39,13 +40,17 @@ class BulkFinalizePayrollServiceTest {
     private PayrollRepository payrollRepository;
     @Mock
     private PayrollLaunchPresenceLookupPort payrollLaunchPresenceLookupPort;
+    @Mock
+    private PayslipDocumentArchiver payslipDocumentArchiver;
 
     private BulkFinalizePayrollService service;
 
     @BeforeEach
     void setUp() {
         service = new BulkFinalizePayrollService(
-                payrollRepository, new PayrollBulkTargetExpander(payrollLaunchPresenceLookupPort));
+                payrollRepository,
+                new PayrollBulkTargetExpander(payrollLaunchPresenceLookupPort),
+                payslipDocumentArchiver);
     }
 
     @Test

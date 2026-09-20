@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll.application.usecase;
 
+import com.b4rrhh.payroll.document.application.service.PayslipDocumentArchiver;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
@@ -39,13 +40,16 @@ public class BulkFinalizePayrollService implements BulkFinalizePayrollUseCase {
 
     private final PayrollRepository payrollRepository;
     private final PayrollBulkTargetExpander targetExpander;
+    private final PayslipDocumentArchiver payslipDocumentArchiver;
 
     public BulkFinalizePayrollService(
             PayrollRepository payrollRepository,
-            PayrollBulkTargetExpander targetExpander
+            PayrollBulkTargetExpander targetExpander,
+            PayslipDocumentArchiver payslipDocumentArchiver
     ) {
         this.payrollRepository = payrollRepository;
         this.targetExpander = targetExpander;
+        this.payslipDocumentArchiver = payslipDocumentArchiver;
     }
 
     @Override
@@ -90,7 +94,13 @@ public class BulkFinalizePayrollService implements BulkFinalizePayrollUseCase {
                 totalSkippedAlreadyDefinitive++;
             } else if (existing.getStatus() == PayrollStatus.CALCULATED
                     || existing.getStatus() == PayrollStatus.EXPLICIT_VALIDATED) {
-                payrollRepository.save(existing.finalizePayroll());
+                // Cada recibo cerrado emite su documento, igual que en el cierre de uno: la
+                // invariante es «un DEFINITIVE tiene su papel», y no «un DEFINITIVE cerrado de uno
+                // en uno». Si el almacen se cae a mitad de tanda, esto revienta y la transaccion
+                // entera se deshace: no quedan ni recibos cerrados sin documento ni media tanda.
+                Payroll definitive = existing.finalizePayroll();
+                payslipDocumentArchiver.archive(definitive);
+                payrollRepository.save(definitive);
                 totalFinalized++;
             } else {
                 // NOT_VALID. No es un fallo y no se cuenta como tal: NOT_VALID -> DEFINITIVE no
