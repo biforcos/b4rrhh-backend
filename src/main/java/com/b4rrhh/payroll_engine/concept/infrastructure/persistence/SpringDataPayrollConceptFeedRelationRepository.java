@@ -53,6 +53,21 @@ public interface SpringDataPayrollConceptFeedRelationRepository
             @Param("referenceDate") LocalDate referenceDate
     );
 
+    /**
+     * Todas las alimentaciones del sistema de reglas, vigentes o no, con sus dos objetos en la
+     * misma consulta. Es la lectura del grafo del disenador (designer#15).
+     */
+    @Query("""
+        select r from PayrollEngineFeedRelationEntity r
+        join fetch r.targetObject t
+        join fetch r.sourceObject
+        where t.ruleSystemCode = :ruleSystemCode
+        order by t.objectCode asc, r.id asc
+        """)
+    List<PayrollConceptFeedRelationEntity> findAllByRuleSystemCodeFetchingObjects(
+            @Param("ruleSystemCode") String ruleSystemCode
+    );
+
     @Modifying
     @Transactional
     @Query("""
