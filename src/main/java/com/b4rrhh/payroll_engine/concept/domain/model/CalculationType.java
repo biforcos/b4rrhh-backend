@@ -5,6 +5,7 @@ public enum CalculationType {
     RATE_BY_QUANTITY,
     PERCENTAGE,
     AGGREGATE,
+    QUOTIENT,
     ENGINE_PROVIDED,
     EMPLOYEE_INPUT,
     GREATEST,

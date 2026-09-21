@@ -187,6 +187,16 @@ public class DefaultExecutionPlanBuilder implements ExecutionPlanBuilder {
             return entry;
         }
 
+        if (calculationType == CalculationType.QUOTIENT) {
+            ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType, rounding, metamodel,
+                    OperandRole.BASE, OperandRole.DIVISOR);
+            log.debug("[ENGINE]     PLAN {} | QUOTIENT: BASE={} DIVISOR={}",
+                    identity.getConceptCode(),
+                    entry.operands().get(OperandRole.BASE).getConceptCode(),
+                    entry.operands().get(OperandRole.DIVISOR).getConceptCode());
+            return entry;
+        }
+
         if (calculationType == CalculationType.LEAST) {
             ConceptExecutionPlanEntry entry = buildOperandWiredEntry(graph, identity, calculationType, rounding, metamodel,
                     OperandRole.LEFT, OperandRole.RIGHT);

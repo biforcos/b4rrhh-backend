@@ -295,7 +295,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     employeeInputsForPeriod,
                     grupoCotizacionCode,
                     tipoNomina,
-                    precalculoPorContexto.get(claveDePrecalculo(seg)).importes()
+                    precalculoPorContexto.get(claveDePrecalculo(seg)).importes(),
+                    seg.vigencias().extraPaymentsProrated()
             ));
             segmentStates.add(new SegmentExecutionState());
         }
@@ -715,7 +716,11 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 employeeInputsForPeriod,
                 grupoCotizacionCode,
                 tipoNomina,
-                precomputedDirectAmounts
+                precomputedDirectAmounts,
+                // Lo que es del PERIODO se resuelve con el ultimo tramo, como todo lo demas. La
+                // prorrata no lo usa —sus dos conceptos son de tramo, que es donde el regimen
+                // significa algo—, pero el contexto no puede quedarse sin contestar.
+                segments.getLast().vigencias().extraPaymentsProrated()
         );
     }
 

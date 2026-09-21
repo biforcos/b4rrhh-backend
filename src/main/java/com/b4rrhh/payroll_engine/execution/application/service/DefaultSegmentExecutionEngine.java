@@ -56,6 +56,7 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
     private final PercentageConceptResolver percentageConceptResolver;
     private final GreatestConceptResolver greatestConceptResolver;
     private final LeastConceptResolver leastConceptResolver;
+    private final QuotientConceptResolver quotientConceptResolver;
     private final TechnicalConceptCalculatorRegistry technicalCalculatorRegistry;
 
     public DefaultSegmentExecutionEngine(
@@ -64,6 +65,7 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
             PercentageConceptResolver percentageConceptResolver,
             GreatestConceptResolver greatestConceptResolver,
             LeastConceptResolver leastConceptResolver,
+            QuotientConceptResolver quotientConceptResolver,
             TechnicalConceptCalculatorRegistry technicalCalculatorRegistry
     ) {
         this.technicalValueResolver = technicalValueResolver;
@@ -71,6 +73,7 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
         this.percentageConceptResolver = percentageConceptResolver;
         this.greatestConceptResolver = greatestConceptResolver;
         this.leastConceptResolver = leastConceptResolver;
+        this.quotientConceptResolver = quotientConceptResolver;
         this.technicalCalculatorRegistry = technicalCalculatorRegistry;
     }
 
@@ -133,6 +136,9 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
             case LEAST ->
                     leastConceptResolver.resolve(entry, state);
 
+            case QUOTIENT ->
+                    quotientConceptResolver.resolve(entry, state);
+
             case AGGREGATE -> {
                 BigDecimal sum = BigDecimal.ZERO;
                 for (AggregateSourceEntry source : entry.aggregateSources()) {
@@ -160,7 +166,8 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
                         context.getWorkingTimePercentage(),
                         context.getRuleSystemCode(),
                         context.getGrupoCotizacionCode(),
-                        context.getTipoNomina()
+                        context.getTipoNomina(),
+                        context.isExtraPaymentsProrated()
                 ));
             }
 

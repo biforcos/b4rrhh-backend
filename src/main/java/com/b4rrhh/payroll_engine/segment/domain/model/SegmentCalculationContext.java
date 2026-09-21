@@ -49,6 +49,7 @@ public final class SegmentCalculationContext {
     private final String grupoCotizacionCode;
     private final String tipoNomina;
     private final Map<String, BigDecimal> precomputedDirectAmounts;
+    private final boolean extraPaymentsProrated;
 
     public SegmentCalculationContext(
             String ruleSystemCode,
@@ -67,7 +68,8 @@ public final class SegmentCalculationContext {
             Map<String, BigDecimal> employeeInputs,
             String grupoCotizacionCode,
             String tipoNomina,
-            Map<String, BigDecimal> precomputedDirectAmounts
+            Map<String, BigDecimal> precomputedDirectAmounts,
+            boolean extraPaymentsProrated
     ) {
         requireNonBlank(ruleSystemCode, "ruleSystemCode");
         requireNonBlank(employeeTypeCode, "employeeTypeCode");
@@ -115,6 +117,7 @@ public final class SegmentCalculationContext {
         this.grupoCotizacionCode = grupoCotizacionCode;
         this.tipoNomina = tipoNomina;
         this.precomputedDirectAmounts = Map.copyOf(precomputedDirectAmounts);
+        this.extraPaymentsProrated = extraPaymentsProrated;
     }
 
     public String getRuleSystemCode() { return ruleSystemCode; }
@@ -134,4 +137,12 @@ public final class SegmentCalculationContext {
     public String getGrupoCotizacionCode() { return grupoCotizacionCode; }
     public String getTipoNomina() { return tipoNomina; }
     public Map<String, BigDecimal> getPrecomputedDirectAmounts() { return precomputedDirectAmounts; }
+
+    /**
+     * Si en este tramo las pagas extras del empleado se prorratean ({@code backend#118}).
+     *
+     * <p>Va en el tramo y no en la asignacion de conceptos porque el regimen cambia a mitad de
+     * mes y el plan se arma una vez para el periodo entero (ADR-070).
+     */
+    public boolean isExtraPaymentsProrated() { return extraPaymentsProrated; }
 }

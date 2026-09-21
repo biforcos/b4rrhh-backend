@@ -76,9 +76,15 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * porque se componen del {@code 101}, que lo es. Son cuatro conceptos que se calculan y no
      * salen en ningun recibo: no llevan orden de folio y todavia no alimentan a nadie —eso es el
      * {@code backend#119}—, asi que lo unico que crecio fue el rastro de calculo.
+     *
+     * <p>Y eran 43 y 9 hasta el {@code backend#119}: la {@code V146} declara los siete
+     * conceptos de la prorrata de pagas extras. Seis son {@code SEGMENT} —el total de las
+     * pagas, la prorrata, los dos coeficientes de regimen y las dos puertas— porque el
+     * regimen puede cambiar a mitad de mes; el septimo, los meses del ano, es
+     * {@code PERIOD}: doce son doce en un mes partido tambien.
      */
-    private static final int CONCEPTS_IN_THE_ENGINE = 43;
-    private static final int SEGMENT_SCOPED_CONCEPTS = 9;
+    private static final int CONCEPTS_IN_THE_ENGINE = 50;
+    private static final int SEGMENT_SCOPED_CONCEPTS = 15;
 
     /**
      * Y los 38 entran en algun plan, que es lo que cambio en el backend#96.
@@ -93,7 +99,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * Declarar tres si: desde el backend#104 son 38 y 42, desde el backend#47 son 38 y 43, y desde
      * el backend#114 son 39 y 44 — cambiar un ambito no anade conceptos, anade evaluaciones.
      */
-    private static final int CONCEPTS_IN_A_PLAN = 43;
+    private static final int CONCEPTS_IN_A_PLAN = 50;
 
     /**
      * Los conceptos con orden de recibo: los que PUEDEN ser linea.
@@ -103,7 +109,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * se calculaban desde siempre y ahora ademas salen en el papel. Y son 18 desde el
      * backend#114, que le dio total propio al recuadro de aportacion empresarial.
      */
-    private static final int CONCEPTS_WITH_A_PAYSLIP_ORDER = 18;
+    private static final int CONCEPTS_WITH_A_PAYSLIP_ORDER = 20;
 
     /**
      * Y las lineas que un empleado sin horas extra acaba teniendo en el folio, que son 16.
@@ -119,7 +125,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * el backend#114 por lo mismo: la aportacion empresarial vale algo en cualquier recibo con
      * presencia, y su total tambien.
      */
-    private static final int PAYSLIP_LINES_WITHOUT_OVERTIME = 17;
+    private static final int PAYSLIP_LINES_WITHOUT_OVERTIME = 18;
 
     @Autowired
     private LaunchPayrollCalculationUseCase launch;
@@ -181,7 +187,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
     }
 
     @Test
-    void aWholeMonthKeepsEveryStep_andOnly17OfThemGetPrinted() {
+    void aWholeMonthKeepsEveryStep_andOnly18OfThemGetPrinted() {
         String emp = hireWholeMonth();
         assertEquals("COMPLETED", launchSingleEmployee(emp).status());
         vaciarLaSesion();
@@ -191,15 +197,17 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
         assertEquals(CONCEPTS_IN_A_PLAN, countSteps(pid), "pasos guardados");
 
         // Y los que antes se tiraban estan, con nombre y apellido.
-        assertEquals(10, countStepsWithNature(pid, "BASE"),
-                "conceptos BASE: los 5 de siempre, el P03 (precio de la hora extra, backend#104) y"
-                        + " las cuatro pagas extras del convenio (backend#117)");
-        assertEquals(16, countStepsWithNature(pid, "TECHNICAL"),
-                "conceptos TECHNICAL: los 16 del catalogo, desde que la V130 retiro el P_SS");
+        assertEquals(13, countStepsWithNature(pid, "BASE"),
+                "conceptos BASE: los 5 de siempre, el P03 (precio de la hora extra, backend#104),"
+                        + " las cuatro pagas extras del convenio (backend#117) y los tres de la"
+                        + " prorrata: su total, la prorrata y la puerta que cotiza (backend#119)");
+        assertEquals(19, countStepsWithNature(pid, "TECHNICAL"),
+                "conceptos TECHNICAL: los 16 de siempre mas los tres del backend#119 — los meses"
+                        + " del ano y los dos coeficientes de regimen");
 
-        // El recibo tiene 17 lineas: las 14 de siempre, las dos bases que el backend#111 saco al
-        // papel y el total de la aportacion empresarial del backend#114. Siguen sin ser TODOS los
-        // pasos con orden de recibo: hay 18, y el que sobra es el 102 valiendo cero.
+        // El recibo tiene 18 lineas: las 17 de antes mas la prorrata que cotiza, que es la puerta
+        // que le toca a este empleado. Siguen sin ser TODOS los pasos con orden de recibo: hay 20,
+        // y los dos que sobran son el 102 y el 103 valiendo cero.
         int payslipLines = jdbc.queryForObject(
                 "select count(*) from payroll.payroll_concept where payroll_id = ?", Integer.class, pid);
         assertEquals(PAYSLIP_LINES_WITHOUT_OVERTIME, payslipLines, "lineas de recibo");
@@ -208,30 +216,39 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
                         + " where payroll_id = ? and payslip_order_code is not null",
                 Integer.class, pid), "los pasos que llevan orden de recibo");
 
-        // Y la diferencia tiene nombre: es el 102, que se calculo, dio cero y no se imprimio. El
-        // paso existe —el calculo ocurrio— y la linea no. Esa es la regla del cero (backend#104).
-        assertEquals(List.of("102"), jdbc.queryForList(
+        // Y la diferencia tiene nombre: el 102 y el 103, que se calcularon, dieron cero y no se
+        // imprimieron. El paso existe —el calculo ocurrio— y la linea no. Esa es la regla del cero
+        // (backend#104), y es lo que hace que las dos puertas de la prorrata puedan estar las dos
+        // asignadas a todo el mundo y salga impresa exactamente una (backend#119).
+        assertEquals(List.of("102", "103"), jdbc.queryForList(
                 "select concept_code from payroll.payroll_calculation_step"
                         + " where payroll_id = ? and payslip_order_code is not null"
                         + "   and payslip_line_number is null order by concept_code",
-                String.class, pid), "el unico paso con orden y sin linea es el 102 a cero");
+                String.class, pid),
+                "los pasos con orden y sin linea son los dos que valen cero en este recibo: el 102"
+                        + " porque no declara horas extra, y el 103 porque este empleado no tiene"
+                        + " las pagas prorrateadas — su prorrata sale por la otra puerta, el B02");
 
         // El recuadro de bases, por los dos lados (backend#111).
         //
         // Las dos que el modelo oficial imprime salen, en su bloque y con su nombre. Y los otros
-        // ocho BASE siguen sin salir: el B_CC_MAX es el paso intermedio entre las dos; P01, P02 y
-        // P03 son precios que llevan naturaleza BASE porque el motor los usa como operando; y las
-        // cuatro PE_* son las pagas del convenio, bases intermedias de las que sale la prorrata.
+        // diez BASE siguen sin salir: el B_CC_MAX es el paso intermedio entre las dos; P01, P02 y
+        // P03 son precios que llevan naturaleza BASE porque el motor los usa como operando; las
+        // cuatro PE_* son las pagas del convenio; y PE_TOTAL y P_PRORRATA son su suma y su
+        // duodecima parte, los dos pasos por los que se llega a la linea que SI sale (backend#119).
         //
         // Las dos mitades van juntas a proposito. Con solo la primera, darles orden de recibo a
-        // los diez pasaria igual; es la segunda la que hace que «no tiene orden» siga
+        // los doce pasaria igual; es la segunda la que hace que «no tiene orden» siga
         // significando «no va al papel» y no «se me olvido».
-        assertEquals(List.of("B_CC", "B01"), jdbc.queryForList(
+        assertEquals(List.of("B02", "B_CC", "B01"), jdbc.queryForList(
                 "select c.concept_code from payroll.payroll_concept c"
                         + " where c.payroll_id = ? and c.payslip_section_code = 'BASES'"
                         + " order by c.display_order",
-                String.class, pid), "el recuadro de bases: la de cotizacion y la sujeta a IRPF");
-        assertEquals(List.of("B_CC_MAX", "P01", "P02", "P03", "PE_1", "PE_2", "PE_3", "PE_4"),
+                String.class, pid),
+                "el recuadro de bases del modelo oficial: la prorrata que cotiza, la base de"
+                        + " contingencias comunes y la base cotizable (backend#119)");
+        assertEquals(List.of("B_CC_MAX", "P01", "P02", "P03",
+                        "PE_1", "PE_2", "PE_3", "PE_4", "PE_TOTAL", "P_PRORRATA"),
                 jdbc.queryForList(
                 "select s.concept_code from payroll.payroll_calculation_step s"
                         + " where s.payroll_id = ? and s.functional_nature = 'BASE'"
@@ -249,13 +266,13 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
     }
 
     @Test
-    void aSplitMonthKeepsFourStepsMore_withSalarioBaseTwiceAndNeitherOneLost() {
+    void aSplitMonthKeepsFifteenStepsMore_withSalarioBaseTwiceAndNeitherOneLost() {
         String emp = hireWithSplitWorkingTime(new BigDecimal("100.00"), new BigDecimal("50.00"));
         assertEquals("COMPLETED", launchSingleEmployee(emp).status());
         vaciarLaSesion();
         Long pid = payrollId(emp);
 
-        // Los 9 conceptos SEGMENT se evaluan una vez por tramo: 34 + 9 x 2 = 52.
+        // Los 15 conceptos SEGMENT se evaluan una vez por tramo: 35 + 15 x 2 = 65.
         assertEquals(CONCEPTS_IN_A_PLAN + SEGMENT_SCOPED_CONCEPTS, countSteps(pid), "pasos guardados");
 
         // Y el 101 sale dos veces, con dos precios distintos. Es el caso que se comia cualquier

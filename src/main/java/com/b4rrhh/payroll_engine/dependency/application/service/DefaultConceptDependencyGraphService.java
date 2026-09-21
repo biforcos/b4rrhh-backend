@@ -88,7 +88,8 @@ public class DefaultConceptDependencyGraphService implements ConceptDependencyGr
 
             CalculationType calcType = target.getCalculationType();
             if (calcType == CalculationType.RATE_BY_QUANTITY || calcType == CalculationType.PERCENTAGE
-                    || calcType == CalculationType.GREATEST || calcType == CalculationType.LEAST) {
+                    || calcType == CalculationType.GREATEST || calcType == CalculationType.LEAST
+                    || calcType == CalculationType.QUOTIENT) {
                 metamodel.requireSameRuleSystem(target.getRuleSystemCode());
                 List<PayrollConceptOperand> operands = metamodel.operandsOf(target.getConceptCode());
 

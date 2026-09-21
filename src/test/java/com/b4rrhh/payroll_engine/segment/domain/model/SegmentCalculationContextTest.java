@@ -27,7 +27,7 @@ class SegmentCalculationContextTest {
                 Map.of(),
                 "G02",
                 "MENSUAL",
-                Map.of()
+                Map.of(), false
         );
     }
 
@@ -43,7 +43,7 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                "G02", "MENSUAL", Map.of()));
+                "G02", "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -53,7 +53,7 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                "G02", "MENSUAL", Map.of()));
+                "G02", "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -63,7 +63,7 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                "G02", "MENSUAL", Map.of()));
+                "G02", "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -73,7 +73,7 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                "G02", "MENSUAL", Map.of()));
+                "G02", "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -83,7 +83,7 @@ class SegmentCalculationContextTest {
                 null, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                "G02", "MENSUAL", Map.of()));
+                "G02", "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -93,7 +93,7 @@ class SegmentCalculationContextTest {
                 APR_01, null, APR_01, APR_14,
                 true, false, 30L, 14L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                "G02", "MENSUAL", Map.of()));
+                "G02", "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -103,7 +103,7 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, null, APR_14,
                 true, false, 30L, 14L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                "G02", "MENSUAL", Map.of()));
+                "G02", "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -113,7 +113,7 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, APR_01, null,
                 true, false, 30L, 14L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                "G02", "MENSUAL", Map.of()));
+                "G02", "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -123,7 +123,7 @@ class SegmentCalculationContextTest {
                 APR_30, APR_01, APR_01, APR_01,
                 true, true, 1L, 1L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                "G02", "MENSUAL", Map.of()));
+                "G02", "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -133,7 +133,7 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, APR_14, APR_01,
                 true, false, 30L, 1L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                "G02", "MENSUAL", Map.of()));
+                "G02", "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -144,7 +144,7 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, mar31, APR_14,
                 true, false, 30L, 15L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                "G02", "MENSUAL", Map.of()));
+                "G02", "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -155,7 +155,7 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, APR_01, may01,
                 true, true, 30L, 31L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                "G02", "MENSUAL", Map.of()));
+                "G02", "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -165,7 +165,7 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 0L, 14L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                "G02", "MENSUAL", Map.of()));
+                "G02", "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -175,7 +175,7 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, -1L, 14L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                "G02", "MENSUAL", Map.of()));
+                "G02", "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -185,7 +185,7 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 0L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                "G02", "MENSUAL", Map.of()));
+                "G02", "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -195,7 +195,7 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
                 null, new BigDecimal("2000.00"), Map.of(),
-                "G02", "MENSUAL", Map.of()));
+                "G02", "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -205,7 +205,7 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
                 new BigDecimal("100"), null, Map.of(),
-                "G02", "MENSUAL", Map.of()));
+                "G02", "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -215,7 +215,7 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), null,
-                "G02", "MENSUAL", Map.of()));
+                "G02", "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -225,7 +225,7 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                null, "MENSUAL", Map.of()));
+                null, "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -235,7 +235,7 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                "  ", "MENSUAL", Map.of()));
+                "  ", "MENSUAL", Map.of(), false));
     }
 
     @Test
@@ -245,7 +245,7 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                "G02", null, Map.of()));
+                "G02", null, Map.of(), false));
     }
 
     @Test
@@ -255,7 +255,7 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                "G02", "  ", Map.of()));
+                "G02", "  ", Map.of(), false));
     }
 
     @Test
@@ -265,6 +265,6 @@ class SegmentCalculationContextTest {
                 APR_01, APR_30, APR_01, APR_14,
                 true, false, 30L, 14L,
                 new BigDecimal("100"), new BigDecimal("2000.00"), Map.of(),
-                "G02", "MENSUAL", null));
+                "G02", "MENSUAL", null, false));
     }
 }

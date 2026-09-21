@@ -84,9 +84,9 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
     private static final Map<String, Integer> PERSISTED_WITH_A_PAYSLIP_ORDER = new LinkedHashMap<>();
 
     static {
-        PERSISTED_WITH_A_PAYSLIP_ORDER.put("BASE", 2);             // B_CC, B01 (V139)
+        PERSISTED_WITH_A_PAYSLIP_ORDER.put("BASE", 3);             // B02, B_CC, B01 (V139, V146)
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("DEDUCTION", 5);        // 700, 701, 702, 703, 800
-        PERSISTED_WITH_A_PAYSLIP_ORDER.put("EARNING", 2);          // 101, 102
+        PERSISTED_WITH_A_PAYSLIP_ORDER.put("EARNING", 3);          // 101, 102, 103
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("INFORMATIONAL", 5);    // 720 a 724
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("NET_PAY", 1);          // 990
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("TOTAL_DEDUCTION", 1);  // 980
@@ -172,14 +172,15 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
      */
     @Test
     void onlyTheTwoBasesOfTheOfficialBlockArePrinted_andNoTechnicalConceptIs() {
-        assertEquals(Map.of("BASE", 2), censusByNature("BASE", "TECHNICAL"),
+        assertEquals(Map.of("BASE", 3), censusByNature("BASE", "TECHNICAL"),
                 """
                 Ha cambiado que conceptos BASE o TECHNICAL llevan orden de recibo.
 
-                Del recuadro de bases se imprimen DOS y estan elegidos uno a uno en la V139: \
-                B_CC (base de cotizacion) y B01 (base sujeta a retencion del IRPF).
+                Del recuadro de bases se imprimen TRES y estan elegidos uno a uno: B02 (la \
+                prorrata de pagas extras que cotiza y no se paga, V146), B_CC (base de cotizacion) \
+                y B01 (base cotizable, V139).
 
-                Si han subido a tres o mas, mira si lo que has anadido es una base de verdad o \
+                Si han subido a cuatro o mas, mira si lo que has anadido es una base de verdad o \
                 uno de los precios: P01, P02 y P03 llevan naturaleza BASE porque el motor los usa \
                 como operando BASE, y no son bases de cotizacion. B_CC_MAX tampoco: es el paso \
                 intermedio entre B01 y B_CC y en el papel no hay nada entre los dos.
@@ -190,13 +191,15 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
         // 410 es B_CC y 430 es B01: el orden del modelo oficial, primero la base de cotizacion y
         // despues la sujeta a retencion. Sale del payslip_order_code y no del codigo del
         // concepto, que aqui es una letra y no ordena.
-        assertEquals(List.of("410", "430"), conceptsWithPayslipOrderOfNature("BASE"),
+        assertEquals(List.of("405", "410", "430"), conceptsWithPayslipOrderOfNature("BASE"),
                 """
-                Los ordenes de recibo de los BASE ya no son 410 y 430.
+                Los ordenes de recibo de los BASE ya no son 405, 410 y 430.
 
-                Los puso la V139: 410 para B_CC (base de cotizacion) y 430 para B01 (base sujeta \
-                a retencion del IRPF). La decena 4xx es la del recuadro de bases y no significa \
-                otra cosa en este catalogo.""");
+                Los puso la V139 —410 para B_CC (base de cotizacion) y 430 para B01 (base \
+                cotizable)— y la V146 anadio el 405 para B02, la prorrata que cotiza: va delante \
+                de la base de contingencias comunes porque es uno de los sumandos con los que se \
+                forma, que es el orden del modelo oficial. La decena 4xx es la del recuadro de \
+                bases y no significa otra cosa en este catalogo.""");
     }
 
     /**
@@ -242,8 +245,8 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
     }
 
     /**
-     * Y las dos particiones, puestas una al lado de la otra: se persisten 17 y se pintan
-     * <b>17</b>.
+     * Y las dos particiones, puestas una al lado de la otra: se persisten 20 y se pintan
+     * <b>20</b>.
      *
      * <p>Eran 15 y 10 hasta el {@code b4rrhh/frontend#76}: los cinco que faltaban eran la
      * aportación empresarial, y que los dos números coincidan es el resultado de aquel issue —lo
@@ -259,21 +262,26 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
      * {@code 102} es {@code EARNING} y lleva orden de recibo, así que entra en los dos lados. Y
      * eran diecisiete hasta el {@code backend#114}, que le dio total propio al recuadro de
      * aportación empresarial: el {@code 725}, con naturaleza nueva y en el bloque que cierra.
-     * <b>Pintable no es impreso</b>: en un recibo sin horas vale cero y la regla del cero no lo
-     * imprime. Este censo no lo sabe ni tiene por qué saberlo — habla del catálogo.
+     * Y eran dieciocho hasta el {@code backend#119}, que añadió las <b>dos puertas</b> de la
+     * prorrata de pagas extras: el {@code 103} entre los devengos y el {@code B02} en el
+     * recuadro de bases.
+     *
+     * <b>Pintable no es impreso</b>: en un recibo sin horas el {@code 102} vale cero y la regla
+     * del cero no lo imprime, y de las dos puertas de la prorrata siempre hay una que vale cero
+     * y tampoco sale. Este censo no lo sabe ni tiene por qué saberlo — habla del catálogo.
      */
     @Test
-    void eighteenAreKeptAndEighteenArePainted() {
+    void twentyAreKeptAndTwentyArePainted() {
         int persisted = censusByNature().values().stream().mapToInt(Integer::intValue).sum();
         int painted = censusByNature().entrySet().stream()
                 .filter(entry -> PAINTED_BY_THE_PAYSLIP.contains(entry.getKey()))
                 .mapToInt(Map.Entry::getValue)
                 .sum();
 
-        assertEquals(18, persisted, "conceptos con sitio en el recibo");
-        assertEquals(18, painted,
+        assertEquals(20, persisted, "conceptos con sitio en el recibo");
+        assertEquals(20, painted,
                 """
-                Los conceptos que el folio pinta han dejado de ser dieciocho.
+                Los conceptos que el folio pinta han dejado de ser veinte.
 
                 Persistidos y pintados siguen siendo dos criterios distintos —el sitio lo da \
                 payslip_order_code y el bloque lo da la seccion declarada en la V138— y desde el \

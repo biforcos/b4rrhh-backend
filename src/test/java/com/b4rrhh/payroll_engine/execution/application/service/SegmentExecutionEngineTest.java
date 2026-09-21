@@ -43,6 +43,7 @@ class SegmentExecutionEngineTest {
                     new PercentageConceptResolver(),
                     new GreatestConceptResolver(),
                     new LeastConceptResolver(),
+                    new QuotientConceptResolver(),
                     new TechnicalConceptCalculatorRegistry(List.of()));
 
     /** Builds an enriched SALARIO_BASE plan entry with QUANTITY and RATE operand wiring. */
@@ -120,7 +121,7 @@ class SegmentExecutionEngineTest {
                 Map.of(),
                 "G02",
                 "MENSUAL",
-                Map.of()
+                Map.of(), false
         );
     }
 
@@ -169,7 +170,7 @@ class SegmentExecutionEngineTest {
                 Map.of(),
                 "G02",
                 "MENSUAL",
-                Map.of()
+                Map.of(), false
         );
         List<ConceptExecutionPlanEntry> plan = List.of(
                 precioDiaConOchoDecimales()
@@ -213,7 +214,7 @@ class SegmentExecutionEngineTest {
                 Map.of(),
                 "G02",
                 "MENSUAL",
-                Map.of()
+                Map.of(), false
         );
         List<ConceptExecutionPlanEntry> plan = List.of(
                 new ConceptExecutionPlanEntry(node("T_DIAS_PRESENCIA_SEGMENTO"), CalculationType.DIRECT_AMOUNT),
@@ -379,7 +380,7 @@ class SegmentExecutionEngineTest {
                 Map.of(),
                 "G02",
                 "MENSUAL",
-                Map.of("PRECIO_DIA_PLENO", precioDiaPleno)
+                Map.of("PRECIO_DIA_PLENO", precioDiaPleno), false
         );
 
         List<ConceptExecutionPlanEntry> plan = List.of(

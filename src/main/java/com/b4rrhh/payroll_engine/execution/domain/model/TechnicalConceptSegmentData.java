@@ -12,5 +12,15 @@ public record TechnicalConceptSegmentData(
         BigDecimal workingTimePercentage,
         String ruleSystemCode,
         String grupoCotizacionCode,
-        String tipoNomina
+        String tipoNomina,
+        /**
+         * Si en este tramo las pagas extras del empleado se prorratean ({@code backend#118}).
+         *
+         * <p>Es lo que decide por cual de las dos puertas entra la prorrata en el recibo, y viaja
+         * por el tramo y no por la asignacion porque el regimen puede cambiar a mitad de mes: el
+         * plan de conceptos se arma una vez para el periodo entero, asi que una condicion de
+         * {@code concept_assignment} no sabria contestar dos cosas distintas en el mismo recibo
+         * (ADR-070).
+         */
+        boolean extraPaymentsProrated
 ) {}

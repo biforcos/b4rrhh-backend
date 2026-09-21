@@ -29,6 +29,7 @@ import com.b4rrhh.payroll_engine.execution.application.service.DefaultSegmentExe
 import com.b4rrhh.payroll_engine.execution.application.service.GreatestConceptResolver;
 import com.b4rrhh.payroll_engine.execution.application.service.LeastConceptResolver;
 import com.b4rrhh.payroll_engine.execution.application.service.PercentageConceptResolver;
+import com.b4rrhh.payroll_engine.execution.application.service.QuotientConceptResolver;
 import com.b4rrhh.payroll_engine.execution.application.service.RateByQuantityOperandResolver;
 import com.b4rrhh.payroll_engine.execution.application.service.SegmentExecutionEngine;
 import com.b4rrhh.payroll_engine.execution.application.service.SegmentTechnicalValueResolver;
@@ -114,6 +115,7 @@ class CalculatePayrollUnitServiceTest {
             new PercentageConceptResolver(),
             new GreatestConceptResolver(),
             new LeastConceptResolver(),
+            new QuotientConceptResolver(),
             new TechnicalConceptCalculatorRegistry(List.of(
                     new AccrualDaysConceptCalculator(),
                     new WorkingTimeConceptCalculator())));

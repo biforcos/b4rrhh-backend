@@ -38,10 +38,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <h2>Lo que este issue NO hace, y este test lo sujeta</h2>
  *
- * <p>Las cuatro pagas <b>no alimentan a nadie</b> y <b>no se imprimen</b>. Son bases intermedias,
- * como {@code P01}. Quien las consume es el {@code backend#119}, y hasta entonces ningun recibo
- * puede moverse: un concepto que no alimenta a nadie no puede cambiar un importe. Eso es lo que
- * convierte «cero recibos se mueven» en una afirmacion comprobable y no en una esperanza.
+ * <p>Las cuatro pagas <b>no se imprimen</b>: son bases intermedias, como {@code P01}. Y cuando este
+ * issue se cerro tampoco alimentaban a nadie, que era lo que convertia su «cero recibos se mueven»
+ * en una afirmacion comprobable. Quien las enchufo —a proposito— fue el {@code backend#119}, asi
+ * que lo que se defiende hoy es que siguen alimentando <b>solo a su total</b>.
  */
 @TestSobreEsquemaReal
 class TheAgreementSaysItsExtraPaymentsAndWhetherTheyAreProratedTest {
@@ -49,7 +49,13 @@ class TheAgreementSaysItsExtraPaymentsAndWhetherTheyAreProratedTest {
     /** El convenio de la demo. */
     private static final String CONVENIO = "99002405011982";
 
-    /** Las cuatro del articulo 23. */
+    /**
+     * Las cuatro del articulo 23, <b>nombradas una a una y no por prefijo</b>.
+     *
+     * <p>Aqui habia un prefijo y duro un issue: el {@code backend#119} declaro
+     * {@code PE_TOTAL}, que es su suma y no una paga, y estas consultas empezaron a contar cinco.
+     * Un prefijo es una conjetura sobre como se van a llamar las cosas que todavia no existen.
+     */
     private static final List<String> LAS_CUATRO_PAGAS = List.of("PE_1", "PE_2", "PE_3", "PE_4");
 
     @Autowired
@@ -105,7 +111,7 @@ class TheAgreementSaysItsExtraPaymentsAndWhetherTheyAreProratedTest {
                   join payroll_engine.payroll_concept c on c.object_id = o.id
                  where o.rule_system_code = 'ESP'
                    and o.object_type_code = 'CONCEPT'
-                   and o.object_code like 'PE\\_%'
+                   and o.object_code in ('PE_1', 'PE_2', 'PE_3', 'PE_4')
                  order by o.object_code
                 """);
 
@@ -153,16 +159,20 @@ class TheAgreementSaysItsExtraPaymentsAndWhetherTheyAreProratedTest {
     }
 
     /**
-     * La afirmacion que hace comprobable el «cero recibos se mueven» de este issue: las cuatro
-     * pagas no alimentan a nadie.
+     * Las cuatro pagas alimentan <b>una sola cosa</b>: su total, y de ahi sale la prorrata.
      *
-     * <p>Un concepto que no alimenta a ningun otro no puede mover un importe de un recibo, y por
-     * eso declararlas es seguro aunque la semilla no se recalcule. Quien rompa este test esta
-     * enchufando la prorrata, y eso es el {@code backend#119} — que mueve los 863 recibos a
-     * proposito.
+     * <p>Cuando este issue se cerro, esta comprobacion decia que no alimentaban a nadie, y ese era
+     * su sentido: un concepto que no alimenta a ningun otro no puede cambiar un importe, y eso era
+     * lo que hacia comprobable el «cero recibos se mueven» del {@code backend#117}. El
+     * {@code backend#119} las enchufo —a proposito, y moviendo los 863 recibos— asi que lo que se
+     * defiende ahora es lo otro: que <b>siguen alimentando solo a su total</b>.
+     *
+     * <p>No es una comprobacion de adorno. Una paga que alimentara ademas a {@code B01} o al
+     * {@code 970} por su cuenta se cobraria dos veces, que es exactamente lo que le pasa hoy al
+     * {@code 102} en el liquido ({@code backend#120}).
      */
     @Test
-    void noExtraPaymentFeedsAnythingYet_whichIsWhyNoPayslipCanMove() {
+    void theFourExtraPaymentsFeedOnlyTheirTotal() {
         List<String> consumidores = jdbc.queryForList("""
                 select origen.object_code || ' -> ' || destino.object_code
                   from payroll_engine.payroll_concept_feed_relation f
@@ -170,13 +180,15 @@ class TheAgreementSaysItsExtraPaymentsAndWhetherTheyAreProratedTest {
                   join payroll_engine.payroll_object destino on destino.id = f.target_object_id
                  where origen.rule_system_code = 'ESP'
                    and origen.object_type_code = 'CONCEPT'
-                   and origen.object_code like 'PE\\_%'
+                   and origen.object_code in ('PE_1', 'PE_2', 'PE_3', 'PE_4')
                  order by 1
                 """, String.class);
 
-        assertEquals(List.of(), consumidores,
-                "Las pagas del convenio todavia no alimentan nada. En cuanto alimenten algo, los "
-                        + "recibos se mueven — y eso es el backend#119, no este issue.");
+        assertEquals(
+                List.of("PE_1 -> PE_TOTAL", "PE_2 -> PE_TOTAL", "PE_3 -> PE_TOTAL", "PE_4 -> PE_TOTAL"),
+                consumidores,
+                "Cada paga suma en el total y en nada mas. Un camino de mas al 970 o a B01 seria "
+                        + "cobrarla dos veces.");
 
         List<String> operandos = jdbc.queryForList("""
                 select destino.object_code
@@ -184,11 +196,11 @@ class TheAgreementSaysItsExtraPaymentsAndWhetherTheyAreProratedTest {
                   join payroll_engine.payroll_object origen  on origen.id  = op.source_object_id
                   join payroll_engine.payroll_object destino on destino.id = op.target_object_id
                  where origen.rule_system_code = 'ESP'
-                   and origen.object_code like 'PE\\_%'
+                   and origen.object_code in ('PE_1', 'PE_2', 'PE_3', 'PE_4')
                 """, String.class);
 
         assertEquals(List.of(), operandos,
-                "Ni como operando de nadie: eso tambien las meteria en el plan de ejecucion.");
+                "Y ninguna es operando de nadie: quien lee el total es P_PRORRATA, no las pagas.");
     }
 
     /**
@@ -209,7 +221,7 @@ class TheAgreementSaysItsExtraPaymentsAndWhetherTheyAreProratedTest {
                   from payroll_engine.concept_assignment
                  where rule_system_code = 'ESP'
                    and agreement_code = ?
-                   and concept_code like 'PE\\_%'
+                   and concept_code in ('PE_1', 'PE_2', 'PE_3', 'PE_4')
                  order by concept_code
                 """, String.class, CONVENIO);
 
@@ -232,7 +244,7 @@ class TheAgreementSaysItsExtraPaymentsAndWhetherTheyAreProratedTest {
                          on l.object_id = o.id and l.language_code = 'es'
                  where o.rule_system_code = 'ESP'
                    and o.object_type_code = 'CONCEPT'
-                   and o.object_code like 'PE\\_%'
+                   and o.object_code in ('PE_1', 'PE_2', 'PE_3', 'PE_4')
                  order by o.object_code
                 """);
 
@@ -257,7 +269,7 @@ class TheAgreementSaysItsExtraPaymentsAndWhetherTheyAreProratedTest {
                 select o.rule_system_code || '/' || o.object_code
                   from payroll_engine.payroll_object o
                  where o.object_type_code = 'CONCEPT'
-                   and o.object_code like 'PE\\_%'
+                   and o.object_code in ('PE_1', 'PE_2', 'PE_3', 'PE_4')
                    and o.rule_system_code <> 'ESP'
                  order by 1
                 """, String.class);

@@ -40,7 +40,7 @@ class DefaultSegmentExecutionEngineEmployeeInputTest {
                 employeeInputs,
                 "G02",
                 "MENSUAL",
-                Map.of()
+                Map.of(), false
         );
     }
 
@@ -51,6 +51,7 @@ class DefaultSegmentExecutionEngineEmployeeInputTest {
                     new PercentageConceptResolver(),
                     new GreatestConceptResolver(),
                     new LeastConceptResolver(),
+                    new QuotientConceptResolver(),
                     new TechnicalConceptCalculatorRegistry(List.of()));
 
     @Test
