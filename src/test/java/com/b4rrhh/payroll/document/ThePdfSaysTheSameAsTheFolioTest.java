@@ -17,7 +17,11 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -126,40 +130,68 @@ class ThePdfSaysTheSameAsTheFolioTest {
     }
 
     /**
-     * Criterio 5: solo se totaliza el bloque cuyas lineas son sumandos.
+     * Criterio 2 del {@code backend#114}: <b>no hay ninguna cifra en el PDF que no venga de una
+     * linea del recibo.</b>
      *
-     * <p>Son tres reglas y las tres tienen que verse aqui, porque cada una tapa un numero falso
-     * distinto:
+     * <p>Esta frase es la que se queria poder decir, y hasta hoy no se podia. El recuadro de
+     * aportacion empresarial era el unico bloque con total en el modelo oficial al que el motor
+     * no le daba uno, asi que la plantilla del papel lo sumaba —y este mismo test lo declaraba
+     * como «la unica cifra del PDF que no viene de una linea del recibo»—. La {@code V141} le
+     * da su concepto, el {@code 725}, y con eso la excepcion se retira.
      *
-     * <ul>
-     *   <li><b>Los devengos no se suman</b>: ya traen el 970, que <i>es</i> esa suma. Sumarlos
-     *       otra vez daria el doble.</li>
-     *   <li><b>La aportacion empresarial si</b>: el motor no la totaliza y el modelo oficial pide
-     *       el total del recuadro. Es la unica cifra del PDF que no viene de una linea del
-     *       recibo.</li>
-     *   <li><b>Las bases no se suman nunca</b>, aunque no traigan total propio. La base de
-     *       contingencias comunes y la base sujeta a retencion son dos magnitudes distintas del
-     *       mismo mes: {@code 1323,00 + 1068,75 = 2391,75} no es ninguna magnitud.</li>
-     * </ul>
+     * <p>Se comprueba por barrido y no por lista: se buscan <b>todas</b> las cifras con decimales
+     * del texto del PDF y se exige que cada una este entre las que el recibo trae escritas. Una
+     * lista de cifras esperadas volveria a dejar sitio para que manana alguien sume algo; esto
+     * no, porque lo que afirma es una ausencia.
      *
-     * <p>Esa tercera es <b>la unica linea en la que el PDF y el folio no dicen lo mismo</b>, y es
-     * a proposito: el folio la suma hoy —un defecto que la {@code V139} destapo al llenar un
-     * recuadro que antes salia vacio— y el papel no lo hereda. Un numero sin significado en un
-     * documento que se entrega es peor que una diferencia entre dos salidas.
+     * <p>El recuadro de bases sigue sin total y sigue sin necesitarlo: {@code 1323,00 + 1068,75}
+     * no es ninguna magnitud. Eso lo decidio el {@code frontend#79} para la pantalla y esto lo
+     * sostiene para el papel —por eso tambien se comprueba que el {@code 2391,75} no aparece—.
      */
     @Test
-    void onlyTheBlockWhoseLinesAreAddendsCarriesASum() throws IOException {
-        String texto = textoDe(pdfDe(PayslipDocumentFixtures.cerrado(PayslipDocumentFixtures.emp000001())));
+    void noFigureOnThePaperComesFromOutsideTheReceipt() throws IOException {
+        Payroll payroll = PayslipDocumentFixtures.cerrado(PayslipDocumentFixtures.emp000001());
 
-        assertTrue(texto.contains("Total aportacion empresarial"),
-                "La aportacion empresarial es el bloque que el motor no totaliza y necesita el suyo");
-        assertTrue(texto.contains("423,76"),
+        Set<String> lasQueTraeElRecibo = new HashSet<>();
+        for (PayrollConceptResponse concept : folio.toResponse(payroll, false).concepts()) {
+            lasQueTraeElRecibo.add(PayslipNumbers.valor(concept.quantity()));
+            lasQueTraeElRecibo.add(PayslipNumbers.valor(concept.rate()));
+            lasQueTraeElRecibo.add(PayslipNumbers.valor(concept.amount()));
+        }
+
+        String texto = textoDe(pdfDe(payroll));
+        List<String> inventadas = new ArrayList<>();
+        Matcher cifra = Pattern.compile("(?<![\\d.])\\d[\\d.]*,\\d+").matcher(texto);
+        while (cifra.find()) {
+            if (!lasQueTraeElRecibo.contains(cifra.group())) {
+                inventadas.add(cifra.group());
+            }
+        }
+
+        assertEquals(List.of(), inventadas,
+                "El papel no puede escribir una cifra que no este en una linea del recibo."
+                        + "\nEl PDF dice:\n"
+                        + texto);
+    }
+
+    /** Y el total que antes sumaba el papel ahora sale porque el motor lo calculo. */
+    @Test
+    void theEmployerContributionTotalComesFromItsOwnLine() throws IOException {
+        Payroll payroll = PayslipDocumentFixtures.cerrado(PayslipDocumentFixtures.emp000001());
+        PayrollConceptResponse total = folio.toResponse(payroll, false).concepts().stream()
+                .filter(c -> "TOTAL_EMPLOYER_CONTRIBUTION".equals(c.conceptNatureCode()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError(
+                        "el recibo tiene que traer el total de la aportacion empresarial como linea"));
+
+        assertEquals("423,76", PayslipNumbers.valor(total.amount()),
                 "312,23 + 93,27 + 7,94 + 2,65 + 7,67 = 423,76");
 
-        assertTrue(!texto.contains("Total devengos"),
-                "Los devengos ya traen el 970: sumarlos otra vez daria el doble");
+        String texto = textoDe(pdfDe(payroll));
+        assertTrue(texto.contains("Total aportacion empresarial"),
+                "y el papel lo tiene que pintar con el nombre que trae la linea");
         assertTrue(!texto.contains("2391,75") && !texto.contains("2.391,75"),
-                "Dos bases de cotizacion no se suman, y el folio si lo hace hoy" + texto);
+                "dos bases de cotizacion no se suman, ni en el papel ni en la pantalla");
     }
 
     /** Criterio 7: A4, y el recibo cabe en una hoja. Tambien el mas largo de la semilla. */

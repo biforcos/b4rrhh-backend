@@ -15,15 +15,17 @@ import java.util.List;
  * Dos recibos de la semilla de la demo, copiados tal cual ({@code backend#112}).
  *
  * <p><b>Son datos medidos, no inventados.</b> Las lineas, los literales, las naturalezas y las
- * secciones salen de {@code b4rrhh_semilla} despues de la {@code V139}; las fotos de contexto, de
+ * secciones salen de {@code b4rrhh_semilla} recalculada con la {@code V141}; las fotos de contexto, de
  * {@code payroll.payroll_context_snapshot} del mismo recibo. Un recibo de laboratorio con tres
  * lineas redondas no habria enseñado ninguna de las dos cosas que esto tiene que enseñar: que el
  * bloque de bases sale, y que el literal mas largo del catalogo —«Mecanismo de equidad
  * intergeneracional (aportacion empresarial)», sesenta y dos caracteres— cabe en su columna.
  *
- * <p>Una nota sobre el recuento: el issue dice que {@code EMP000001} tiene quince lineas. Tenia
- * quince <b>antes</b> de la {@code V139}; desde que el recuadro de bases se imprime son
- * <b>diecisiete</b>, y el mas largo de la semilla ({@code EMP000005}) tiene dieciocho.
+ * <p>Una nota sobre el recuento: el issue del {@code backend#112} dice que {@code EMP000001}
+ * tiene quince lineas. Tenia quince <b>antes</b> de la {@code V139}; con el recuadro de bases
+ * pasaron a diecisiete, y con el total de la aportacion empresarial de la {@code V141}
+ * ({@code backend#114}) son <b>dieciocho</b>. El mas largo de la semilla
+ * ({@code EMP000005}) tiene diecinueve.
  */
 final class PayslipDocumentFixtures {
 
@@ -38,7 +40,7 @@ final class PayslipDocumentFixtures {
         );
     }
 
-    /** Diecisiete lineas, cinco bloques, 822,97 € de liquido. Presencia 2: es un readmitido. */
+    /** Dieciocho lineas, cinco bloques, 822,97 € de liquido. Presencia 2: es un readmitido. */
     static Payroll emp000001() {
         return recibo("EMP000001", 2, PayrollStatus.CALCULATED, """
                 101|101|SALARIO_BASE|Salario base|15|47.5|712.5|EARNING|101|DEVENGOS
@@ -54,10 +56,11 @@ final class PayslipDocumentFixtures {
                 111|722|SS_FP_EMPRESARIO|Formacion profesional (aportacion empresarial)|1323|0.6|7.94|INFORMATIONAL|722|APORTACION_EMPRESARIAL
                 112|723|SS_FOGASA_EMPRESARIO|FOGASA (aportacion empresarial)|1323|0.2|2.65|INFORMATIONAL|723|APORTACION_EMPRESARIAL
                 113|724|SS_MEI_EMPRESARIO|Mecanismo de equidad intergeneracional (aportacion empresarial)|1323|0.58|7.67|INFORMATIONAL|724|APORTACION_EMPRESARIAL
-                114|800|RETENCION_IRPF|Retencion IRPF|1068.75|15|160.31|DEDUCTION|800|DEDUCCIONES
-                115|970|TOTAL_DEVENGOS|Total devengado|||1068.75|TOTAL_EARNING|970|DEVENGOS
-                116|980|TOTAL_DEDUCCIONES|Total a deducir|||245.78|TOTAL_DEDUCTION|980|DEDUCCIONES
-                117|990|LIQUIDO_A_PAGAR|Liquido total a percibir|||822.97|NET_PAY|990|LIQUIDO
+                114|725|TOTAL_APORTACION_EMPRESARIAL|Total aportacion empresarial|||423.76|TOTAL_EMPLOYER_CONTRIBUTION|725|APORTACION_EMPRESARIAL
+                115|800|RETENCION_IRPF|Retencion IRPF|1068.75|15|160.31|DEDUCTION|800|DEDUCCIONES
+                116|970|TOTAL_DEVENGOS|Total devengado|||1068.75|TOTAL_EARNING|970|DEVENGOS
+                117|980|TOTAL_DEDUCCIONES|Total a deducir|||245.78|TOTAL_DEDUCTION|980|DEDUCCIONES
+                118|990|LIQUIDO_A_PAGAR|Liquido total a percibir|||822.97|NET_PAY|990|LIQUIDO
                 """);
     }
 
@@ -93,7 +96,7 @@ final class PayslipDocumentFixtures {
                 original.getCreatedAt(), original.getUpdatedAt());
     }
 
-    /** El mas largo de la semilla: dieciocho lineas, con horas extraordinarias. */
+    /** El mas largo de la semilla: diecinueve lineas, con horas extraordinarias. */
     static Payroll emp000005() {
         return recibo("EMP000005", 1, PayrollStatus.CALCULATED, """
                 101|101|SALARIO_BASE|Salario base|15|47.5|712.5|EARNING|101|DEVENGOS
@@ -110,10 +113,11 @@ final class PayslipDocumentFixtures {
                 112|722|SS_FP_EMPRESARIO|Formacion profesional (aportacion empresarial)|1323|0.6|7.94|INFORMATIONAL|722|APORTACION_EMPRESARIAL
                 113|723|SS_FOGASA_EMPRESARIO|FOGASA (aportacion empresarial)|1323|0.2|2.65|INFORMATIONAL|723|APORTACION_EMPRESARIAL
                 114|724|SS_MEI_EMPRESARIO|Mecanismo de equidad intergeneracional (aportacion empresarial)|1323|0.58|7.67|INFORMATIONAL|724|APORTACION_EMPRESARIAL
-                115|800|RETENCION_IRPF|Retencion IRPF|1157.85|15|173.68|DEDUCTION|800|DEDUCCIONES
-                116|970|TOTAL_DEVENGOS|Total devengado|||1157.85|TOTAL_EARNING|970|DEVENGOS
-                117|980|TOTAL_DEDUCCIONES|Total a deducir|||259.15|TOTAL_DEDUCTION|980|DEDUCCIONES
-                118|990|LIQUIDO_A_PAGAR|Liquido total a percibir|||987.8|NET_PAY|990|LIQUIDO
+                115|725|TOTAL_APORTACION_EMPRESARIAL|Total aportacion empresarial|||423.76|TOTAL_EMPLOYER_CONTRIBUTION|725|APORTACION_EMPRESARIAL
+                116|800|RETENCION_IRPF|Retencion IRPF|1157.85|15|173.68|DEDUCTION|800|DEDUCCIONES
+                117|970|TOTAL_DEVENGOS|Total devengado|||1157.85|TOTAL_EARNING|970|DEVENGOS
+                118|980|TOTAL_DEDUCCIONES|Total a deducir|||259.15|TOTAL_DEDUCTION|980|DEDUCCIONES
+                119|990|LIQUIDO_A_PAGAR|Liquido total a percibir|||987.8|NET_PAY|990|LIQUIDO
                 """);
     }
 

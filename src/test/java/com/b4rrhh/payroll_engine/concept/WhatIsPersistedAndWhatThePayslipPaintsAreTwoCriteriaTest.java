@@ -91,6 +91,7 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("NET_PAY", 1);          // 990
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("TOTAL_DEDUCTION", 1);  // 980
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("TOTAL_EARNING", 1);    // 970
+        PERSISTED_WITH_A_PAYSLIP_ORDER.put("TOTAL_EMPLOYER_CONTRIBUTION", 1);  // 725 (V141)
     }
 
     /**
@@ -111,7 +112,7 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
      */
     private static final List<String> PAINTED_BY_THE_PAYSLIP = List.of(
             "EARNING", "DEDUCTION", "INFORMATIONAL", "BASE",
-            "TOTAL_EARNING", "TOTAL_DEDUCTION", "NET_PAY");
+            "TOTAL_EARNING", "TOTAL_DEDUCTION", "TOTAL_EMPLOYER_CONTRIBUTION", "NET_PAY");
 
     /**
      * Las que se persisten en el recibo sin que el folio las pinte: <b>ninguna</b>.
@@ -255,22 +256,24 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
      * día que estos dos números dejen de ser el mismo, hay algo que se imprime menos.
      *
      * <p>Eran catorce y nueve hasta el {@code backend#104}, que declaró las horas extra: el
-     * {@code 102} es {@code EARNING} y lleva orden de recibo, así que entra en los dos lados.
+     * {@code 102} es {@code EARNING} y lleva orden de recibo, así que entra en los dos lados. Y
+     * eran diecisiete hasta el {@code backend#114}, que le dio total propio al recuadro de
+     * aportación empresarial: el {@code 725}, con naturaleza nueva y en el bloque que cierra.
      * <b>Pintable no es impreso</b>: en un recibo sin horas vale cero y la regla del cero no lo
      * imprime. Este censo no lo sabe ni tiene por qué saberlo — habla del catálogo.
      */
     @Test
-    void seventeenAreKeptAndSeventeenArePainted() {
+    void eighteenAreKeptAndEighteenArePainted() {
         int persisted = censusByNature().values().stream().mapToInt(Integer::intValue).sum();
         int painted = censusByNature().entrySet().stream()
                 .filter(entry -> PAINTED_BY_THE_PAYSLIP.contains(entry.getKey()))
                 .mapToInt(Map.Entry::getValue)
                 .sum();
 
-        assertEquals(17, persisted, "conceptos con sitio en el recibo");
-        assertEquals(17, painted,
+        assertEquals(18, persisted, "conceptos con sitio en el recibo");
+        assertEquals(18, painted,
                 """
-                Los conceptos que el folio pinta han dejado de ser diecisiete.
+                Los conceptos que el folio pinta han dejado de ser dieciocho.
 
                 Persistidos y pintados siguen siendo dos criterios distintos —el sitio lo da \
                 payslip_order_code y el bloque lo da la seccion declarada en la V138— y desde el \

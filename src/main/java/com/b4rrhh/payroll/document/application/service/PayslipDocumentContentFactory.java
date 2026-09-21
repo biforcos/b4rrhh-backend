@@ -9,7 +9,6 @@ import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayslipSection;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -129,26 +128,19 @@ public class PayslipDocumentContentFactory {
         List<PayrollConcept> ordenadas = new ArrayList<>(lineas);
         ordenadas.sort(Comparator.comparingInt(PayrollConcept::getDisplayOrder));
 
-        boolean traeSuTotal = ordenadas.stream()
-                .anyMatch(PayslipDocumentContentFactory::esTotalDeBloque);
-        boolean sonSumandos = ordenadas.stream()
-                .noneMatch(concept -> "BASE".equals(concept.getConceptNatureCode()));
-
         return new PayslipDocumentContent.Block(
                 label,
                 ordenadas.stream().map(PayslipDocumentContentFactory::line).toList(),
-                // Un bloque que ya trae su total no se suma: el 970 es la suma del 101 y el 102, y
-                // totalizarlo otra vez daria el doble. El que no lo trae —la aportacion
-                // empresarial, que el motor no totaliza— si necesita el suyo, y es una suma de lo
-                // que hay a la vista, no un concepto.
+                // Aqui ya no se suma nada, y hasta el backend#114 se sumaba una cosa: el recuadro
+                // de aportacion empresarial, que era el unico bloque con total en el modelo
+                // oficial al que el motor no le daba uno. Ahora se lo da —el 725 de la V141— y
+                // llega como una linea mas, igual que el 970, el 980 y el 990.
                 //
-                // Y el recuadro de bases no se totaliza NUNCA, aunque no traiga total propio,
-                // porque sus lineas no son sumandos: la base de contingencias comunes y la base
-                // sujeta a retencion son dos magnitudes distintas del mismo mes, y sumarlas da un
-                // numero que no significa nada. El folio si lo suma hoy —«Total determinacion de
-                // las bases de cotizacion 2.391,75»—, y es un defecto que la V139 destapo al
-                // llenar un recuadro que antes salia vacio; el papel no lo hereda (backend#112).
-                traeSuTotal || !sonSumandos ? null : PayslipNumbers.valor(suma(ordenadas)),
+                // El recuadro de bases sigue sin total y sigue sin necesitarlo: la base de
+                // contingencias comunes y la base sujeta a retencion son dos magnitudes distintas
+                // del mismo mes, y sumarlas da un numero que no significa nada. Eso lo decidio el
+                // frontend#79 para la pantalla y esto lo sostiene para el papel.
+                //
                 // Dice «el liquido» y no «un bloque con una sola linea de total»: con esa segunda
                 // regla, un recibo cuyas deducciones se hubieran quedado todas a cero pintaria
                 // «Total a deducir» como linea de cierre (frontend#76).
@@ -165,27 +157,6 @@ public class PayslipDocumentContentFactory {
                 PayslipNumbers.valor(concept.getRate()),
                 PayslipNumbers.valor(concept.getAmount())
         );
-    }
-
-    /**
-     * Si esta linea es el total de su bloque.
-     *
-     * <p>Mira la naturaleza y no el codigo, igual que el folio: <b>en que bloque</b> va una linea
-     * lo dice su seccion congelada, pero <b>que es</b> —un concepto o el total que lo cierra— lo
-     * dice su naturaleza, y sin esa distincion un bloque se sumaria a si mismo.
-     */
-    private static boolean esTotalDeBloque(PayrollConcept concept) {
-        String nature = concept.getConceptNatureCode();
-        return "TOTAL_EARNING".equals(nature)
-                || "TOTAL_DEDUCTION".equals(nature)
-                || "NET_PAY".equals(nature);
-    }
-
-    private static BigDecimal suma(List<PayrollConcept> lineas) {
-        return lineas.stream()
-                .map(PayrollConcept::getAmount)
-                .filter(amount -> amount != null)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     // ---------------------------------------------------------------------

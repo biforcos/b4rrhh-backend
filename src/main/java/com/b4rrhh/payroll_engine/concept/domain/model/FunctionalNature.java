@@ -8,5 +8,6 @@ public enum FunctionalNature {
     TECHNICAL,
     TOTAL_EARNING,
     TOTAL_DEDUCTION,
+    TOTAL_EMPLOYER_CONTRIBUTION,
     NET_PAY
 }

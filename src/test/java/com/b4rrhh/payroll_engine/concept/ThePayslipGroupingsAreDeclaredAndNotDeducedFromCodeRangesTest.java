@@ -97,6 +97,9 @@ class ThePayslipGroupingsAreDeclaredAndNotDeducedFromCodeRangesTest {
         assertEquals(sectionByNature.get(FunctionalNature.DEDUCTION.name()),
                 sectionByNature.get(FunctionalNature.TOTAL_DEDUCTION.name()));
         assertEquals("LIQUIDO", sectionByNature.get(FunctionalNature.NET_PAY.name()));
+        // El cuarto total, que hasta el backend#114 no existia: lo sumaba la plantilla del PDF.
+        assertEquals(sectionByNature.get(FunctionalNature.INFORMATIONAL.name()),
+                sectionByNature.get(FunctionalNature.TOTAL_EMPLOYER_CONTRIBUTION.name()));
     }
 
     /**

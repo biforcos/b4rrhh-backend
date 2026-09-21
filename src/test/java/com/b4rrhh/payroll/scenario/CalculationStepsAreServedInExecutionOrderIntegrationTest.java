@@ -38,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * ({@code backend#97}).
  *
  * <p>Sobre ESP y no sobre TST, por lo mismo que el
- * {@code EveryCalculatedConceptIsKeptIntegrationTest}: los recuentos que afirma —38 pasos y 43—
+ * {@code EveryCalculatedConceptIsKeptIntegrationTest}: los recuentos que afirma —39 pasos y 44—
  * son los de la reglamentacion que siembran las migraciones, y un fixture con quince conceptos de
  * mentira no probaria el numero que hay que probar.
  *
@@ -68,26 +68,30 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
     private static final LocalDate JANUARY_1 = LocalDate.of(2025, 1, 1);
 
     /** Los pasos de un empleado de mes entero: uno por cada concepto del catalogo ESP. */
-    private static final int STEPS_IN_A_WHOLE_MONTH = 38;
+    private static final int STEPS_IN_A_WHOLE_MONTH = 39;
 
     /**
      * Y los de uno del mes partido: los conceptos de ambito SEGMENT se evaluan una vez por tramo.
      *
-     * <p>Eran 42 y son 43 desde el {@code backend#47}: la {@code V135} paso {@code P02} a
+     * <p>Eran 42 y fueron 43 desde el {@code backend#47}: la {@code V135} paso {@code P02} a
      * {@code SEGMENT}, asi que los conceptos por tramo son cinco. El importe no se mueve —con una
      * sola categoria los dos tramos leen la misma fila— y lo que se anade es el paso que lo dice.
+     *
+     * <p>Y son 44 desde el {@code backend#114}: el {@code 725} es {@code PERIOD}, asi que anade
+     * un paso y solo uno, tenga el recibo los tramos que tenga.
      */
-    private static final int STEPS_IN_A_SPLIT_MONTH = 43;
+    private static final int STEPS_IN_A_SPLIT_MONTH = 44;
 
     /**
      * Los pasos que llevan orden de recibo: los que PUEDEN ser linea.
      *
      * <p>Eran 14 y fueron 15 desde el {@code backend#104}, que declaro las horas extra: el
-     * {@code 102} lleva orden de recibo como cualquier devengo. Son 17 desde el
+     * {@code 102} lleva orden de recibo como cualquier devengo. Fueron 17 desde el
      * {@code backend#111}, que imprimio el recuadro de bases: {@code B_CC} y {@code B01} se
-     * calculaban desde siempre y ahora ademas llevan orden.
+     * calculaban desde siempre y ahora ademas llevan orden. Y son 18 desde el
+     * {@code backend#114}, que le dio total propio al recuadro de aportacion empresarial.
      */
-    private static final int STEPS_WITH_A_PAYSLIP_ORDER = 17;
+    private static final int STEPS_WITH_A_PAYSLIP_ORDER = 18;
 
     /**
      * Y las lineas que el folio acaba imprimiendo, que ya no son las mismas.
@@ -98,11 +102,12 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
      * tiene horas extra, asi que el {@code 102} se calcula, se guarda como paso y no llega al
      * papel. <b>Que estos dos numeros se hayan separado no es un fallo: es el issue.</b>
      *
-     * <p>Eran 14 y son 16 desde el {@code backend#111}: las dos bases del recuadro de cotizacion
-     * valen algo en cualquier recibo con presencia, asi que suben los dos recuentos a la vez y
-     * la diferencia entre ellos sigue siendo la misma, el {@code 102} a cero.
+     * <p>Eran 14 y fueron 16 desde el {@code backend#111}: las dos bases del recuadro de
+     * cotizacion valen algo en cualquier recibo con presencia, asi que suben los dos recuentos a
+     * la vez y la diferencia entre ellos sigue siendo la misma, el {@code 102} a cero. Son 17
+     * desde el {@code backend#114}, y por lo mismo.
      */
-    private static final int PAYSLIP_LINES = 16;
+    private static final int PAYSLIP_LINES = 17;
 
     private static final String STEPS_URL =
             "/payrolls/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}"
@@ -214,7 +219,7 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
      * <p>El escenario se fabrica borrando los pasos de un recibo recien calculado, que es
      * exactamente el estado en que esta hoy la semilla entera: 873 recibos calculados antes de que
      * la tabla existiera. La lista vacia no puede leerse como «este recibo no tiene conceptos», y
-     * no se rellena derivandola de {@code payroll_concept}: sus 14 lineas no son 38 pasos.
+     * no se rellena derivandola de {@code payroll_concept}: sus 17 lineas no son 39 pasos.
      */
     @Test
     @WithMockUser(roles = "ADMIN")

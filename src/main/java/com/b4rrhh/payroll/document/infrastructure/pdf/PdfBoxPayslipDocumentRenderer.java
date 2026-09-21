@@ -201,14 +201,6 @@ public class PdfBoxPayslipDocumentRenderer implements PayslipDocumentRenderer {
             hoja.derecha(normal, CUERPO, FIN_IMPORTE, y, line.amount());
         }
 
-        if (block.subtotal() != null) {
-            hoja.reservar(ALTO_LINEA + 3f);
-            float y = hoja.bajar(ALTO_LINEA + 3f);
-            hoja.raya(MARGEN, y + ALTO_LINEA - 2f, DERECHA);
-            hoja.texto(negrita, CUERPO, COL_CONCEPTO, y, "Total " + block.label().toLowerCase());
-            hoja.derecha(negrita, CUERPO, FIN_IMPORTE, y, block.subtotal());
-        }
-
         hoja.situar(hoja.y() - HUECO_ENTRE_BLOQUES);
     }
 

@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * payroll.payroll_calculation_step.
  *
  * <p>Sobre ESP y no sobre TST, a proposito: los numeros de este issue —38 conceptos, 4 de ambito
- * SEGMENT y 34 de ambito PERIOD— son los de la reglamentacion que siembran las migraciones, y un
+ * SEGMENT y 34 de ambito PERIOD— eran los de la reglamentacion que siembran las migraciones, y un
  * fixture con quince conceptos de mentira no probaria el recuento que hay que probar.
  *
  * <p>Eran 35 hasta el backend#104, que declaro la cadena de las horas extra: {@code H01} (la
@@ -61,13 +61,17 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
     private static final LocalDate JANUARY_1 = LocalDate.of(2025, 1, 1);
 
     /**
-     * Los que hay en el catalogo ESP: 5 de ambito SEGMENT y 33 de ambito PERIOD.
+     * Los que hay en el catalogo ESP: 5 de ambito SEGMENT y 34 de ambito PERIOD.
      *
      * <p>Eran 4 y 34 hasta el {@code backend#47}: la {@code V135} paso {@code P02} a
      * {@code SEGMENT} porque el precio del dia sale de una fila que se busca por categoria, y un
      * empleado que cambia de categoria a mitad de mes tiene dos precios en el mismo mes.
+     *
+     * <p>Y eran 38 hasta el {@code backend#114}: la {@code V141} declara el {@code 725}, el total
+     * de la aportacion empresarial, que hasta entonces sumaba la plantilla del PDF. Es
+     * {@code PERIOD}, asi que anade un paso por recibo y no uno por tramo.
      */
-    private static final int CONCEPTS_IN_THE_ENGINE = 38;
+    private static final int CONCEPTS_IN_THE_ENGINE = 39;
     private static final int SEGMENT_SCOPED_CONCEPTS = 5;
 
     /**
@@ -80,19 +84,20 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      *
      * <p>El recuento de pasos no se movio con aquello: 35 en un mes entero y 39 en uno del mes
      * partido, igual que antes. Retirar un concepto que nadie ejecutaba no puede anadir un paso.
-     * Declarar tres si: desde el backend#104 son 38 y 42, y desde el backend#47 son 38 y 43 —
-     * cambiar un ambito no anade conceptos, anade evaluaciones.
+     * Declarar tres si: desde el backend#104 son 38 y 42, desde el backend#47 son 38 y 43, y desde
+     * el backend#114 son 39 y 44 — cambiar un ambito no anade conceptos, anade evaluaciones.
      */
-    private static final int CONCEPTS_IN_A_PLAN = 38;
+    private static final int CONCEPTS_IN_A_PLAN = 39;
 
     /**
      * Los conceptos con orden de recibo: los que PUEDEN ser linea.
      *
-     * <p>Eran 14 y fueron 15 desde que el backend#104 declaro el {@code 102}. Son 17 desde el
+     * <p>Eran 14 y fueron 15 desde que el backend#104 declaro el {@code 102}. Fueron 17 desde el
      * backend#111, que imprimio el recuadro de bases de cotizacion: {@code B_CC} y {@code B01}
-     * se calculaban desde siempre y ahora ademas salen en el papel.
+     * se calculaban desde siempre y ahora ademas salen en el papel. Y son 18 desde el
+     * backend#114, que le dio total propio al recuadro de aportacion empresarial.
      */
-    private static final int CONCEPTS_WITH_A_PAYSLIP_ORDER = 17;
+    private static final int CONCEPTS_WITH_A_PAYSLIP_ORDER = 18;
 
     /**
      * Y las lineas que un empleado sin horas extra acaba teniendo en el folio, que son 16.
@@ -103,10 +108,12 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * este empleado no declara horas, asi que el {@code 102} se calcula, se guarda y no se
      * imprime.
      *
-     * <p>Eran 14 hasta el backend#111 y son 16: las dos bases del recuadro de cotizacion valen
-     * algo en cualquier recibo con presencia, asi que suman linea en los dos sitios.
+     * <p>Eran 14 hasta el backend#111 y fueron 16: las dos bases del recuadro de cotizacion valen
+     * algo en cualquier recibo con presencia, asi que suman linea en los dos sitios. Son 17 desde
+     * el backend#114 por lo mismo: la aportacion empresarial vale algo en cualquier recibo con
+     * presencia, y su total tambien.
      */
-    private static final int PAYSLIP_LINES_WITHOUT_OVERTIME = 16;
+    private static final int PAYSLIP_LINES_WITHOUT_OVERTIME = 17;
 
     @Autowired
     private LaunchPayrollCalculationUseCase launch;
@@ -168,7 +175,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
     }
 
     @Test
-    void aWholeMonthKeepsEveryStep_andOnly16OfThemGetPrinted() {
+    void aWholeMonthKeepsEveryStep_andOnly17OfThemGetPrinted() {
         String emp = hireWholeMonth();
         assertEquals("COMPLETED", launchSingleEmployee(emp).status());
         vaciarLaSesion();
@@ -183,9 +190,9 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
         assertEquals(16, countStepsWithNature(pid, "TECHNICAL"),
                 "conceptos TECHNICAL: los 16 del catalogo, desde que la V130 retiro el P_SS");
 
-        // El recibo tiene 16 lineas: las 14 de siempre mas las dos bases que el backend#111 saco
-        // al papel. Siguen sin ser TODOS los pasos con orden de recibo: hay 17, y el que sobra es
-        // el 102 valiendo cero.
+        // El recibo tiene 17 lineas: las 14 de siempre, las dos bases que el backend#111 saco al
+        // papel y el total de la aportacion empresarial del backend#114. Siguen sin ser TODOS los
+        // pasos con orden de recibo: hay 18, y el que sobra es el 102 valiendo cero.
         int payslipLines = jdbc.queryForObject(
                 "select count(*) from payroll.payroll_concept where payroll_id = ?", Integer.class, pid);
         assertEquals(PAYSLIP_LINES_WITHOUT_OVERTIME, payslipLines, "lineas de recibo");
@@ -239,7 +246,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
         vaciarLaSesion();
         Long pid = payrollId(emp);
 
-        // Los 5 conceptos SEGMENT se evaluan una vez por tramo: 33 + 5 x 2 = 43.
+        // Los 5 conceptos SEGMENT se evaluan una vez por tramo: 34 + 5 x 2 = 44.
         assertEquals(CONCEPTS_IN_A_PLAN + SEGMENT_SCOPED_CONCEPTS, countSteps(pid), "pasos guardados");
 
         // Y el 101 sale dos veces, con dos precios distintos. Es el caso que se comia cualquier

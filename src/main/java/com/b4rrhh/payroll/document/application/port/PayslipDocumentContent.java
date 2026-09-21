@@ -65,15 +65,17 @@ public record PayslipDocumentContent(
     /**
      * Un bloque del modelo oficial.
      *
-     * @param subtotal la suma del bloque, <b>solo</b> cuando el motor no trae un total para el.
-     *                 Nulo en los que ya traen el suyo: el 970 es la suma del 101 y el 102, y
-     *                 totalizarlo otra vez daria el doble.
-     * @param closing  si se pinta como la linea de cierre del recibo en vez de como una tabla.
+     * <p>No lleva subtotal, y esa ausencia es la afirmacion del {@code backend#114}: <b>ninguna
+     * cifra del papel se calcula aqui</b>. Los cuatro bloques que el modelo oficial totaliza
+     * traen su total como una linea mas —{@code 970}, {@code 980}, {@code 990} y, desde la
+     * {@code V141}, el {@code 725} de la aportacion empresarial—, y el recuadro de bases no se
+     * totaliza porque su suma no significa nada. El motor calcula; el papel lee.
+     *
+     * @param closing si se pinta como la linea de cierre del recibo en vez de como una tabla.
      */
     public record Block(
             String label,
             List<Line> lines,
-            String subtotal,
             boolean closing
     ) {}
 
