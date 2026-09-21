@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll.application.port;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -50,5 +51,5 @@ public interface RuleSystemLastChangeLookupPort {
      * @return la fecha del último cambio conocido en la reglamentación de ese sistema de reglas, o
      *         vacío si no hay ninguna reglamentación suya en la base
      */
-    Optional<LocalDateTime> lastChangedAt(String ruleSystemCode);
+    Optional<Instant> lastChangedAt(String ruleSystemCode);
 }

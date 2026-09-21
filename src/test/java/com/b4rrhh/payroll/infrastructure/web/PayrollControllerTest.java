@@ -37,6 +37,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -322,7 +323,7 @@ class PayrollControllerTest {
                 1,
                 status,
                 statusReasonCode,
-                LocalDateTime.of(2026, 1, 31, 10, 15),
+                Instant.parse("2026-01-31T10:15:00Z"),
                 "ENGINE",
                 "1.0",
                 41L,

@@ -5,6 +5,7 @@ import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 /**
@@ -22,7 +23,7 @@ public class PayrollConceptFeedRelation {
     private final LocalDate effectiveFrom;
     private final LocalDate effectiveTo;
     private final LocalDateTime createdAt;
-    private final LocalDateTime updatedAt;
+    private final Instant updatedAt;
 
     public PayrollConceptFeedRelation(
             Long id,
@@ -34,7 +35,7 @@ public class PayrollConceptFeedRelation {
             LocalDate effectiveFrom,
             LocalDate effectiveTo,
             LocalDateTime createdAt,
-            LocalDateTime updatedAt
+            Instant updatedAt
     ) {
         if (sourceObject == null) {
             throw new IllegalArgumentException("sourceObject is required");
@@ -87,7 +88,7 @@ public class PayrollConceptFeedRelation {
     public LocalDate getEffectiveFrom() { return effectiveFrom; }
     public LocalDate getEffectiveTo() { return effectiveTo; }
     public LocalDateTime getCreatedAt() { return createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
 
     private boolean isAllowedSourceType(PayrollObjectTypeCode sourceType) {
         return sourceType == PayrollObjectTypeCode.CONCEPT

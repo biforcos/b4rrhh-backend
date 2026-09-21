@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,6 +59,8 @@ class DefaultEligibleExecutionPlanBuilderTest {
     private static final String RS = "ESP";
     private static final LocalDate REF = LocalDate.of(2025, 3, 1);
     private static final LocalDateTime NOW = LocalDateTime.of(2025, 1, 1, 0, 0);
+    /** El mismo momento como instante: los updated_at llevan zona desde el backend#116. */
+    private static final Instant AHORA = Instant.parse("2025-01-01T00:00:00Z");
 
     private static final EmployeeAssignmentContext CONTEXT =
             new EmployeeAssignmentContext(RS, "EMP1", "METAL", "INDEFINIDO");
@@ -322,7 +325,7 @@ class DefaultEligibleExecutionPlanBuilderTest {
         for (String code : conceptCodes) {
             assignments.add(new ConceptAssignment(
                     null, RS, code, null, null, null,
-                    LocalDate.of(2025, 1, 1), null, 0, NOW, NOW
+                    LocalDate.of(2025, 1, 1), null, 0, NOW, AHORA
             ));
         }
         return assignments;
@@ -333,10 +336,10 @@ class DefaultEligibleExecutionPlanBuilderTest {
     }
 
     private PayrollConcept concept(long id, String code, CalculationType type) {
-        PayrollObject obj = new PayrollObject(id, RS, PayrollObjectTypeCode.CONCEPT, code, NOW, NOW);
+        PayrollObject obj = new PayrollObject(id, RS, PayrollObjectTypeCode.CONCEPT, code, NOW, AHORA);
         return new PayrollConcept(obj, code, type,
                 FunctionalNature.INFORMATIONAL,
-                null, ExecutionScope.SEGMENT, NOW, NOW);
+                null, ExecutionScope.SEGMENT, NOW, AHORA);
     }
 
     private PayrollConceptFeedRelation feedRel(PayrollConcept source, PayrollConcept target) {
@@ -349,7 +352,7 @@ class DefaultEligibleExecutionPlanBuilderTest {
                 LocalDate.of(2025, 1, 1),
                 null,
                 NOW,
-                NOW
+                AHORA
         );
     }
 

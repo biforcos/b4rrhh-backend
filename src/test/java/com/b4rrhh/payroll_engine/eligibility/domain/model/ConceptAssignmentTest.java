@@ -3,6 +3,7 @@ package com.b4rrhh.payroll_engine.eligibility.domain.model;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -134,6 +135,6 @@ class ConceptAssignmentTest {
             LocalDate validFrom, LocalDate validTo, int priority
     ) {
         return new ConceptAssignment(null, ruleSystem, concept, company, agreement, employeeType,
-                validFrom, validTo, priority, LocalDateTime.now(), LocalDateTime.now());
+                validFrom, validTo, priority, LocalDateTime.now(), Instant.now());
     }
 }

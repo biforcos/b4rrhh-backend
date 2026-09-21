@@ -11,6 +11,7 @@ import com.b4rrhh.payroll_engine.object.domain.port.PayrollObjectRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Service
@@ -38,6 +39,9 @@ public class CreatePayrollConceptService implements CreatePayrollConceptUseCase 
         }
 
         LocalDateTime now = LocalDateTime.now();
+        // createdAt sigue sin zona y updatedAt la lleva desde el backend#116:
+        // solo la segunda entra en la comparacion que decide si un recibo sigue vigente.
+        Instant ahora = Instant.now();
 
         PayrollObject newObject = new PayrollObject(
                 null,
@@ -45,7 +49,7 @@ public class CreatePayrollConceptService implements CreatePayrollConceptUseCase 
                 PayrollObjectTypeCode.CONCEPT,
                 command.conceptCode(),
                 now,
-                now
+                ahora
         );
         PayrollObject persistedObject = objectRepository.save(newObject);
 
@@ -58,7 +62,7 @@ public class CreatePayrollConceptService implements CreatePayrollConceptUseCase 
                 command.executionScope(),
                 command.summary(),
                 now,
-                now
+                ahora
         );
 
         return conceptRepository.save(concept);

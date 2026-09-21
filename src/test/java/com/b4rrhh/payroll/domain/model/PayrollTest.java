@@ -6,6 +6,7 @@ import com.b4rrhh.payroll.domain.exception.PayrollTypeInvalidException;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -96,7 +97,7 @@ class PayrollTest {
                         1,
                         PayrollStatus.CALCULATED,
                         null,
-                        LocalDateTime.of(2026, 1, 31, 10, 15),
+                        Instant.parse("2026-01-31T10:15:00Z"),
                         "PAYROLL_ENGINE",
                         "1.0.0",
                         List.of(
@@ -135,7 +136,7 @@ class PayrollTest {
                 1,
                 status,
                 status == PayrollStatus.NOT_VALID ? "ENGINE_INVALID" : null,
-                LocalDateTime.of(2026, 1, 31, 10, 15),
+                Instant.parse("2026-01-31T10:15:00Z"),
                 "PAYROLL_ENGINE",
                 "1.0.0",
                 List.of(

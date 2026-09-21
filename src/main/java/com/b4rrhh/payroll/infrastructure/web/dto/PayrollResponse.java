@@ -2,6 +2,7 @@ package com.b4rrhh.payroll.infrastructure.web.dto;
 
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -23,7 +24,7 @@ public record PayrollResponse(
         Integer presenceNumber,
         PayrollStatus status,
         String statusReasonCode,
-        LocalDateTime calculatedAt,
+        Instant calculatedAt,
         String calculationEngineCode,
         String calculationEngineVersion,
         Long runId,

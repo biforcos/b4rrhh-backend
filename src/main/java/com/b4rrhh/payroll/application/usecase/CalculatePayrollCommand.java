@@ -6,6 +6,7 @@ import com.b4rrhh.payroll.domain.model.PayrollSegment;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.model.PayrollWarning;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -18,7 +19,7 @@ public record CalculatePayrollCommand(
         Integer presenceNumber,
         PayrollStatus status,
         String statusReasonCode,
-        LocalDateTime calculatedAt,
+        Instant calculatedAt,
         String calculationEngineCode,
         String calculationEngineVersion,
         Long runId,

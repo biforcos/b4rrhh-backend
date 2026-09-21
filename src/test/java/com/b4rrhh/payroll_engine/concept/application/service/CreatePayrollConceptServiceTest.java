@@ -17,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -54,7 +55,7 @@ class CreatePayrollConceptServiceTest {
                     input.getObjectTypeCode(),
                     input.getObjectCode(),
                     LocalDateTime.now(),
-                    LocalDateTime.now()
+                    Instant.now()
             );
         });
         when(conceptRepository.save(any(PayrollConcept.class))).thenAnswer(invocation -> invocation.getArgument(0));

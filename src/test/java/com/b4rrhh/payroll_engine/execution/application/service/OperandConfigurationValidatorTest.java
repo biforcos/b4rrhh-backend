@@ -8,6 +8,7 @@ import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -30,12 +31,12 @@ class OperandConfigurationValidatorTest {
     private final OperandConfigurationValidator validator = new OperandConfigurationValidator();
 
     private static PayrollObject obj(long id, String code) {
-        return new PayrollObject(id, RS, PayrollObjectTypeCode.CONCEPT, code, LocalDateTime.now(), LocalDateTime.now());
+        return new PayrollObject(id, RS, PayrollObjectTypeCode.CONCEPT, code, LocalDateTime.now(), Instant.now());
     }
 
     private static PayrollConceptOperand operand(OperandRole role, String sourceCode) {
         return new PayrollConceptOperand(null, obj(99L, TARGET), role, obj(1L, sourceCode),
-                LocalDateTime.now(), LocalDateTime.now());
+                LocalDateTime.now(), Instant.now());
     }
 
     private static ConceptNodeIdentity id(String code) {

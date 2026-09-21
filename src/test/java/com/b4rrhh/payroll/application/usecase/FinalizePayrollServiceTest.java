@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -47,7 +48,7 @@ class FinalizePayrollServiceTest {
                 1,
                 PayrollStatus.EXPLICIT_VALIDATED,
                 null,
-                LocalDateTime.of(2026, 1, 31, 10, 15),
+                Instant.parse("2026-01-31T10:15:00Z"),
                 "ENGINE",
                 "1.0",
                 List.of(),

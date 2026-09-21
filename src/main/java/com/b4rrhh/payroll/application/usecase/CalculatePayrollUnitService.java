@@ -55,6 +55,7 @@ import java.time.LocalDate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -444,7 +445,9 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 command.presenceNumber(),
                 PayrollStatus.CALCULATED,
                 null,
-                LocalDateTime.now(),
+                // Instant y no LocalDateTime.now(): el recibo guarda el INSTANTE en que se
+                // calculo, no la hora de pared de la maquina que lo calculo (backend#116).
+                Instant.now(),
                 command.calculationEngineCode(),
                 command.calculationEngineVersion(),
                 command.runId(),

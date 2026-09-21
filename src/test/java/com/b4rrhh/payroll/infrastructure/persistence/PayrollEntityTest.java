@@ -3,6 +3,7 @@ package com.b4rrhh.payroll.infrastructure.persistence;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -64,7 +65,7 @@ class PayrollEntityTest {
         payroll.setPayrollPeriodCode("202501");
         payroll.setPayrollTypeCode("NORMAL");
         payroll.setPresenceNumber(1);
-        payroll.setCalculatedAt(LocalDateTime.of(2026, 1, 31, 10, 15));
+        payroll.setCalculatedAt(Instant.parse("2026-01-31T10:15:00Z"));
         return payroll;
     }
 }

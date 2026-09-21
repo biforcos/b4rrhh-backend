@@ -5,7 +5,8 @@ import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.Optional;
 
 /**
@@ -62,19 +63,31 @@ public class RuleSystemLastChangeLookupAdapter implements RuleSystemLastChangeLo
         this.entityManager = entityManager;
     }
 
+    /**
+     * Devuelve un instante y no una hora de pared ({@code backend#116}).
+     *
+     * <p>Las siete columnas son {@code timestamptz} desde la {@code V143}, asi que el driver
+     * entrega {@code OffsetDateTime}. Los otros dos casos se quedan porque una consulta nativa
+     * devuelve {@code Object} y lo que llegue depende del driver: si algun dia devolviera un
+     * {@code Timestamp}, {@code toInstant()} lo resuelve bien, porque un {@code Timestamp} que
+     * sale de una columna con zona ya trae el instante correcto.
+     */
     @Override
-    public Optional<LocalDateTime> lastChangedAt(String ruleSystemCode) {
+    public Optional<Instant> lastChangedAt(String ruleSystemCode) {
         Object cambio = entityManager.createNativeQuery(LAST_CHANGE_QUERY)
                 .setParameter("ruleSystemCode", ruleSystemCode)
                 .getSingleResult();
 
         // Nulo cuando ese sistema de reglas no tiene reglamentacion ninguna: los siete terminos
         // devuelven nulo y el maximo de siete nulos es nulo. No es un error, es «no hay reglas».
-        if (cambio instanceof Timestamp timestamp) {
-            return Optional.of(timestamp.toLocalDateTime());
+        if (cambio instanceof OffsetDateTime offsetDateTime) {
+            return Optional.of(offsetDateTime.toInstant());
         }
-        if (cambio instanceof LocalDateTime localDateTime) {
-            return Optional.of(localDateTime);
+        if (cambio instanceof Instant instant) {
+            return Optional.of(instant);
+        }
+        if (cambio instanceof Timestamp timestamp) {
+            return Optional.of(timestamp.toInstant());
         }
         return Optional.empty();
     }

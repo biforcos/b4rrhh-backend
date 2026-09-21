@@ -91,7 +91,10 @@ import com.b4rrhh.employee.working_time.infrastructure.persistence.WorkingTimePe
 import com.b4rrhh.employee.working_time.infrastructure.persistence.WorkingTimePresenceConsistencyAdapter;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollObjectBindingLookupAdapter;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.PayrollTableRowLookupAdapter;
+import com.b4rrhh.payroll.application.service.PayrollRuleFreshnessService;
 import com.b4rrhh.payroll.infrastructure.persistence.PayrollLaunchEligibleInputLookupAdapter;
+import com.b4rrhh.payroll.infrastructure.persistence.PayrollPersistenceAdapter;
+import com.b4rrhh.payroll.infrastructure.persistence.RuleSystemLastChangeLookupAdapter;
 import com.b4rrhh.payroll_engine.concept.infrastructure.persistence.ConceptLabelPersistenceAdapter;
 import com.b4rrhh.payroll_engine.concept.infrastructure.persistence.PayrollConceptOperandPersistenceAdapter;
 import com.b4rrhh.payroll_engine.concept.infrastructure.persistence.PayrollConceptPersistenceAdapter;
@@ -246,6 +249,10 @@ import java.lang.annotation.Target;
         EmployeeJourneyLookupAdapter.class,
         // payroll: de donde sale el contexto de la unidad, antiguedad incluida (backend#91)
         PayrollLaunchEligibleInputLookupAdapter.class,
+        // payroll: si las reglas cambiaron desde que se calculo el recibo (backend#107, #116)
+        PayrollPersistenceAdapter.class,
+        RuleSystemLastChangeLookupAdapter.class,
+        PayrollRuleFreshnessService.class,
         // payroll: binding de objetos y tablas
         PayrollObjectBindingLookupAdapter.class,
         PayrollTableRowLookupAdapter.class,

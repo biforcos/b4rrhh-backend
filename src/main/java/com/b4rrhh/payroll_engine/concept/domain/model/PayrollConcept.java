@@ -2,6 +2,7 @@ package com.b4rrhh.payroll_engine.concept.domain.model;
 
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 /**
@@ -21,7 +22,7 @@ public class PayrollConcept {
     private final ConceptRounding rounding;
     private final String summary;
     private final LocalDateTime createdAt;
-    private final LocalDateTime updatedAt;
+    private final Instant updatedAt;
 
     public PayrollConcept(
             PayrollObject object,
@@ -31,7 +32,7 @@ public class PayrollConcept {
             String payslipOrderCode,
             ExecutionScope executionScope,
             LocalDateTime createdAt,
-            LocalDateTime updatedAt
+            Instant updatedAt
     ) {
         this(object, conceptMnemonic, calculationType, functionalNature,
                 payslipOrderCode, executionScope, null, createdAt, updatedAt);
@@ -46,7 +47,7 @@ public class PayrollConcept {
             ExecutionScope executionScope,
             String summary,
             LocalDateTime createdAt,
-            LocalDateTime updatedAt
+            Instant updatedAt
     ) {
         this(object, conceptMnemonic, calculationType, functionalNature, payslipOrderCode,
                 executionScope, ConceptRounding.DEFAULT, summary, createdAt, updatedAt);
@@ -69,7 +70,7 @@ public class PayrollConcept {
             ConceptRounding rounding,
             String summary,
             LocalDateTime createdAt,
-            LocalDateTime updatedAt
+            Instant updatedAt
     ) {
         if (object == null) {
             throw new IllegalArgumentException("PayrollConcept requires a base PayrollObject");
@@ -151,7 +152,7 @@ public class PayrollConcept {
         return createdAt;
     }
 
-    public LocalDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 }

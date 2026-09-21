@@ -14,6 +14,7 @@ import com.b4rrhh.payroll_engine.object.domain.port.PayrollObjectRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -88,6 +89,9 @@ public class ReplaceConceptFeedsService implements ReplaceConceptFeedsUseCase {
         }
 
         LocalDateTime now = LocalDateTime.now();
+        // createdAt sigue sin zona y updatedAt la lleva desde el backend#116:
+        // solo la segunda entra en la comparacion que decide si un recibo sigue vigente.
+        Instant ahora = Instant.now();
         for (ReplaceConceptFeedsCommand.Item item : command.items()) {
             PayrollObject sourceObject = resolveSourceObject(ruleSystemCode, item.sourceObjectCode());
 
@@ -101,7 +105,7 @@ public class ReplaceConceptFeedsService implements ReplaceConceptFeedsUseCase {
                     item.effectiveFrom(),
                     item.effectiveTo(),
                     now,
-                    now
+                    ahora
             );
             persisted.add(feedRelationRepository.save(feed));
         }

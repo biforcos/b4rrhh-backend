@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -53,7 +54,7 @@ class PayrollPersistenceAdapterTest {
                 1,
                 PayrollStatus.NOT_VALID,
                 "USER_INVALIDATED",
-                LocalDateTime.of(2026, 1, 31, 10, 15),
+                Instant.parse("2026-01-31T10:15:00Z"),
                 "ENGINE",
                 "1.0",
                 List.of(new PayrollConcept(1, "BASE", "SALARIO_BASE", "Base salary", new BigDecimal("1000.00"), null, null, "EARNING", "202501", 1)),
@@ -91,7 +92,7 @@ class PayrollPersistenceAdapterTest {
                 1,
                 PayrollStatus.CALCULATED,
                 null,
-                LocalDateTime.of(2026, 1, 31, 10, 15),
+                Instant.parse("2026-01-31T10:15:00Z"),
                 "ENGINE",
                 "1.0",
                 41L,
@@ -122,7 +123,7 @@ class PayrollPersistenceAdapterTest {
         payroll.setPresenceNumber(1);
         payroll.setStatus(status);
         payroll.setStatusReasonCode(statusReasonCode);
-        payroll.setCalculatedAt(LocalDateTime.of(2026, 1, 31, 10, 15));
+        payroll.setCalculatedAt(Instant.parse("2026-01-31T10:15:00Z"));
         payroll.setCalculationEngineCode("ENGINE");
         payroll.setCalculationEngineVersion("1.0");
         payroll.setRunId(41L);

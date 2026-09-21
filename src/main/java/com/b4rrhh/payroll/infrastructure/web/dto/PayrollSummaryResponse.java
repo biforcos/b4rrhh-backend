@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll.infrastructure.web.dto;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 public record PayrollSummaryResponse(
@@ -10,5 +11,5 @@ public record PayrollSummaryResponse(
         String payrollTypeCode,
         Integer presenceNumber,
         String status,
-        LocalDateTime calculatedAt
+        Instant calculatedAt
 ) {}

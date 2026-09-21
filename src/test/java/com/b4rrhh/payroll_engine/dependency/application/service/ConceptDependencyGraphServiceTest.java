@@ -14,6 +14,7 @@ import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -168,7 +169,7 @@ class ConceptDependencyGraphServiceTest {
                 LocalDate.of(2020, 1, 1),
                 null,
                 LocalDateTime.now(),
-                LocalDateTime.now()
+                Instant.now()
         );
     }
 

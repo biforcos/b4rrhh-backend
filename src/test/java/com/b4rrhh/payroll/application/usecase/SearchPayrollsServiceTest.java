@@ -9,6 +9,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -66,7 +67,7 @@ class SearchPayrollsServiceTest {
         return Payroll.rehydrate(
                 1L, "MAS", "EMP", employeeNumber, periodCode, "NORMAL", 1,
                 status, null,
-                LocalDateTime.now(), "ENGINE_001", "1.0",
+                Instant.now(), "ENGINE_001", "1.0",
                 List.of(), List.of(), List.of(),
                 LocalDateTime.now(), LocalDateTime.now()
         );

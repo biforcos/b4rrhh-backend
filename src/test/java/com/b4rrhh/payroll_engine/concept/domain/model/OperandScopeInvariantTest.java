@@ -5,6 +5,7 @@ import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -60,8 +61,9 @@ class OperandScopeInvariantTest {
 
     private static PayrollConcept concept(Long id, String code, String mnemonic, ExecutionScope scope) {
         LocalDateTime now = LocalDateTime.now();
-        PayrollObject object = new PayrollObject(id, "ESP", PayrollObjectTypeCode.CONCEPT, code, now, now);
+        Instant ahora = Instant.now();
+        PayrollObject object = new PayrollObject(id, "ESP", PayrollObjectTypeCode.CONCEPT, code, now, ahora);
         return new PayrollConcept(object, mnemonic, CalculationType.DIRECT_AMOUNT,
-                FunctionalNature.TECHNICAL, null, scope, now, now);
+                FunctionalNature.TECHNICAL, null, scope, now, ahora);
     }
 }

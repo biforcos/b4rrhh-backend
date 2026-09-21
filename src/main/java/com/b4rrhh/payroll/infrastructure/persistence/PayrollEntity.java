@@ -14,6 +14,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -54,7 +55,9 @@ public class PayrollEntity {
     private String statusReasonCode;
 
     @Column(name = "calculated_at", nullable = false)
-    private LocalDateTime calculatedAt;
+    // Instant desde el backend#116: se compara con los updated_at de la reglamentacion, y
+    // para eso hace falta un instante y no la hora de pared de quien lo escribio.
+    private Instant calculatedAt;
 
     @Column(name = "calculation_engine_code", nullable = false, length = 50)
     private String calculationEngineCode;
@@ -169,8 +172,8 @@ public class PayrollEntity {
     public void setStatus(PayrollStatus status) { this.status = status; }
     public String getStatusReasonCode() { return statusReasonCode; }
     public void setStatusReasonCode(String statusReasonCode) { this.statusReasonCode = statusReasonCode; }
-    public LocalDateTime getCalculatedAt() { return calculatedAt; }
-    public void setCalculatedAt(LocalDateTime calculatedAt) { this.calculatedAt = calculatedAt; }
+    public Instant getCalculatedAt() { return calculatedAt; }
+    public void setCalculatedAt(Instant calculatedAt) { this.calculatedAt = calculatedAt; }
     public String getCalculationEngineCode() { return calculationEngineCode; }
     public void setCalculationEngineCode(String calculationEngineCode) { this.calculationEngineCode = calculationEngineCode; }
     public String getCalculationEngineVersion() { return calculationEngineVersion; }

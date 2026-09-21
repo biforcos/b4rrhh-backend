@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -110,7 +111,7 @@ class ConceptAssignmentRepositoryFindAllTest {
                 null, ruleSystemCode, conceptCode,
                 companyCode, agreementCode, employeeTypeCode,
                 JAN_1, DEC_31, priority,
-                LocalDateTime.now(), LocalDateTime.now()
+                LocalDateTime.now(), Instant.now()
         );
     }
 }

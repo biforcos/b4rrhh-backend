@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll_engine.object.domain.model;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -10,7 +11,7 @@ public class PayrollObject {
     private final PayrollObjectTypeCode objectTypeCode;
     private final String objectCode;
     private final LocalDateTime createdAt;
-    private final LocalDateTime updatedAt;
+    private final Instant updatedAt;
 
     public PayrollObject(
             Long id,
@@ -18,7 +19,7 @@ public class PayrollObject {
             PayrollObjectTypeCode objectTypeCode,
             String objectCode,
             LocalDateTime createdAt,
-            LocalDateTime updatedAt
+            Instant updatedAt
     ) {
         if (ruleSystemCode == null || ruleSystemCode.isBlank()) {
             throw new IllegalArgumentException("ruleSystemCode is required");
@@ -57,7 +58,7 @@ public class PayrollObject {
         return createdAt;
     }
 
-    public LocalDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 

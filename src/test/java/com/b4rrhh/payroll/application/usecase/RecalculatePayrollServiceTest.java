@@ -21,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -300,7 +301,7 @@ class RecalculatePayrollServiceTest {
         // status, statusReasonCode (null=none), calculatedAt, engCode, engVer, warnings, concepts, contextSnapshots, createdAt, updatedAt
         return Payroll.rehydrate(
                 1L, "MAS", "EMP", employeeNumber, periodCode, "NORMAL", 1,
-                status, null, LocalDateTime.now(), engCode, engVer,
+                status, null, Instant.now(), engCode, engVer,
                 List.of(), List.of(), List.of(),
                 LocalDateTime.now(), LocalDateTime.now()
         );

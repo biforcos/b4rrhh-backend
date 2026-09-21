@@ -8,6 +8,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -97,7 +98,7 @@ class SpringDataPayrollRepositoryFlywayIntegrationTest {
         payroll.setPayrollTypeCode("NORMAL");
         payroll.setPresenceNumber(1);
         payroll.setStatus(PayrollStatus.CALCULATED);
-        payroll.setCalculatedAt(LocalDateTime.of(2026, 1, 31, 10, 15));
+        payroll.setCalculatedAt(Instant.parse("2026-01-31T10:15:00Z"));
         payroll.setCalculationEngineCode("ENGINE");
         payroll.setCalculationEngineVersion("1.0");
 

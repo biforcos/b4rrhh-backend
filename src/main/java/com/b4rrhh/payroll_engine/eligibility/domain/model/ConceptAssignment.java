@@ -1,6 +1,7 @@
 package com.b4rrhh.payroll_engine.eligibility.domain.model;
 
 import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -39,7 +40,7 @@ public class ConceptAssignment {
     private final LocalDate validTo;
     private final int priority;
     private final LocalDateTime createdAt;
-    private final LocalDateTime updatedAt;
+    private final Instant updatedAt;
 
     public ConceptAssignment(
             Long id,
@@ -52,7 +53,7 @@ public class ConceptAssignment {
             LocalDate validTo,
             int priority,
             LocalDateTime createdAt,
-            LocalDateTime updatedAt
+            Instant updatedAt
     ) {
         if (ruleSystemCode == null || ruleSystemCode.isBlank()) {
             throw new IllegalArgumentException("ruleSystemCode is required");
@@ -106,7 +107,7 @@ public class ConceptAssignment {
     public LocalDate getValidTo() { return validTo; }
     public int getPriority() { return priority; }
     public LocalDateTime getCreatedAt() { return createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
 
     @Override
     public boolean equals(Object o) {

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -73,7 +74,7 @@ class ConceptAssignmentPersistenceAdapterTest {
         ConceptAssignment expired = new ConceptAssignment(null, "TST", "SALARIO_BASE",
                 null, null, null,
                 LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31), 0,
-                LocalDateTime.now(), LocalDateTime.now());
+                LocalDateTime.now(), Instant.now());
         adapter.save(expired);
 
         EmployeeAssignmentContext ctx = new EmployeeAssignmentContext("TST", null, null, null);
@@ -88,7 +89,7 @@ class ConceptAssignmentPersistenceAdapterTest {
         ConceptAssignment future = new ConceptAssignment(null, "TST", "SALARIO_BASE",
                 null, null, null,
                 LocalDate.of(2025, 7, 1), null, 0,
-                LocalDateTime.now(), LocalDateTime.now());
+                LocalDateTime.now(), Instant.now());
         adapter.save(future);
 
         EmployeeAssignmentContext ctx = new EmployeeAssignmentContext("TST", null, null, null);
@@ -103,7 +104,7 @@ class ConceptAssignmentPersistenceAdapterTest {
         ConceptAssignment openEnded = new ConceptAssignment(null, "TST", "SALARIO_BASE",
                 null, null, null,
                 JAN_1, null, 0,
-                LocalDateTime.now(), LocalDateTime.now());
+                LocalDateTime.now(), Instant.now());
         adapter.save(openEnded);
 
         EmployeeAssignmentContext ctx = new EmployeeAssignmentContext("TST", null, null, null);
@@ -226,11 +227,11 @@ class ConceptAssignmentPersistenceAdapterTest {
             String concept, String company, String agreement, String employeeType, int priority
     ) {
         return new ConceptAssignment(null, "TST", concept, company, agreement, employeeType,
-                JAN_1, DEC_31, priority, LocalDateTime.now(), LocalDateTime.now());
+                JAN_1, DEC_31, priority, LocalDateTime.now(), Instant.now());
     }
 
     private ConceptAssignment wildcardAssignment(String concept, int priority) {
         return new ConceptAssignment(null, "TST", concept, null, null, null,
-                JAN_1, DEC_31, priority, LocalDateTime.now(), LocalDateTime.now());
+                JAN_1, DEC_31, priority, LocalDateTime.now(), Instant.now());
     }
 }

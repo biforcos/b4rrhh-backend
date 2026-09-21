@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -220,7 +221,7 @@ class BulkFinalizePayrollServiceTest {
     private Payroll payroll(String employeeNumber, int presenceNumber, PayrollStatus status) {
         return Payroll.rehydrate(
                 1L, "ESP", "INTERNAL", employeeNumber, "202501", "NORMAL", presenceNumber,
-                status, null, LocalDateTime.now(), "ENGINE", "1.0",
+                status, null, Instant.now(), "ENGINE", "1.0",
                 List.of(), List.of(), List.of(),
                 LocalDateTime.now(), LocalDateTime.now());
     }

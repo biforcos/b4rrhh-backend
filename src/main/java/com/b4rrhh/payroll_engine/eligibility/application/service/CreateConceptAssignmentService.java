@@ -10,6 +10,7 @@ import com.b4rrhh.payroll_engine.metamodel.domain.model.MetamodelValidityWindow;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 /**
@@ -47,6 +48,9 @@ public class CreateConceptAssignmentService implements CreateConceptAssignmentUs
         );
 
         LocalDateTime now = LocalDateTime.now();
+        // createdAt sigue sin zona y updatedAt la lleva desde el backend#116:
+        // solo la segunda entra en la comparacion que decide si un recibo sigue vigente.
+        Instant ahora = Instant.now();
         ConceptAssignment assignment = new ConceptAssignment(
                 null,
                 command.ruleSystemCode(),
@@ -58,7 +62,7 @@ public class CreateConceptAssignmentService implements CreateConceptAssignmentUs
                 command.validTo(),
                 command.priority(),
                 now,
-                now
+                ahora
         );
         return assignmentRepository.save(assignment);
     }

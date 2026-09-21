@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -279,7 +280,7 @@ class BulkInvalidatePayrollServiceTest {
                 presenceNumber,
                 status,
                 null,
-                LocalDateTime.of(2026, 1, 31, 10, 0),
+                Instant.parse("2026-01-31T10:00:00Z"),
                 "ENGINE",
                 "1.0",
                 List.of(new PayrollConcept(1, "BASE", "SALARIO_BASE", "Base salary", new BigDecimal("1000.00"), null, null, "EARNING", "202501", 1)),

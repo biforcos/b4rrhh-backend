@@ -20,6 +20,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -136,8 +137,9 @@ class ReplaceConceptOperandsServiceTest {
 
     private static PayrollConcept concept(Long id, String code, String mnemonic, ExecutionScope scope) {
         LocalDateTime now = LocalDateTime.now();
-        PayrollObject object = new PayrollObject(id, RS, PayrollObjectTypeCode.CONCEPT, code, now, now);
+        Instant ahora = Instant.now();
+        PayrollObject object = new PayrollObject(id, RS, PayrollObjectTypeCode.CONCEPT, code, now, ahora);
         return new PayrollConcept(object, mnemonic, CalculationType.DIRECT_AMOUNT,
-                FunctionalNature.TECHNICAL, null, scope, now, now);
+                FunctionalNature.TECHNICAL, null, scope, now, ahora);
     }
 }

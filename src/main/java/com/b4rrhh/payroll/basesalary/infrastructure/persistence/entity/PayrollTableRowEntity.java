@@ -3,7 +3,7 @@ package com.b4rrhh.payroll.basesalary.infrastructure.persistence.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
  * JPA entity for payroll.payroll_table_row table.
@@ -54,14 +54,17 @@ public class PayrollTableRowEntity {
      * fila por la API dejaba la marca de tiempo en la del dia de la siembra. Ahora se mantiene,
      * porque es la mitad de la comparacion que dice si un recibo puede haber dejado de reflejar
      * las reglas: la otra mitad es su {@code calculated_at}.
+     *
+     * <p>{@code Instant} desde el {@code backend#116}: las dos mitades de esa comparacion tienen
+     * que ser instantes, o lo que se compara son dos horas de pared de dos maquinas distintas.
      */
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     @PrePersist
     @PreUpdate
     void stampUpdatedAt() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = Instant.now();
     }
 
     // Getters and setters
@@ -153,7 +156,7 @@ public class PayrollTableRowEntity {
         this.active = active;
     }
 
-    public LocalDateTime getUpdatedAt() {
+    public Instant getUpdatedAt() {
         return updatedAt;
     }
 }

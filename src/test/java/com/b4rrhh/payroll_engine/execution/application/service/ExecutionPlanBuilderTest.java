@@ -21,6 +21,7 @@ import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -63,31 +64,31 @@ class ExecutionPlanBuilderTest {
      */
     private static RuleSystemMetamodel pocMetamodel() {
         PayrollObject salarioTargetObj = new PayrollObject(3L, RS, PayrollObjectTypeCode.CONCEPT,
-                "SALARIO_BASE", LocalDateTime.now(), LocalDateTime.now());
+                "SALARIO_BASE", LocalDateTime.now(), Instant.now());
         PayrollObject qObj = new PayrollObject(1L, RS, PayrollObjectTypeCode.CONCEPT,
-                "T_DIAS_PRESENCIA_SEGMENTO", LocalDateTime.now(), LocalDateTime.now());
+                "T_DIAS_PRESENCIA_SEGMENTO", LocalDateTime.now(), Instant.now());
         PayrollObject rObj = new PayrollObject(2L, RS, PayrollObjectTypeCode.CONCEPT,
-                "T_PRECIO_DIA", LocalDateTime.now(), LocalDateTime.now());
+                "T_PRECIO_DIA", LocalDateTime.now(), Instant.now());
 
         List<PayrollConceptOperand> salarioBaseOperands = List.of(
                 new PayrollConceptOperand(null, salarioTargetObj, OperandRole.QUANTITY, qObj,
-                        LocalDateTime.now(), LocalDateTime.now()),
+                        LocalDateTime.now(), Instant.now()),
                 new PayrollConceptOperand(null, salarioTargetObj, OperandRole.RATE, rObj,
-                        LocalDateTime.now(), LocalDateTime.now())
+                        LocalDateTime.now(), Instant.now())
         );
 
         PayrollObject retencionTargetObj = new PayrollObject(8L, RS, PayrollObjectTypeCode.CONCEPT,
-                "RETENCION_IRPF_TRAMO", LocalDateTime.now(), LocalDateTime.now());
+                "RETENCION_IRPF_TRAMO", LocalDateTime.now(), Instant.now());
         PayrollObject totalDevengosObj = new PayrollObject(6L, RS, PayrollObjectTypeCode.CONCEPT,
-                "TOTAL_DEVENGOS_SEGMENTO", LocalDateTime.now(), LocalDateTime.now());
+                "TOTAL_DEVENGOS_SEGMENTO", LocalDateTime.now(), Instant.now());
         PayrollObject tPctIrpfObj = new PayrollObject(7L, RS, PayrollObjectTypeCode.CONCEPT,
-                "T_PCT_IRPF", LocalDateTime.now(), LocalDateTime.now());
+                "T_PCT_IRPF", LocalDateTime.now(), Instant.now());
 
         List<PayrollConceptOperand> retencionIrpfOperands = List.of(
                 new PayrollConceptOperand(null, retencionTargetObj, OperandRole.BASE, totalDevengosObj,
-                        LocalDateTime.now(), LocalDateTime.now()),
+                        LocalDateTime.now(), Instant.now()),
                 new PayrollConceptOperand(null, retencionTargetObj, OperandRole.PERCENTAGE, tPctIrpfObj,
-                        LocalDateTime.now(), LocalDateTime.now())
+                        LocalDateTime.now(), Instant.now())
         );
 
         return metamodel(RS, REF)
@@ -331,12 +332,12 @@ class ExecutionPlanBuilderTest {
     void missingOperandDefinitionDuringPlanBuildThrows() {
         // Repo returns only RATE — QUANTITY is missing → MissingOperandDefinitionException
         PayrollObject targetObj = new PayrollObject(3L, RS, PayrollObjectTypeCode.CONCEPT,
-                "SALARIO_BASE", LocalDateTime.now(), LocalDateTime.now());
+                "SALARIO_BASE", LocalDateTime.now(), Instant.now());
         PayrollObject rObj = new PayrollObject(2L, RS, PayrollObjectTypeCode.CONCEPT,
-                "T_PRECIO_DIA", LocalDateTime.now(), LocalDateTime.now());
+                "T_PRECIO_DIA", LocalDateTime.now(), Instant.now());
         List<PayrollConceptOperand> rateOnly = List.of(
                 new PayrollConceptOperand(null, targetObj, OperandRole.RATE, rObj,
-                        LocalDateTime.now(), LocalDateTime.now()));
+                        LocalDateTime.now(), Instant.now()));
 
         RuleSystemMetamodel rateOnlyMetamodel = metamodelWith(rateOnly);
 
@@ -352,20 +353,20 @@ class ExecutionPlanBuilderTest {
     void duplicateOperandDefinitionDuringPlanBuildThrows() {
         // Repo returns two QUANTITY operands → DuplicateOperandDefinitionException
         PayrollObject targetObj = new PayrollObject(3L, RS, PayrollObjectTypeCode.CONCEPT,
-                "SALARIO_BASE", LocalDateTime.now(), LocalDateTime.now());
+                "SALARIO_BASE", LocalDateTime.now(), Instant.now());
         PayrollObject q1 = new PayrollObject(1L, RS, PayrollObjectTypeCode.CONCEPT,
-                "T_DIAS_PRESENCIA_SEGMENTO", LocalDateTime.now(), LocalDateTime.now());
+                "T_DIAS_PRESENCIA_SEGMENTO", LocalDateTime.now(), Instant.now());
         PayrollObject q2 = new PayrollObject(4L, RS, PayrollObjectTypeCode.CONCEPT,
-                "T_OTHER_QUANTITY", LocalDateTime.now(), LocalDateTime.now());
+                "T_OTHER_QUANTITY", LocalDateTime.now(), Instant.now());
         PayrollObject rObj = new PayrollObject(2L, RS, PayrollObjectTypeCode.CONCEPT,
-                "T_PRECIO_DIA", LocalDateTime.now(), LocalDateTime.now());
+                "T_PRECIO_DIA", LocalDateTime.now(), Instant.now());
         List<PayrollConceptOperand> duplicateQuantity = List.of(
                 new PayrollConceptOperand(null, targetObj, OperandRole.QUANTITY, q1,
-                        LocalDateTime.now(), LocalDateTime.now()),
+                        LocalDateTime.now(), Instant.now()),
                 new PayrollConceptOperand(null, targetObj, OperandRole.QUANTITY, q2,
-                        LocalDateTime.now(), LocalDateTime.now()),
+                        LocalDateTime.now(), Instant.now()),
                 new PayrollConceptOperand(null, targetObj, OperandRole.RATE, rObj,
-                        LocalDateTime.now(), LocalDateTime.now()));
+                        LocalDateTime.now(), Instant.now()));
 
         RuleSystemMetamodel duplicateQuantityMetamodel = metamodelWith(duplicateQuantity);
 
@@ -391,16 +392,16 @@ class ExecutionPlanBuilderTest {
     void graphMismatchDuringPlanBuildThrows() {
         // Repo returns a QUANTITY source (T_OTHER) that is NOT in the graph deps → OperandGraphMismatchException
         PayrollObject targetObj = new PayrollObject(3L, RS, PayrollObjectTypeCode.CONCEPT,
-                "SALARIO_BASE", LocalDateTime.now(), LocalDateTime.now());
+                "SALARIO_BASE", LocalDateTime.now(), Instant.now());
         PayrollObject qObj = new PayrollObject(5L, RS, PayrollObjectTypeCode.CONCEPT,
-                "T_OTHER", LocalDateTime.now(), LocalDateTime.now());
+                "T_OTHER", LocalDateTime.now(), Instant.now());
         PayrollObject rObj = new PayrollObject(2L, RS, PayrollObjectTypeCode.CONCEPT,
-                "T_PRECIO_DIA", LocalDateTime.now(), LocalDateTime.now());
+                "T_PRECIO_DIA", LocalDateTime.now(), Instant.now());
         List<PayrollConceptOperand> mismatchedOperands = List.of(
                 new PayrollConceptOperand(null, targetObj, OperandRole.QUANTITY, qObj,
-                        LocalDateTime.now(), LocalDateTime.now()),
+                        LocalDateTime.now(), Instant.now()),
                 new PayrollConceptOperand(null, targetObj, OperandRole.RATE, rObj,
-                        LocalDateTime.now(), LocalDateTime.now()));
+                        LocalDateTime.now(), Instant.now()));
 
         RuleSystemMetamodel mismatchedOperandsMetamodel = metamodelWith(mismatchedOperands);
 
@@ -582,12 +583,12 @@ class ExecutionPlanBuilderTest {
     void missingBaseOperandDefinitionForPercentageConceptThrows() {
         // Repo returns PERCENTAGE only — BASE is missing → MissingOperandDefinitionException
         PayrollObject retencionObj = new PayrollObject(8L, RS, PayrollObjectTypeCode.CONCEPT,
-                "RETENCION_IRPF_TRAMO", LocalDateTime.now(), LocalDateTime.now());
+                "RETENCION_IRPF_TRAMO", LocalDateTime.now(), Instant.now());
         PayrollObject pctObj = new PayrollObject(7L, RS, PayrollObjectTypeCode.CONCEPT,
-                "T_PCT_IRPF", LocalDateTime.now(), LocalDateTime.now());
+                "T_PCT_IRPF", LocalDateTime.now(), Instant.now());
         List<PayrollConceptOperand> pctOnly = List.of(
                 new PayrollConceptOperand(null, retencionObj, OperandRole.PERCENTAGE, pctObj,
-                        LocalDateTime.now(), LocalDateTime.now()));
+                        LocalDateTime.now(), Instant.now()));
 
         RuleSystemMetamodel pctOnlyMetamodel = metamodelWith(pctOnly);
 
@@ -605,12 +606,12 @@ class ExecutionPlanBuilderTest {
     void missingPercentageOperandDefinitionForPercentageConceptThrows() {
         // Repo returns BASE only — PERCENTAGE is missing → MissingOperandDefinitionException
         PayrollObject retencionObj = new PayrollObject(8L, RS, PayrollObjectTypeCode.CONCEPT,
-                "RETENCION_IRPF_TRAMO", LocalDateTime.now(), LocalDateTime.now());
+                "RETENCION_IRPF_TRAMO", LocalDateTime.now(), Instant.now());
         PayrollObject baseObj = new PayrollObject(6L, RS, PayrollObjectTypeCode.CONCEPT,
-                "TOTAL_DEVENGOS_SEGMENTO", LocalDateTime.now(), LocalDateTime.now());
+                "TOTAL_DEVENGOS_SEGMENTO", LocalDateTime.now(), Instant.now());
         List<PayrollConceptOperand> baseOnly = List.of(
                 new PayrollConceptOperand(null, retencionObj, OperandRole.BASE, baseObj,
-                        LocalDateTime.now(), LocalDateTime.now()));
+                        LocalDateTime.now(), Instant.now()));
 
         RuleSystemMetamodel baseOnlyMetamodel = metamodelWith(baseOnly);
         PayrollConcept totalDevengos = concept("TOTAL_DEVENGOS_SEGMENTO", CalculationType.DIRECT_AMOUNT);
@@ -627,16 +628,16 @@ class ExecutionPlanBuilderTest {
     void graphMismatchForPercentageConceptThrows() {
         // Repo returns BASE=TOTAL_DEVENGOS which is NOT declared as dep in graph → OperandGraphMismatchException
         PayrollObject retencionObj   = new PayrollObject(8L, RS, PayrollObjectTypeCode.CONCEPT,
-                "RETENCION_IRPF_TRAMO", LocalDateTime.now(), LocalDateTime.now());
+                "RETENCION_IRPF_TRAMO", LocalDateTime.now(), Instant.now());
         PayrollObject totalDevengosObj = new PayrollObject(6L, RS, PayrollObjectTypeCode.CONCEPT,
-                "TOTAL_DEVENGOS_SEGMENTO", LocalDateTime.now(), LocalDateTime.now());
+                "TOTAL_DEVENGOS_SEGMENTO", LocalDateTime.now(), Instant.now());
         PayrollObject pctObj = new PayrollObject(7L, RS, PayrollObjectTypeCode.CONCEPT,
-                "T_PCT_IRPF", LocalDateTime.now(), LocalDateTime.now());
+                "T_PCT_IRPF", LocalDateTime.now(), Instant.now());
         List<PayrollConceptOperand> operandsPointingToUndeclaredDep = List.of(
                 new PayrollConceptOperand(null, retencionObj, OperandRole.BASE, totalDevengosObj,
-                        LocalDateTime.now(), LocalDateTime.now()),
+                        LocalDateTime.now(), Instant.now()),
                 new PayrollConceptOperand(null, retencionObj, OperandRole.PERCENTAGE, pctObj,
-                        LocalDateTime.now(), LocalDateTime.now()));
+                        LocalDateTime.now(), Instant.now()));
 
         RuleSystemMetamodel operandsPointingToUndeclaredDepMetamodel = metamodelWith(operandsPointingToUndeclaredDep);
 

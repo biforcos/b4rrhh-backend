@@ -3,6 +3,7 @@ package com.b4rrhh.payroll_engine.concept.domain.model;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObject;
 import com.b4rrhh.payroll_engine.object.domain.model.PayrollObjectTypeCode;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -19,7 +20,7 @@ public class PayrollConceptOperand {
     private final OperandRole operandRole;
     private final PayrollObject sourceObject;
     private final LocalDateTime createdAt;
-    private final LocalDateTime updatedAt;
+    private final Instant updatedAt;
 
     public PayrollConceptOperand(
             Long id,
@@ -27,7 +28,7 @@ public class PayrollConceptOperand {
             OperandRole operandRole,
             PayrollObject sourceObject,
             LocalDateTime createdAt,
-            LocalDateTime updatedAt
+            Instant updatedAt
     ) {
         Objects.requireNonNull(targetObject, "targetObject is required");
         Objects.requireNonNull(operandRole, "operandRole is required");
@@ -56,5 +57,5 @@ public class PayrollConceptOperand {
     public OperandRole getOperandRole() { return operandRole; }
     public PayrollObject getSourceObject() { return sourceObject; }
     public LocalDateTime getCreatedAt() { return createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
 }

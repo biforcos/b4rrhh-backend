@@ -28,6 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -694,7 +695,7 @@ class LaunchPayrollCalculationServiceTest {
                 1,
                 status,
                 null,
-                LocalDateTime.of(2026, 1, 31, 10, 15),
+                Instant.parse("2026-01-31T10:15:00Z"),
                 "ENGINE",
                 "1.0",
                 runId,

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -109,7 +110,7 @@ class NothingLeavesADefinitivePayrollTest {
     private Payroll payroll(PayrollStatus status) {
         return Payroll.rehydrate(
                 1L, "ESP", "INTERNAL", "EMP000001", "202501", "NORMAL", 1,
-                status, null, LocalDateTime.now(), "ENGINE", "1.0",
+                status, null, Instant.now(), "ENGINE", "1.0",
                 List.of(), List.of(), List.of(),
                 LocalDateTime.now(), LocalDateTime.now());
     }

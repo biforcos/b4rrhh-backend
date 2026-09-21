@@ -12,6 +12,7 @@ import com.b4rrhh.payroll_engine.object.infrastructure.persistence.SpringDataPay
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -110,7 +111,7 @@ class PayrollConceptRepositoryFindAllTest {
                 null,
                 ExecutionScope.PERIOD,
                 LocalDateTime.now(),
-                LocalDateTime.now()
+                Instant.now()
         );
         repository.save(concept);
     }

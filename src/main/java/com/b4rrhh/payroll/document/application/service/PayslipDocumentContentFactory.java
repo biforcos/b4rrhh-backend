@@ -10,6 +10,7 @@ import com.b4rrhh.payroll_engine.concept.domain.model.PayslipSection;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -32,7 +33,18 @@ import java.util.Map;
 @Component
 public class PayslipDocumentContentFactory {
 
-    private static final DateTimeFormatter MOMENTO = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    /**
+     * El momento del calculo, escrito en la hora de Madrid.
+     *
+     * <p>Desde el {@code backend#116} el {@code calculated_at} es un {@code Instant}, y un
+     * instante no se puede escribir sin decir en que reloj. Se elige {@code Europe/Madrid} y no
+     * el huso de la maquina que genera el PDF: este es un recibo de salarios espanol y quien lo
+     * lee esta en Espana. Si el servidor corre en UTC -la CT de la demo lo hace-, el papel
+     * seguiria diciendo la hora de aqui.
+     */
+    private static final DateTimeFormatter MOMENTO = DateTimeFormatter
+            .ofPattern("dd/MM/yyyy HH:mm")
+            .withZone(ZoneId.of("Europe/Madrid"));
     private static final DateTimeFormatter DIA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private static final String[] MESES = {

@@ -7,6 +7,7 @@ import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayslipSection;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -149,7 +150,12 @@ final class PayslipDocumentFixtures {
         }
         return Payroll.rehydrate(
                 1L, "ESP", "INTERNAL", employeeNumber, "202609", "NORMAL", presenceNumber,
-                status, null, LocalDateTime.of(2026, 9, 20, 18, 4, 37),
+                // El instante, no la hora de pared (backend#116). En la semilla este recibo
+                // dice «18:04:37» y lo escribio el portatil, que va en Europe/Madrid: en
+                // septiembre eso son dos horas por delante de UTC. Que haya que decidirlo
+                // aqui es la mitad buena del cambio -- antes el numero no decia de que
+                // reloj era, y el PDF lo reimprimia tal cual sin saberlo.
+                status, null, Instant.parse("2026-09-20T16:04:37Z"),
                 "GRAPH", "1.0", 1L,
                 List.of(), concepts, snapshots(), List.of(),
                 LocalDateTime.of(2026, 9, 20, 18, 4, 37),

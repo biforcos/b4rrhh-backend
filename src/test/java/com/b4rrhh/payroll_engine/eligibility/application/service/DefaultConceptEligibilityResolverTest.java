@@ -8,6 +8,7 @@ import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -156,7 +157,7 @@ class DefaultConceptEligibilityResolverTest {
         return new ConceptAssignment(
                 null, rs, concept, company, agreement, employeeType,
                 LocalDate.of(2025, 1, 1), null, priority,
-                LocalDateTime.now(), LocalDateTime.now()
+                LocalDateTime.now(), Instant.now()
         );
     }
 

@@ -4,6 +4,7 @@ import com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException;
 import com.b4rrhh.payroll.domain.exception.PayrollInvalidStateTransitionException;
 import com.b4rrhh.payroll.domain.exception.PayrollTypeInvalidException;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -18,7 +19,7 @@ public class Payroll {
     private final Integer presenceNumber;
     private final PayrollStatus status;
     private final String statusReasonCode;
-    private final LocalDateTime calculatedAt;
+    private final Instant calculatedAt;
     private final String calculationEngineCode;
     private final String calculationEngineVersion;
     // La ejecucion que produjo este recibo. No es mutable: si se recalcula, el recibo es otro y
@@ -44,7 +45,7 @@ public class Payroll {
             Integer presenceNumber,
             PayrollStatus status,
             String statusReasonCode,
-            LocalDateTime calculatedAt,
+            Instant calculatedAt,
             String calculationEngineCode,
             String calculationEngineVersion,
             Long runId,
@@ -89,7 +90,7 @@ public class Payroll {
             Integer presenceNumber,
             PayrollStatus status,
             String statusReasonCode,
-            LocalDateTime calculatedAt,
+            Instant calculatedAt,
             String calculationEngineCode,
             String calculationEngineVersion,
             List<PayrollWarning> warnings,
@@ -111,7 +112,7 @@ public class Payroll {
             Integer presenceNumber,
             PayrollStatus status,
             String statusReasonCode,
-            LocalDateTime calculatedAt,
+            Instant calculatedAt,
             String calculationEngineCode,
             String calculationEngineVersion,
             Long runId,
@@ -152,7 +153,7 @@ public class Payroll {
             Integer presenceNumber,
             PayrollStatus status,
             String statusReasonCode,
-            LocalDateTime calculatedAt,
+            Instant calculatedAt,
             String calculationEngineCode,
             String calculationEngineVersion,
             List<PayrollConcept> concepts,
@@ -174,7 +175,7 @@ public class Payroll {
             Integer presenceNumber,
             PayrollStatus status,
             String statusReasonCode,
-            LocalDateTime calculatedAt,
+            Instant calculatedAt,
             String calculationEngineCode,
             String calculationEngineVersion,
             List<PayrollWarning> warnings,
@@ -199,7 +200,7 @@ public class Payroll {
             Integer presenceNumber,
             PayrollStatus status,
             String statusReasonCode,
-            LocalDateTime calculatedAt,
+            Instant calculatedAt,
             String calculationEngineCode,
             String calculationEngineVersion,
             Long runId,
@@ -243,7 +244,7 @@ public class Payroll {
             Integer presenceNumber,
             PayrollStatus status,
             String statusReasonCode,
-            LocalDateTime calculatedAt,
+            Instant calculatedAt,
             String calculationEngineCode,
             String calculationEngineVersion,
             List<PayrollConcept> concepts,
@@ -309,7 +310,7 @@ public class Payroll {
         return value;
     }
 
-    private static LocalDateTime requireCalculatedAt(LocalDateTime value) {
+    private static Instant requireCalculatedAt(Instant value) {
         if (value == null) {
             throw new InvalidPayrollArgumentException("calculatedAt is required");
         }
@@ -407,7 +408,7 @@ public class Payroll {
         return statusReasonCode;
     }
 
-    public LocalDateTime getCalculatedAt() {
+    public Instant getCalculatedAt() {
         return calculatedAt;
     }
 

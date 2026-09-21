@@ -48,6 +48,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -486,7 +487,7 @@ class CalculatePayrollUnitServiceTest {
                 2,
                 PayrollStatus.CALCULATED,
                 null,
-                LocalDateTime.of(2026, 4, 11, 10, 0),
+                Instant.parse("2026-04-11T10:00:00Z"),
                 "ENGINE",
                 "1.0",
                 List.of(),

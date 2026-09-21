@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -103,7 +104,7 @@ class ListPayrollCalculationStepsServiceTest {
     private void givenPayroll(long payrollId) {
         Payroll payroll = Payroll.rehydrate(
                 payrollId, "ESP", "INTERNAL", "EMP000001", "202609", "NORMAL", 1,
-                PayrollStatus.CALCULATED, null, LocalDateTime.of(2026, 9, 30, 12, 0),
+                PayrollStatus.CALCULATED, null, Instant.parse("2026-09-30T12:00:00Z"),
                 "ENGINE", "1.0", List.of(), List.of(), List.of(), null, null);
         when(getPayrollByBusinessKeyUseCase.getByBusinessKey(
                 anyString(), anyString(), anyString(), anyString(), anyString(), anyInt()))
