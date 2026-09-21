@@ -150,8 +150,10 @@ public class PayrollScenarioFixtures {
                 " values (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 categoryId, "05", "MENSUAL");
 
-        // Un sistema de reglas completo declara tambien sus agrupaciones de folio (backend#109).
+        // Un sistema de reglas completo declara tambien sus agrupaciones de folio (backend#109)
+        // y sus tipos de cotizacion (backend#105).
         seedPayslipSections(ruleSystemCode);
+        seedCotizacionRates(ruleSystemCode);
     }
 
     /** Inserts one employee row; returns the generated surrogate id. */
@@ -406,6 +408,39 @@ public class PayrollScenarioFixtures {
             jdbc.update("insert into payroll_engine.payslip_section_nature"
                     + " (rule_system_code, functional_nature, section_code) values (?, ?, ?)",
                     ruleSystemCode, n[0], n[1]);
+        }
+    }
+
+    /**
+     * Los nueve tipos de cotizacion vigentes, como los siembra la V88 para ESP
+     * ({@code backend#105}).
+     *
+     * <p>Hasta ese issue esto no hacia falta: los nueve numeros eran constantes de Java y valian
+     * para cualquier sistema de reglas, incluidos los de tres letras que fabrican estos
+     * escenarios. Ahora se leen del catalogo, y <b>un sistema de reglas sin tipos no calcula un
+     * recibo</b> — se para con un {@code IllegalStateException} en vez de inventarse un cero.
+     *
+     * <p>Que esto haya hecho falta es parte de lo que el issue destapo: las constantes eran
+     * ciegas al sistema de reglas y esto no lo es, que es lo correcto — un tipo de cotizacion es
+     * de un pais.
+     */
+    public void seedCotizacionRates(String ruleSystemCode) {
+        String[][] tipos = {
+                {"CC_TRAB",         "4.70"},
+                {"DESEMPLEO_TRAB",  "1.55"},
+                {"FP_TRAB",         "0.10"},
+                {"MEI_TRAB",        "0.11"},
+                {"CC_EMP",         "23.60"},
+                {"DESEMPLEO_EMP",   "7.05"},
+                {"FP_EMP",          "0.60"},
+                {"FOGASA_EMP",      "0.20"},
+                {"MEI_EMP",         "0.58"},
+        };
+        for (String[] t : tipos) {
+            jdbc.update("insert into payroll_engine.ss_cotizacion_tipos"
+                    + " (rule_system_code, contingency_code, rate, valid_from, valid_to)"
+                    + " values (?, ?, ?, DATE '2000-01-01', null)",
+                    ruleSystemCode, t[0], new BigDecimal(t[1]));
         }
     }
 
