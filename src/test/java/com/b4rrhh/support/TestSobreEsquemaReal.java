@@ -26,6 +26,7 @@ import com.b4rrhh.employee.contract.application.usecase.UpdateContractService;
 import com.b4rrhh.employee.contract.infrastructure.persistence.ContractPersistenceAdapter;
 import com.b4rrhh.employee.contract.infrastructure.persistence.ContractPresenceConsistencyAdapter;
 import com.b4rrhh.employee.contract.infrastructure.persistence.ContractRuleEntityUsageParticipant;
+import com.b4rrhh.employee.contract.infrastructure.persistence.ContractSubtypeCatalogLookupAdapter;
 import com.b4rrhh.employee.contract.infrastructure.persistence.ContractSubtypeRelationLookupAdapter;
 import com.b4rrhh.employee.contract.infrastructure.persistence.EmployeeContractLookupAdapter;
 import com.b4rrhh.employee.cost_center.application.service.CostCenterCatalogValidator;
@@ -56,6 +57,7 @@ import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborC
 import com.b4rrhh.employee.labor_classification.application.usecase.DeleteLaborClassificationService;
 import com.b4rrhh.employee.labor_classification.application.usecase.PlanLaborClassificationChangeService;
 import com.b4rrhh.employee.labor_classification.application.usecase.UpdateLaborClassificationService;
+import com.b4rrhh.employee.labor_classification.infrastructure.persistence.AgreementCategoryCatalogLookupAdapter;
 import com.b4rrhh.employee.labor_classification.infrastructure.persistence.AgreementCategoryRelationLookupAdapter;
 import com.b4rrhh.employee.labor_classification.infrastructure.persistence.EmployeeLaborClassificationLookupAdapter;
 import com.b4rrhh.employee.labor_classification.infrastructure.persistence.LaborClassificationPersistenceAdapter;
@@ -185,6 +187,9 @@ import java.lang.annotation.Target;
         ContractCatalogValidator.class,
         ContractSubtypeRelationValidator.class,
         ContractSubtypeRelationLookupAdapter.class,
+        // catalogo: la vigencia de las relaciones, publicada y no adivinada (backend#115)
+        ContractSubtypeCatalogLookupAdapter.class,
+        AgreementCategoryCatalogLookupAdapter.class,
         ContractPersistenceAdapter.class,
         ContractPresenceConsistencyAdapter.class,
         EmployeeContractLookupAdapter.class,
