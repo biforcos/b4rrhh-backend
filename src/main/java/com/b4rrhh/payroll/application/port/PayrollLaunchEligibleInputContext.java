@@ -16,6 +16,9 @@ import java.util.List;
  *        sale el precio del dia (backend#47)
  * @param contractWindows los tramos de contrato que tocan el periodo, en orden. Rompen el periodo
  *        aunque hoy no los lea ningun concepto: el dia que alguno los lea, ya estara partido
+ * @param extraPaymentRegimeWindows los tramos de regimen de pagas extras que tocan el periodo, en
+ *        orden. Rompen el periodo por la misma razon: la prorrata de un tramo prorrateado y la de
+ *        uno que no lo es entran por puertas distintas (backend#118, backend#119)
  * @param presenceStartDate el arranque de la presencia de ESTA unidad
  * @param seniorityDate la antiguedad del empleado, como fecha: el arranque de su presencia mas
  *        antigua, cortes incluidos, asi que quien se readmite la conserva del primer alta
@@ -32,6 +35,7 @@ public record PayrollLaunchEligibleInputContext(
         List<PayrollLaunchWorkingTimeWindowContext> workingTimeWindows,
         List<PayrollLaunchAgreementWindowContext> agreementWindows,
         List<PayrollLaunchContractWindowContext> contractWindows,
+        List<PayrollLaunchExtraPaymentRegimeWindowContext> extraPaymentRegimeWindows,
         LocalDate presenceStartDate,
         LocalDate presenceEndDate,
         String workCenterCode,

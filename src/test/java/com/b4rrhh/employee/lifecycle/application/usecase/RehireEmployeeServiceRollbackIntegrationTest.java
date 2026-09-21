@@ -22,6 +22,7 @@ import com.b4rrhh.employee.presence.application.usecase.CreatePresenceCommand;
 import com.b4rrhh.employee.presence.application.usecase.CreatePresenceUseCase;
 import com.b4rrhh.employee.presence.application.usecase.ListEmployeePresencesUseCase;
 import com.b4rrhh.employee.presence.domain.model.Presence;
+import com.b4rrhh.employee.extra_payment_regime.application.usecase.CreateExtraPaymentRegimeUseCase;
 import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeUseCase;
 import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesCommand;
 import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesUseCase;
@@ -338,6 +339,19 @@ class RehireEmployeeServiceRollbackIntegrationTest {
                 throw new InvalidWorkingTimePercentageException(
                         "workingTimePercentage must be greater than 0 and less than or equal to 100"
                 );
+            };
+        }
+
+        /**
+         * La readmision tambien crea el regimen de pagas extras ({@code backend#118}). Aqui no se
+         * llega a el —la jornada revienta antes— pero el servicio lo pide por constructor, y este
+         * test monta sus colaboradores a mano.
+         */
+        @Bean
+        CreateExtraPaymentRegimeUseCase createExtraPaymentRegimeUseCase() {
+            return command -> {
+                throw new IllegalStateException(
+                        "La jornada revienta antes: si esto se llama, el orden de la readmision ha cambiado");
             };
         }
     }

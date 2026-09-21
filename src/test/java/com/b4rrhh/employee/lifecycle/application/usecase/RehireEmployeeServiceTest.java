@@ -34,6 +34,7 @@ import com.b4rrhh.employee.presence.application.usecase.CreatePresenceUseCase;
 import com.b4rrhh.employee.presence.application.usecase.ListEmployeePresencesUseCase;
 import com.b4rrhh.employee.presence.domain.model.Presence;
 import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeCommand;
+import com.b4rrhh.employee.extra_payment_regime.application.usecase.CreateExtraPaymentRegimeUseCase;
 import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeUseCase;
 import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesCommand;
 import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesUseCase;
@@ -105,6 +106,8 @@ class RehireEmployeeServiceTest {
         @Mock
         private CreateWorkingTimeUseCase createWorkingTimeUseCase;
         @Mock
+        private CreateExtraPaymentRegimeUseCase createExtraPaymentRegimeUseCase;
+        @Mock
         private WorkCenterCompanyLookupPort workCenterCompanyLookupPort;
     @Mock
     private RuleEntityRepository employeeTypeRuleEntityRepository;
@@ -141,6 +144,7 @@ class RehireEmployeeServiceTest {
                 createWorkCenterUseCase,
                                 createCostCenterDistributionUseCase,
                                 createWorkingTimeUseCase,
+                                createExtraPaymentRegimeUseCase,
                                 workCenterCompanyValidator,
                 employeeTypeCatalogValidator
         );

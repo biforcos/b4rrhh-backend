@@ -1,6 +1,8 @@
 package com.b4rrhh.payroll.infrastructure.persistence;
 
 import com.b4rrhh.employee.contract.infrastructure.persistence.ContractEntity;
+import com.b4rrhh.employee.extra_payment_regime.infrastructure.persistence.ExtraPaymentRegimeEntity;
+import com.b4rrhh.employee.extra_payment_regime.infrastructure.persistence.SpringDataExtraPaymentRegimeRepository;
 import com.b4rrhh.employee.contract.infrastructure.persistence.SpringDataContractRepository;
 import com.b4rrhh.employee.labor_classification.infrastructure.persistence.LaborClassificationEntity;
 import com.b4rrhh.employee.labor_classification.infrastructure.persistence.SpringDataLaborClassificationRepository;
@@ -16,6 +18,7 @@ import com.b4rrhh.payroll.application.port.PayrollLaunchAgreementWindowContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchContractWindowContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputLookupPort;
+import com.b4rrhh.payroll.application.port.PayrollLaunchExtraPaymentRegimeWindowContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchWorkingTimeWindowContext;
 import com.b4rrhh.payroll.basesalary.infrastructure.persistence.repository.EmployeeAgreementCategoryRepository;
 import org.springframework.data.domain.PageRequest;
@@ -36,6 +39,7 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
     private final SpringDataWorkCenterRepository workCenterRepository;
     private final SpringDataLaborClassificationRepository laborClassificationRepository;
     private final SpringDataContractRepository contractRepository;
+    private final SpringDataExtraPaymentRegimeRepository extraPaymentRegimeRepository;
 
     public PayrollLaunchEligibleInputLookupAdapter(
             EmployeeBusinessKeyLookupSupport employeeLookupSupport,
@@ -45,7 +49,8 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
             SpringDataWorkingTimeRepository workingTimeRepository,
             SpringDataWorkCenterRepository workCenterRepository,
             SpringDataLaborClassificationRepository laborClassificationRepository,
-            SpringDataContractRepository contractRepository
+            SpringDataContractRepository contractRepository,
+            SpringDataExtraPaymentRegimeRepository extraPaymentRegimeRepository
     ) {
         this.employeeLookupSupport = employeeLookupSupport;
         this.presenceRepository = presenceRepository;
@@ -55,6 +60,7 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
         this.workCenterRepository = workCenterRepository;
         this.laborClassificationRepository = laborClassificationRepository;
         this.contractRepository = contractRepository;
+        this.extraPaymentRegimeRepository = extraPaymentRegimeRepository;
     }
 
     @Override
@@ -123,6 +129,13 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
                 .map(PayrollLaunchEligibleInputLookupAdapter::toContractWindow)
                 .toList();
 
+        List<PayrollLaunchExtraPaymentRegimeWindowContext> extraPaymentRegimeWindows =
+                extraPaymentRegimeRepository
+                        .findOverlappingByEmployeeIdAndPeriodOrdered(employeeId, periodStart, periodEnd)
+                        .stream()
+                        .map(PayrollLaunchEligibleInputLookupAdapter::toExtraPaymentRegimeWindow)
+                        .toList();
+
         String workCenterCode = workCenterRepository
                 .findActiveByEmployeeIdAndReferenceDate(employeeId, referenceDate, PageRequest.of(0, 1))
                 .stream().findFirst()
@@ -142,6 +155,7 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
                 windows,
                 agreementWindows,
                 contractWindows,
+                extraPaymentRegimeWindows,
                 presence.getStartDate(),
                 presence.getEndDate(),
                 workCenterCode,
@@ -187,6 +201,13 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
     private static PayrollLaunchContractWindowContext toContractWindow(ContractEntity e) {
         return new PayrollLaunchContractWindowContext(
                 e.getStartDate(), e.getEndDate(), e.getContractCode(), e.getContractSubtypeCode());
+    }
+
+    private static PayrollLaunchExtraPaymentRegimeWindowContext toExtraPaymentRegimeWindow(
+            ExtraPaymentRegimeEntity e
+    ) {
+        return new PayrollLaunchExtraPaymentRegimeWindowContext(
+                e.getStartDate(), e.getEndDate(), Boolean.TRUE.equals(e.getProrated()));
     }
 
     private PayrollLaunchWorkingTimeWindowContext toWorkingTimeWindow(WorkingTimeEntity workingTime) {

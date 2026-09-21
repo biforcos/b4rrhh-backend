@@ -53,6 +53,10 @@ import com.b4rrhh.employee.presence.domain.exception.InvalidPresenceDateRangeExc
 import com.b4rrhh.employee.presence.domain.exception.PresenceCatalogValueInvalidException;
 import com.b4rrhh.employee.presence.domain.exception.PresenceOverlapException;
 import com.b4rrhh.employee.presence.domain.model.Presence;
+import com.b4rrhh.employee.extra_payment_regime.application.usecase.CreateExtraPaymentRegimeCommand;
+import com.b4rrhh.employee.extra_payment_regime.application.usecase.CreateExtraPaymentRegimeUseCase;
+import com.b4rrhh.employee.extra_payment_regime.domain.exception.ExtraPaymentRegimeNumberConflictException;
+import com.b4rrhh.employee.extra_payment_regime.domain.exception.ExtraPaymentRegimeSeriesInvariantException;
 import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeCommand;
 import com.b4rrhh.employee.working_time.application.usecase.CreateWorkingTimeUseCase;
 import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesCommand;
@@ -97,6 +101,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
     private final CreateWorkCenterUseCase createWorkCenterUseCase;
     private final CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase;
     private final CreateWorkingTimeUseCase createWorkingTimeUseCase;
+    private final CreateExtraPaymentRegimeUseCase createExtraPaymentRegimeUseCase;
     private final WorkCenterCompanyValidator workCenterCompanyValidator;
     private final EmployeeTypeCatalogValidator employeeTypeCatalogValidator;
 
@@ -114,6 +119,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
             CreateWorkCenterUseCase createWorkCenterUseCase,
             CreateCostCenterDistributionUseCase createCostCenterDistributionUseCase,
             CreateWorkingTimeUseCase createWorkingTimeUseCase,
+            CreateExtraPaymentRegimeUseCase createExtraPaymentRegimeUseCase,
             WorkCenterCompanyValidator workCenterCompanyValidator,
             EmployeeTypeCatalogValidator employeeTypeCatalogValidator
     ) {
@@ -130,6 +136,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
         this.createWorkCenterUseCase = createWorkCenterUseCase;
         this.createCostCenterDistributionUseCase = createCostCenterDistributionUseCase;
         this.createWorkingTimeUseCase = createWorkingTimeUseCase;
+        this.createExtraPaymentRegimeUseCase = createExtraPaymentRegimeUseCase;
         this.workCenterCompanyValidator = workCenterCompanyValidator;
         this.employeeTypeCatalogValidator = employeeTypeCatalogValidator;
     }
@@ -303,6 +310,19 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                     null,
                     workingTime.workingTimePercentage()
             ));
+
+            // La readmision estrena presencia, y con ella todas las verticales que derivan de
+            // ella. El regimen de pagas extras no se pregunta: se copia el del convenio que le
+            // aplica hoy (backend#117, backend#118). Si el convenio cambio desde que se fue, el
+            // que vuelve entra con el de ahora, que es lo que significa que sea una copia.
+            createExtraPaymentRegimeUseCase.create(new CreateExtraPaymentRegimeCommand(
+                    ruleSystemCode,
+                    employeeTypeCode,
+                    employeeNumber,
+                    rehireDate,
+                    null,
+                    null
+            ));
         } catch (EmployeeTypeInvalidException
                  | PresenceCatalogValueInvalidException
                  | LaborClassificationAgreementInvalidException
@@ -318,9 +338,11 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                  | ContractSubtypeRelationInvalidException ex) {
             throw new RehireEmployeeDependentRelationInvalidException(ex.getMessage(), ex);
         } catch (InvalidWorkingTimePercentageException
-                 | WorkingTimeSeriesInvariantException ex) {
+                 | WorkingTimeSeriesInvariantException
+                 | ExtraPaymentRegimeSeriesInvariantException ex) {
             throw new RehireEmployeeBusinessValidationException(ex.getMessage(), ex);
-        } catch (WorkingTimeNumberConflictException ex) {
+        } catch (WorkingTimeNumberConflictException
+                 | ExtraPaymentRegimeNumberConflictException ex) {
             throw new RehireEmployeeConflictException(ex.getMessage(), ex);
         } catch (WorkingTimeEmployeeNotFoundException ex) {
             throw new RehireEmployeeConflictException("Employee is not available for rehire workingTime creation", ex);

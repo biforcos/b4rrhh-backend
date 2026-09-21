@@ -19,6 +19,7 @@ import com.b4rrhh.payroll.application.port.PayrollLaunchAgreementWindowContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchContractWindowContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputLookupPort;
+import com.b4rrhh.payroll.application.port.PayrollLaunchExtraPaymentRegimeWindowContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchWorkingTimeWindowContext;
 import com.b4rrhh.payroll.application.port.TableRowOrigin;
 import com.b4rrhh.payroll.application.service.PayrollConceptExecutionContext;
@@ -512,7 +513,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             return segmentStart + ".." + segmentEnd
                     + " jornada=" + vigencias.workingTimePercentage() + "%"
                     + " categoria=" + vigencias.agreementCategoryCode()
-                    + " contrato=" + vigencias.contractCode();
+                    + " contrato=" + vigencias.contractCode()
+                    + " prorrateadas=" + vigencias.extraPaymentsProrated();
         }
     }
 
@@ -528,7 +530,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             String agreementCode,
             String agreementCategoryCode,
             String contractCode,
-            String contractSubtypeCode
+            String contractSubtypeCode,
+            boolean extraPaymentsProrated
     ) {}
 
     /**
@@ -579,6 +582,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         cortes.addAll(PayrollPeriodSegmentation.cutsOf(input.workingTimeWindows()));
         cortes.addAll(PayrollPeriodSegmentation.cutsOf(input.agreementWindows()));
         cortes.addAll(PayrollPeriodSegmentation.cutsOf(input.contractWindows()));
+        cortes.addAll(PayrollPeriodSegmentation.cutsOf(input.extraPaymentRegimeWindows()));
 
         return PayrollPeriodSegmentation.split(presenceStart, presenceEnd, cortes).stream()
                 .map(tramo -> new SegmentSpec(
@@ -597,6 +601,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         PayrollLaunchWorkingTimeWindowContext jornada = enVigor(input.workingTimeWindows(), dia);
         PayrollLaunchAgreementWindowContext convenio = enVigor(input.agreementWindows(), dia);
         PayrollLaunchContractWindowContext contrato = enVigor(input.contractWindows(), dia);
+        PayrollLaunchExtraPaymentRegimeWindowContext regimen = enVigor(input.extraPaymentRegimeWindows(), dia);
 
         return new Vigencias(
                 jornada != null ? jornada.workingTimePercentage() : BigDecimal.valueOf(100),
@@ -606,7 +611,11 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 convenio != null ? convenio.agreementCode() : input.agreementCode(),
                 convenio != null ? convenio.agreementCategoryCode() : input.agreementCategoryCode(),
                 contrato != null ? contrato.contractCode() : null,
-                contrato != null ? contrato.contractSubtypeCode() : null);
+                contrato != null ? contrato.contractSubtypeCode() : null,
+                // Sin tramo de regimen se supone que no se prorratea, que es lo que significa no
+                // tener la vertical: los empleados anteriores al backend#118 no la tienen, y sus
+                // recibos salen como salian.
+                regimen != null && regimen.prorated());
     }
 
     /** El ultimo tramo que cubre ese dia, o {@code null} si ninguno lo cubre. */

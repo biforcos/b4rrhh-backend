@@ -302,6 +302,26 @@ public class PayrollScenarioFixtures {
     }
 
     /**
+     * Un tramo de regimen de pagas extras ({@code backend#118}).
+     *
+     * <p>Rompe el periodo como lo rompe la jornada: la union de los cortes lo incluye, asi que
+     * un cambio a mitad de mes deja dos tramos.
+     */
+    public void insertExtraPaymentRegime(long employeeId, boolean prorated, LocalDate from, LocalDate to) {
+        Integer max = jdbc.queryForObject(
+                "select coalesce(max(extra_payment_regime_number), 0)"
+                        + " from employee.extra_payment_regime where employee_id = ?",
+                Integer.class, employeeId);
+        int nextNum = (max == null ? 0 : max) + 1;
+        jdbc.update(
+                "insert into employee.extra_payment_regime" +
+                " (employee_id, extra_payment_regime_number, start_date, end_date, prorated," +
+                "  created_at, updated_at)" +
+                " values (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                employeeId, nextNum, from, to, prorated);
+    }
+
+    /**
      * Anade al grafo la cadena del tope y el suelo de cotizacion, igual que la siembra
      * ESP (V88): B_CC_MAX = LEAST(B01, P_TOPE_MAX), B_CC = GREATEST(B_CC_MAX, P_TOPE_MIN),
      * y los porcentajes 700 y 703 pasan a leer B_CC en vez de B01. Los cuatro conceptos
