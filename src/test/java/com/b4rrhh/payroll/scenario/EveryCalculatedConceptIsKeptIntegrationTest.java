@@ -70,9 +70,15 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * <p>Y eran 38 hasta el {@code backend#114}: la {@code V141} declara el {@code 725}, el total
      * de la aportacion empresarial, que hasta entonces sumaba la plantilla del PDF. Es
      * {@code PERIOD}, asi que anade un paso por recibo y no uno por tramo.
+     *
+     * <p>Y eran 39 y 5 hasta el {@code backend#117}: la {@code V144} declara las cuatro pagas
+     * extraordinarias del convenio ({@code PE_1} a {@code PE_4}), las cuatro {@code SEGMENT}
+     * porque se componen del {@code 101}, que lo es. Son cuatro conceptos que se calculan y no
+     * salen en ningun recibo: no llevan orden de folio y todavia no alimentan a nadie —eso es el
+     * {@code backend#119}—, asi que lo unico que crecio fue el rastro de calculo.
      */
-    private static final int CONCEPTS_IN_THE_ENGINE = 39;
-    private static final int SEGMENT_SCOPED_CONCEPTS = 5;
+    private static final int CONCEPTS_IN_THE_ENGINE = 43;
+    private static final int SEGMENT_SCOPED_CONCEPTS = 9;
 
     /**
      * Y los 38 entran en algun plan, que es lo que cambio en el backend#96.
@@ -87,7 +93,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * Declarar tres si: desde el backend#104 son 38 y 42, desde el backend#47 son 38 y 43, y desde
      * el backend#114 son 39 y 44 — cambiar un ambito no anade conceptos, anade evaluaciones.
      */
-    private static final int CONCEPTS_IN_A_PLAN = 39;
+    private static final int CONCEPTS_IN_A_PLAN = 43;
 
     /**
      * Los conceptos con orden de recibo: los que PUEDEN ser linea.
@@ -185,8 +191,9 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
         assertEquals(CONCEPTS_IN_A_PLAN, countSteps(pid), "pasos guardados");
 
         // Y los que antes se tiraban estan, con nombre y apellido.
-        assertEquals(6, countStepsWithNature(pid, "BASE"),
-                "conceptos BASE: los 5 de siempre mas el P03, precio de la hora extra (backend#104)");
+        assertEquals(10, countStepsWithNature(pid, "BASE"),
+                "conceptos BASE: los 5 de siempre, el P03 (precio de la hora extra, backend#104) y"
+                        + " las cuatro pagas extras del convenio (backend#117)");
         assertEquals(16, countStepsWithNature(pid, "TECHNICAL"),
                 "conceptos TECHNICAL: los 16 del catalogo, desde que la V130 retiro el P_SS");
 
@@ -212,18 +219,20 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
         // El recuadro de bases, por los dos lados (backend#111).
         //
         // Las dos que el modelo oficial imprime salen, en su bloque y con su nombre. Y los otros
-        // cuatro BASE siguen sin salir: el B_CC_MAX es el paso intermedio entre las dos, y P01,
-        // P02 y P03 son precios que llevan naturaleza BASE porque el motor los usa como operando.
+        // ocho BASE siguen sin salir: el B_CC_MAX es el paso intermedio entre las dos; P01, P02 y
+        // P03 son precios que llevan naturaleza BASE porque el motor los usa como operando; y las
+        // cuatro PE_* son las pagas del convenio, bases intermedias de las que sale la prorrata.
         //
         // Las dos mitades van juntas a proposito. Con solo la primera, darles orden de recibo a
-        // los seis pasaria igual; es la segunda la que hace que «no tiene orden» siga
+        // los diez pasaria igual; es la segunda la que hace que «no tiene orden» siga
         // significando «no va al papel» y no «se me olvido».
         assertEquals(List.of("B_CC", "B01"), jdbc.queryForList(
                 "select c.concept_code from payroll.payroll_concept c"
                         + " where c.payroll_id = ? and c.payslip_section_code = 'BASES'"
                         + " order by c.display_order",
                 String.class, pid), "el recuadro de bases: la de cotizacion y la sujeta a IRPF");
-        assertEquals(List.of("B_CC_MAX", "P01", "P02", "P03"), jdbc.queryForList(
+        assertEquals(List.of("B_CC_MAX", "P01", "P02", "P03", "PE_1", "PE_2", "PE_3", "PE_4"),
+                jdbc.queryForList(
                 "select s.concept_code from payroll.payroll_calculation_step s"
                         + " where s.payroll_id = ? and s.functional_nature = 'BASE'"
                         + "   and s.payslip_order_code is null order by s.concept_code",
@@ -246,7 +255,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
         vaciarLaSesion();
         Long pid = payrollId(emp);
 
-        // Los 5 conceptos SEGMENT se evaluan una vez por tramo: 34 + 5 x 2 = 44.
+        // Los 9 conceptos SEGMENT se evaluan una vez por tramo: 34 + 9 x 2 = 52.
         assertEquals(CONCEPTS_IN_A_PLAN + SEGMENT_SCOPED_CONCEPTS, countSteps(pid), "pasos guardados");
 
         // Y el 101 sale dos veces, con dos precios distintos. Es el caso que se comia cualquier

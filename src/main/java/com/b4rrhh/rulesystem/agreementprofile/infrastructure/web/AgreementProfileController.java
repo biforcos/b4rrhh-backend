@@ -36,6 +36,7 @@ public class AgreementProfileController {
                         result.displayName(),
                         result.shortName(),
                         result.annualHours(),
+                        result.extraPaymentsProrated(),
                         result.active()
                 )))
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -55,6 +56,7 @@ public class AgreementProfileController {
                     request.displayName(),
                     request.shortName(),
                     request.annualHours(),
+                    request.extraPaymentsProrated(),
                     request.active()
             ));
 
@@ -63,6 +65,7 @@ public class AgreementProfileController {
                     result.displayName(),
                     result.shortName(),
                     result.annualHours(),
+                    result.extraPaymentsProrated(),
                     result.active()
             ));
         } catch (IllegalArgumentException ex) {

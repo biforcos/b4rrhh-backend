@@ -38,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * ({@code backend#97}).
  *
  * <p>Sobre ESP y no sobre TST, por lo mismo que el
- * {@code EveryCalculatedConceptIsKeptIntegrationTest}: los recuentos que afirma —39 pasos y 44—
+ * {@code EveryCalculatedConceptIsKeptIntegrationTest}: los recuentos que afirma —43 pasos y 52—
  * son los de la reglamentacion que siembran las migraciones, y un fixture con quince conceptos de
  * mentira no probaria el numero que hay que probar.
  *
@@ -68,7 +68,7 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
     private static final LocalDate JANUARY_1 = LocalDate.of(2025, 1, 1);
 
     /** Los pasos de un empleado de mes entero: uno por cada concepto del catalogo ESP. */
-    private static final int STEPS_IN_A_WHOLE_MONTH = 39;
+    private static final int STEPS_IN_A_WHOLE_MONTH = 43;
 
     /**
      * Y los de uno del mes partido: los conceptos de ambito SEGMENT se evaluan una vez por tramo.
@@ -79,8 +79,12 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
      *
      * <p>Y son 44 desde el {@code backend#114}: el {@code 725} es {@code PERIOD}, asi que anade
      * un paso y solo uno, tenga el recibo los tramos que tenga.
+     *
+     * <p>Y 43 y 52 desde el {@code backend#117}: la {@code V144} declara las cuatro pagas
+     * extraordinarias del convenio, las cuatro {@code SEGMENT}, asi que anaden cuatro pasos por
+     * tramo. Son pasos y no lineas: no llevan orden de folio, y el recibo sigue teniendo 17.
      */
-    private static final int STEPS_IN_A_SPLIT_MONTH = 44;
+    private static final int STEPS_IN_A_SPLIT_MONTH = 52;
 
     /**
      * Los pasos que llevan orden de recibo: los que PUEDEN ser linea.
@@ -219,7 +223,7 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
      * <p>El escenario se fabrica borrando los pasos de un recibo recien calculado, que es
      * exactamente el estado en que esta hoy la semilla entera: 873 recibos calculados antes de que
      * la tabla existiera. La lista vacia no puede leerse como «este recibo no tiene conceptos», y
-     * no se rellena derivandola de {@code payroll_concept}: sus 17 lineas no son 39 pasos.
+     * no se rellena derivandola de {@code payroll_concept}: sus 17 lineas no son 43 pasos.
      */
     @Test
     @WithMockUser(roles = "ADMIN")

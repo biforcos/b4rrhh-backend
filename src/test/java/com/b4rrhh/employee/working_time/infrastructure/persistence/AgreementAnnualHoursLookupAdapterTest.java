@@ -89,6 +89,7 @@ class AgreementAnnualHoursLookupAdapterTest {
         entity.setOfficialAgreementNumber(officialNumber);
         entity.setDisplayName(displayName);
         entity.setAnnualHours(annualHours);
+        entity.setExtraPaymentsProrated(false);
         entity.setIsActive(true);
         return entity;
     }

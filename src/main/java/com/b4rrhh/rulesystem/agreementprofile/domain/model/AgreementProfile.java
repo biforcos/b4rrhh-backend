@@ -14,6 +14,7 @@ public class AgreementProfile {
     private final String displayName;
     private final String shortName;
     private final BigDecimal annualHours;
+    private final boolean extraPaymentsProrated;
     private final boolean active;
 
     public AgreementProfile(
@@ -21,12 +22,14 @@ public class AgreementProfile {
             String displayName,
             String shortName,
             BigDecimal annualHours,
+            boolean extraPaymentsProrated,
             boolean active
     ) {
         this.officialAgreementNumber = normalizeRequiredText("officialAgreementNumber", officialAgreementNumber, OFFICIAL_AGREEMENT_NUMBER_MAX_LENGTH);
         this.displayName = normalizeRequiredText("displayName", displayName, DISPLAY_NAME_MAX_LENGTH);
         this.shortName = normalizeOptionalText("shortName", shortName, SHORT_NAME_MAX_LENGTH);
         this.annualHours = normalizeRequiredAnnualHours(annualHours);
+        this.extraPaymentsProrated = extraPaymentsProrated;
         this.active = active;
     }
 
@@ -35,6 +38,7 @@ public class AgreementProfile {
             String displayName,
             String shortName,
             BigDecimal annualHours,
+            boolean extraPaymentsProrated,
             boolean active
     ) {
         return new AgreementProfile(
@@ -42,6 +46,7 @@ public class AgreementProfile {
                 displayName,
                 shortName,
                 annualHours,
+                extraPaymentsProrated,
                 active
         );
     }
@@ -60,6 +65,17 @@ public class AgreementProfile {
 
     public BigDecimal getAnnualHours() {
         return annualHours;
+    }
+
+    /**
+     * Si el convenio prorratea las pagas extras por defecto (backend#117).
+     *
+     * <p>No es lo que decide el recibo. Lo que lo decide es la vertical del empleado, y este
+     * testigo es lo que la contratacion copia cuando nadie dice otra cosa. Es una copia y no un
+     * enlace: si el convenio cambia el ano que viene, los que ya estan no cambian solos.
+     */
+    public boolean isExtraPaymentsProrated() {
+        return extraPaymentsProrated;
     }
 
     public boolean isActive() {

@@ -27,6 +27,9 @@ public class AgreementProfileEntity {
     @Column(name = "annual_hours", nullable = false, precision = 7, scale = 2)
     private BigDecimal annualHours;
 
+    @Column(name = "extra_payments_prorated", nullable = false)
+    private Boolean extraPaymentsProrated;
+
     @Column(name = "is_active", nullable = false)
     private Boolean isActive;
 
@@ -94,6 +97,14 @@ public class AgreementProfileEntity {
 
     public void setAnnualHours(BigDecimal annualHours) {
         this.annualHours = annualHours;
+    }
+
+    public Boolean getExtraPaymentsProrated() {
+        return extraPaymentsProrated;
+    }
+
+    public void setExtraPaymentsProrated(Boolean extraPaymentsProrated) {
+        this.extraPaymentsProrated = extraPaymentsProrated;
     }
 
     public Boolean getIsActive() {

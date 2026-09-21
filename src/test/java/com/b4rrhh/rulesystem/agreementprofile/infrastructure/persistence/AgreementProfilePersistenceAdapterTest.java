@@ -50,6 +50,7 @@ class AgreementProfilePersistenceAdapterTest {
                 "Collective Agreement 2024",
                 "CA-2024",
                 new BigDecimal("1560.00"),
+                false,
                 true
         );
 
@@ -69,6 +70,7 @@ class AgreementProfilePersistenceAdapterTest {
                 "Collective Agreement 2024",
                 "CA-2024",
                 new BigDecimal("1560.00"),
+                false,
                 true
         );
         adapter.save(agreementRuleEntityId, profile);
@@ -93,6 +95,7 @@ class AgreementProfilePersistenceAdapterTest {
                 "Original Name",
                 "ORIG",
                 new BigDecimal("1560.00"),
+                false,
                 true
         );
         adapter.save(agreementRuleEntityId, original);
@@ -102,6 +105,7 @@ class AgreementProfilePersistenceAdapterTest {
                 "Updated Name",
                 "UPD",
                 new BigDecimal("1680.00"),
+                true,
                 true
         );
         adapter.save(agreementRuleEntityId, updated);
@@ -111,5 +115,8 @@ class AgreementProfilePersistenceAdapterTest {
         assertEquals("CA-2024-002", fetched.get().getOfficialAgreementNumber());
         assertEquals("Updated Name", fetched.get().getDisplayName());
         assertEquals(0, new BigDecimal("1680.00").compareTo(fetched.get().getAnnualHours()));
+        // El testigo de prorrateo se guarda y se lee como los demas datos del convenio
+        // (backend#117). El original se guardo sin prorratear y el update lo pone a si.
+        assertTrue(fetched.get().isExtraPaymentsProrated());
     }
 }

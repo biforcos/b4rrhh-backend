@@ -41,6 +41,7 @@ class UpsertAgreementProfileServiceTest {
                 "Convenio colectivo general centros atencion personas con discapacidad",
                 "Discapacidad 99002405",
                 new BigDecimal("1736.00"),
+                false,
                 true
         );
         when(agreementProfileRepository.save(any(Long.class), any(AgreementProfile.class)))
@@ -53,6 +54,7 @@ class UpsertAgreementProfileServiceTest {
                 "Convenio colectivo general centros atencion personas con discapacidad",
                 "Discapacidad 99002405",
                 new BigDecimal("1736.00"),
+                false,
                 true
         ));
 
@@ -85,6 +87,7 @@ class UpsertAgreementProfileServiceTest {
                 "Convenio",
                 "Disc",
                 new BigDecimal("1736.00"),
+                false,
                 true
         )));
     }
@@ -107,6 +110,7 @@ class UpsertAgreementProfileServiceTest {
                 null,
                 "Disc",
                 new BigDecimal("1736.00"),
+                false,
                 true
         )));
     }

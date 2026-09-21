@@ -11,26 +11,26 @@ class AgreementProfileTest {
     @Test
     void constructorValidatesRequiredFields() {
         assertThrows(IllegalArgumentException.class, () ->
-                new AgreementProfile(null, "Display", null, new BigDecimal("1560"), true)
+                new AgreementProfile(null, "Display", null, new BigDecimal("1560"), false, true)
         );
         assertThrows(IllegalArgumentException.class, () ->
-                new AgreementProfile("", "Display", null, new BigDecimal("1560"), true)
+                new AgreementProfile("", "Display", null, new BigDecimal("1560"), false, true)
         );
         assertThrows(IllegalArgumentException.class, () ->
-                new AgreementProfile("CA-001", null, null, new BigDecimal("1560"), true)
+                new AgreementProfile("CA-001", null, null, new BigDecimal("1560"), false, true)
         );
         assertThrows(IllegalArgumentException.class, () ->
-                new AgreementProfile("CA-001", "Display", null, null, true)
+                new AgreementProfile("CA-001", "Display", null, null, false, true)
         );
     }
 
     @Test
     void constructorValidatesAnnualHoursRange() {
         assertThrows(IllegalArgumentException.class, () ->
-                new AgreementProfile("CA-001", "Display", null, new BigDecimal("0"), true)
+                new AgreementProfile("CA-001", "Display", null, new BigDecimal("0"), false, true)
         );
         assertThrows(IllegalArgumentException.class, () ->
-                new AgreementProfile("CA-001", "Display", null, new BigDecimal("10000"), true)
+                new AgreementProfile("CA-001", "Display", null, new BigDecimal("10000"), false, true)
         );
     }
 
@@ -38,12 +38,12 @@ class AgreementProfileTest {
     void constructorValidatesFieldLengths() {
         String tooLongNumber = "A".repeat(51);
         assertThrows(IllegalArgumentException.class, () ->
-                new AgreementProfile(tooLongNumber, "Display", null, new BigDecimal("1560"), true)
+                new AgreementProfile(tooLongNumber, "Display", null, new BigDecimal("1560"), false, true)
         );
 
         String tooLongDisplay = "A".repeat(201);
         assertThrows(IllegalArgumentException.class, () ->
-                new AgreementProfile("CA-001", tooLongDisplay, null, new BigDecimal("1560"), true)
+                new AgreementProfile("CA-001", tooLongDisplay, null, new BigDecimal("1560"), false, true)
         );
     }
 
@@ -54,6 +54,7 @@ class AgreementProfileTest {
                 "  Display Name  ",
                 "  SHORT  ",
                 new BigDecimal("1560"),
+                false,
                 true
         );
 
@@ -69,6 +70,7 @@ class AgreementProfileTest {
                 "Original",
                 "ORG",
                 new BigDecimal("1560"),
+                false,
                 true
         );
 
@@ -77,6 +79,7 @@ class AgreementProfileTest {
                 "Updated",
                 "UPD",
                 new BigDecimal("1680"),
+                true,
                 false
         );
 
@@ -85,6 +88,10 @@ class AgreementProfileTest {
         assertEquals("CA-002", updated.getOfficialAgreementNumber());
         assertTrue(original.isActive());
         assertFalse(updated.isActive());
+        // El testigo de prorrateo viaja en el update como cualquier otro dato del convenio
+        // (backend#117): un convenio que pasa a prorratear se edita, no se sustituye.
+        assertFalse(original.isExtraPaymentsProrated());
+        assertTrue(updated.isExtraPaymentsProrated());
     }
 
     @Test
@@ -94,6 +101,7 @@ class AgreementProfileTest {
                 "Display",
                 null,
                 new BigDecimal("1560"),
+                false,
                 true
         );
         assertNull(profile1.getShortName());
@@ -103,6 +111,7 @@ class AgreementProfileTest {
                 "Display",
                 "  ",
                 new BigDecimal("1560"),
+                false,
                 true
         );
         assertNull(profile2.getShortName());

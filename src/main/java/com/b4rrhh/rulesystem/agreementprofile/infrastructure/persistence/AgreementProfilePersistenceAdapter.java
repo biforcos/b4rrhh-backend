@@ -31,6 +31,7 @@ public class AgreementProfilePersistenceAdapter implements AgreementProfileRepos
         entity.setDisplayName(profile.getDisplayName());
         entity.setShortName(profile.getShortName());
         entity.setAnnualHours(profile.getAnnualHours());
+        entity.setExtraPaymentsProrated(profile.isExtraPaymentsProrated());
         entity.setIsActive(profile.isActive());
 
         AgreementProfileEntity saved = repository.save(entity);
@@ -43,6 +44,7 @@ public class AgreementProfilePersistenceAdapter implements AgreementProfileRepos
                 entity.getDisplayName(),
                 entity.getShortName(),
                 entity.getAnnualHours(),
+                entity.getExtraPaymentsProrated(),
                 entity.getIsActive()
         );
     }

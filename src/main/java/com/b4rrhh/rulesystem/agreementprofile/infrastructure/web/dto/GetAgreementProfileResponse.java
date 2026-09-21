@@ -7,6 +7,7 @@ public record GetAgreementProfileResponse(
         String displayName,
         String shortName,
         BigDecimal annualHours,
+        boolean extraPaymentsProrated,
         boolean active
 ) {
 }

@@ -32,6 +32,7 @@ public class UpsertAgreementProfileService implements UpsertAgreementProfileUseC
                 command.displayName(),
                 command.shortName(),
                 command.annualHours(),
+                command.extraPaymentsProrated(),
                 command.active()
         );
 
@@ -45,6 +46,7 @@ public class UpsertAgreementProfileService implements UpsertAgreementProfileUseC
                 profile.getDisplayName(),
                 profile.getShortName(),
                 profile.getAnnualHours(),
+                profile.isExtraPaymentsProrated(),
                 profile.isActive()
         );
     }

@@ -9,6 +9,7 @@ public record UpsertAgreementProfileCommand(
         String displayName,
         String shortName,
         BigDecimal annualHours,
+        boolean extraPaymentsProrated,
         boolean active
 ) {
 }

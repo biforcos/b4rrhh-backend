@@ -38,6 +38,7 @@ class GetAgreementProfileServiceTest {
                 "Convenio colectivo general centros atencion personas con discapacidad",
                 "Discapacidad 99002405",
                 new BigDecimal("1736.00"),
+                false,
                 true
         );
         when(agreementProfileRepository.findByAgreementRuleEntityId(1L))

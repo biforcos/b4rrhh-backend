@@ -34,6 +34,7 @@ public class GetAgreementProfileService implements GetAgreementProfileUseCase {
                 profile.getDisplayName(),
                 profile.getShortName(),
                 profile.getAnnualHours(),
+                profile.isExtraPaymentsProrated(),
                 profile.isActive()
         );
     }
