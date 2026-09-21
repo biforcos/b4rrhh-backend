@@ -28,12 +28,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * conjunto, una migración que recree una columna, un {@code create table} copiado de otro sitio.
  * Ninguna de esas tres rompería aquel test si la tabla nueva no participa todavía en la consulta.
  *
- * <h2>Y la otra mitad: las 96 que siguen sin zona</h2>
+ * <h2>Y la otra mitad: que no aparezca una novena</h2>
  *
- * <p>Se cuentan también, y a propósito. No para obligar a que sean 96 para siempre, sino para que
- * <b>nadie las convierta en masa creyendo que arregla esto</b>: convertir 104 columnas y todas sus
- * entidades es otro tamaño de cambio, no arregla nada más, y el criterio para traer una aquí es
- * que alguien la compare, no que quede más ordenado.
+ * <p>Se comprueba también <b>el conjunto entero de columnas con zona</b>, por nombre. Es para
+ * que nadie las convierta en masa creyendo que arregla esto: convertirlas todas es otro tamaño
+ * de cambio, no arregla nada más, y el criterio para traer una al grupo es que <b>alguien la
+ * compare</b>, no que quede más ordenado.
+ *
+ * <p>Aquí había un recuento de las que <i>no</i> llevan zona —96— y estaba mal pensado. Su
+ * propio mensaje admitía que subir era «probablemente está bien»: cualquier tabla nueva con su
+ * {@code created_at}, que es la forma más común de tabla de este árbol, lo ponía rojo sin que
+ * pasara nada malo. Un candado que muerde en el caso bueno enseña a ajustar el número hasta que
+ * salga verde, y entonces deja de proteger.
+ *
+ * <p>Por el conjunto con zona se reparte al revés, que es como tiene que estar: una conversión
+ * en masa lo pone rojo; una tabla nueva con sellos sin zona no lo toca; y una columna con zona
+ * nueva y deliberada lo pone rojo <b>justo en el momento en que hay que decidir si entra en la
+ * lista</b>. El coste de equivocarse es añadir un nombre una vez al año, no revisar cada tabla
+ * nueva que se cree.
  */
 @TestSobreEsquemaReal
 class TheColumnsThatGetComparedKeepTheirTimeZoneTest {
@@ -84,32 +96,45 @@ class TheColumnsThatGetComparedKeepTheirTimeZoneTest {
     }
 
     /**
-     * Las demás siguen sin zona, y eso es el alcance y no un olvido.
+     * Que no aparezca una novena con zona sin que nadie lo decida.
      *
-     * <p>El número no se defiende como una cifra sagrada: se defiende como una señal. Que baje de
-     * golpe quiere decir que alguien ha hecho la conversión en masa que este issue decidió no
-     * hacer, y entonces hay que mirar por qué.
+     * <p>Se afirma el conjunto entero <b>por nombre</b>, y no cuántas quedan sin zona. La
+     * diferencia es en qué caso muerde: una tabla nueva con su {@code created_at} —lo más común
+     * que se hace en este árbol— no lo toca, y una columna que gane zona lo pone rojo justo
+     * cuando hay que decidir si entra.
+     *
+     * <p>Un apunte que sale al medirlo: en un volcado restaurado hay una novena,
+     * {@code deploy.semilla.capturada_en}, que escribe {@code crear-semilla.sh} con la
+     * procedencia de la semilla. No la crea ninguna migración, así que sobre el esquema de estos
+     * tests no existe y no está en la lista.
      */
     @Test
-    void theOtherStampsAreDeliberatelyLeftWithoutOne() {
-        Integer sinZona = jdbc.queryForObject("""
-                select count(*) from information_schema.columns
-                 where data_type = 'timestamp without time zone'
+    void noNinthColumnHasQuietlyJoinedTheOnesWithATimeZone() {
+        List<String> conZona = jdbc.queryForList("""
+                select table_schema || '.' || table_name || '.' || column_name
+                  from information_schema.columns
+                 where data_type = 'timestamp with time zone'
                    and table_schema not in ('pg_catalog', 'information_schema')
-                """, Integer.class);
+                 order by 1
+                """, String.class);
 
-        assertEquals(96, sinZona,
+        assertEquals(LAS_OCHO.stream().sorted().toList(), conZona,
                 """
-                El numero de columnas timestamp sin zona ha cambiado.
+                El conjunto de columnas CON zona ha cambiado.
 
-                Eran 104 antes de la V143 y son 96 despues: las ocho de la comparacion se \
-                llevaron su zona y las demas se quedaron como estaban, a proposito -- son sellos, \
-                se escriben y se leen, y nadie pregunta cual es anterior a cual.
+                Si SOBRA alguna: se le ha puesto zona a una columna que no esta en la lista. \
+                Este rojo es el sitio donde hay que decidir si entra, y entra solo si ALGUIEN \
+                LA COMPARA con otra -- ese es el criterio, no que quede mas ordenado. Si entra, \
+                se anade su nombre a LAS_OCHO y la migracion dice con quien se compara.
 
-                Si este numero SUBE, hay una tabla nueva con sellos sin zona y probablemente \
-                esta bien. Si BAJA de golpe, alguien esta convirtiendolas en masa: eso es otro \
-                tamano de cambio y el criterio para traer una columna al grupo con zona es que \
-                ALGUIEN LA COMPARE, no que quede mas ordenado.""");
+                Si FALTA alguna: una migracion ha deshecho la V143 para esa columna, y la \
+                comparacion del RuleSystemLastChangeLookupAdapter vuelve a mezclar horas de \
+                pared de dos maquinas. Eso no falla: contesta mal.
+
+                Lo que este test NO vigila, a proposito: las demas columnas timestamp del \
+                esquema, que siguen sin zona y estan bien asi. Son sellos -- se escriben, se \
+                leen, y nadie pregunta cual es anterior a cual. Una tabla nueva con su \
+                created_at sin zona no tiene que pasar por aqui.""");
     }
 
     private String tipoDe(String columnaCualificada) {
