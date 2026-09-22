@@ -54,6 +54,10 @@ public class CompanyProfileEntity {
     @Column(name = "cnae_code", length = 10)
     private String cnaeCode;
 
+    /** En que clasificacion esta escrito el codigo de arriba (backend#122). */
+    @Column(name = "cnae_classification", length = 20)
+    private String cnaeClassification;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -154,6 +158,14 @@ public class CompanyProfileEntity {
 
     public void setCnaeCode(String v) {
         this.cnaeCode = v;
+    }
+
+    public String getCnaeClassification() {
+        return cnaeClassification;
+    }
+
+    public void setCnaeClassification(String v) {
+        this.cnaeClassification = v;
     }
 
     public LocalDateTime getCreatedAt() {

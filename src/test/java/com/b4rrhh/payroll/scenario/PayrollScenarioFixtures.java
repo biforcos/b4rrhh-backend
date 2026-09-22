@@ -384,14 +384,21 @@ public class PayrollScenarioFixtures {
                 ruleSystemCode, "05", "MENSUAL", baseMin, baseMax);
     }
 
-    /** La actividad economica de una empresa, en CNAE ({@code backend#122}). */
+    /**
+     * La actividad economica de una empresa, en CNAE ({@code backend#122}).
+     *
+     * <p>Escribe tambien la clasificacion, y no es un detalle del fixture: el esquema no admite un
+     * codigo sin decir en que clasificacion esta escrito, porque un codigo de cuatro digitos vale
+     * en CNAE-2009 y en CNAE-2025 y quiere decir cosas distintas. {@code null} borra las dos.
+     */
     public void setCompanyCnae(String ruleSystemCode, String companyCode, String cnaeCode) {
         jdbc.update(
-                "update rulesystem.company_profile set cnae_code = ?, updated_at = CURRENT_TIMESTAMP" +
+                "update rulesystem.company_profile" +
+                "    set cnae_code = ?, cnae_classification = ?, updated_at = CURRENT_TIMESTAMP" +
                 " where company_rule_entity_id = (" +
                 "   select id from rulesystem.rule_entity" +
                 "    where rule_system_code = ? and rule_entity_type_code = 'COMPANY' and code = ?)",
-                cnaeCode, ruleSystemCode, companyCode);
+                cnaeCode, cnaeCode == null ? null : "CNAE-2025", ruleSystemCode, companyCode);
     }
 
     /**

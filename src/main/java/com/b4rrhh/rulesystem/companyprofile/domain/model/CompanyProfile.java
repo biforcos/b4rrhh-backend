@@ -10,6 +10,16 @@ public class CompanyProfile {
     private static final int REGION_CODE_MAX_LENGTH = 30;
     private static final int CNAE_CODE_MAX_LENGTH = 10;
 
+    /**
+     * La unica clasificacion de actividad que este sistema sabe guardar hoy ({@code backend#122}).
+     *
+     * <p>Es la que entiende la tarifa de primas vigente (RD 10/2025). No se pide por la API ni se
+     * edita: <b>se deriva</b> de que haya codigo, porque mientras solo haya una admisible dejar
+     * elegir seria dejar equivocarse. Admitir una segunda no es anadir un valor, es traer la tabla
+     * de correspondencias oficial —la DT 45.a de la LGSS— y decidir quien convierte y cuando.
+     */
+    public static final String CNAE_CLASSIFICATION = "CNAE-2025";
+
     private final String legalName;
     private final String taxIdentifier;
     private final String street;
@@ -30,6 +40,14 @@ public class CompanyProfile {
      * mas especifica que lo cubra.
      */
     private final String cnaeCode;
+    /**
+     * En que clasificacion esta escrito {@link #cnaeCode}, o {@code null} si no hay codigo.
+     *
+     * <p>Un codigo de cuatro digitos vale en CNAE-2009 y en CNAE-2025 y quiere decir cosas
+     * distintas: el {@code 4719} que la {@code V150} sembro era CNAE-2009 y se resolvia contra una
+     * tarifa de CNAE-2025 sin que nada lo notara.
+     */
+    private final String cnaeClassification;
 
     public CompanyProfile(
             String legalName,
@@ -49,6 +67,7 @@ public class CompanyProfile {
         this.regionCode = normalizeOptionalCode("regionCode", regionCode, REGION_CODE_MAX_LENGTH);
         this.countryCode = normalizeOptionalCode(countryCode);
         this.cnaeCode = normalizeOptionalText("cnaeCode", cnaeCode, CNAE_CODE_MAX_LENGTH);
+        this.cnaeClassification = this.cnaeCode == null ? null : CNAE_CLASSIFICATION;
     }
 
     public CompanyProfile update(
@@ -71,6 +90,10 @@ public class CompanyProfile {
                 countryCode,
                 cnaeCode
         );
+    }
+
+    public String getCnaeClassification() {
+        return cnaeClassification;
     }
 
     public String getLegalName() {

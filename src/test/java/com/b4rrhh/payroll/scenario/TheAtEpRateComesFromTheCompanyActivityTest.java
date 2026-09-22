@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <h2>Y la forma de la tarifa</h2>
  *
  * <p>La tarifa no lista todos los CNAE: lista entradas de dos, tres o cuatro digitos y la mas
- * especifica gana —«47 (excepto 4773, 4781, 4782 y 4783)» es exactamente eso—. Buscar por
+ * especifica gana —«47 (excepto 473, 4781, 4782 y 4783)» es exactamente eso—. Buscar por
  * igualdad habria funcionado con las cuatro empresas de la semilla y habria dejado sin tipo a la
  * primera con un CNAE que nadie hubiera sembrado.
  */
@@ -182,6 +182,52 @@ class TheAtEpRateComesFromTheCompanyActivityTest {
                 run.id());
         assertTrue(mensajes.stream().anyMatch(m -> String.valueOf(m.get("message")).contains("CNAE")),
                 "y el mensaje tiene que nombrar lo que falta: " + mensajes);
+    }
+
+    /**
+     * Las excepciones que la propia tarifa nombra tienen su fila, y ganan ({@code backend#122}).
+     *
+     * <p>La fila del {@code 47} dice «excepto 473, 4781, 4782 y 4783». Sin esas filas, una empresa
+     * de combustible para la automocion resolvia al {@code 47} y cotizaba al <b>1,65</b> en vez de
+     * al <b>1,85</b>: verde y en falso, porque el texto de la fila decia lo contrario de lo que la
+     * tabla podia hacer. <b>Si una fila nombra una excepcion, la excepcion tiene que tener su
+     * fila</b>, o el texto es un adorno.
+     *
+     * <p>El issue pedia este test con el {@code 4773}, y ese codigo no esta en la lista: el
+     * {@code 4773} es el comercio al por menor de productos farmaceuticos y cotiza por el
+     * {@code 47} como cualquier otro. La excepcion del combustible es el {@code 473} —tres
+     * digitos— y es la que se prueba aqui. Rojo antes de la {@code V152}, con 1,65.
+     */
+    @Test
+    void anExceptionNamedByTheTariffHasItsOwnRowAndWins() {
+        fixtures.setCompanyCnae(RULE_SYSTEM, EMPRESA_UNA, "4730");
+
+        Long recibo = reciboDe(empleadoDe(EMPRESA_UNA));
+
+        assertEquals(0, tipoDe(recibo, "727").compareTo(new BigDecimal("1.85")),
+                () -> "el 4730 cae bajo la excepcion 473 (1,00 de IT + 0,85 de IMS). Si sale 1,65"
+                        + " es que ha resuelto a la fila del 47, que dice expresamente que no le"
+                        + " cubre");
+    }
+
+    /**
+     * Y las cuatro que nombra estan, en los dos ejercicios que la tabla declara.
+     *
+     * <p>La mitad estructural: el test de arriba prueba una, y ésta prueba que no falta ninguna.
+     * Una excepcion sin fila no falla —resuelve a la division y cobra de menos o de mas—, asi que
+     * nadie se entera hasta que alguien mira un recibo concreto de esa actividad.
+     */
+    @Test
+    void everyExceptionTheTariffNamesHasARowInBothPeriods() {
+        for (String cnae : new String[] {"473", "4781", "4782", "4783"}) {
+            Integer filas = jdbc.queryForObject(
+                    "select count(*) from payroll_engine.ss_tarifa_primas_at"
+                            + " where rule_system_code = ? and cnae_code = ?",
+                    Integer.class, RULE_SYSTEM, cnae);
+            assertEquals(2, filas,
+                    () -> "la excepcion " + cnae + " que la fila del 47 nombra tiene que tener su"
+                            + " fila en los dos ejercicios de la tabla, y tiene " + filas);
+        }
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────

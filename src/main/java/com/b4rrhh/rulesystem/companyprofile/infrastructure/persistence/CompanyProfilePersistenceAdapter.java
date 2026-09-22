@@ -35,6 +35,7 @@ public class CompanyProfilePersistenceAdapter implements CompanyProfileRepositor
         entity.setRegionCode(companyProfile.getRegionCode());
         entity.setCountryCode(companyProfile.getCountryCode());
         entity.setCnaeCode(companyProfile.getCnaeCode());
+        entity.setCnaeClassification(companyProfile.getCnaeClassification());
 
         CompanyProfileEntity saved = springDataCompanyProfileRepository.save(entity);
         return toDomain(saved);
