@@ -237,6 +237,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         // naturaleza, que es lo unico que dice lo que el concepto ES.
         Map<String, String> sectionByNature =
                 payslipSectionRepository.findSectionCodeByNature(command.ruleSystemCode());
+        Map<String, String> subsectionByConcept =
+                payslipSectionRepository.findSubsectionCodeByConcept(command.ruleSystemCode());
 
         // Los segmentos ya no son «de jornada»: salen de la union de los puntos de cambio de las
         // verticales que afectan al calculo —jornada, clasificacion laboral y contrato— (backend#47).
@@ -415,7 +417,11 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     r.sourceExecutionOrders().size(),
                     // Nulo si la naturaleza no tiene seccion declarada, y eso se ve. Colocarla
                     // por defecto en un bloque cualquiera seria esconderlo.
-                    sectionByNature.get(r.nature())
+                    sectionByNature.get(r.nature()),
+                    // Y el apartado dentro del bloque, cuando el bloque los tiene (backend#121).
+                    // Aqui nulo NO es una ausencia que mirar: es el caso normal —una linea se
+                    // imprime en su bloque— y solo las diez del recuadro de bases lo llevan.
+                    subsectionByConcept.get(r.conceptCode())
             ));
             for (Integer executionOrder : r.sourceExecutionOrders()) {
                 lineaPorPaso.put(executionOrder, lineNumber);

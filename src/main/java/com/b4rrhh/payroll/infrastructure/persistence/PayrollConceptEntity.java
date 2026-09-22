@@ -61,6 +61,10 @@ public class PayrollConceptEntity {
     @Column(name = "payslip_section_code", length = 30)
     private String payslipSectionCode;
 
+    /** El apartado del bloque, cuando el bloque tiene apartados (backend#121). */
+    @Column(name = "payslip_subsection_code", length = 30)
+    private String payslipSubsectionCode;
+
     /** De cuantos pasos del motor viene esta linea. Uno salvo que el folio haya fundido. */
     @Column(name = "merged_step_count", nullable = false)
     private Integer mergedStepCount = 1;
@@ -91,6 +95,9 @@ public class PayrollConceptEntity {
     public void setDisplayOrder(Integer displayOrder) { this.displayOrder = displayOrder; }
     public String getPayslipSectionCode() { return payslipSectionCode; }
     public void setPayslipSectionCode(String payslipSectionCode) { this.payslipSectionCode = payslipSectionCode; }
+
+    public String getPayslipSubsectionCode() { return payslipSubsectionCode; }
+    public void setPayslipSubsectionCode(String payslipSubsectionCode) { this.payslipSubsectionCode = payslipSubsectionCode; }
     public Integer getMergedStepCount() { return mergedStepCount; }
     public void setMergedStepCount(Integer mergedStepCount) { this.mergedStepCount = mergedStepCount; }
 

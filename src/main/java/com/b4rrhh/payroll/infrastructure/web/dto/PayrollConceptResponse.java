@@ -32,6 +32,7 @@ public record PayrollConceptResponse(
         String originPeriodCode,
         Integer displayOrder,
         Integer mergedStepCount,
-        String payslipSectionCode
+        String payslipSectionCode,
+        String payslipSubsectionCode
 ) {
 }

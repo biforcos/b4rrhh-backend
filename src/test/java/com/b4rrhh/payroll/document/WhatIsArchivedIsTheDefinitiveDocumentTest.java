@@ -187,6 +187,11 @@ class WhatIsArchivedIsTheDefinitiveDocumentTest {
             public Map<String, String> findSectionCodeByNature(String ruleSystemCode) {
                 return Map.of();
             }
+
+            @Override
+            public Map<String, String> findSubsectionCodeByConcept(String ruleSystemCode) {
+                return Map.of();
+            }
         };
     }
 }

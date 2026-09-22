@@ -29,7 +29,11 @@ public class PayslipSectionController {
     public List<PayslipSectionResponse> list(@PathVariable String ruleSystemCode) {
         return listPayslipSectionsUseCase.listByRuleSystemCode(ruleSystemCode).stream()
                 .map(section -> new PayslipSectionResponse(
-                        section.sectionCode(), section.label(), section.displayOrder()))
+                        section.sectionCode(), section.label(), section.displayOrder(),
+                        section.subsections().stream()
+                                .map(sub -> new PayslipSectionResponse.PayslipSubsectionResponse(
+                                        sub.subsectionCode(), sub.label(), sub.displayOrder()))
+                                .toList()))
                 .toList();
     }
 }

@@ -75,8 +75,37 @@ public record PayslipDocumentContent(
      */
     public record Block(
             String label,
-            List<Line> lines,
+            /**
+             * Las partes del bloque, en el orden en el que se imprimen ({@code backend#121}).
+             *
+             * <p>Casi siempre una, sin rotulo: un bloque de devengos es una lista de lineas. El
+             * recuadro de bases del modelo oficial tiene cuatro apartados numerados, y cada uno
+             * se lee de arriba abajo.
+             */
+            List<Group> groups,
             boolean closing
+    ) {
+
+        /**
+         * Las lineas del bloque, seguidas y sin los apartados.
+         *
+         * <p>Para quien no necesita la division: el liquido, que es una linea, y cualquier
+         * recuento. El dibujo si la necesita.
+         */
+        public List<Line> lines() {
+            return groups.stream().flatMap(group -> group.lines().stream()).toList();
+        }
+    }
+
+    /**
+     * Una parte de un bloque ({@code backend#121}).
+     *
+     * @param label como se llama el apartado, o {@code null} si el bloque no tiene apartados y
+     *              sus lineas van seguidas.
+     */
+    public record Group(
+            String label,
+            List<Line> lines
     ) {}
 
     /**

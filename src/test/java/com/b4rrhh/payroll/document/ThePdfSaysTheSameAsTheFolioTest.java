@@ -115,6 +115,64 @@ class ThePdfSaysTheSameAsTheFolioTest {
         }
     }
 
+    /**
+     * Y el recuadro de bases sale en sus cuatro apartados, en orden ({@code backend#121}).
+     *
+     * <p>El papel lo lee del contenido y no lo sabe de antemano: los rotulos y su orden salen de
+     * la seccion que sirve el catalogo. Si el dibujo los tuviera escritos dentro, cambiar el
+     * catalogo no moveria nada, que es lo que la {@code V138} retiro un nivel mas arriba.
+     */
+    @Test
+    void theBasesBoxIsPrintedInItsFourParts() throws IOException {
+        String texto = textoDe(renderizador.render(contenido.contentOf(
+                PayslipDocumentFixtures.cerrado(PayslipDocumentFixtures.elRecuadroDeLasTresBases()),
+                PayslipDocumentFixtures.seccionesConLosApartadosDelRecuadro())));
+
+        int anterior = texto.indexOf("Determinacion de las bases de cotizacion");
+        assertTrue(anterior >= 0, "el bloque de bases tiene que estar en el papel");
+        for (String apartado : List.of(
+                "1. Contingencias comunes",
+                "2. Contingencias profesionales y recaudacion conjunta",
+                "3. Horas extraordinarias",
+                "4. Base sujeta a retencion del IRPF")) {
+            int donde = texto.indexOf(apartado);
+            assertTrue(donde > anterior,
+                    "El apartado «" + apartado + "» falta o sale fuera de orden en el PDF");
+            anterior = donde;
+        }
+    }
+
+    /**
+     * Y los bloques sin apartados se siguen imprimiendo seguidos.
+     *
+     * <p>La mitad que se olvida: si el dibujo pintara un rotulo por bloque, los devengos ganarian
+     * una fila que nadie ha pedido. El mismo recibo, con el mismo catalogo, y entre «Devengos» y
+     * su primera linea no hay ningun rotulo de por medio.
+     */
+    @Test
+    void aBlockWithoutPartsStillPrintsAsOneList() throws IOException {
+        List<String> lineas = lineasDe(renderizador.render(contenido.contentOf(
+                PayslipDocumentFixtures.cerrado(PayslipDocumentFixtures.elRecuadroDeLasTresBases()),
+                PayslipDocumentFixtures.seccionesConLosApartadosDelRecuadro())));
+
+        int devengos = indiceDe(lineas, "Devengos");
+        int salario = indiceDe(lineas, "Salario base");
+        assertTrue(devengos >= 0 && salario > devengos, "el bloque de devengos y su primera linea");
+        // Entre el titulo del bloque y su primera linea solo va la cabecera de la tabla.
+        assertEquals(2, salario - devengos,
+                () -> "entre «Devengos» y «Salario base» se ha colado algo: "
+                        + lineas.subList(devengos, salario + 1));
+    }
+
+    private static int indiceDe(List<String> lineas, String texto) {
+        for (int i = 0; i < lineas.size(); i++) {
+            if (lineas.get(i).contains(texto)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     /** Criterio 5: el liquido del recibo de {@code EMP000001} es {@code 822,97 €}. */
     @Test
     void theNetPayIsTheOneTheScreenShows() throws IOException {
@@ -194,7 +252,21 @@ class ThePdfSaysTheSameAsTheFolioTest {
                 "dos bases de cotizacion no se suman, ni en el papel ni en la pantalla");
     }
 
-    /** Criterio 7: A4, y el recibo cabe en una hoja. Tambien el mas largo de la semilla. */
+    /**
+     * Criterio 7: A4, y el recibo cabe en una hoja. Tambien el mas largo de la semilla.
+     *
+     * <p><b>Los dos recibos de estas fixtures son de antes del {@code backend#121}</b>, y el
+     * recuento que afirman lo es tambien: 18 y 19 lineas. Con las tres bases del modelo oficial
+     * el recuadro pasa de 3 lineas a 10 y las horas extraordinarias estrenan dos cuotas, asi que
+     * un recibo de la semilla de hoy tiene entre 23 y 31, y el mas largo <b>ya no cabe en una
+     * hoja</b>: medido sobre {@code EMP001000} recalculado, la aportacion empresarial se parte y
+     * la procedencia se va a la segunda pagina.
+     *
+     * <p>No se toca la maqueta aqui y se deja escrito, que es lo que faltaba. Que un recibo de
+     * salarios con el recuadro entero ocupe dos hojas no es un defecto por si mismo —los de papel
+     * lo hacen— pero es una decision de maqueta y no una consecuencia que deba llegar sin que
+     * nadie la haya visto.
+     */
     @Test
     void theOfficialModelIsA4AndFitsInOnePage() throws IOException {
         for (Payroll payroll : List.of(

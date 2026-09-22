@@ -5,6 +5,7 @@ import com.b4rrhh.payroll.domain.model.PayrollConcept;
 import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayslipSection;
+import com.b4rrhh.payroll_engine.concept.domain.model.PayslipSubsection;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -39,6 +40,54 @@ final class PayslipDocumentFixtures {
                 new PayslipSection("BASES", "Determinacion de las bases de cotizacion", 40),
                 new PayslipSection("APORTACION_EMPRESARIAL", "Aportacion empresarial", 50)
         );
+    }
+
+    /**
+     * Las mismas cinco secciones, con los cuatro apartados del recuadro de bases
+     * ({@code backend#121}, {@code V149}).
+     */
+    static List<PayslipSection> seccionesConLosApartadosDelRecuadro() {
+        return List.of(
+                new PayslipSection("DEVENGOS", "Devengos", 10),
+                new PayslipSection("DEDUCCIONES", "Deducciones", 20),
+                new PayslipSection("LIQUIDO", "Liquido total a percibir", 30),
+                new PayslipSection("BASES", "Determinacion de las bases de cotizacion", 40,
+                        List.of(
+                                new PayslipSubsection("BASE_CC", "1. Contingencias comunes", 10),
+                                new PayslipSubsection("BASE_CP",
+                                        "2. Contingencias profesionales y recaudacion conjunta", 20),
+                                new PayslipSubsection("BASE_HE", "3. Horas extraordinarias", 30),
+                                new PayslipSubsection("BASE_IRPF",
+                                        "4. Base sujeta a retencion del IRPF", 40))),
+                new PayslipSection("APORTACION_EMPRESARIAL", "Aportacion empresarial", 50)
+        );
+    }
+
+    /**
+     * Un recibo con el recuadro de las tres bases, de los 245 con horas extra
+     * ({@code backend#121}).
+     *
+     * <p>Las diez lineas del recuadro con su apartado, un devengo y el liquido: lo justo para ver
+     * en el papel las dos cosas que este paso anade —que el recuadro sale en cuatro apartados y
+     * que los demas bloques siguen sin ninguno—. Los importes son los del ejemplo del issue.
+     */
+    static Payroll elRecuadroDeLasTresBases() {
+        return recibo("EMP001000", 1, PayrollStatus.CALCULATED, """
+                101|101|SALARIO_BASE|Salario base|30|61.67|1850.10|EARNING|101|DEVENGOS|
+                102|102|IMPORTE_HORAS_EXTRA|Horas extraordinarias|18|7.71|138.78|EARNING|102|DEVENGOS|
+                103|970|TOTAL_DEVENGOS|Total devengado|||1988.88|TOTAL_EARNING|970|DEVENGOS|
+                104|B03|REMUNERACION_MENSUAL|Remuneracion mensual|||1850.10|BASE|401|BASES|BASE_CC
+                105|B04|PRORRATA_EN_LA_BASE|Prorrata de pagas extraordinarias|||616.70|BASE|402|BASES|BASE_CC
+                106|B01|BASE_CONTINGENCIAS_COMUNES|Base de cotizacion|||2466.80|BASE|403|BASES|BASE_CC
+                107|B_CC|BASE_COTIZACION_COTIZ|Base tras topes|||2466.80|BASE|404|BASES|BASE_CC
+                108|B05|BASE_COMUNES_EN_PROFESIONALES|Base de contingencias comunes|||2466.80|BASE|411|BASES|BASE_CP
+                109|B06|HORAS_EXTRA_EN_PROFESIONALES|Horas extraordinarias|||138.78|BASE|412|BASES|BASE_CP
+                110|B07|BASE_CONTINGENCIAS_PROFESIONALES|Base de cotizacion|||2605.58|BASE|413|BASES|BASE_CP
+                111|B_CP|BASE_PROFESIONALES_COTIZ|Base tras topes|||2605.58|BASE|414|BASES|BASE_CP
+                112|B08|BASE_HORAS_EXTRAORDINARIAS|Base|||138.78|BASE|421|BASES|BASE_HE
+                113|B09|BASE_SUJETA_A_RETENCION|Base|||1988.88|BASE|431|BASES|BASE_IRPF
+                114|990|LIQUIDO_A_PAGAR|Liquido total a percibir|||1500.00|NET_PAY|990|LIQUIDO|
+                """);
     }
 
     /** Dieciocho lineas, cinco bloques, 822,97 € de liquido. Presencia 2: es un readmitido. */
@@ -145,7 +194,10 @@ final class PayslipDocumentFixtures {
                     "202609",
                     Integer.parseInt(campo[8]),
                     1,
-                    campo[9]
+                    campo[9],
+                    // El apartado del bloque, cuando la fila lo trae (backend#121). Casi ninguna:
+                    // solo el recuadro de bases tiene apartados.
+                    campo.length > 10 && !campo[10].isEmpty() ? campo[10] : null
             ));
         }
         return Payroll.rehydrate(

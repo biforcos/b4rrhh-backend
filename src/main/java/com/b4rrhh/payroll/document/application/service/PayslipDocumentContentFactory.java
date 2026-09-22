@@ -7,6 +7,7 @@ import com.b4rrhh.payroll.domain.model.PayrollConcept;
 import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayslipSection;
+import com.b4rrhh.payroll_engine.concept.domain.model.PayslipSubsection;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -121,7 +122,7 @@ public class PayslipDocumentContentFactory {
         for (PayslipSection section : declaradas) {
             List<PayrollConcept> lineas = porSeccion.remove(section.sectionCode());
             if (lineas != null && !lineas.isEmpty()) {
-                blocks.add(block(section.label(), lineas));
+                blocks.add(block(section.label(), lineas, section.subsections()));
             }
         }
 
@@ -130,19 +131,22 @@ public class PayslipDocumentContentFactory {
         for (Map.Entry<String, List<PayrollConcept>> resto : porSeccion.entrySet()) {
             blocks.add(block(
                     resto.getKey() == null ? "Sin bloque declarado" : resto.getKey(),
-                    resto.getValue()
+                    resto.getValue(),
+                    List.of()
             ));
         }
         return List.copyOf(blocks);
     }
 
-    private PayslipDocumentContent.Block block(String label, List<PayrollConcept> lineas) {
+    private PayslipDocumentContent.Block block(
+            String label, List<PayrollConcept> lineas, List<PayslipSubsection> apartados) {
+
         List<PayrollConcept> ordenadas = new ArrayList<>(lineas);
         ordenadas.sort(Comparator.comparingInt(PayrollConcept::getDisplayOrder));
 
         return new PayslipDocumentContent.Block(
                 label,
-                ordenadas.stream().map(PayslipDocumentContentFactory::line).toList(),
+                groups(ordenadas, apartados),
                 // Aqui ya no se suma nada, y hasta el backend#114 se sumaba una cosa: el recuadro
                 // de aportacion empresarial, que era el unico bloque con total en el modelo
                 // oficial al que el motor no le daba uno. Ahora se lo da —el 725 de la V141— y
@@ -158,6 +162,51 @@ public class PayslipDocumentContentFactory {
                 // «Total a deducir» como linea de cierre (frontend#76).
                 ordenadas.size() == 1 && "NET_PAY".equals(ordenadas.get(0).getConceptNatureCode())
         );
+    }
+
+    /**
+     * Las partes de un bloque ({@code backend#121}).
+     *
+     * <p>Las lineas sin apartado van primero y sin rotulo, que es como se imprimen los devengos y
+     * las deducciones. Despues, los apartados declarados por el catalogo en su orden, y solo los
+     * que tienen alguna linea: un apartado vacio no sale, igual que un bloque vacio.
+     *
+     * <p>Y al final, los apartados que las lineas dicen y el catalogo no conoce. Se pintan con su
+     * codigo por rotulo, por la misma razon que un bloque sin nombre se pinta igual: del papel no
+     * se puede recargar, y callarse una linea es peor que ensenarla mal colocada.
+     */
+    private List<PayslipDocumentContent.Group> groups(
+            List<PayrollConcept> ordenadas, List<PayslipSubsection> apartados) {
+
+        Map<String, List<PayrollConcept>> porApartado = new LinkedHashMap<>();
+        for (PayrollConcept concept : ordenadas) {
+            porApartado.computeIfAbsent(concept.getPayslipSubsectionCode(), key -> new ArrayList<>())
+                    .add(concept);
+        }
+
+        List<PayslipDocumentContent.Group> groups = new ArrayList<>();
+        List<PayrollConcept> sinApartado = porApartado.remove(null);
+        if (sinApartado != null && !sinApartado.isEmpty()) {
+            groups.add(group(null, sinApartado));
+        }
+
+        List<PayslipSubsection> declarados = new ArrayList<>(apartados);
+        declarados.sort(Comparator.comparingInt(PayslipSubsection::displayOrder));
+        for (PayslipSubsection apartado : declarados) {
+            List<PayrollConcept> lineas = porApartado.remove(apartado.subsectionCode());
+            if (lineas != null && !lineas.isEmpty()) {
+                groups.add(group(apartado.label(), lineas));
+            }
+        }
+        for (Map.Entry<String, List<PayrollConcept>> resto : porApartado.entrySet()) {
+            groups.add(group(resto.getKey(), resto.getValue()));
+        }
+        return List.copyOf(groups);
+    }
+
+    private static PayslipDocumentContent.Group group(String label, List<PayrollConcept> lineas) {
+        return new PayslipDocumentContent.Group(
+                label, lineas.stream().map(PayslipDocumentContentFactory::line).toList());
     }
 
     private static PayslipDocumentContent.Line line(PayrollConcept concept) {

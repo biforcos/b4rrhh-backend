@@ -20,4 +20,15 @@ public interface PayslipSectionRepository {
      * en ningun bloque: una linea sin seccion se ve, y colocarla donde no pinta nada, no.
      */
     Map<String, String> findSectionCodeByNature(String ruleSystemCode);
+
+    /**
+     * En que apartado de su bloque va cada concepto, indexado por codigo de concepto
+     * ({@code backend#121}).
+     *
+     * <p>Un concepto <b>sin apartado no esta en el mapa</b>, y ese es el caso de casi todos: su
+     * linea se imprime en el bloque, sin nada por encima. A diferencia de la seccion, esto no se
+     * deduce de la naturaleza —los diez conceptos del recuadro de bases son todos {@code BASE} y
+     * van en cuatro apartados— asi que la clave es el concepto.
+     */
+    Map<String, String> findSubsectionCodeByConcept(String ruleSystemCode);
 }

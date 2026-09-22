@@ -68,6 +68,8 @@ public class PdfBoxPayslipDocumentRenderer implements PayslipDocumentRenderer {
     private static final float ALTO_LINEA = 12f;
     private static final float ALTO_CABECERA_TABLA = 12f;
     private static final float ALTO_ROTULO_BLOQUE = 15f;
+    /** El rotulo de un apartado, mas bajo que el del bloque: es un escalon, no otro bloque. */
+    private static final float ALTO_ROTULO_APARTADO = 12f;
     private static final float HUECO_ENTRE_BLOQUES = 9f;
 
     private static final float CUERPO = 8f;
@@ -187,21 +189,40 @@ public class PdfBoxPayslipDocumentRenderer implements PayslipDocumentRenderer {
         rotulo(hoja, block.label());
         cabeceraDeTabla(hoja);
 
-        for (PayslipDocumentContent.Line line : block.lines()) {
-            if (hoja.reservar(ALTO_LINEA)) {
-                cabeceraDeTabla(hoja);
+        for (PayslipDocumentContent.Group group : block.groups()) {
+            // El rotulo del apartado, cuando lo hay. Un bloque sin apartados trae un unico grupo
+            // sin rotulo y esto no pinta nada, que es como se imprimen los devengos (backend#121).
+            if (group.label() != null) {
+                if (hoja.reservar(ALTO_ROTULO_APARTADO + ALTO_LINEA)) {
+                    cabeceraDeTabla(hoja);
+                }
+                rotuloDeApartado(hoja, group.label());
             }
-            float y = hoja.bajar(ALTO_LINEA);
-            hoja.texto(normal, MENUDA, COL_PERIODO, y, line.period());
-            hoja.texto(normal, MENUDA, COL_CLAVE, y, line.code());
-            hoja.texto(normal, CUERPO, COL_CONCEPTO, y,
-                    recortar(line.label(), normal, CUERPO, ANCHO_CONCEPTO));
-            hoja.derecha(normal, CUERPO, FIN_CANTIDAD, y, line.quantity());
-            hoja.derecha(normal, CUERPO, FIN_TARIFA, y, line.rate());
-            hoja.derecha(normal, CUERPO, FIN_IMPORTE, y, line.amount());
+            for (PayslipDocumentContent.Line line : group.lines()) {
+                if (hoja.reservar(ALTO_LINEA)) {
+                    cabeceraDeTabla(hoja);
+                }
+                float y = hoja.bajar(ALTO_LINEA);
+                hoja.texto(normal, MENUDA, COL_PERIODO, y, line.period());
+                hoja.texto(normal, MENUDA, COL_CLAVE, y, line.code());
+                hoja.texto(normal, CUERPO, COL_CONCEPTO, y,
+                        recortar(line.label(), normal, CUERPO, ANCHO_CONCEPTO));
+                hoja.derecha(normal, CUERPO, FIN_CANTIDAD, y, line.quantity());
+                hoja.derecha(normal, CUERPO, FIN_TARIFA, y, line.rate());
+                hoja.derecha(normal, CUERPO, FIN_IMPORTE, y, line.amount());
+            }
         }
 
         hoja.situar(hoja.y() - HUECO_ENTRE_BLOQUES);
+    }
+
+    /**
+     * El rotulo de un apartado: en negrita y sin fondo, para que se lea como un escalon dentro
+     * del bloque y no como un bloque nuevo. El fondo gris es lo que distingue a los bloques.
+     */
+    private void rotuloDeApartado(Hoja hoja, String label) throws IOException {
+        float y = hoja.bajar(ALTO_ROTULO_APARTADO);
+        hoja.texto(negrita, CUERPO, COL_CONCEPTO, y, label);
     }
 
     private void rotulo(Hoja hoja, String label) throws IOException {

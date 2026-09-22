@@ -3,6 +3,7 @@ package com.b4rrhh.payroll_engine.concept;
 import com.b4rrhh.payroll_engine.concept.domain.model.FunctionalNature;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayrollConcept;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayslipSection;
+import com.b4rrhh.payroll_engine.concept.domain.model.PayslipSubsection;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayrollConceptRepository;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayslipSectionRepository;
 import com.b4rrhh.support.TestSobreEsquemaReal;
@@ -45,6 +46,57 @@ class ThePayslipGroupingsAreDeclaredAndNotDeducedFromCodeRangesTest {
                 sections.stream()
                         .filter(s -> s.sectionCode().equals("LIQUIDO"))
                         .findFirst().orElseThrow().label());
+    }
+
+    /**
+     * Y el recuadro de bases, en sus cuatro apartados ({@code backend#121}).
+     *
+     * <p>Es el unico bloque del modelo oficial que tiene partes dentro, y son las que el modelo
+     * numera. Que este declarado aqui y no dibujado en el PDF es lo mismo que la {@code V138}
+     * decidio un nivel mas arriba: un renderizador que supiera que hay cuatro bloques de bases
+     * volveria a tener las agrupaciones escritas dentro.
+     */
+    @Test
+    void theContributionBasesBoxIsDeclaredInFourNumberedParts() {
+        List<PayslipSection> sections = payslipSectionRepository.findByRuleSystemCode("ESP");
+
+        PayslipSection bases = sections.stream()
+                .filter(s -> s.sectionCode().equals("BASES"))
+                .findFirst().orElseThrow();
+        assertEquals(List.of("BASE_CC", "BASE_CP", "BASE_HE", "BASE_IRPF"),
+                bases.subsections().stream().map(PayslipSubsection::subsectionCode).toList(),
+                "los cuatro apartados del recuadro, en el orden del modelo oficial");
+        assertEquals("1. Contingencias comunes", bases.subsections().get(0).label());
+
+        // Y los otros cuatro bloques no tienen ninguno, que es el caso normal: sus lineas se
+        // imprimen seguidas. Un apartado que apareciera ahi seria un rotulo que nadie ha pedido.
+        assertEquals(List.of(),
+                sections.stream()
+                        .filter(s -> !s.sectionCode().equals("BASES"))
+                        .filter(s -> !s.subsections().isEmpty())
+                        .map(PayslipSection::sectionCode)
+                        .toList());
+    }
+
+    /**
+     * A que apartado va cada linea lo dice el concepto, y <b>no su naturaleza</b>
+     * ({@code backend#121}).
+     *
+     * <p>Es la diferencia con la seccion, y la razon de que la subseccion cuelgue del concepto:
+     * las diez lineas del recuadro son todas {@code BASE} y viven en cuatro apartados distintos.
+     * Una regla que dedujera el apartado de la naturaleza las metaria a las diez en el mismo.
+     */
+    @Test
+    void whichPartALineGoesInIsDeclaredByTheConceptAndNotByItsNature() {
+        Map<String, String> byConcept = payslipSectionRepository.findSubsectionCodeByConcept("ESP");
+
+        assertEquals(Map.of(
+                        "B03", "BASE_CC", "B04", "BASE_CC", "B01", "BASE_CC", "B_CC", "BASE_CC",
+                        "B05", "BASE_CP", "B06", "BASE_CP", "B07", "BASE_CP", "B_CP", "BASE_CP",
+                        "B08", "BASE_HE", "B09", "BASE_IRPF"),
+                byConcept,
+                "los diez del recuadro, y solo ellos: un concepto de mas aqui es una linea que va"
+                        + " a salir bajo un rotulo que no le toca");
     }
 
     /** Vienen ordenadas, y el orden es el declarado y no el de insercion. */

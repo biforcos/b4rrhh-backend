@@ -50,6 +50,17 @@ public class PayrollConcept {
      */
     private final String payslipSectionCode;
     /**
+     * El apartado de ese bloque, cuando el bloque tiene apartados ({@code backend#121}).
+     *
+     * <p>Viaja congelado por lo mismo que la seccion. Lo que declara es a que parte del bloque
+     * pertenece la linea: los diez conceptos del recuadro de bases son todos {@code BASE} y van
+     * en cuatro apartados distintos, asi que esto <b>no se deduce de la naturaleza</b> como se
+     * deduce la seccion.
+     *
+     * <p>Nulo es el caso normal: la linea se imprime en su bloque, sin apartado por encima.
+     */
+    private final String payslipSubsectionCode;
+    /**
      * De cuantos pasos del motor viene esta linea ({@code backend#103}).
      *
      * <p>Uno en la inmensa mayoria. Mas de uno cuando el folio ha fundido varios tramos del
@@ -71,7 +82,7 @@ public class PayrollConcept {
             Integer displayOrder
     ) {
         this(lineNumber, conceptCode, conceptMnemonic, conceptLabel, amount, quantity, rate,
-                conceptNatureCode, originPeriodCode, displayOrder, 1, null);
+                conceptNatureCode, originPeriodCode, displayOrder, 1, null, null);
     }
 
     public PayrollConcept(
@@ -88,10 +99,10 @@ public class PayrollConcept {
             Integer mergedStepCount
     ) {
         this(lineNumber, conceptCode, conceptMnemonic, conceptLabel, amount, quantity, rate,
-                conceptNatureCode, originPeriodCode, displayOrder, mergedStepCount, null);
+                conceptNatureCode, originPeriodCode, displayOrder, mergedStepCount, null, null);
     }
 
-    /** El constructor completo, con los pasos que la linea funde y el bloque en el que sale. */
+    /** Sin apartado de bloque, que es el caso de todas las lineas menos las del recuadro de bases. */
     public PayrollConcept(
             Integer lineNumber,
             String conceptCode,
@@ -106,6 +117,27 @@ public class PayrollConcept {
             Integer mergedStepCount,
             String payslipSectionCode
     ) {
+        this(lineNumber, conceptCode, conceptMnemonic, conceptLabel, amount, quantity, rate,
+                conceptNatureCode, originPeriodCode, displayOrder, mergedStepCount,
+                payslipSectionCode, null);
+    }
+
+    /** El constructor completo, con los pasos que la linea funde y donde sale. */
+    public PayrollConcept(
+            Integer lineNumber,
+            String conceptCode,
+            String conceptMnemonic,
+            String conceptLabel,
+            BigDecimal amount,
+            BigDecimal quantity,
+            BigDecimal rate,
+            String conceptNatureCode,
+            String originPeriodCode,
+            Integer displayOrder,
+            Integer mergedStepCount,
+            String payslipSectionCode,
+            String payslipSubsectionCode
+    ) {
         this.lineNumber = requirePositive(lineNumber, "lineNumber");
         this.conceptCode = requireCode(conceptCode, "conceptCode", 30);
         this.conceptMnemonic = requireText(conceptMnemonic, "conceptMnemonic", 50);
@@ -118,6 +150,8 @@ public class PayrollConcept {
         this.displayOrder = requirePositive(displayOrder, "displayOrder");
         this.mergedStepCount = requirePositive(mergedStepCount, "mergedStepCount");
         this.payslipSectionCode = normalizeOptional(payslipSectionCode, "payslipSectionCode", 30);
+        this.payslipSubsectionCode =
+                normalizeOptional(payslipSubsectionCode, "payslipSubsectionCode", 30);
     }
 
     private static Integer requirePositive(Integer value, String fieldName) {
@@ -223,6 +257,10 @@ public class PayrollConcept {
 
     public Integer getDisplayOrder() {
         return displayOrder;
+    }
+
+    public String getPayslipSubsectionCode() {
+        return payslipSubsectionCode;
     }
 
     public String getPayslipSectionCode() {
