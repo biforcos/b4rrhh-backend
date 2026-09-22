@@ -37,10 +37,16 @@ Un tercio no tiene escritura decimal exacta, así que «el valor sin redondear»
 elegir una precisión intermedia: `MathContext.DECIMAL128`, 34 cifras significativas. Es la misma
 idea que la escala 8 de `J01`, con más holgura porque aquí el resultado es dinero.
 
-**El divisor es un concepto del grafo** (`P_MESES_ANO` = 12) y no una constante dentro de un
-resolutor. En este motor lo que interviene en un cálculo se ve en el grafo; escondido en Java, la
-pregunta «de dónde sale este número» tendría una respuesta que sólo está en el código, que es
-exactamente lo que el primer camino quitó de en medio.
+**El divisor es un nodo del grafo** (`P_MESES_ANO`) y no un número escrito dentro del resolutor
+del cociente: quien mire la prorrata ve de qué depende sin abrir el código. Lo que no se ve ahí es
+el doce. `P_MESES_ANO` es `ENGINE_PROVIDED` como `D02`, los días del mes: **el nodo se ve, el valor
+es del calendario y lo provee el motor igual que provee los días del mes** —en Java, en un
+calculador técnico de tres líneas.
+
+Y así tiene que ser. Los meses del año no son parametrización: nadie debe poder ponerle catorce a
+este divisor para que las catorce pagas de un convenio «cuadren». Lo que sí es catálogo es cuántas
+pagas hay y cuánto valen —`PE_1` a `PE_4`, `backend#117`—; el doce entre el que se reparten es el
+calendario, y el catálogo no lo decide.
 
 Dividir entre cero revienta la corrida, y eso es lo correcto: un divisor a cero es un catálogo mal
 parametrizado, no un caso de negocio.

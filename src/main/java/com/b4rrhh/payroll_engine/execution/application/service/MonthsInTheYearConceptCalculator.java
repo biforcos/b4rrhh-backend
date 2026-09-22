@@ -8,10 +8,15 @@ import java.math.BigDecimal;
 /**
  * Los meses del ano: doce ({@code backend#119}).
  *
- * <p>Es el divisor de la prorrata, y existe como concepto en vez de como constante dentro de
- * un resolutor porque en este motor <b>lo que interviene en un calculo se ve en el grafo</b>.
- * Escondido en Java, la pregunta «de donde sale este numero» tendria una respuesta que solo
- * esta en el codigo, que es justo lo que el camino 1 quito de en medio.
+ * <p>Es el divisor de la prorrata. Existe como concepto para que <b>el nodo se vea en el
+ * grafo</b> —quien mire la prorrata ve de que depende sin abrir el codigo—, pero el doce lo
+ * pone esta clase: es {@code ENGINE_PROVIDED}, igual que {@code D02}, los dias del mes. El
+ * valor es del calendario y lo provee el motor como provee los dias del mes (ADR-070 §1).
+ *
+ * <p>Y asi tiene que ser: los meses del ano no son parametrizacion. Nadie debe poder ponerle
+ * catorce a este divisor para que las catorce pagas de un convenio «cuadren». Cuantas pagas
+ * hay y cuanto valen si es catalogo ({@code PE_1} a {@code PE_4}, {@code backend#117}); el
+ * doce entre el que se reparten, no.
  *
  * <p>No depende del tramo: doce son doce en enero y en un mes partido. Por eso es
  * {@code PERIOD} y un concepto de tramo lo puede leer, que es la direccion permitida
