@@ -67,4 +67,16 @@ public class SsCotizacionRateCalculators {
     SsCotizacionRateCalculator meiEmpresarioRate(SsCotizacionTiposRepository tipos) {
         return new SsCotizacionRateCalculator("P_SS_MEI_EMP", "MEI_EMP", tipos);
     }
+
+    // ── Cotizacion adicional por horas extraordinarias (backend#121) ─────────
+
+    @Bean
+    SsCotizacionRateCalculator horasExtraTrabajadorRate(SsCotizacionTiposRepository tipos) {
+        return new SsCotizacionRateCalculator("P_HE_TRAB", "HORAS_EXTRA_TRAB", tipos);
+    }
+
+    @Bean
+    SsCotizacionRateCalculator horasExtraEmpresarioRate(SsCotizacionTiposRepository tipos) {
+        return new SsCotizacionRateCalculator("P_HE_EMP", "HORAS_EXTRA_EMP", tipos);
+    }
 }

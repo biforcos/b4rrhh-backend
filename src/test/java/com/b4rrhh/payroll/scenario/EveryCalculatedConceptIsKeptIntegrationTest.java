@@ -83,7 +83,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * regimen puede cambiar a mitad de mes; el septimo, los meses del ano, es
      * {@code PERIOD}: doce son doce en un mes partido tambien.
      */
-    private static final int CONCEPTS_IN_THE_ENGINE = 50;
+    private static final int CONCEPTS_IN_THE_ENGINE = 65;
     private static final int SEGMENT_SCOPED_CONCEPTS = 15;
 
     /**
@@ -99,7 +99,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * Declarar tres si: desde el backend#104 son 38 y 42, desde el backend#47 son 38 y 43, y desde
      * el backend#114 son 39 y 44 — cambiar un ambito no anade conceptos, anade evaluaciones.
      */
-    private static final int CONCEPTS_IN_A_PLAN = 50;
+    private static final int CONCEPTS_IN_A_PLAN = 65;
 
     /**
      * Los conceptos con orden de recibo: los que PUEDEN ser linea.
@@ -109,7 +109,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * se calculaban desde siempre y ahora ademas salen en el papel. Y son 18 desde el
      * backend#114, que le dio total propio al recuadro de aportacion empresarial.
      */
-    private static final int CONCEPTS_WITH_A_PAYSLIP_ORDER = 20;
+    private static final int CONCEPTS_WITH_A_PAYSLIP_ORDER = 29;
 
     /**
      * Y las lineas que un empleado sin horas extra acaba teniendo en el folio, que son 16.
@@ -125,7 +125,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * el backend#114 por lo mismo: la aportacion empresarial vale algo en cualquier recibo con
      * presencia, y su total tambien.
      */
-    private static final int PAYSLIP_LINES_WITHOUT_OVERTIME = 18;
+    private static final int PAYSLIP_LINES_WITHOUT_OVERTIME = 23;
 
     @Autowired
     private LaunchPayrollCalculationUseCase launch;
@@ -197,13 +197,13 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
         assertEquals(CONCEPTS_IN_A_PLAN, countSteps(pid), "pasos guardados");
 
         // Y los que antes se tiraban estan, con nombre y apellido.
-        assertEquals(13, countStepsWithNature(pid, "BASE"),
-                "conceptos BASE: los 5 de siempre, el P03 (precio de la hora extra, backend#104),"
-                        + " las cuatro pagas extras del convenio (backend#117) y los tres de la"
-                        + " prorrata: su total, la prorrata y la puerta que cotiza (backend#119)");
-        assertEquals(19, countStepsWithNature(pid, "TECHNICAL"),
-                "conceptos TECHNICAL: los 16 de siempre mas los tres del backend#119 — los meses"
-                        + " del ano y los dos coeficientes de regimen");
+        assertEquals(22, countStepsWithNature(pid, "BASE"),
+                "conceptos BASE: los 13 de antes del backend#121 mas los nueve de las tres bases"
+                        + " — B03, B04, B05, B06, B07, B_CP_MAX, B_CP, B08 y B09");
+        assertEquals(23, countStepsWithNature(pid, "TECHNICAL"),
+                "conceptos TECHNICAL: los 19 de antes mas los cuatro del backend#121 — los dos"
+                        + " topes de la base profesional y los dos tipos de la cotizacion"
+                        + " adicional por horas extraordinarias");
 
         // El recibo tiene 18 lineas: las 17 de antes mas la prorrata que cotiza, que es la puerta
         // que le toca a este empleado. Siguen sin ser TODOS los pasos con orden de recibo: hay 20,
@@ -220,14 +220,17 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
         // imprimieron. El paso existe —el calculo ocurrio— y la linea no. Esa es la regla del cero
         // (backend#104), y es lo que hace que las dos puertas de la prorrata puedan estar las dos
         // asignadas a todo el mundo y salga impresa exactamente una (backend#119).
-        assertEquals(List.of("102", "103"), jdbc.queryForList(
+        assertEquals(List.of("102", "103", "704", "726", "B06", "B08"), jdbc.queryForList(
                 "select concept_code from payroll.payroll_calculation_step"
                         + " where payroll_id = ? and payslip_order_code is not null"
                         + "   and payslip_line_number is null order by concept_code",
                 String.class, pid),
-                "los pasos con orden y sin linea son los dos que valen cero en este recibo: el 102"
-                        + " porque no declara horas extra, y el 103 porque este empleado no tiene"
-                        + " las pagas prorrateadas — su prorrata sale por la otra puerta, el B02");
+                "los pasos con orden y sin linea son los que valen cero en este recibo: el 103"
+                        + " porque este empleado no tiene las pagas prorrateadas —su prorrata sale"
+                        + " por la otra puerta, el B02— y los cinco que cuelgan de las horas extra"
+                        + " que no ha hecho: el 102, su base (B08), la linea con la que entra en"
+                        + " la base profesional (B06) y las dos cuotas de cotizacion adicional"
+                        + " (704 y 726)");
 
         // El recuadro de bases, por los dos lados (backend#111).
         //
@@ -240,14 +243,17 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
         // Las dos mitades van juntas a proposito. Con solo la primera, darles orden de recibo a
         // los doce pasaria igual; es la segunda la que hace que «no tiene orden» siga
         // significando «no va al papel» y no «se me olvido».
-        assertEquals(List.of("B02", "B_CC", "B01"), jdbc.queryForList(
+        assertEquals(List.of("B03", "B04", "B01", "B_CC", "B05", "B07", "B_CP", "B09"),
+                jdbc.queryForList(
                 "select c.concept_code from payroll.payroll_concept c"
                         + " where c.payroll_id = ? and c.payslip_section_code = 'BASES'"
                         + " order by c.display_order",
                 String.class, pid),
-                "el recuadro de bases del modelo oficial: la prorrata que cotiza, la base de"
-                        + " contingencias comunes y la base cotizable (backend#119)");
-        assertEquals(List.of("B_CC_MAX", "P01", "P02", "P03",
+                "el recuadro de bases del modelo oficial, en sus cuatro bloques: comunes (B03,"
+                        + " B04, B01, B_CC), profesionales (B05, B07, B_CP), y la base sujeta a"
+                        + " retencion (B09). Las dos lineas de horas extra del recuadro —B06 y"
+                        + " B08— valen cero en este recibo y no se imprimen (backend#121)");
+        assertEquals(List.of("B02", "B_CC_MAX", "B_CP_MAX", "P01", "P02", "P03",
                         "PE_1", "PE_2", "PE_3", "PE_4", "PE_TOTAL", "P_PRORRATA"),
                 jdbc.queryForList(
                 "select s.concept_code from payroll.payroll_calculation_step s"

@@ -3,23 +3,34 @@ package com.b4rrhh.payroll_engine.execution.application.service;
 import com.b4rrhh.payroll_engine.execution.domain.model.SsCotizacionTope;
 import com.b4rrhh.payroll_engine.execution.domain.model.TechnicalConceptSegmentData;
 import com.b4rrhh.payroll_engine.execution.domain.port.SsCotizacionTopesRepository;
-import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.temporal.ChronoUnit;
 
-@Component
+/**
+ * El tope maximo de una base de cotizacion, prorrateado al tramo.
+ *
+ * <p>Deja de ser un {@code @Component} con el codigo de concepto escrito dentro y pasa a llevar
+ * su contingencia en el constructor ({@code backend#121}): hay dos bases con topes —comunes y
+ * profesionales— y el dia que la clase decidiera por su cuenta cual de las dos mira, habria que
+ * escribir una clase mas por cada base. Quien empareja concepto y contingencia es
+ * {@link SsCotizacionTopeCalculators}, igual que {@link SsCotizacionRateCalculators} empareja
+ * concepto y tipo desde el {@code backend#105}.
+ */
 public class TopeMaxCotizacionCalculator implements TechnicalConceptCalculator {
 
+    private final String conceptCode;
+    private final String contingencyCode;
     private final SsCotizacionTopesRepository topesRepository;
 
-    public TopeMaxCotizacionCalculator(SsCotizacionTopesRepository topesRepository) {
+    public TopeMaxCotizacionCalculator(
+            String conceptCode, String contingencyCode, SsCotizacionTopesRepository topesRepository) {
+        this.conceptCode = conceptCode;
+        this.contingencyCode = contingencyCode;
         this.topesRepository = topesRepository;
     }
 
     @Override
-    public String conceptCode() { return "P_TOPE_MAX"; }
+    public String conceptCode() { return conceptCode; }
 
     @Override
     public BigDecimal resolve(TechnicalConceptSegmentData context) {
@@ -27,21 +38,14 @@ public class TopeMaxCotizacionCalculator implements TechnicalConceptCalculator {
                         context.ruleSystemCode(),
                         context.grupoCotizacionCode(),
                         context.tipoNomina(),
+                        contingencyCode,
                         context.periodEnd())
                 .map(SsCotizacionTope::baseMax)
                 .orElseThrow(() -> new IllegalStateException(
                         "No ss_cotizacion_topes entry found for grupo=" + context.grupoCotizacionCode()
                         + " tipoNomina=" + context.tipoNomina()
+                        + " contingencia=" + contingencyCode
                         + " referenceDate=" + context.periodEnd()));
-        return prorate(baseMax, context);
-    }
-
-    private BigDecimal prorate(BigDecimal base, TechnicalConceptSegmentData ctx) {
-        if ("DIARIO".equals(ctx.tipoNomina())) {
-            return base.multiply(BigDecimal.valueOf(ctx.daysInSegment())).setScale(2, RoundingMode.HALF_UP);
-        }
-        long daysInPeriod = ChronoUnit.DAYS.between(ctx.periodStart(), ctx.periodEnd()) + 1;
-        return base.multiply(BigDecimal.valueOf(ctx.daysInSegment()))
-                .divide(BigDecimal.valueOf(daysInPeriod), 2, RoundingMode.HALF_UP);
+        return SegmentProration.prorate(baseMax, context);
     }
 }

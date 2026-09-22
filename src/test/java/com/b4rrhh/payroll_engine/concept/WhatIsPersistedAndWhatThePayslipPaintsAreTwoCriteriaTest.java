@@ -84,10 +84,15 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
     private static final Map<String, Integer> PERSISTED_WITH_A_PAYSLIP_ORDER = new LinkedHashMap<>();
 
     static {
-        PERSISTED_WITH_A_PAYSLIP_ORDER.put("BASE", 3);             // B02, B_CC, B01 (V139, V146)
-        PERSISTED_WITH_A_PAYSLIP_ORDER.put("DEDUCTION", 5);        // 700, 701, 702, 703, 800
+        // Los diez del recuadro, en los cuatro bloques del modelo oficial (V148):
+        //   1. comunes        B03, B04, B01, B_CC
+        //   2. profesionales  B05, B06, B07, B_CP
+        //   3. horas extra    B08
+        //   4. base del IRPF  B09
+        PERSISTED_WITH_A_PAYSLIP_ORDER.put("BASE", 10);
+        PERSISTED_WITH_A_PAYSLIP_ORDER.put("DEDUCTION", 6);        // 700, 701, 702, 703, 704, 800
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("EARNING", 3);          // 101, 102, 103
-        PERSISTED_WITH_A_PAYSLIP_ORDER.put("INFORMATIONAL", 5);    // 720 a 724
+        PERSISTED_WITH_A_PAYSLIP_ORDER.put("INFORMATIONAL", 6);    // 720 a 724 y 726
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("NET_PAY", 1);          // 990
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("TOTAL_DEDUCTION", 1);  // 980
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("TOTAL_EARNING", 1);    // 970
@@ -127,9 +132,9 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
      */
     private static final List<String> PERSISTED_BUT_NOT_PAINTED = List.of();
 
-    /** Los cinco de la aportación empresarial, que son la divergencia entera. */
+    /** Los seis de la aportación empresarial, que son la divergencia entera. */
     private static final List<String> THE_KNOWN_DIVERGENCE =
-            List.of("720", "721", "722", "723", "724");
+            List.of("720", "721", "722", "723", "724", "726");
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -160,46 +165,59 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
      * es lo que aquella frase escondía: <b>cuáles de los {@code BASE} se imprimen</b>, porque no
      * son todos y la diferencia no se ve mirando la naturaleza.
      *
-     * <p>Se imprimen dos: {@code B_CC}, la base de cotización contra la que cotizan el trabajador
-     * y la empresa, y {@code B01}, la base sujeta a retención del IRPF. No se imprimen
-     * {@code B_CC_MAX} —un paso intermedio entre las dos— ni {@code P01}, {@code P02} y
-     * {@code P03}, que son <b>precios</b> y llevan naturaleza {@code BASE} sólo porque el motor
-     * los usa como operando {@code BASE}. Un cuarto concepto en esta lista es, casi seguro, uno
-     * de esos precios colado en el recuadro de las bases.
+     * <p>Desde el {@code backend#121} se imprimen <b>diez</b>, los del recuadro del modelo
+     * oficial, y están elegidos uno a uno: cuatro del bloque de contingencias comunes
+     * ({@code B03}, {@code B04}, {@code B01}, {@code B_CC}), cuatro del de profesionales
+     * ({@code B05}, {@code B06}, {@code B07}, {@code B_CP}), la base de horas extraordinarias
+     * ({@code B08}) y la sujeta a retención del IRPF ({@code B09}).
+     *
+     * <p>No se imprimen los dos pasos intermedios de los topes —{@code B_CC_MAX} y
+     * {@code B_CP_MAX}—, porque entre una base y su base topada no hay nada que un técnico tenga
+     * que ver; ni {@code B02}, que desde la {@code V148} sale sumada con el {@code 103} dentro
+     * del {@code B04}; ni {@code P01}, {@code P02} y {@code P03}, que son <b>precios</b> y llevan
+     * naturaleza {@code BASE} sólo porque el motor los usa como operando {@code BASE}. Un
+     * undécimo concepto en esta lista es, casi seguro, uno de esos precios colado en el recuadro.
      *
      * <p>{@code TECHNICAL} sigue sin llevar ninguno, y eso no ha cambiado: un concepto técnico no
      * va al papel.
      */
     @Test
-    void onlyTheTwoBasesOfTheOfficialBlockArePrinted_andNoTechnicalConceptIs() {
-        assertEquals(Map.of("BASE", 3), censusByNature("BASE", "TECHNICAL"),
+    void onlyTheBasesOfTheOfficialBlockArePrinted_andNoTechnicalConceptIs() {
+        assertEquals(Map.of("BASE", 10), censusByNature("BASE", "TECHNICAL"),
                 """
                 Ha cambiado que conceptos BASE o TECHNICAL llevan orden de recibo.
 
-                Del recuadro de bases se imprimen TRES y estan elegidos uno a uno: B02 (la \
-                prorrata de pagas extras que cotiza y no se paga, V146), B_CC (base de cotizacion) \
-                y B01 (base cotizable, V139).
+                Del recuadro de bases se imprimen DIEZ y estan elegidos uno a uno: los cuatro de \
+                contingencias comunes (B03, B04, B01, B_CC), los cuatro de profesionales (B05, \
+                B06, B07, B_CP), la base de horas extraordinarias (B08) y la sujeta a retencion \
+                del IRPF (B09).
 
-                Si han subido a cuatro o mas, mira si lo que has anadido es una base de verdad o \
+                Si han subido a once o mas, mira si lo que has anadido es una base de verdad o \
                 uno de los precios: P01, P02 y P03 llevan naturaleza BASE porque el motor los usa \
-                como operando BASE, y no son bases de cotizacion. B_CC_MAX tampoco: es el paso \
-                intermedio entre B01 y B_CC y en el papel no hay nada entre los dos.
+                como operando BASE, y no son bases de cotizacion. B_CC_MAX y B_CP_MAX tampoco: \
+                son los pasos intermedios de los topes y en el papel no hay nada entre una base y \
+                su base topada.
 
                 Si aparece un TECHNICAL, lo mas probable es que le hayas dado orden de recibo a \
                 un concepto tecnico sin querer.""");
 
-        // 410 es B_CC y 430 es B01: el orden del modelo oficial, primero la base de cotizacion y
-        // despues la sujeta a retencion. Sale del payslip_order_code y no del codigo del
-        // concepto, que aqui es una letra y no ordena.
-        assertEquals(List.of("405", "410", "430"), conceptsWithPayslipOrderOfNature("BASE"),
+        // La decena 4xx es la del recuadro de bases; la unidad dice en que bloque va la linea y
+        // en que sitio del bloque. Sale del payslip_order_code y no del codigo del concepto, que
+        // aqui empieza por letra y no ordena.
+        assertEquals(
+                List.of("401", "402", "403", "404", "411", "412", "413", "414", "421", "431"),
+                conceptsWithPayslipOrderOfNature("BASE"),
                 """
-                Los ordenes de recibo de los BASE ya no son 405, 410 y 430.
+                Los ordenes de recibo de los BASE ya no son los diez del modelo oficial (V148):
 
-                Los puso la V139 —410 para B_CC (base de cotizacion) y 430 para B01 (base \
-                cotizable)— y la V146 anadio el 405 para B02, la prorrata que cotiza: va delante \
-                de la base de contingencias comunes porque es uno de los sumandos con los que se \
-                forma, que es el orden del modelo oficial. La decena 4xx es la del recuadro de \
-                bases y no significa otra cosa en este catalogo.""");
+                  401 B03  Remuneracion mensual          411 B05  Base de contingencias comunes
+                  402 B04  Prorrata de pagas extras      412 B06  Horas extraordinarias
+                  403 B01  Base de cotizacion            413 B07  Base de cotizacion
+                  404 B_CC Base tras topes               414 B_CP Base tras topes
+                  421 B08  Base                          431 B09  Base
+
+                Cada bloque se lee de arriba abajo y cierra con la base sobre la que se cotiza de \
+                verdad. Si estos numeros se mueven, el recuadro deja de leerse como una suma.""");
     }
 
     /**
@@ -236,8 +254,9 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
 
         assertEquals(THE_KNOWN_DIVERGENCE, conceptsWithPayslipOrderOfNature("INFORMATIONAL"),
                 """
-                Los conceptos INFORMATIONAL con orden de recibo ya no son los cinco de la \
-                aportacion empresarial (720 a 724).
+                Los conceptos INFORMATIONAL con orden de recibo ya no son los seis de la \
+                aportacion empresarial (720 a 724 y el 726, la cotizacion adicional por horas \
+                extraordinarias a cargo de la empresa).
 
                 Si has anadido uno, comprueba que de verdad es aportacion de empresa y que el \
                 folio no tiene que pintarlo. Si has quitado uno, el recuadro del pie que algun \
@@ -245,8 +264,8 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
     }
 
     /**
-     * Y las dos particiones, puestas una al lado de la otra: se persisten 20 y se pintan
-     * <b>20</b>.
+     * Y las dos particiones, puestas una al lado de la otra: se persisten 29 y se pintan
+     * <b>29</b>.
      *
      * <p>Eran 15 y 10 hasta el {@code b4rrhh/frontend#76}: los cinco que faltaban eran la
      * aportación empresarial, y que los dos números coincidan es el resultado de aquel issue —lo
@@ -266,22 +285,28 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
      * prorrata de pagas extras: el {@code 103} entre los devengos y el {@code B02} en el
      * recuadro de bases.
      *
+     * <p>Y eran veinte hasta el {@code backend#121}, que puso las <b>tres bases</b> del modelo
+     * oficial: siete líneas nuevas en el recuadro —y el {@code B02} sale de él, porque entra
+     * sumado con el {@code 103} dentro del {@code B04}— más las dos cuotas de la cotización
+     * adicional por horas extraordinarias, el {@code 704} del trabajador y el {@code 726} de la
+     * empresa.
+     *
      * <b>Pintable no es impreso</b>: en un recibo sin horas el {@code 102} vale cero y la regla
      * del cero no lo imprime, y de las dos puertas de la prorrata siempre hay una que vale cero
      * y tampoco sale. Este censo no lo sabe ni tiene por qué saberlo — habla del catálogo.
      */
     @Test
-    void twentyAreKeptAndTwentyArePainted() {
+    void twentyNineAreKeptAndTwentyNineArePainted() {
         int persisted = censusByNature().values().stream().mapToInt(Integer::intValue).sum();
         int painted = censusByNature().entrySet().stream()
                 .filter(entry -> PAINTED_BY_THE_PAYSLIP.contains(entry.getKey()))
                 .mapToInt(Map.Entry::getValue)
                 .sum();
 
-        assertEquals(20, persisted, "conceptos con sitio en el recibo");
-        assertEquals(20, painted,
+        assertEquals(29, persisted, "conceptos con sitio en el recibo");
+        assertEquals(29, painted,
                 """
-                Los conceptos que el folio pinta han dejado de ser veinte.
+                Los conceptos que el folio pinta han dejado de ser veintinueve.
 
                 Persistidos y pintados siguen siendo dos criterios distintos —el sitio lo da \
                 payslip_order_code y el bloque lo da la seccion declarada en la V138— y desde el \

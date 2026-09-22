@@ -38,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * ({@code backend#97}).
  *
  * <p>Sobre ESP y no sobre TST, por lo mismo que el
- * {@code EveryCalculatedConceptIsKeptIntegrationTest}: los recuentos que afirma —50 pasos y 65—
+ * {@code EveryCalculatedConceptIsKeptIntegrationTest}: los recuentos que afirma —65 pasos y 80—
  * son los de la reglamentacion que siembran las migraciones, y un fixture con quince conceptos de
  * mentira no probaria el numero que hay que probar.
  *
@@ -68,7 +68,7 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
     private static final LocalDate JANUARY_1 = LocalDate.of(2025, 1, 1);
 
     /** Los pasos de un empleado de mes entero: uno por cada concepto del catalogo ESP. */
-    private static final int STEPS_IN_A_WHOLE_MONTH = 50;
+    private static final int STEPS_IN_A_WHOLE_MONTH = 65;
 
     /**
      * Y los de uno del mes partido: los conceptos de ambito SEGMENT se evaluan una vez por tramo.
@@ -87,8 +87,13 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
      * <p>Y 50 y 65 desde el {@code backend#119}: siete conceptos mas, seis de ellos {@code SEGMENT}.
      * De esos siete, dos SI son linea —las dos puertas de la prorrata— y el recibo pasa a tener 18,
      * porque de las dos solo se imprime la que no vale cero.
+     *
+     * <p>Y 65 y 80 desde el {@code backend#121}: las tres bases del modelo oficial son quince
+     * conceptos mas y los quince son {@code PERIOD}, asi que anaden quince pasos al mes entero y
+     * los mismos quince al partido. La diferencia entre los dos numeros no se mueve: sigue siendo
+     * los quince {@code SEGMENT} evaluados una vez de mas.
      */
-    private static final int STEPS_IN_A_SPLIT_MONTH = 65;
+    private static final int STEPS_IN_A_SPLIT_MONTH = 80;
 
     /**
      * Los pasos que llevan orden de recibo: los que PUEDEN ser linea.
@@ -97,9 +102,12 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
      * {@code 102} lleva orden de recibo como cualquier devengo. Fueron 17 desde el
      * {@code backend#111}, que imprimio el recuadro de bases: {@code B_CC} y {@code B01} se
      * calculaban desde siempre y ahora ademas llevan orden. Y son 18 desde el
-     * {@code backend#114}, que le dio total propio al recuadro de aportacion empresarial.
+     * {@code backend#114}, que le dio total propio al recuadro de aportacion empresarial. Y son
+     * 29 desde el {@code backend#121}: el recuadro de bases pasa de tres lineas a las diez del
+     * modelo oficial, y las horas extraordinarias estrenan sus dos cuotas de cotizacion
+     * adicional, la del trabajador y la de la empresa.
      */
-    private static final int STEPS_WITH_A_PAYSLIP_ORDER = 20;
+    private static final int STEPS_WITH_A_PAYSLIP_ORDER = 29;
 
     /**
      * Y las lineas que el folio acaba imprimiendo, que ya no son las mismas.
@@ -119,8 +127,14 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
      * UNA —la otra vale cero—, asi que el catalogo sube de dos en dos y el recibo de uno en uno.
      * Este empleado no tiene vertical de regimen, o sea que no prorratea, y lo que sale es el
      * {@code B02} en el recuadro de bases.
+     *
+     * <p>Y 23 desde el {@code backend#121}: el recuadro pasa de tres lineas a diez, pero este
+     * empleado no tiene horas extra, asi que las cinco que cuelgan de ellas valen cero y no se
+     * imprimen —el {@code 102}, su base {@code B08}, la linea {@code B06} con la que entra en la
+     * base profesional y las dos cuotas {@code 704} y {@code 726}—. El {@code B02} tampoco sale
+     * ya por su cuenta: entra sumado en el {@code B04}.
      */
-    private static final int PAYSLIP_LINES = 18;
+    private static final int PAYSLIP_LINES = 23;
 
     private static final String STEPS_URL =
             "/payrolls/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}"
@@ -181,7 +195,7 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
                 "select count(*) from payroll.payroll_concept where payroll_id = ?",
                 Integer.class, payrollId(emp)), "lineas de recibo");
 
-        // Y los 21 que no llegan al folio estan servidos, que es la explicacion entera.
+        // Y los que no llegan al folio estan servidos, que es la explicacion entera.
         List<Object> naturalezas = column(steps, "functionalNature");
         assertTrue(naturalezas.contains("BASE"), "los BASE estan: son de donde sale el numero");
         assertTrue(naturalezas.contains("TECHNICAL"), "y los TECHNICAL tambien");
@@ -232,7 +246,7 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
      * <p>El escenario se fabrica borrando los pasos de un recibo recien calculado, que es
      * exactamente el estado en que esta hoy la semilla entera: 873 recibos calculados antes de que
      * la tabla existiera. La lista vacia no puede leerse como «este recibo no tiene conceptos», y
-     * no se rellena derivandola de {@code payroll_concept}: sus 18 lineas no son 50 pasos.
+     * no se rellena derivandola de {@code payroll_concept}: sus 23 lineas no son 65 pasos.
      */
     @Test
     @WithMockUser(roles = "ADMIN")

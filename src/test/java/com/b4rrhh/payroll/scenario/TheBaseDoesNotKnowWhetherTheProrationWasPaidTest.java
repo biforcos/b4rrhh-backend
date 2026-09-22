@@ -98,12 +98,21 @@ class TheBaseDoesNotKnowWhetherTheProrationWasPaidTest {
         assertNotEquals(importe(noProrrateado, "800"), importe(prorrateado, "800"),
                 "y la retencion tambien: se retiene sobre lo que se paga, no sobre lo que cotiza");
 
-        // Y cada uno ensena UNA de las dos lineas, no las dos ni ninguna. La que sobra vale cero
-        // y la regla del cero no la imprime (backend#104).
-        assertEquals(List.of("103"), lineasDeProrrata(prorrateado),
-                "al prorrateado se le imprime la prorrata entre los devengos");
-        assertEquals(List.of("B02"), lineasDeProrrata(noProrrateado),
-                "y al otro, en el recuadro de bases");
+        // Y a cada uno le entra por UNA de las dos puertas, no por las dos ni por ninguna.
+        assertEquals(List.of("103"), puertasConImporte(prorrateado),
+                "al prorrateado la prorrata le entra por los devengos, que es donde se le paga");
+        assertEquals(List.of("B02"), puertasConImporte(noProrrateado),
+                "y al otro por la puerta que solo cotiza");
+
+        // Y el recuadro de bases ensena la misma linea a los dos: la prorrata del mes, venga por
+        // donde venga. Antes del backend#121 imprimia el B02, o sea la prorrata SOLO a quien no la
+        // cobra; a quien la cobra no le salia ninguna, porque su B02 vale cero.
+        assertEquals(List.of("B04"), lineasDeProrrataEnElRecuadro(prorrateado),
+                "el recuadro de bases ensena una linea de prorrata");
+        assertEquals(List.of("B04"), lineasDeProrrataEnElRecuadro(noProrrateado),
+                "y la misma, en los dos regimenes");
+        assertEquals(importe(noProrrateado, "B04"), importe(prorrateado, "B04"),
+                "y con el mismo importe, que es la invariante de este paso vista en el papel");
     }
 
     /**
@@ -140,7 +149,7 @@ class TheBaseDoesNotKnowWhetherTheProrationWasPaidTest {
         fixtures.insertExtraPaymentRegime(empId, true, APRIL_16, null);
         Long partido = reciboDe(emp);
 
-        assertEquals(List.of("103", "B02"), lineasDeProrrata(partido),
+        assertEquals(List.of("103", "B02"), puertasConImporte(partido),
                 "las dos puertas en el mismo recibo, una por tramo");
 
         // Y la suma de las dos es la prorrata entera del mes: lo que cambia es por donde entra,
@@ -257,11 +266,32 @@ class TheBaseDoesNotKnowWhetherTheProrationWasPaidTest {
     }
 
     /** Que lineas de prorrata acabaron impresas en el recibo. */
-    private List<String> lineasDeProrrata(Long payrollId) {
+    /**
+     * Las puertas por las que entro la prorrata en este recibo: las que valen algo.
+     *
+     * <p>Miraba las <b>lineas</b> del recibo, y desde el {@code backend#121} eso ya no sirve para
+     * el {@code B02}: el recuadro de bases imprime una sola linea de prorrata —el {@code B04},
+     * que suma las dos puertas— en vez de la puerta que toque. Eso es justo lo que aquel issue
+     * arreglo, porque el recuadro le ensenaba la prorrata a quien no la cobra y no a quien si.
+     *
+     * <p>Lo que este test afirma no cambia: las puertas siguen siendo dos, sigue entrando por
+     * UNA de las dos en cada tramo, y la base sigue sin enterarse. Se mira en el paso, que es
+     * donde el hecho vive; la regla del cero es de la impresion y tiene su propio test.
+     */
+    private List<String> puertasConImporte(Long payrollId) {
+        return jdbc.queryForList(
+                "select concept_code from payroll.payroll_calculation_step"
+                        + " where payroll_id = ? and concept_code in ('103', 'B02') and amount <> 0"
+                        + " group by concept_code order by concept_code",
+                String.class, payrollId);
+    }
+
+    /** Lo que el recuadro de bases ensena como prorrata: una linea, y la misma en los dos regimenes. */
+    private List<String> lineasDeProrrataEnElRecuadro(Long payrollId) {
         return jdbc.queryForList(
                 "select concept_code from payroll.payroll_concept"
-                        + " where payroll_id = ? and concept_code in ('103', 'B02')"
-                        + " order by concept_code",
+                        + " where payroll_id = ? and concept_code in ('103', 'B02', 'B04')"
+                        + "   and payslip_section_code = 'BASES' order by concept_code",
                 String.class, payrollId);
     }
 }
