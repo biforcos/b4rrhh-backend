@@ -126,13 +126,21 @@ class EachBaseIsClampedByItsOwnLimitsTest {
     }
 
     /**
-     * El suelo de contingencias comunes muerde, y la base de profesionales arranca de ahi.
+     * El suelo de contingencias comunes muerde, y <b>la base de profesionales no se entera</b>.
      *
-     * <p>Media jornada deja la base por debajo del minimo del grupo. Sin el {@code GREATEST} la
-     * base se quedaria en lo devengado y las cuatro cuotas de comunes bajarian con ella.
+     * <p>Media jornada deja la base por debajo del minimo del grupo. Sin el {@code GREATEST} de
+     * la cadena de comunes, la base de comunes se quedaria en lo devengado y las cuatro cuotas de
+     * comunes bajarian con ella.
+     *
+     * <p>Y la otra mitad, que es la que este test existe para sujetar desde la correccion del
+     * {@code backend#121}: <b>las bases minimas por grupo son solo de contingencias comunes</b>.
+     * La de profesionales se determina con las mismas normas —remuneracion mas prorrata mas horas
+     * extraordinarias— y se limita por el tope minimo y el maximo, no por el minimo del grupo
+     * (Orden PJC/297/2026, arts. 1.2 y 2.2). Apoyarla en la de comunes ya topada le metia por la
+     * puerta de atras un minimo que no le toca.
      */
     @Test
-    void whenTheCommonFloorBitesTheProfessionalBaseStartsFromTheFlooredValue() {
+    void whenTheCommonFloorBitesTheProfessionalBaseDoesNotInheritIt() {
         Long recibo = reciboDe(empleadoAMediaJornadaConHorasExtra());
 
         BigDecimal devengada = importe(recibo, "B01");
@@ -143,8 +151,48 @@ class EachBaseIsClampedByItsOwnLimitsTest {
         assertEquals(0, topada.compareTo(new BigDecimal("1323.00")),
                 "y el suelo es la base minima del grupo 05");
 
-        assertEquals(0, importe(recibo, "B_CP").compareTo(topada.add(importe(recibo, "102"))),
-                "la base de profesionales arranca de la de comunes YA topada, no de lo devengado");
+        assertEquals(0, importe(recibo, "B05").compareTo(devengada),
+                () -> "el apartado 2 arranca de la base COTIZABLE y no de la topada: B05="
+                        + importe(recibo, "B05") + " tiene que ser B01=" + devengada
+                        + " y no B_CC=" + topada);
+        assertEquals(0, importe(recibo, "B07").compareTo(devengada.add(importe(recibo, "102"))),
+                "y la suma del apartado 2 es esa base mas las horas extraordinarias");
+    }
+
+    /**
+     * El caso que no se puede arreglar sumando horas: un grupo alto por debajo de su minimo.
+     *
+     * <p>El grupo 01 tiene la base minima mas alta del catalogo —1.847,40— y el tope minimo de
+     * cotizacion es mucho menor. Un salario por debajo de ese minimo deja <b>la base de
+     * profesionales por DEBAJO de la de comunes</b>, y ninguna cantidad de horas extra las
+     * iguala.
+     *
+     * <p>Es el caso que el cableado anterior no podia dar: con {@code B05 = B_CC}, la base
+     * profesional era la de comunes mas algo, o sea siempre mayor o igual. Rojo con aquel
+     * cableado y verde con este.
+     */
+    @Test
+    void aHighGroupBelowItsOwnMinimumHasAProfessionalBaseLowerThanTheCommonOne() {
+        Long recibo = reciboDe(empleadoDelGrupo01ConLaBaseEntreLosDosMinimos());
+
+        BigDecimal cotizable     = importe(recibo, "B01");
+        BigDecimal comunes       = importe(recibo, "B_CC");
+        BigDecimal profesionales = importe(recibo, "B_CP");
+
+        assertEquals(0, comunes.compareTo(new BigDecimal("1847.40")),
+                () -> "el escenario tiene que tocar el minimo del grupo 01 o no prueba nada:"
+                        + " B01=" + cotizable + " B_CC=" + comunes);
+        assertTrue(cotizable.compareTo(comunes) < 0, "y quedarse por debajo de el");
+        assertTrue(cotizable.compareTo(new BigDecimal("1323.00")) > 0,
+                () -> "y POR ENCIMA del tope minimo de profesionales, o el suelo mordería"
+                        + " tambien ahi y el caso dejaria de distinguir: B01=" + cotizable);
+
+        assertEquals(0, profesionales.compareTo(cotizable),
+                () -> "sin horas extra, la base de profesionales es la base cotizable: B_CP="
+                        + profesionales + " tiene que ser " + cotizable);
+        assertTrue(profesionales.compareTo(comunes) < 0,
+                () -> "y queda POR DEBAJO de la de comunes, que es lo que el cableado anterior no"
+                        + " podia dar: B_CP=" + profesionales + " B_CC=" + comunes);
     }
 
     /**
@@ -210,6 +258,17 @@ class EachBaseIsClampedByItsOwnLimitsTest {
 
     private String empleadoDelGrupo01() {
         return empleado(new BigDecimal("100.00"), CATEGORIA_GRUPO_01);
+    }
+
+    /**
+     * Grupo 01 al 60 % de jornada, que es la ventana que hace falta: su remuneracion queda
+     * <b>entre</b> el tope minimo de cotizacion (1.323,00) y la base minima de su grupo
+     * (1.847,40), asi que el suelo de comunes muerde y el de profesionales no.
+     *
+     * <p>A media jornada no valdria: la base caeria por debajo de los dos y las dos subirian.
+     */
+    private String empleadoDelGrupo01ConLaBaseEntreLosDosMinimos() {
+        return empleado(new BigDecimal("60.00"), CATEGORIA_GRUPO_01);
     }
 
     private String conHorasExtra(String emp, BigDecimal horas) {

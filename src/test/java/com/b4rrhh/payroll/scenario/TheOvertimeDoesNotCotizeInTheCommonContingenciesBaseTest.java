@@ -28,9 +28,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>Que el modelo oficial tiene <b>tres</b> bases y que cada cuota lee la suya:
  *
  * <pre>
- *   comunes        B_CC = topes(remuneracion mensual + prorrata)   → 700, 702, 720, 724
- *   profesionales  B_CP = topes(B_CC + horas extra)                → 701, 703, 721, 722, 723
+ *   comunes        B_CC = topes(B01)                              → 700, 702, 720, 724
+ *   profesionales  B_CP = topes(B01 + horas extra)                → 701, 703, 721, 722, 723
  *   horas extra    B08  = horas extra                              → 704, 726
+ *
+ *   B01 = remuneracion mensual + prorrata
  * </pre>
  *
  * <p>El motor tenia una sola, montada en la {@code V88} para poder jugar con los topes, y las
@@ -100,10 +102,15 @@ class TheOvertimeDoesNotCotizeInTheCommonContingenciesBaseTest {
                         + ". Si sobran " + horasExtra + " es que las horas extra siguen"
                         + " alimentando B01, que es el defecto del backend#121");
 
-        assertEquals(0, baseProfesionales.compareTo(baseComunesTopada.add(horasExtra)),
-                () -> "la base de profesionales es la de comunes ya topada mas las horas extra:"
-                        + " B_CP=" + baseProfesionales + " B_CC=" + baseComunesTopada
-                        + " 102=" + horasExtra);
+        assertEquals(0, baseProfesionales.compareTo(baseComunes.add(horasExtra)),
+                () -> "la base de profesionales es la COTIZABLE mas las horas extra, no la de"
+                        + " comunes ya topada: las bases minimas por grupo son solo de comunes"
+                        + " (backend#121). B_CP=" + baseProfesionales + " B01=" + baseComunes
+                        + " B_CC=" + baseComunesTopada + " 102=" + horasExtra);
+        assertTrue(baseComunes.compareTo(baseComunesTopada) == 0,
+                "en este escenario no muerde ningun tope, asi que las dos coinciden y la"
+                        + " comprobacion de arriba no distingue: el caso que las separa esta en"
+                        + " EachBaseIsClampedByItsOwnLimitsTest");
 
         assertEquals(0, importe(recibo, "B08").compareTo(horasExtra),
                 "la tercera base es el importe de las horas extra, sin topes");
@@ -179,8 +186,8 @@ class TheOvertimeDoesNotCotizeInTheCommonContingenciesBaseTest {
         assertEquals(0, importe(recibo, "B07").compareTo(
                         importe(recibo, "B05").add(importe(recibo, "B06"))),
                 "2. profesionales: base de comunes + horas extraordinarias = base de cotizacion");
-        assertEquals(0, importe(recibo, "B05").compareTo(importe(recibo, "B_CC")),
-                "2. profesionales: la base de comunes entra ya topada");
+        assertEquals(0, importe(recibo, "B05").compareTo(importe(recibo, "B01")),
+                "2. profesionales: el apartado arranca de la base cotizable, no de la topada");
         assertEquals(0, importe(recibo, "B08").compareTo(importe(recibo, "102")),
                 "3. horas extraordinarias: la base es el importe de las horas extra");
         assertEquals(0, importe(recibo, "B09").compareTo(importe(recibo, "970")),

@@ -24,15 +24,36 @@ una base donde deberían estar tres.
 | base | qué es | topes | la leen |
 |---|---|---|---|
 | **contingencias comunes** (`B_CC`) | remuneración mensual **sin horas extra** + prorrata de pagas | mín. y máx. **del grupo de cotización** | `700`, `702`, `720`, `724` |
-| **contingencias profesionales y recaudación conjunta** (`B_CP`) | la de comunes **ya topada** + horas extra | máximo el mismo; mínimo el **tope mínimo de cotización**, que no es el del grupo | `701`, `703`, `721`, `722`, `723`, y el AT/EP del `backend#122` |
+| **contingencias profesionales y recaudación conjunta** (`B_CP`) | la **base cotizable** (`B01`) + horas extra | máximo el mismo; mínimo el **tope mínimo de cotización**, que no es el del grupo | `701`, `703`, `721`, `722`, `723`, y el AT/EP del `backend#122` |
 | **horas extraordinarias** (`B08`) | el importe de las horas extra | **ninguno** | `704` (4,70 % trabajador) y `726` (23,60 % empresa) |
 
 El MEI (`702`, `724`) cotiza sobre la base de **comunes**, y por eso se queda donde estaba. El resto
 de la recaudación conjunta —desempleo, formación profesional, FOGASA— cambia de base.
 
-**En un recibo sin horas extra no se mueve ni un céntimo**: `B_CP = B_CC + 0`. Ésa es la propiedad
-que hace que el cambio sea seguro y, a la vez, la razón por la que un test cómodo no prueba nada:
-las tres bases sólo se distinguen cuando hay horas extra.
+**En un recibo sin horas extra y sin ningún tope que muerda no se mueve ni un céntimo**: las dos
+bases valen lo mismo. Ésa es la propiedad que hace que el cambio sea seguro y, a la vez, la razón
+por la que un test cómodo no prueba nada: las tres bases sólo se distinguen cuando hay horas extra
+**o cuando un tope muerde**.
+
+### Las bases mínimas por grupo son sólo de contingencias comunes
+
+Esto se corrigió después de la primera implementación y es la parte que conviene mirar dos veces.
+La `V148` apoyó el apartado 2 del recuadro en la base de comunes **ya topada** (`B05 = B_CC`), y
+la Orden de cotización no dice eso: la base de contingencias profesionales se determina con las
+mismas normas que la de comunes —remuneración mensual, prorrata y horas extraordinarias— y se
+limita por el **tope mínimo** y el **tope máximo**. Las bases mínimas **por grupo** son de
+contingencias comunes y de nadie más (Orden PJC/297/2026, arts. 1.2 y 2.2).
+
+Apoyarla en la de comunes ya topada le metía por la puerta de atrás un mínimo que no le toca, y no
+se veía porque en la inmensa mayoría de los recibos ningún tope muerde y las dos coinciden. Donde
+se ve es en un grupo alto por debajo de su propio mínimo: con 1.480,08 de base cotizable, un grupo
+01 cotiza por comunes sobre 1.847,40 —su mínimo— y por profesionales sobre **1.480,08**. Ahí la
+base profesional queda **por debajo** de la común, que es algo que el cableado anterior no podía
+producir: sumaba horas a la común, así que siempre salía mayor o igual.
+
+La `V151` lo arregla cambiando una sola alimentación —`B05` lee `B01` y no `B_CC`— y el literal de
+esa línea, que pasa a decir «Base de contingencias comunes antes de topes»: en el bloque de arriba
+están las dos magnitudes y se parecen.
 
 ### Los topes se declaran por contingencia
 
@@ -95,11 +116,11 @@ ocho sin que ninguno se llame ya como el modelo.
   el `702`, el `720`, el `724` (bajan), el `980`, el `990` y el `725`. Los 618 sin horas no mueven
   ningún importe.
 - Las cuotas de recaudación conjunta (`701`, `703`, `721`, `722`, `723`) **no se mueven** salvo
-  cuando un tope muerde: sin topes, `B_CP = B_CC + horas` es la `B01` de antes.
+  cuando un tope muerde: sin topes, `B_CP = B01 + horas` es la base de antes.
 - El catálogo `ESP` pasa de 50 conceptos a 65, y de 20 líneas posibles de recibo a 29. El recibo de
   un empleado sin horas extra pasa de 18 líneas a 23.
-- **El recibo más largo de la semilla ya no cabe en una hoja A4**: 31 líneas. Es una decisión de
-  maqueta pendiente y está anotada donde se ve, en el test que lo vigila.
+- **El recibo más largo de la semilla ya no cabe en una hoja A4**: 31 líneas. Es maqueta y no
+  consecuencia del cálculo, y va por su cuenta en el `backend#125`.
 - El motor sabe declarar **un nivel de agrupación dentro de un bloque**, que es lo que el modelo
   oficial pide y no tenía.
 
