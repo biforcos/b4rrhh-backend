@@ -11,6 +11,7 @@ public record UpdateCompanyCommand(
         String city,
         String postalCode,
         String regionCode,
-        String countryCode
+        String countryCode,
+        String cnaeCode
 ) {
 }

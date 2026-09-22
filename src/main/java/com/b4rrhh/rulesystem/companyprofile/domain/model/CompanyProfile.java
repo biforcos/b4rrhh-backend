@@ -8,7 +8,7 @@ public class CompanyProfile {
     private static final int CITY_MAX_LENGTH = 120;
     private static final int POSTAL_CODE_MAX_LENGTH = 20;
     private static final int REGION_CODE_MAX_LENGTH = 30;
-    private static final int EPIGRAFE_AT_CODE_MAX_LENGTH = 10;
+    private static final int CNAE_CODE_MAX_LENGTH = 10;
 
     private final String legalName;
     private final String taxIdentifier;
@@ -17,7 +17,19 @@ public class CompanyProfile {
     private final String postalCode;
     private final String regionCode;
     private final String countryCode;
-    private final String epigrafeAtCode;
+    /**
+     * La actividad economica de la empresa, en CNAE ({@code backend#122}).
+     *
+     * <p>Se llamaba {@code epigrafeAtCode} y el nombre estaba mal: el «epigrafe» es la tarifa de
+     * primas anterior a 2007 y hoy no significa nada. Lo que la Seguridad Social usa desde
+     * entonces para cotizar por accidentes de trabajo es el codigo CNAE de la actividad, y ese es
+     * el dato que se guarda aqui.
+     *
+     * <p>Es una propiedad de la EMPRESA y no de la nomina: de el sale el tipo de la cuota de
+     * accidentes de trabajo y enfermedad profesional, buscando en la tarifa de primas la entrada
+     * mas especifica que lo cubra.
+     */
+    private final String cnaeCode;
 
     public CompanyProfile(
             String legalName,
@@ -27,7 +39,7 @@ public class CompanyProfile {
             String postalCode,
             String regionCode,
             String countryCode,
-            String epigrafeAtCode
+            String cnaeCode
     ) {
         this.legalName = normalizeRequiredText("legalName", legalName, LEGAL_NAME_MAX_LENGTH);
         this.taxIdentifier = normalizeOptionalText("taxIdentifier", taxIdentifier, TAX_IDENTIFIER_MAX_LENGTH);
@@ -36,7 +48,7 @@ public class CompanyProfile {
         this.postalCode = normalizeOptionalText("postalCode", postalCode, POSTAL_CODE_MAX_LENGTH);
         this.regionCode = normalizeOptionalCode("regionCode", regionCode, REGION_CODE_MAX_LENGTH);
         this.countryCode = normalizeOptionalCode(countryCode);
-        this.epigrafeAtCode = normalizeOptionalText("epigrafeAtCode", epigrafeAtCode, EPIGRAFE_AT_CODE_MAX_LENGTH);
+        this.cnaeCode = normalizeOptionalText("cnaeCode", cnaeCode, CNAE_CODE_MAX_LENGTH);
     }
 
     public CompanyProfile update(
@@ -47,7 +59,7 @@ public class CompanyProfile {
             String postalCode,
             String regionCode,
             String countryCode,
-            String epigrafeAtCode
+            String cnaeCode
     ) {
         return new CompanyProfile(
                 legalName,
@@ -57,7 +69,7 @@ public class CompanyProfile {
                 postalCode,
                 regionCode,
                 countryCode,
-                epigrafeAtCode
+                cnaeCode
         );
     }
 
@@ -89,8 +101,8 @@ public class CompanyProfile {
         return countryCode;
     }
 
-    public String getEpigrafeAtCode() {
-        return epigrafeAtCode;
+    public String getCnaeCode() {
+        return cnaeCode;
     }
 
     private String normalizeRequiredText(String fieldName, String value, int maxLength) {

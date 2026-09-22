@@ -5,6 +5,6 @@ public record CompanyProfileResponse(
         String legalName,
         String taxIdentifier,
         CompanyProfileAddressResponse address,
-        String epigrafeAtCode
+        String cnaeCode
 ) {
 }

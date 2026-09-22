@@ -4,6 +4,6 @@ public record UpsertCompanyProfileRequest(
         String legalName,
         String taxIdentifier,
         CompanyProfileAddressRequest address,
-        String epigrafeAtCode
+        String cnaeCode
 ) {
 }

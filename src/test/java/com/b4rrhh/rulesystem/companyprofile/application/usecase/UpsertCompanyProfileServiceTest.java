@@ -188,7 +188,7 @@ class UpsertCompanyProfileServiceTest {
     }
 
     @Test
-    void storesEpigrafeAtCodeWhenProvided() {
+    void storesCnaeCodeWhenProvided() {
         when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COMPANY", "ACME", LocalDate.now()))
                 .thenReturn(Optional.of(ruleEntity(10L, "ESP", "COMPANY", "ACME")));
         when(companyProfileRepository.findByCompanyRuleEntityId(10L)).thenReturn(Optional.empty());
@@ -202,7 +202,7 @@ class UpsertCompanyProfileServiceTest {
                 null, null, null, null, "ESP", "6210"
         ));
 
-        assertEquals("6210", result.getEpigrafeAtCode());
+        assertEquals("6210", result.getCnaeCode());
     }
 
     private RuleEntity ruleEntity(Long id, String ruleSystemCode, String ruleEntityTypeCode, String code) {

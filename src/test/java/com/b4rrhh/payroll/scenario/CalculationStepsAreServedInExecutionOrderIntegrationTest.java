@@ -38,7 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * ({@code backend#97}).
  *
  * <p>Sobre ESP y no sobre TST, por lo mismo que el
- * {@code EveryCalculatedConceptIsKeptIntegrationTest}: los recuentos que afirma —65 pasos y 80—
+ * {@code EveryCalculatedConceptIsKeptIntegrationTest}: los recuentos que afirma —67 pasos y 82—
  * son los de la reglamentacion que siembran las migraciones, y un fixture con quince conceptos de
  * mentira no probaria el numero que hay que probar.
  *
@@ -68,7 +68,7 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
     private static final LocalDate JANUARY_1 = LocalDate.of(2025, 1, 1);
 
     /** Los pasos de un empleado de mes entero: uno por cada concepto del catalogo ESP. */
-    private static final int STEPS_IN_A_WHOLE_MONTH = 65;
+    private static final int STEPS_IN_A_WHOLE_MONTH = 67;
 
     /**
      * Y los de uno del mes partido: los conceptos de ambito SEGMENT se evaluan una vez por tramo.
@@ -92,8 +92,11 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
      * conceptos mas y los quince son {@code PERIOD}, asi que anaden quince pasos al mes entero y
      * los mismos quince al partido. La diferencia entre los dos numeros no se mueve: sigue siendo
      * los quince {@code SEGMENT} evaluados una vez de mas.
+     *
+     * <p>Y 67 y 82 desde el {@code backend#122}: la cuota de accidentes de trabajo y su tipo, los
+     * dos {@code PERIOD}.
      */
-    private static final int STEPS_IN_A_SPLIT_MONTH = 80;
+    private static final int STEPS_IN_A_SPLIT_MONTH = 82;
 
     /**
      * Los pasos que llevan orden de recibo: los que PUEDEN ser linea.
@@ -105,9 +108,10 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
      * {@code backend#114}, que le dio total propio al recuadro de aportacion empresarial. Y son
      * 29 desde el {@code backend#121}: el recuadro de bases pasa de tres lineas a las diez del
      * modelo oficial, y las horas extraordinarias estrenan sus dos cuotas de cotizacion
-     * adicional, la del trabajador y la de la empresa.
+     * adicional, la del trabajador y la de la empresa. Y son 30 desde el {@code backend#122},
+     * que anade la de accidentes de trabajo.
      */
-    private static final int STEPS_WITH_A_PAYSLIP_ORDER = 29;
+    private static final int STEPS_WITH_A_PAYSLIP_ORDER = 30;
 
     /**
      * Y las lineas que el folio acaba imprimiendo, que ya no son las mismas.
@@ -133,8 +137,11 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
      * imprimen —el {@code 102}, su base {@code B08}, la linea {@code B06} con la que entra en la
      * base profesional y las dos cuotas {@code 704} y {@code 726}—. El {@code B02} tampoco sale
      * ya por su cuenta: entra sumado en el {@code B04}.
+     *
+     * <p>Y 24 desde el {@code backend#122}: la cuota de accidentes de trabajo vale algo en
+     * cualquier recibo con presencia, asi que sube los dos recuentos a la vez.
      */
-    private static final int PAYSLIP_LINES = 23;
+    private static final int PAYSLIP_LINES = 24;
 
     private static final String STEPS_URL =
             "/payrolls/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}"
@@ -246,7 +253,7 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
      * <p>El escenario se fabrica borrando los pasos de un recibo recien calculado, que es
      * exactamente el estado en que esta hoy la semilla entera: 873 recibos calculados antes de que
      * la tabla existiera. La lista vacia no puede leerse como «este recibo no tiene conceptos», y
-     * no se rellena derivandola de {@code payroll_concept}: sus 23 lineas no son 65 pasos.
+     * no se rellena derivandola de {@code payroll_concept}: sus 24 lineas no son 67 pasos.
      */
     @Test
     @WithMockUser(roles = "ADMIN")

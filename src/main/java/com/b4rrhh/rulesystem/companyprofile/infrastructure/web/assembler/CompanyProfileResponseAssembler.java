@@ -20,7 +20,7 @@ public class CompanyProfileResponseAssembler {
                         companyProfile.getRegionCode(),
                         companyProfile.getCountryCode()
                 ),
-                companyProfile.getEpigrafeAtCode()
+                companyProfile.getCnaeCode()
         );
     }
 

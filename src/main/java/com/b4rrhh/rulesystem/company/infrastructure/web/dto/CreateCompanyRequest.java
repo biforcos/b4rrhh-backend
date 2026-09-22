@@ -10,6 +10,7 @@ public record CreateCompanyRequest(
         LocalDate startDate,
         String legalName,
         String taxIdentifier,
-        CompanyAddressRequest address
+        CompanyAddressRequest address,
+        String cnaeCode
 ) {
 }

@@ -92,7 +92,7 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("BASE", 10);
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("DEDUCTION", 6);        // 700, 701, 702, 703, 704, 800
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("EARNING", 3);          // 101, 102, 103
-        PERSISTED_WITH_A_PAYSLIP_ORDER.put("INFORMATIONAL", 6);    // 720 a 724 y 726
+        PERSISTED_WITH_A_PAYSLIP_ORDER.put("INFORMATIONAL", 7);    // 720 a 724, 726 y 727
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("NET_PAY", 1);          // 990
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("TOTAL_DEDUCTION", 1);  // 980
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("TOTAL_EARNING", 1);    // 970
@@ -132,9 +132,9 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
      */
     private static final List<String> PERSISTED_BUT_NOT_PAINTED = List.of();
 
-    /** Los seis de la aportación empresarial, que son la divergencia entera. */
+    /** Los siete de la aportación empresarial, que son la divergencia entera. */
     private static final List<String> THE_KNOWN_DIVERGENCE =
-            List.of("720", "721", "722", "723", "724", "726");
+            List.of("720", "721", "722", "723", "724", "726", "727");
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -254,9 +254,9 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
 
         assertEquals(THE_KNOWN_DIVERGENCE, conceptsWithPayslipOrderOfNature("INFORMATIONAL"),
                 """
-                Los conceptos INFORMATIONAL con orden de recibo ya no son los seis de la \
-                aportacion empresarial (720 a 724 y el 726, la cotizacion adicional por horas \
-                extraordinarias a cargo de la empresa).
+                Los conceptos INFORMATIONAL con orden de recibo ya no son los siete de la \
+                aportacion empresarial: 720 a 724, el 726 (cotizacion adicional por horas \
+                extraordinarias) y el 727 (accidentes de trabajo y enfermedades profesionales).
 
                 Si has anadido uno, comprueba que de verdad es aportacion de empresa y que el \
                 folio no tiene que pintarlo. Si has quitado uno, el recuadro del pie que algun \
@@ -264,8 +264,8 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
     }
 
     /**
-     * Y las dos particiones, puestas una al lado de la otra: se persisten 29 y se pintan
-     * <b>29</b>.
+     * Y las dos particiones, puestas una al lado de la otra: se persisten 30 y se pintan
+     * <b>30</b>.
      *
      * <p>Eran 15 y 10 hasta el {@code b4rrhh/frontend#76}: los cinco que faltaban eran la
      * aportación empresarial, y que los dos números coincidan es el resultado de aquel issue —lo
@@ -296,17 +296,17 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
      * y tampoco sale. Este censo no lo sabe ni tiene por qué saberlo — habla del catálogo.
      */
     @Test
-    void twentyNineAreKeptAndTwentyNineArePainted() {
+    void thirtyAreKeptAndThirtyArePainted() {
         int persisted = censusByNature().values().stream().mapToInt(Integer::intValue).sum();
         int painted = censusByNature().entrySet().stream()
                 .filter(entry -> PAINTED_BY_THE_PAYSLIP.contains(entry.getKey()))
                 .mapToInt(Map.Entry::getValue)
                 .sum();
 
-        assertEquals(29, persisted, "conceptos con sitio en el recibo");
-        assertEquals(29, painted,
+        assertEquals(30, persisted, "conceptos con sitio en el recibo");
+        assertEquals(30, painted,
                 """
-                Los conceptos que el folio pinta han dejado de ser veintinueve.
+                Los conceptos que el folio pinta han dejado de ser treinta.
 
                 Persistidos y pintados siguen siendo dos criterios distintos —el sitio lo da \
                 payslip_order_code y el bloque lo da la seccion declarada en la V138— y desde el \

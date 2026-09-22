@@ -199,6 +199,16 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         String grupoCotizacionCode = categoryProfile.getGrupoCotizacionCode();
         String tipoNomina = categoryProfile.getTipoNomina().name();
 
+        // La actividad economica de la empresa, una vez por unidad y no una por tramo
+        // (backend#122). De ella sale el tipo de la cuota de accidentes de trabajo, que es el
+        // unico de este catalogo que no es el mismo para todo el mundo. Nula si la empresa no la
+        // declara: quien la necesita es quien tiene que decir que falta.
+        String cnaeCode = input.companyCode() == null ? null
+                : companyProfileLookupPort
+                        .findByRuleSystemAndCode(command.ruleSystemCode(), input.companyCode())
+                        .map(CompanyProfileContext::cnaeCode)
+                        .orElse(null);
+
         EmployeeAssignmentContext assignmentContext = new EmployeeAssignmentContext(
                 command.ruleSystemCode(),
                 input.companyCode(),
@@ -298,7 +308,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     grupoCotizacionCode,
                     tipoNomina,
                     precalculoPorContexto.get(claveDePrecalculo(seg)).importes(),
-                    seg.vigencias().extraPaymentsProrated()
+                    seg.vigencias().extraPaymentsProrated(),
+                    cnaeCode
             ));
             segmentStates.add(new SegmentExecutionState());
         }
@@ -310,7 +321,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 precalculoPorContexto.get(claveDePrecalculo(segments.getLast()));
         SegmentCalculationContext periodContext = periodContext(
                 command, segments, daysInPeriod, monthlySalary, employeeInputsForPeriod,
-                grupoCotizacionCode, tipoNomina, precalculoDelPeriodo.importes());
+                grupoCotizacionCode, tipoNomina, precalculoDelPeriodo.importes(), cnaeCode);
         SegmentExecutionState periodState = new SegmentExecutionState();
 
         // Una travesia y una proyeccion (backend#93). El recorrido arma un paso por evaluacion
@@ -696,7 +707,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             Map<String, BigDecimal> employeeInputsForPeriod,
             String grupoCotizacionCode,
             String tipoNomina,
-            Map<String, BigDecimal> precomputedDirectAmounts
+            Map<String, BigDecimal> precomputedDirectAmounts,
+            String cnaeCode
     ) {
         long daysCovered = segments.stream().mapToLong(SegmentSpec::daysInSegment).sum();
         BigDecimal weightedWorkingTime = BigDecimal.ZERO;
@@ -726,7 +738,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 // Lo que es del PERIODO se resuelve con el ultimo tramo, como todo lo demas. La
                 // prorrata no lo usa —sus dos conceptos son de tramo, que es donde el regimen
                 // significa algo—, pero el contexto no puede quedarse sin contestar.
-                segments.getLast().vigencias().extraPaymentsProrated()
+                segments.getLast().vigencias().extraPaymentsProrated(),
+                cnaeCode
         );
     }
 

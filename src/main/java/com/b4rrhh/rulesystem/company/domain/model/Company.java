@@ -16,6 +16,14 @@ public record Company(
         String city,
         String postalCode,
         String regionCode,
-        String countryCode
+        String countryCode,
+        /**
+         * La actividad economica de la empresa, en CNAE ({@code backend#122}).
+         *
+         * <p>Llega hasta aqui porque se ve y se edita en la pantalla de la empresa, que es donde
+         * un tecnico de nominas lo busca. De el sale el tipo de la cuota de accidentes de
+         * trabajo.
+         */
+        String cnaeCode
 ) {
 }

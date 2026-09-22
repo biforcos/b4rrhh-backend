@@ -153,11 +153,13 @@ class TheOvertimeDoesNotCotizeInTheCommonContingenciesBaseTest {
                 "la cotizacion adicional de la empresa es el 23,60 %");
 
         // La de la empresa no descuenta del liquido: suma en el total de aportacion empresarial.
-        assertEquals(0, importe(recibo, "725").compareTo(
-                        importe(recibo, "720").add(importe(recibo, "721")).add(importe(recibo, "722"))
-                                .add(importe(recibo, "723")).add(importe(recibo, "724"))
-                                .add(importe(recibo, "726"))),
-                "el 725 suma sus seis sumandos, el 726 incluido");
+        BigDecimal aportacion = BigDecimal.ZERO;
+        for (String cuota : new String[] {"720", "721", "722", "723", "724", "726", "727"}) {
+            aportacion = aportacion.add(importe(recibo, cuota));
+        }
+        assertEquals(0, importe(recibo, "725").compareTo(aportacion),
+                "el 725 suma sus sumandos, el 726 de horas extraordinarias y el 727 de accidentes"
+                        + " de trabajo incluidos");
     }
 
     /**

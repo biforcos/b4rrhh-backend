@@ -34,7 +34,7 @@ public class CompanyProfilePersistenceAdapter implements CompanyProfileRepositor
         entity.setPostalCode(companyProfile.getPostalCode());
         entity.setRegionCode(companyProfile.getRegionCode());
         entity.setCountryCode(companyProfile.getCountryCode());
-        entity.setEpigrafeAtCode(companyProfile.getEpigrafeAtCode());
+        entity.setCnaeCode(companyProfile.getCnaeCode());
 
         CompanyProfileEntity saved = springDataCompanyProfileRepository.save(entity);
         return toDomain(saved);
@@ -49,7 +49,7 @@ public class CompanyProfilePersistenceAdapter implements CompanyProfileRepositor
                 entity.getPostalCode(),
                 entity.getRegionCode(),
                 entity.getCountryCode(),
-                entity.getEpigrafeAtCode()
+                entity.getCnaeCode()
         );
     }
 }

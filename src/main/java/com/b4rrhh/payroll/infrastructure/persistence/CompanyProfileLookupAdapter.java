@@ -32,7 +32,8 @@ public class CompanyProfileLookupAdapter implements CompanyProfileLookupPort {
                         cp.getTaxIdentifier(),
                         cp.getStreet(),
                         cp.getCity(),
-                        cp.getPostalCode()
+                        cp.getPostalCode(),
+                        cp.getCnaeCode()
                 ));
     }
 }

@@ -50,7 +50,16 @@ public final class SegmentCalculationContext {
     private final String tipoNomina;
     private final Map<String, BigDecimal> precomputedDirectAmounts;
     private final boolean extraPaymentsProrated;
+    private final String cnaeCode;
 
+    /**
+     * Sin la actividad economica de la empresa, que es opcional y casi ningun calculo mira
+     * ({@code backend#122}).
+     *
+     * <p>La necesita el tipo de accidentes de trabajo y nadie mas. Un contexto construido sin ella
+     * calcula todo lo demas igual; lo que no puede es resolver esa cuota, y entonces la corrida
+     * falla diciendo que falta, que es lo correcto.
+     */
     public SegmentCalculationContext(
             String ruleSystemCode,
             String employeeTypeCode,
@@ -70,6 +79,33 @@ public final class SegmentCalculationContext {
             String tipoNomina,
             Map<String, BigDecimal> precomputedDirectAmounts,
             boolean extraPaymentsProrated
+    ) {
+        this(ruleSystemCode, employeeTypeCode, employeeNumber, periodStart, periodEnd,
+                segmentStart, segmentEnd, firstSegment, lastSegment, daysInPeriod, daysInSegment,
+                workingTimePercentage, monthlySalaryAmount, employeeInputs, grupoCotizacionCode,
+                tipoNomina, precomputedDirectAmounts, extraPaymentsProrated, null);
+    }
+
+    public SegmentCalculationContext(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber,
+            LocalDate periodStart,
+            LocalDate periodEnd,
+            LocalDate segmentStart,
+            LocalDate segmentEnd,
+            boolean firstSegment,
+            boolean lastSegment,
+            long daysInPeriod,
+            long daysInSegment,
+            BigDecimal workingTimePercentage,
+            BigDecimal monthlySalaryAmount,
+            Map<String, BigDecimal> employeeInputs,
+            String grupoCotizacionCode,
+            String tipoNomina,
+            Map<String, BigDecimal> precomputedDirectAmounts,
+            boolean extraPaymentsProrated,
+            String cnaeCode
     ) {
         requireNonBlank(ruleSystemCode, "ruleSystemCode");
         requireNonBlank(employeeTypeCode, "employeeTypeCode");
@@ -118,6 +154,10 @@ public final class SegmentCalculationContext {
         this.tipoNomina = tipoNomina;
         this.precomputedDirectAmounts = Map.copyOf(precomputedDirectAmounts);
         this.extraPaymentsProrated = extraPaymentsProrated;
+        // Puede venir nulo, y no se valida: es opcional en el perfil de la empresa y hay empresas
+        // sin el. Quien lo necesita -el tipo de accidentes de trabajo- es quien tiene que decir
+        // que le falta, y decirlo con el codigo de la empresa dentro (backend#122).
+        this.cnaeCode = cnaeCode;
     }
 
     public String getRuleSystemCode() { return ruleSystemCode; }
@@ -137,6 +177,17 @@ public final class SegmentCalculationContext {
     public String getGrupoCotizacionCode() { return grupoCotizacionCode; }
     public String getTipoNomina() { return tipoNomina; }
     public Map<String, BigDecimal> getPrecomputedDirectAmounts() { return precomputedDirectAmounts; }
+
+    /**
+     * La actividad economica de la empresa del empleado, en CNAE ({@code backend#122}).
+     *
+     * <p>Se resuelve una vez por unidad de calculo y viaja por el contexto por lo mismo que el
+     * grupo de cotizacion: es un dato del que dependen tipos, no un calculo. De el sale el tipo
+     * de la cuota de accidentes de trabajo, buscando en la tarifa de primas.
+     *
+     * <p><b>Puede ser nulo</b>: el perfil de la empresa no lo exige y hay empresas sin el.
+     */
+    public String getCnaeCode() { return cnaeCode; }
 
     /**
      * Si en este tramo las pagas extras del empleado se prorratean ({@code backend#118}).

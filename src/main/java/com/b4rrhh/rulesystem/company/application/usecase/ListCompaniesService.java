@@ -62,6 +62,7 @@ public class ListCompaniesService implements ListCompaniesUseCase {
         String postalCode = profile.map(CompanyProfile::getPostalCode).orElse(null);
         String regionCode = profile.map(CompanyProfile::getRegionCode).orElse(null);
         String countryCode = profile.map(CompanyProfile::getCountryCode).orElse(null);
+        String cnaeCode = profile.map(CompanyProfile::getCnaeCode).orElse(null);
 
         return new Company(
                 companyEntity.getRuleSystemCode(),
@@ -77,7 +78,8 @@ public class ListCompaniesService implements ListCompaniesUseCase {
                 city,
                 postalCode,
                 regionCode,
-                countryCode
+                countryCode,
+                cnaeCode
         );
     }
 }

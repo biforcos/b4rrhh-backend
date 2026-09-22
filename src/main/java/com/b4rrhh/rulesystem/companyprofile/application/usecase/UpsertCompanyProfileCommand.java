@@ -10,6 +10,6 @@ public record UpsertCompanyProfileCommand(
         String postalCode,
         String regionCode,
         String countryCode,
-        String epigrafeAtCode
+        String cnaeCode
 ) {
 }

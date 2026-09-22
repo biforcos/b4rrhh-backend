@@ -26,7 +26,8 @@ public class CompanyResponseAssembler {
                         company.postalCode(),
                         company.regionCode(),
                         company.countryCode()
-                )
+                ),
+                company.cnaeCode()
         );
     }
 

@@ -69,7 +69,10 @@ public class UpdateCompanyService implements UpdateCompanyUseCase {
                 command.postalCode(),
                 command.regionCode(),
                 countryCode,
-                null
+                // Con null aqui, editar una empresa le borraba el CNAE. Mientras la columna no la
+                // leia nadie eso no se notaba; desde el backend#122 le quita a sus empleados la
+                // cuota de accidentes de trabajo y hace fallar la corrida siguiente.
+                command.cnaeCode()
         );
 
         CompanyProfile savedProfile = companyProfileRepository.save(savedCompanyEntity.getId(), updatedProfile);
@@ -101,7 +104,8 @@ public class UpdateCompanyService implements UpdateCompanyUseCase {
                 companyProfile.getCity(),
                 companyProfile.getPostalCode(),
                 companyProfile.getRegionCode(),
-                companyProfile.getCountryCode()
+                companyProfile.getCountryCode(),
+                companyProfile.getCnaeCode()
         );
     }
 

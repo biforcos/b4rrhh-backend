@@ -13399,8 +13399,14 @@ cotización a `SEGMENT` sin entender esto, el recorte deja de cuadrar.
    —hay que decidir su naturaleza, si alimenta al 980 y qué sitio ocupa en el folio— y nada de eso
    estaba decidido. El catálogo ESP pasa de 36 conceptos a 35, y los 35 entran en algún plan. El
    recuento de pasos de un recibo no se movió: 35 en un mes entero y 39 en uno del mes partido.
-4. **No hay accidentes de trabajo (725).** Requiere la tarifa por CNAE de cada empresa; queda
-   aplazado explícitamente desde V88.
+4. ~~**No hay accidentes de trabajo (725).** Requiere la tarifa por CNAE de cada empresa; queda
+   aplazado explícitamente desde V88.~~
+   **Cerrado el 22/09/2026 (`backend#122`).** La `V150` renombra `epigrafe_at_code` a `cnae_code`
+   —el «epígrafe» es la tarifa anterior a 2007—, crea `payroll_engine.ss_tarifa_primas_at` con su
+   vigencia y su cita, y declara el concepto `727`, que cotiza sobre la base de contingencias
+   profesionales del `backend#121` y suma en el `725`. La numeración de aquel aplazamiento se
+   quedó vieja por el camino: el `725` es el **total** de la aportación empresarial desde la
+   `V141`, así que la cuota de accidentes es el `727`.
 5. **`B01` solo se alimenta del salario base.** Falta la prorrata de pagas extra y cualquier
    otro devengo cotizable. Mientras eso siga así, la base de cotización de esta nómina no es
    la real.
@@ -13427,7 +13433,7 @@ cotización a `SEGMENT` sin entender esto, el recorte deja de cuadrar.
 | 1 | `ss_cotizacion_tipos` no la lee nadie; los tipos son constantes Java | los 10 `*RateCalculator` |
 | 2 | IRPF fijo al 15 %, con `employee.tax_information` ya disponible | `IrpfWithholdingRateCalculator` |
 | 3 | ~~`P_SS` y `SsContributionRateCalculator` muertos desde V91~~ — retirados en la `V130` (`backend#96`) | `payroll_engine` |
-| 4 | Sin AT/EP (725): falta tarifa CNAE por empresa | V88, aplazado |
+| 4 | ~~Sin AT/EP (725): falta tarifa CNAE por empresa~~ — cerrada en la `V150` (`backend#122`), y el concepto es el `727` | `payroll_engine.ss_tarifa_primas_at` |
 | 5 | `B01` incompleta: sin prorrata de extras ni otros devengos cotizables | grafo de feeds |
 
 ---

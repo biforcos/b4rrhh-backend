@@ -198,7 +198,8 @@ class CompanyControllerHttpTest {
                 "Madrid",
                 "28013",
                 "MD",
-                "ESP"
+                "ESP",
+                "4719"
         );
     }
 }

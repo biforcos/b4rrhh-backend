@@ -91,7 +91,7 @@ public class CreateCompanyService implements CreateCompanyUseCase {
                 command.postalCode(),
                 command.regionCode(),
                 countryCode,
-                null
+                command.cnaeCode()
         );
 
         Company savedProfile = toCompany(savedCompanyEntity, companyProfileRepository.save(savedCompanyEntity.getId(), companyProfile));
@@ -113,7 +113,8 @@ public class CreateCompanyService implements CreateCompanyUseCase {
                 companyProfile.getCity(),
                 companyProfile.getPostalCode(),
                 companyProfile.getRegionCode(),
-                companyProfile.getCountryCode()
+                companyProfile.getCountryCode(),
+                companyProfile.getCnaeCode()
         );
     }
 

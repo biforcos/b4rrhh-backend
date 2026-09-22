@@ -82,8 +82,12 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * pagas, la prorrata, los dos coeficientes de regimen y las dos puertas— porque el
      * regimen puede cambiar a mitad de mes; el septimo, los meses del ano, es
      * {@code PERIOD}: doce son doce en un mes partido tambien.
+     *
+     * <p>Y eran 50 y 15 hasta el {@code backend#121}: las tres bases del modelo oficial son
+     * quince conceptos mas, los quince {@code PERIOD}. Y 65 hasta el {@code backend#122}, que
+     * anade la cuota de accidentes de trabajo y el tipo del que sale.
      */
-    private static final int CONCEPTS_IN_THE_ENGINE = 65;
+    private static final int CONCEPTS_IN_THE_ENGINE = 67;
     private static final int SEGMENT_SCOPED_CONCEPTS = 15;
 
     /**
@@ -99,7 +103,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * Declarar tres si: desde el backend#104 son 38 y 42, desde el backend#47 son 38 y 43, y desde
      * el backend#114 son 39 y 44 — cambiar un ambito no anade conceptos, anade evaluaciones.
      */
-    private static final int CONCEPTS_IN_A_PLAN = 65;
+    private static final int CONCEPTS_IN_A_PLAN = 67;
 
     /**
      * Los conceptos con orden de recibo: los que PUEDEN ser linea.
@@ -109,7 +113,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * se calculaban desde siempre y ahora ademas salen en el papel. Y son 18 desde el
      * backend#114, que le dio total propio al recuadro de aportacion empresarial.
      */
-    private static final int CONCEPTS_WITH_A_PAYSLIP_ORDER = 29;
+    private static final int CONCEPTS_WITH_A_PAYSLIP_ORDER = 30;
 
     /**
      * Y las lineas que un empleado sin horas extra acaba teniendo en el folio, que son 16.
@@ -125,7 +129,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * el backend#114 por lo mismo: la aportacion empresarial vale algo en cualquier recibo con
      * presencia, y su total tambien.
      */
-    private static final int PAYSLIP_LINES_WITHOUT_OVERTIME = 23;
+    private static final int PAYSLIP_LINES_WITHOUT_OVERTIME = 24;
 
     @Autowired
     private LaunchPayrollCalculationUseCase launch;
@@ -200,10 +204,11 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
         assertEquals(22, countStepsWithNature(pid, "BASE"),
                 "conceptos BASE: los 13 de antes del backend#121 mas los nueve de las tres bases"
                         + " — B03, B04, B05, B06, B07, B_CP_MAX, B_CP, B08 y B09");
-        assertEquals(23, countStepsWithNature(pid, "TECHNICAL"),
-                "conceptos TECHNICAL: los 19 de antes mas los cuatro del backend#121 — los dos"
+        assertEquals(24, countStepsWithNature(pid, "TECHNICAL"),
+                "conceptos TECHNICAL: los 19 de antes, los cuatro del backend#121 —los dos"
                         + " topes de la base profesional y los dos tipos de la cotizacion"
-                        + " adicional por horas extraordinarias");
+                        + " adicional por horas extraordinarias— y el tipo de accidentes de"
+                        + " trabajo del backend#122, que sale de la actividad de la empresa");
 
         // El recibo tiene 18 lineas: las 17 de antes mas la prorrata que cotiza, que es la puerta
         // que le toca a este empleado. Siguen sin ser TODOS los pasos con orden de recibo: hay 20,

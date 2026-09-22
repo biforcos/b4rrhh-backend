@@ -12,6 +12,7 @@ public record CompanyResponse(
         boolean active,
         String legalName,
         String taxIdentifier,
-        CompanyAddressResponse address
+        CompanyAddressResponse address,
+        String cnaeCode
 ) {
 }

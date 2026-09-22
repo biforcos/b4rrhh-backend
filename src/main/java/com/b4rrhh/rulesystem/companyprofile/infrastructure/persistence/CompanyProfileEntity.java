@@ -51,8 +51,8 @@ public class CompanyProfileEntity {
     @Column(name = "country_code", columnDefinition = "char(3)", length = 3)
     private String countryCode;
 
-    @Column(name = "epigrafe_at_code", length = 10)
-    private String epigrafeAtCode;
+    @Column(name = "cnae_code", length = 10)
+    private String cnaeCode;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -148,12 +148,12 @@ public class CompanyProfileEntity {
         this.countryCode = countryCode;
     }
 
-    public String getEpigrafeAtCode() {
-        return epigrafeAtCode;
+    public String getCnaeCode() {
+        return cnaeCode;
     }
 
-    public void setEpigrafeAtCode(String v) {
-        this.epigrafeAtCode = v;
+    public void setCnaeCode(String v) {
+        this.cnaeCode = v;
     }
 
     public LocalDateTime getCreatedAt() {

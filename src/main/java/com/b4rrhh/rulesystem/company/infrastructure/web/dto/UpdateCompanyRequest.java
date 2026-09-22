@@ -5,6 +5,7 @@ public record UpdateCompanyRequest(
         String description,
         String legalName,
         String taxIdentifier,
-        CompanyAddressRequest address
+        CompanyAddressRequest address,
+        String cnaeCode
 ) {
 }

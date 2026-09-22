@@ -14,6 +14,7 @@ public record CreateCompanyCommand(
         String city,
         String postalCode,
         String regionCode,
-        String countryCode
+        String countryCode,
+        String cnaeCode
 ) {
 }

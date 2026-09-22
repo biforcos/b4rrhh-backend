@@ -22,5 +22,12 @@ public record TechnicalConceptSegmentData(
          * {@code concept_assignment} no sabria contestar dos cosas distintas en el mismo recibo
          * (ADR-070).
          */
-        boolean extraPaymentsProrated
+        boolean extraPaymentsProrated,
+        /**
+         * La actividad economica de la empresa del empleado, en CNAE ({@code backend#122}).
+         *
+         * <p>Puede ser nula. La lee {@code AtEpRateCalculator} para buscar el tipo en la tarifa
+         * de primas; ningun otro calculador la necesita, y por eso no se valida aqui.
+         */
+        String cnaeCode
 ) {}

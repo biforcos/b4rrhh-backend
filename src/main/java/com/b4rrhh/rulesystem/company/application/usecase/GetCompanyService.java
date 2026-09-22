@@ -71,7 +71,8 @@ public class GetCompanyService implements GetCompanyUseCase {
                 companyProfile.getCity(),
                 companyProfile.getPostalCode(),
                 companyProfile.getRegionCode(),
-                companyProfile.getCountryCode()
+                companyProfile.getCountryCode(),
+                companyProfile.getCnaeCode()
         );
     }
 

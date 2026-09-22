@@ -177,11 +177,23 @@ public class PayrollScenarioFixtures {
      * employee.presence no tiene clave ajena al motivo (#2).
      */
     public long insertPresence(long employeeId, int presenceNumber, LocalDate startDate, LocalDate endDate) {
+        return insertPresence(employeeId, presenceNumber, "ES01", startDate, endDate);
+    }
+
+    /**
+     * Una presencia en la empresa que se le diga ({@code backend#122}).
+     *
+     * <p>Hace falta para el caso que aquel issue existe para arreglar: dos empleados identicos en
+     * empresas con actividad economica distinta cotizan distinto por accidentes de trabajo. Con
+     * la empresa fija no se puede montar, y sin montarlo un tipo escrito a mano pasa por bueno.
+     */
+    public long insertPresence(long employeeId, int presenceNumber, String companyCode,
+                               LocalDate startDate, LocalDate endDate) {
         jdbc.update(
                 "insert into employee.presence" +
                 " (employee_id, presence_number, company_code, entry_reason_code, start_date, end_date, created_at, updated_at)" +
                 " values (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                employeeId, presenceNumber, "ES01", "HIRING", startDate, endDate);
+                employeeId, presenceNumber, companyCode, "HIRING", startDate, endDate);
         return jdbc.queryForObject(
                 "select id from employee.presence where employee_id = ? and presence_number = ?",
                 Long.class, employeeId, presenceNumber);
@@ -370,6 +382,32 @@ public class PayrollScenarioFixtures {
                 " (rule_system_code, grupo_code, period_type, base_min, base_max, valid_from, valid_to)" +
                 " values (?, ?, ?, ?, ?, DATE '2025-01-01', null)",
                 ruleSystemCode, "05", "MENSUAL", baseMin, baseMax);
+    }
+
+    /** La actividad economica de una empresa, en CNAE ({@code backend#122}). */
+    public void setCompanyCnae(String ruleSystemCode, String companyCode, String cnaeCode) {
+        jdbc.update(
+                "update rulesystem.company_profile set cnae_code = ?, updated_at = CURRENT_TIMESTAMP" +
+                " where company_rule_entity_id = (" +
+                "   select id from rulesystem.rule_entity" +
+                "    where rule_system_code = ? and rule_entity_type_code = 'COMPANY' and code = ?)",
+                cnaeCode, ruleSystemCode, companyCode);
+    }
+
+    /**
+     * Una entrada de la tarifa de primas de accidentes de trabajo ({@code backend#122}).
+     *
+     * <p>Los tipos que se le pasen son de laboratorio y no una afirmacion sobre la norma: la
+     * tarifa de verdad, con su cita, esta en la {@code V150}. Lo que un test necesita es que dos
+     * entradas den dos numeros distintos y que se vea cual gana.
+     */
+    public void seedTarifaPrimaAt(String ruleSystemCode, String cnaeCode,
+                                  BigDecimal tipoIt, BigDecimal tipoIms) {
+        jdbc.update(
+                "insert into payroll_engine.ss_tarifa_primas_at" +
+                " (rule_system_code, cnae_code, activity_name, tipo_it, tipo_ims, valid_from, valid_to)" +
+                " values (?, ?, ?, ?, ?, DATE '2025-01-01', null)",
+                ruleSystemCode, cnaeCode, "Actividad de laboratorio " + cnaeCode, tipoIt, tipoIms);
     }
 
     /** Cambia el precio diario pleno de la categoria del fixture (la fila de P02). */

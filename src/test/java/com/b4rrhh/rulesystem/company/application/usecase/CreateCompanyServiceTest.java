@@ -97,7 +97,8 @@ class CreateCompanyServiceTest {
                 "Madrid",
                 "28013",
                 "MD",
-                "ESP"
+                "ESP",
+                "4719"
         ));
 
         ArgumentCaptor<RuleEntity> entityCaptor = ArgumentCaptor.forClass(RuleEntity.class);
@@ -143,6 +144,7 @@ class CreateCompanyServiceTest {
                 null,
                 LocalDate.of(2026, 1, 1),
                 "Acme Spain SA",
+                null,
                 null,
                 null,
                 null,
