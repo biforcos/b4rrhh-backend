@@ -16942,6 +16942,26 @@ Lo que `B01` sigue siendo es la **base de cotización**, que es lo que dice su n
 - `B01` y `970` dejan de ser intercambiables. Quien escriba un concepto nuevo tiene que elegir cuál
   lee, y ya no es una pregunta sin consecuencias.
 
+### La única puerta al líquido es el `970`
+
+La prorrata pagada alimenta `970` y `B01`, y **no** `990`. Es la regla que la `V77` dejó puesta al
+retirar el `101 → 990` —«replaced by `970 → 990`»— y que este paso hereda sin discutirla: **un
+devengo llega al líquido por el total devengado y por ningún otro sitio. Nada se enchufa al `990`
+directamente.**
+
+No es una preferencia de estilo. Un agregado suma lo que le alimenta, así que un concepto que le
+llegue por dos caminos —directo y por dentro de otro alimentador— se cuenta dos veces, y el importe
+sale mal sin que nada falle: no hay excepción, no hay ciclo, no hay concepto sin calcular. Sale un
+número, y es el número equivocado. Le pasó al `102`: la `V133` declaró `102 → 970` y `102 → 990` a
+la vez y dejó el líquido en `101 + 2 × 102 − 980`, que son 245 de los 863 recibos de la demo
+(`backend#120`, `V147`).
+
+La regla la guarda `NoTotalAddsTheSameConceptTwiceTest`, que mira el catálogo y no un recibo. Hace
+falta un candado estructural por dos razones: la regla es invisible desde donde se rompe —quien
+declara un concepto nuevo escribe una línea de alimentación, no el grafo— y **un recibo sin ese
+concepto cumple la identidad con el defecto puesto**, así que un test sobre el caso normal da verde
+igual. Es exactamente lo que pasó.
+
 ## Lo que sigue fuera
 
 - **Pagar la extra en su mes** y las partes proporcionales del finiquito: necesitan la maquinaria
