@@ -55,11 +55,12 @@ class ARateChangeMidYearMovesTheReceiptWithoutTouchingCodeTest {
     private static final String EMPLOYEE_TYPE = "INTERNAL";
     private static final String PAYROLL_TYPE  = "NORMAL";
 
-    private static final LocalDate JANUARY_1 = LocalDate.of(2025, 1, 1);
-    private static final LocalDate JULY_1    = LocalDate.of(2025, 7, 1);
-    private static final LocalDate JUNE_30   = LocalDate.of(2025, 6, 30);
+    private static final LocalDate JANUARY_1   = LocalDate.of(2025, 1, 1);
+    private static final LocalDate JULY_1      = LocalDate.of(2025, 7, 1);
+    private static final LocalDate JUNE_30     = LocalDate.of(2025, 6, 30);
+    private static final LocalDate DECEMBER_31 = LocalDate.of(2025, 12, 31);
 
-    /** Un tipo que no existe ni en la V88 ni en ninguna constante: si sale, sale de la fila. */
+    /** Un tipo que no existe ni en la V153 ni en ninguna constante: si sale, sale de la fila. */
     private static final BigDecimal SECOND_HALF_RATE = new BigDecimal("9.99");
 
     @Autowired
@@ -90,7 +91,7 @@ class ARateChangeMidYearMovesTheReceiptWithoutTouchingCodeTest {
 
         Map<String, Object> april = calculateAndReadCcTrabajador(emp, "202504");
         assertEquals(0, new BigDecimal("4.70").compareTo((BigDecimal) april.get("rate")),
-                "en abril manda la vigencia sembrada por la V88");
+                "en abril manda la vigencia de 2025 sembrada por la V153");
 
         // La ley cambia a mitad de ano: se cierra la fila vigente y se anade otra. Sin tocar
         // codigo, que es la frase entera de este issue.
@@ -132,12 +133,19 @@ class ARateChangeMidYearMovesTheReceiptWithoutTouchingCodeTest {
 
     // ── helpers ──────────────────────────────────────────────────────────────
 
+    /**
+     * Deja la fila de 2025 como la siembra la V153 —abierta el 1 de enero y cerrada el 31 de
+     * diciembre— y quita la que este test inventa. Desde el {@code backend#123} el catalogo tiene
+     * un ejercicio por fila, asi que «restaurar» no puede ser abrir todas las filas: eso dejaria
+     * 2024, 2025 y 2026 solapadas.
+     */
     private void restoreTheSeededRate() {
         jdbc.update("delete from payroll_engine.ss_cotizacion_tipos"
-                        + " where rule_system_code = ? and contingency_code = 'CC_TRAB' and valid_from > ?",
-                RULE_SYSTEM, JANUARY_1);
-        jdbc.update("update payroll_engine.ss_cotizacion_tipos set valid_to = null"
-                + " where rule_system_code = ? and contingency_code = 'CC_TRAB'", RULE_SYSTEM);
+                        + " where rule_system_code = ? and contingency_code = 'CC_TRAB' and valid_from = ?",
+                RULE_SYSTEM, JULY_1);
+        jdbc.update("update payroll_engine.ss_cotizacion_tipos set valid_to = ?"
+                        + " where rule_system_code = ? and contingency_code = 'CC_TRAB' and valid_from = ?",
+                DECEMBER_31, RULE_SYSTEM, JANUARY_1);
     }
 
     private void declareASecondVigencia() {
@@ -146,7 +154,8 @@ class ARateChangeMidYearMovesTheReceiptWithoutTouchingCodeTest {
                 JUNE_30, RULE_SYSTEM, JANUARY_1);
         jdbc.update("insert into payroll_engine.ss_cotizacion_tipos"
                 + " (rule_system_code, contingency_code, rate, valid_from, valid_to)"
-                + " values (?, 'CC_TRAB', ?, ?, null)", RULE_SYSTEM, SECOND_HALF_RATE, JULY_1);
+                + " values (?, 'CC_TRAB', ?, ?, ?)",
+                RULE_SYSTEM, SECOND_HALF_RATE, JULY_1, DECEMBER_31);
     }
 
     private String hireForTheWholeYear() {

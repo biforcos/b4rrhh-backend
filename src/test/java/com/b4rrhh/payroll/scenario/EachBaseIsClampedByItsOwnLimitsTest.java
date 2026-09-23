@@ -59,7 +59,7 @@ class EachBaseIsClampedByItsOwnLimitsTest {
     private static final String PAYROLL_TYPE  = "NORMAL";
     private static final String HORAS         = "H01";
 
-    /** La categoria del grupo 01, cuya base minima (1.847,40) no es el tope minimo (1.323,00). */
+    /** La categoria del grupo 01, cuya base minima (1.929,00) no es el tope minimo (1.381,20). */
     private static final String CATEGORIA_GRUPO_01 = "99002405-G1";
 
     private static final LocalDate JANUARY_1 = LocalDate.of(2025, 1, 1);
@@ -112,17 +112,17 @@ class EachBaseIsClampedByItsOwnLimitsTest {
      *
      * <p>Es la mitad que la estructura no cubre: se pueden tener los cuatro nodos bien enchufados
      * y que el de profesionales lea la fila de comunes. Con un grupo alto las dos cifras se
-     * separan 524,40 EUR y el fallo deja de ser invisible.
+     * separan 547,80 EUR y el fallo deja de ser invisible.
      */
     @Test
     void theTwoMinimumLimitsResolveDifferentRowsForAHighGroup() {
         Long recibo = reciboDe(empleadoDelGrupo01());
 
-        assertEquals(0, importe(recibo, "P_TOPE_MIN").compareTo(new BigDecimal("1847.40")),
+        assertEquals(0, importe(recibo, "P_TOPE_MIN").compareTo(new BigDecimal("1929.00")),
                 "el tope minimo de comunes es la base minima del grupo 01");
-        assertEquals(0, importe(recibo, "P_TOPE_MIN_CP").compareTo(new BigDecimal("1323.00")),
+        assertEquals(0, importe(recibo, "P_TOPE_MIN_CP").compareTo(new BigDecimal("1381.20")),
                 "el de profesionales es el tope minimo de cotizacion, que no es el del grupo;"
-                        + " si sale 1847,40 es que esta leyendo la fila de comunes");
+                        + " si sale 1929,00 es que esta leyendo la fila de comunes");
     }
 
     /**
@@ -148,7 +148,7 @@ class EachBaseIsClampedByItsOwnLimitsTest {
         assertTrue(devengada.compareTo(topada) < 0,
                 "el escenario tiene que quedarse por debajo del minimo o no prueba el suelo:"
                         + " B01=" + devengada + " B_CC=" + topada);
-        assertEquals(0, topada.compareTo(new BigDecimal("1323.00")),
+        assertEquals(0, topada.compareTo(new BigDecimal("1381.20")),
                 "y el suelo es la base minima del grupo 05");
 
         assertEquals(0, importe(recibo, "B05").compareTo(devengada),
@@ -162,7 +162,7 @@ class EachBaseIsClampedByItsOwnLimitsTest {
     /**
      * El caso que no se puede arreglar sumando horas: un grupo alto por debajo de su minimo.
      *
-     * <p>El grupo 01 tiene la base minima mas alta del catalogo —1.847,40— y el tope minimo de
+     * <p>El grupo 01 tiene la base minima mas alta del catalogo —1.929,00— y el tope minimo de
      * cotizacion es mucho menor. Un salario por debajo de ese minimo deja <b>la base de
      * profesionales por DEBAJO de la de comunes</b>, y ninguna cantidad de horas extra las
      * iguala.
@@ -179,11 +179,11 @@ class EachBaseIsClampedByItsOwnLimitsTest {
         BigDecimal comunes       = importe(recibo, "B_CC");
         BigDecimal profesionales = importe(recibo, "B_CP");
 
-        assertEquals(0, comunes.compareTo(new BigDecimal("1847.40")),
+        assertEquals(0, comunes.compareTo(new BigDecimal("1929.00")),
                 () -> "el escenario tiene que tocar el minimo del grupo 01 o no prueba nada:"
                         + " B01=" + cotizable + " B_CC=" + comunes);
         assertTrue(cotizable.compareTo(comunes) < 0, "y quedarse por debajo de el");
-        assertTrue(cotizable.compareTo(new BigDecimal("1323.00")) > 0,
+        assertTrue(cotizable.compareTo(new BigDecimal("1381.20")) > 0,
                 () -> "y POR ENCIMA del tope minimo de profesionales, o el suelo mordería"
                         + " tambien ahi y el caso dejaria de distinguir: B01=" + cotizable);
 
@@ -262,8 +262,8 @@ class EachBaseIsClampedByItsOwnLimitsTest {
 
     /**
      * Grupo 01 al 60 % de jornada, que es la ventana que hace falta: su remuneracion queda
-     * <b>entre</b> el tope minimo de cotizacion (1.323,00) y la base minima de su grupo
-     * (1.847,40), asi que el suelo de comunes muerde y el de profesionales no.
+     * <b>entre</b> el tope minimo de cotizacion (1.381,20) y la base minima de su grupo
+     * (1.929,00), asi que el suelo de comunes muerde y el de profesionales no.
      *
      * <p>A media jornada no valdria: la base caeria por debajo de los dos y las dos subirian.
      */
