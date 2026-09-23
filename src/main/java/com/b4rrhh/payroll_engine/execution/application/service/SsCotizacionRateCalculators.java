@@ -1,6 +1,7 @@
 package com.b4rrhh.payroll_engine.execution.application.service;
 
 import com.b4rrhh.payroll_engine.execution.domain.port.SsCotizacionTiposRepository;
+import com.b4rrhh.payroll_engine.execution.domain.port.SsDesempleoModalidadRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -26,9 +27,14 @@ public class SsCotizacionRateCalculators {
         return new SsCotizacionRateCalculator("P_SS_CC", "CC_TRAB", tipos);
     }
 
+    /**
+     * El desempleo no lee una contingencia fija: la compone con la modalidad del contrato del
+     * tramo ({@code backend#124}, ADR-072).
+     */
     @Bean
-    SsCotizacionRateCalculator desempleoTrabajadorRate(SsCotizacionTiposRepository tipos) {
-        return new SsCotizacionRateCalculator("P_SS_DESEMPLEO", "DESEMPLEO_TRAB", tipos);
+    DesempleoRateCalculator desempleoTrabajadorRate(
+            SsDesempleoModalidadRepository modalidades, SsCotizacionTiposRepository tipos) {
+        return new DesempleoRateCalculator("P_SS_DESEMPLEO", "DESEMPLEO_TRAB", modalidades, tipos);
     }
 
     @Bean
@@ -49,8 +55,10 @@ public class SsCotizacionRateCalculators {
     }
 
     @Bean
-    SsCotizacionRateCalculator desempleoEmpresarioRate(SsCotizacionTiposRepository tipos) {
-        return new SsCotizacionRateCalculator("P_SS_DESEMPLEO_EMP", "DESEMPLEO_EMP", tipos);
+    DesempleoRateCalculator desempleoEmpresarioRate(
+            SsDesempleoModalidadRepository modalidades, SsCotizacionTiposRepository tipos) {
+        return new DesempleoRateCalculator(
+                "P_SS_DESEMPLEO_EMP", "DESEMPLEO_EMP", modalidades, tipos);
     }
 
     @Bean

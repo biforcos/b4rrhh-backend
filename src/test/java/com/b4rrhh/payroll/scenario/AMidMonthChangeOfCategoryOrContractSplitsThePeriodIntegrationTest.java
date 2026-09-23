@@ -137,15 +137,20 @@ class AMidMonthChangeOfCategoryOrContractSplitsThePeriodIntegrationTest {
     }
 
     /**
-     * El contrato parte aunque nadie lo lea. Los dos tramos valen lo mismo, así que el folio los
-     * vuelve a juntar en una línea: el recibo no cambia y el cálculo enseña dos pasos.
+     * El contrato parte el período, y el salario de los dos tramos vale lo mismo, así que el folio
+     * los vuelve a juntar en una línea: el recibo enseña una y el cálculo dos pasos.
+     *
+     * <p>Los códigos eran {@code IND} y {@code TMP}, inventados, y valían porque nadie leía el
+     * contrato. Desde el {@code backend#124} sí se lee —de él sale la modalidad de desempleo— y un
+     * código que no está en el catálogo para la corrida. Ahora son el 100 y el 401, que es además
+     * el cambio que de verdad mueve algo: de indefinido a duración determinada.
      */
     @Test
     void unCambioDeContratoAMitadDeMesTambienParte_yElFolioLosVuelveAJuntar() {
         String emp = contratar();
         fixtures.insertLaborClassification(empIdDe(emp), ENERO_1, null, CATEGORIA_BASE);
-        fixtures.insertContract(empIdDe(emp), ENERO_1, ENERO_15, "IND");
-        fixtures.insertContract(empIdDe(emp), ENERO_16, null, "TMP");
+        fixtures.insertContract(empIdDe(emp), ENERO_1, ENERO_15, "100");
+        fixtures.insertContract(empIdDe(emp), ENERO_16, null, "401");
 
         calcular(emp);
 

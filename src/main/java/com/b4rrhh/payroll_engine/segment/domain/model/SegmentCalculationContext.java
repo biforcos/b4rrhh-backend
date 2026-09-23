@@ -51,6 +51,7 @@ public final class SegmentCalculationContext {
     private final Map<String, BigDecimal> precomputedDirectAmounts;
     private final boolean extraPaymentsProrated;
     private final String cnaeCode;
+    private final String contractCode;
 
     /**
      * Sin la actividad economica de la empresa, que es opcional y casi ningun calculo mira
@@ -83,7 +84,37 @@ public final class SegmentCalculationContext {
         this(ruleSystemCode, employeeTypeCode, employeeNumber, periodStart, periodEnd,
                 segmentStart, segmentEnd, firstSegment, lastSegment, daysInPeriod, daysInSegment,
                 workingTimePercentage, monthlySalaryAmount, employeeInputs, grupoCotizacionCode,
-                tipoNomina, precomputedDirectAmounts, extraPaymentsProrated, null);
+                tipoNomina, precomputedDirectAmounts, extraPaymentsProrated, null, null);
+    }
+
+    /**
+     * Sin el contrato del tramo, que solo mira el tipo de desempleo ({@code backend#124}).
+     */
+    public SegmentCalculationContext(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber,
+            LocalDate periodStart,
+            LocalDate periodEnd,
+            LocalDate segmentStart,
+            LocalDate segmentEnd,
+            boolean firstSegment,
+            boolean lastSegment,
+            long daysInPeriod,
+            long daysInSegment,
+            BigDecimal workingTimePercentage,
+            BigDecimal monthlySalaryAmount,
+            Map<String, BigDecimal> employeeInputs,
+            String grupoCotizacionCode,
+            String tipoNomina,
+            Map<String, BigDecimal> precomputedDirectAmounts,
+            boolean extraPaymentsProrated,
+            String cnaeCode
+    ) {
+        this(ruleSystemCode, employeeTypeCode, employeeNumber, periodStart, periodEnd,
+                segmentStart, segmentEnd, firstSegment, lastSegment, daysInPeriod, daysInSegment,
+                workingTimePercentage, monthlySalaryAmount, employeeInputs, grupoCotizacionCode,
+                tipoNomina, precomputedDirectAmounts, extraPaymentsProrated, cnaeCode, null);
     }
 
     public SegmentCalculationContext(
@@ -105,7 +136,8 @@ public final class SegmentCalculationContext {
             String tipoNomina,
             Map<String, BigDecimal> precomputedDirectAmounts,
             boolean extraPaymentsProrated,
-            String cnaeCode
+            String cnaeCode,
+            String contractCode
     ) {
         requireNonBlank(ruleSystemCode, "ruleSystemCode");
         requireNonBlank(employeeTypeCode, "employeeTypeCode");
@@ -158,6 +190,9 @@ public final class SegmentCalculationContext {
         // sin el. Quien lo necesita -el tipo de accidentes de trabajo- es quien tiene que decir
         // que le falta, y decirlo con el codigo de la empresa dentro (backend#122).
         this.cnaeCode = cnaeCode;
+        // Igual que el CNAE: puede venir nulo y no se valida aqui. El unico que lo necesita es el
+        // tipo de desempleo, y es el quien tiene que decir que falta (backend#124).
+        this.contractCode = contractCode;
     }
 
     public String getRuleSystemCode() { return ruleSystemCode; }
@@ -188,6 +223,17 @@ public final class SegmentCalculationContext {
      * <p><b>Puede ser nulo</b>: el perfil de la empresa no lo exige y hay empresas sin el.
      */
     public String getCnaeCode() { return cnaeCode; }
+
+    /**
+     * El contrato vigente en este tramo ({@code backend#124}).
+     *
+     * <p>Viaja por el tramo y no por la asignacion de conceptos porque el contrato puede cambiar a
+     * mitad de mes, igual que el regimen de pagas extras (ADR-070 §2). De el sale la modalidad de
+     * desempleo -indefinida o de duracion determinada- y con ella el tipo.
+     *
+     * <p><b>Puede ser nulo</b> en los contextos que no lo traen.
+     */
+    public String getContractCode() { return contractCode; }
 
     /**
      * Si en este tramo las pagas extras del empleado se prorratean ({@code backend#118}).

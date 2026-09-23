@@ -309,7 +309,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     tipoNomina,
                     precalculoPorContexto.get(claveDePrecalculo(seg)).importes(),
                     seg.vigencias().extraPaymentsProrated(),
-                    cnaeCode
+                    cnaeCode,
+                    seg.vigencias().contractCode()
             ));
             segmentStates.add(new SegmentExecutionState());
         }
@@ -739,7 +740,10 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 // prorrata no lo usa —sus dos conceptos son de tramo, que es donde el regimen
                 // significa algo—, pero el contexto no puede quedarse sin contestar.
                 segments.getLast().vigencias().extraPaymentsProrated(),
-                cnaeCode
+                cnaeCode,
+                // Y el contrato, por lo mismo: el tipo de desempleo es de tramo y no lo mira desde
+                // aqui, pero el contexto del periodo no puede quedarse sin contestar (backend#124).
+                segments.getLast().vigencias().contractCode()
         );
     }
 

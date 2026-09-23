@@ -4,6 +4,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
 public class PayrollScenarioFixtures {
 
@@ -12,7 +14,22 @@ public class PayrollScenarioFixtures {
     static final String TABLE_CODE         = "P02_99002405011982";
     static final BigDecimal DAILY_RATE     = new BigDecimal("47.50");
 
+    /**
+     * El contrato que se pone solo al dar de alta una presencia: indefinido ordinario a jornada
+     * completa ({@code backend#124}).
+     *
+     * <p>Desde que el tipo de desempleo depende del contrato, <b>un empleado sin contrato no tiene
+     * nomina</b>: la corrida se para. Eso es lo correcto en produccion —el alta crea el contrato—
+     * pero dejaba en rojo a treinta escenarios que no hablan de contratos y que no tenian por que
+     * declarar uno. Se pone el mas comun, y el que quiera otro lo declara con
+     * {@link #insertContract}, que borra este antes.
+     */
+    static final String DEFAULT_CONTRACT_CODE = "100";
+
     private final JdbcTemplate jdbc;
+
+    /** A quien se le puso el contrato por omision, para poder quitarlo si el test declara el suyo. */
+    private final Set<Long> conContratoPorOmision = new HashSet<>();
 
     public PayrollScenarioFixtures(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
@@ -194,9 +211,24 @@ public class PayrollScenarioFixtures {
                 " (employee_id, presence_number, company_code, entry_reason_code, start_date, end_date, created_at, updated_at)" +
                 " values (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 employeeId, presenceNumber, companyCode, "HIRING", startDate, endDate);
+        insertarContratoPorOmision(employeeId, startDate, endDate);
         return jdbc.queryForObject(
                 "select id from employee.presence where employee_id = ? and presence_number = ?",
                 Long.class, employeeId, presenceNumber);
+    }
+
+    /**
+     * El contrato que acompana a toda alta, y que el escenario no tiene que declarar para hablar
+     * de otra cosa ({@code backend#124}).
+     */
+    private void insertarContratoPorOmision(long employeeId, LocalDate from, LocalDate to) {
+        jdbc.update(
+                "insert into employee.contract" +
+                " (employee_id, contract_code, contract_subtype_code, start_date, end_date, created_at, updated_at)" +
+                " values (?, ?, '01', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)" +
+                " on conflict (employee_id, start_date) do nothing",
+                employeeId, DEFAULT_CONTRACT_CODE, from, to);
+        conContratoPorOmision.add(employeeId);
     }
 
     /**
@@ -254,9 +286,21 @@ public class PayrollScenarioFixtures {
                 employeeId, AGREEMENT_CODE, agreementCategoryCode, from, to);
     }
 
-    /** Un tramo de contrato. No lo lee ningun concepto: esta para que rompa el periodo. */
+    /**
+     * Un tramo de contrato declarado por el escenario.
+     *
+     * <p>Parte el periodo, y desde el {@code backend#124} ademas <b>decide el tipo de
+     * desempleo</b>: el 401 y el 402 cotizan al 6,70 + 1,60 y el resto al 5,50 + 1,55.
+     *
+     * <p>La primera llamada quita el contrato por omision que puso {@link #insertPresence}: si se
+     * quedara, el escenario tendria dos contratos y el tramo leeria el que no es.
+     */
     public void insertContract(
             long employeeId, LocalDate from, LocalDate to, String contractCode) {
+        if (conContratoPorOmision.remove(employeeId)) {
+            jdbc.update("delete from employee.contract where employee_id = ? and contract_code = ?",
+                    employeeId, DEFAULT_CONTRACT_CODE);
+        }
         jdbc.update(
                 "insert into employee.contract" +
                 " (employee_id, contract_code, contract_subtype_code, start_date, end_date, created_at, updated_at)" +
@@ -491,21 +535,49 @@ public class PayrollScenarioFixtures {
      */
     public void seedCotizacionRates(String ruleSystemCode) {
         String[][] tipos = {
-                {"CC_TRAB",         "4.70"},
-                {"DESEMPLEO_TRAB",  "1.55"},
-                {"FP_TRAB",         "0.10"},
-                {"MEI_TRAB",        "0.11"},
-                {"CC_EMP",         "23.60"},
-                {"DESEMPLEO_EMP",   "7.05"},
-                {"FP_EMP",          "0.60"},
-                {"FOGASA_EMP",      "0.20"},
-                {"MEI_EMP",         "0.58"},
+                {"CC_TRAB",                    "4.70"},
+                {"DESEMPLEO_TRAB_INDEFINIDA",  "1.55"},
+                {"DESEMPLEO_TRAB_DETERMINADA", "1.60"},
+                {"FP_TRAB",                    "0.10"},
+                {"MEI_TRAB",                   "0.13"},
+                {"CC_EMP",                    "23.60"},
+                {"DESEMPLEO_EMP_INDEFINIDA",   "5.50"},
+                {"DESEMPLEO_EMP_DETERMINADA",  "6.70"},
+                {"FP_EMP",                     "0.60"},
+                {"FOGASA_EMP",                 "0.20"},
+                {"MEI_EMP",                    "0.67"},
         };
         for (String[] t : tipos) {
             jdbc.update("insert into payroll_engine.ss_cotizacion_tipos"
                     + " (rule_system_code, contingency_code, rate, valid_from, valid_to)"
                     + " values (?, ?, ?, DATE '2000-01-01', null)",
                     ruleSystemCode, t[0], new BigDecimal(t[1]));
+        }
+        seedDesempleoModalidades(ruleSystemCode);
+    }
+
+    /**
+     * Que contrato cotiza por que modalidad de desempleo, como lo siembra la V155 para ESP
+     * ({@code backend#124}).
+     *
+     * <p>Mismo motivo que los tipos: <b>un sistema de reglas sin esta tabla no calcula un
+     * recibo</b>. Se siembran los diez contratos del catalogo espanol, con las dos modalidades,
+     * para que un escenario de tres letras pueda montar el caso del temporal.
+     */
+    public void seedDesempleoModalidades(String ruleSystemCode) {
+        String[][] contratos = {
+                {"100", "INDEFINIDA"}, {"108", "INDEFINIDA"},
+                {"109", "INDEFINIDA"}, {"110", "INDEFINIDA"},
+                {"410", "INDEFINIDA"}, {"420", "INDEFINIDA"},
+                {"421", "INDEFINIDA"}, {"422", "INDEFINIDA"},
+                {"401", "DETERMINADA"}, {"402", "DETERMINADA"},
+        };
+        for (String[] c : contratos) {
+            jdbc.update("insert into payroll_engine.ss_desempleo_modalidad_contrato"
+                    + " (rule_system_code, contract_code, modality, valid_from, valid_to)"
+                    + " values (?, ?, ?, DATE '2000-01-01', null)"
+                    + " on conflict (rule_system_code, contract_code, valid_from) do nothing",
+                    ruleSystemCode, c[0], c[1]);
         }
     }
 

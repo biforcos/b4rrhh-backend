@@ -29,5 +29,13 @@ public record TechnicalConceptSegmentData(
          * <p>Puede ser nula. La lee {@code AtEpRateCalculator} para buscar el tipo en la tarifa
          * de primas; ningun otro calculador la necesita, y por eso no se valida aqui.
          */
-        String cnaeCode
+        String cnaeCode,
+        /**
+         * El contrato vigente en este tramo ({@code backend#124}).
+         *
+         * <p>Puede ser nulo. Lo lee {@code DesempleoRateCalculator} para saber por que modalidad
+         * cotiza el tramo -indefinida o de duracion determinada-, y es el quien se queja si falta:
+         * ningun otro calculador lo necesita.
+         */
+        String contractCode
 ) {}
