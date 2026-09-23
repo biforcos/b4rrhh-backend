@@ -253,32 +253,54 @@ class ThePdfSaysTheSameAsTheFolioTest {
     }
 
     /**
-     * Criterio 7: A4, y el recibo cabe en una hoja. Tambien el mas largo de la semilla.
+     * Criterio 7: A4, y el recibo cabe en una hoja. <b>Tambien el mas largo de la semilla.</b>
      *
-     * <p><b>Los dos recibos de estas fixtures son de antes del {@code backend#121}</b>, y el
-     * recuento que afirman lo es tambien: 18 y 19 lineas. Con las tres bases del modelo oficial
-     * el recuadro pasa de 3 lineas a 10 y las horas extraordinarias estrenan dos cuotas, asi que
-     * un recibo de la semilla de hoy tiene entre 23 y 31, y el mas largo <b>ya no cabe en una
-     * hoja</b>: medido sobre {@code EMP001000} recalculado, la aportacion empresarial se parte y
-     * la procedencia se va a la segunda pagina.
+     * <p>Hasta el {@code backend#125} este test miraba dos recibos de 18 y 19 lineas, de antes de
+     * las tres bases, y no vigilaba nada: cabian de sobra y el que no cabia no estaba. Con el
+     * recuadro entero un recibo de la semilla tiene entre 23 y 32 lineas, y el de treinta y dos
+     * —{@code EMP000323}, con mes partido, prorrata pagada en dos lineas y horas
+     * extraordinarias— se salia a una segunda pagina.
      *
-     * <p>No se toca la maqueta aqui y se deja escrito, que es lo que faltaba. Que un recibo de
-     * salarios con el recuadro entero ocupe dos hojas no es un defecto por si mismo —los de papel
-     * lo hacen— pero es una decision de maqueta y no una consecuencia que deba llegar sin que
-     * nadie la haya visto.
+     * <p>Ahora esta en la lista, y con el la excepcion que este javadoc anotaba se retira.
      */
     @Test
     void theOfficialModelIsA4AndFitsInOnePage() throws IOException {
         for (Payroll payroll : List.of(
                 PayslipDocumentFixtures.emp000001(),
-                PayslipDocumentFixtures.emp000005())) {
-            try (PDDocument documento = Loader.loadPDF(pdfDe(payroll))) {
+                PayslipDocumentFixtures.emp000005(),
+                PayslipDocumentFixtures.elMasLargoDeLaSemilla())) {
+            try (PDDocument documento = Loader.loadPDF(pdfDeConApartados(payroll))) {
                 assertEquals(1, documento.getNumberOfPages(),
-                        "El recibo de " + payroll.getEmployeeNumber() + " tiene que caber en una hoja");
+                        "El recibo de " + payroll.getEmployeeNumber() + " ("
+                                + payroll.getConcepts().size() + " lineas) tiene que caber en una hoja");
                 PDRectangle hoja = documento.getPage(0).getMediaBox();
                 assertEquals(PDRectangle.A4.getWidth(), hoja.getWidth(), 0.5f);
                 assertEquals(PDRectangle.A4.getHeight(), hoja.getHeight(), 0.5f);
             }
+        }
+    }
+
+    /**
+     * Y queda sitio para unas cuantas lineas mas, que es lo que impide que esto se rompa solo.
+     *
+     * <p>Apretar la maqueta hasta que el recibo de hoy quepa <b>justo</b> seria dejarlo listo para
+     * salirse otra vez: un mes partido en tres tramos anade dos lineas de salario y dos de
+     * prorrata sin que nadie toque nada. Este test coge el mas largo y le pega <b>cuatro lineas
+     * mas</b>, y sigue en una hoja.
+     *
+     * <p>Cuatro y no cuarenta: el objetivo no es que quepa cualquier cosa —el salto de pagina
+     * existe y tiene que existir, perder lineas en silencio seria peor— sino que el margen sea una
+     * medida y no una casualidad.
+     */
+    @Test
+    void theLayoutHasRoomForAFewMoreLinesThanTheLongestOne() throws IOException {
+        Payroll estirado = PayslipDocumentFixtures.conLineasDeMas(
+                PayslipDocumentFixtures.elMasLargoDeLaSemilla(), 4);
+
+        try (PDDocument documento = Loader.loadPDF(pdfDeConApartados(estirado))) {
+            assertEquals(1, documento.getNumberOfPages(),
+                    "con cuatro lineas mas que el mas largo de hoy (" + estirado.getConcepts().size()
+                            + " en total) el recibo sigue cabiendo en una hoja");
         }
     }
 
@@ -287,6 +309,17 @@ class ThePdfSaysTheSameAsTheFolioTest {
     private byte[] pdfDe(Payroll payroll) {
         return renderizador.render(contenido.contentOf(
                 payroll, PayslipDocumentFixtures.seccionesDelModeloOficial()));
+    }
+
+    /**
+     * El mismo dibujo, con los cuatro apartados del recuadro de bases ({@code backend#121}).
+     *
+     * <p>Es el que hay que usar para medir el alto: los rotulos de apartado son cuatro lineas mas
+     * que el recibo de verdad lleva y el de las secciones sin apartados no.
+     */
+    private byte[] pdfDeConApartados(Payroll payroll) {
+        return renderizador.render(contenido.contentOf(
+                payroll, PayslipDocumentFixtures.seccionesConLosApartadosDelRecuadro()));
     }
 
     private static String filaDe(PayrollConceptResponse concept) {

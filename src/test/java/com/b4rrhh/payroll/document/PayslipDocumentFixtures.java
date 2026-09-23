@@ -171,6 +171,88 @@ final class PayslipDocumentFixtures {
                 """);
     }
 
+    /**
+     * El recibo mas largo de la semilla de hoy: treinta y dos lineas ({@code backend#125}).
+     *
+     * <p>Copiado de {@code EMP000323}, presencia 2, {@code 202609}, con la semilla recalculada
+     * hasta la {@code V155}. Tiene todo lo que alarga un recibo a la vez —mes partido en dos
+     * tramos de salario, prorrata pagada en dos lineas, horas extraordinarias con sus dos cuotas,
+     * las diez lineas del recuadro y las siete de la aportacion empresarial— y por eso es el que
+     * decide si la maqueta cabe en una hoja.
+     *
+     * <p>Los dos recibos de arriba tienen 18 y 19 lineas y son de antes del {@code backend#121}.
+     * Mientras el test de A4 solo los mirara a ellos, <b>no estaba vigilando nada</b>: cabian de
+     * sobra y el que no cabia no estaba.
+     */
+    static Payroll elMasLargoDeLaSemilla() {
+        return recibo("EMP000323", 2, PayrollStatus.CALCULATED, """
+                1|101|SALARIO_BASE|Salario base|6|47.5|285.00|EARNING|101|DEVENGOS|
+                2|101|SALARIO_BASE|Salario base|24|40|960.00|EARNING|101|DEVENGOS|
+                3|102|IMPORTE_HORAS_EXTRA|Horas extraordinarias|12|5|60.00|EARNING|102|DEVENGOS|
+                4|103|PRORRATA_PAGAS_EXTRAS|Prorrata de pagas extraordinarias|1|95|95.00|EARNING|103|DEVENGOS|
+                5|103|PRORRATA_PAGAS_EXTRAS|Prorrata de pagas extraordinarias|1|320|320.00|EARNING|103|DEVENGOS|
+                6|B03|REMUNERACION_MENSUAL|Remuneracion mensual|||1245.00|BASE|401|BASES|BASE_CC
+                7|B04|PRORRATA_EN_LA_BASE|Prorrata de pagas extraordinarias|||415.00|BASE|402|BASES|BASE_CC
+                8|B01|BASE_COTIZABLE|Base de cotizacion|||1660.00|BASE|403|BASES|BASE_CC
+                9|B_CC|BASE_COTIZACION_COTIZ|Base tras topes|||1660.00|BASE|404|BASES|BASE_CC
+                10|B05|BASE_COMUNES_EN_PROFESIONALES|Base de contingencias comunes antes de topes|||1660.00|BASE|411|BASES|BASE_CP
+                11|B06|HORAS_EXTRA_EN_PROFESIONALES|Horas extraordinarias|||60.00|BASE|412|BASES|BASE_CP
+                12|B07|BASE_CONTINGENCIAS_PROFESIONALES|Base de cotizacion|||1720.00|BASE|413|BASES|BASE_CP
+                13|B_CP|BASE_PROFESIONALES_COTIZ|Base tras topes|||1720.00|BASE|414|BASES|BASE_CP
+                14|B08|BASE_HORAS_EXTRAORDINARIAS|Base|||60.00|BASE|421|BASES|BASE_HE
+                15|B09|BASE_SUJETA_A_RETENCION|Base|||1720.00|BASE|431|BASES|BASE_IRPF
+                16|700|CC_TRABAJADOR|Contingencias comunes|1660|4.7|78.02|DEDUCTION|700|DEDUCCIONES|
+                17|701|FP_TRABAJADOR|Formacion profesional|1720|0.1|1.72|DEDUCTION|701|DEDUCCIONES|
+                18|702|MEI_TRABAJADOR|Mecanismo de equidad intergeneracional|1660|0.15|2.49|DEDUCTION|702|DEDUCCIONES|
+                19|703|DESEMPLEO_TRABAJADOR|Desempleo|1720|1.6|27.52|DEDUCTION|703|DEDUCCIONES|
+                20|704|HORAS_EXTRA_TRABAJADOR|Horas extraordinarias|60|4.7|2.82|DEDUCTION|704|DEDUCCIONES|
+                21|720|SS_CC_EMPRESARIO|Contingencias comunes (aportacion empresarial)|1660|23.6|391.76|INFORMATIONAL|720|APORTACION_EMPRESARIAL|
+                22|721|SS_DESEMPLEO_EMPRESARIO|Desempleo (aportacion empresarial)|1720|6.7|115.24|INFORMATIONAL|721|APORTACION_EMPRESARIAL|
+                23|722|SS_FP_EMPRESARIO|Formacion profesional (aportacion empresarial)|1720|0.6|10.32|INFORMATIONAL|722|APORTACION_EMPRESARIAL|
+                24|723|SS_FOGASA_EMPRESARIO|FOGASA (aportacion empresarial)|1720|0.2|3.44|INFORMATIONAL|723|APORTACION_EMPRESARIAL|
+                25|724|SS_MEI_EMPRESARIO|Mecanismo de equidad intergeneracional (aportacion empresarial)|1660|0.75|12.45|INFORMATIONAL|724|APORTACION_EMPRESARIAL|
+                26|726|HORAS_EXTRA_EMPRESARIO|Horas extraordinarias|60|23.6|14.16|INFORMATIONAL|726|APORTACION_EMPRESARIAL|
+                27|727|AT_EP_EMPRESARIO|Accidentes de trabajo y enfermedades profesionales|1720|1.65|28.38|INFORMATIONAL|727|APORTACION_EMPRESARIAL|
+                28|725|TOTAL_APORTACION_EMPRESARIAL|Total aportacion empresarial|||575.75|TOTAL_EMPLOYER_CONTRIBUTION|790|APORTACION_EMPRESARIAL|
+                29|800|RETENCION_IRPF|Retencion IRPF|1720|15|258.00|DEDUCTION|800|DEDUCCIONES|
+                30|970|TOTAL_DEVENGOS|Total devengado|||1720.00|TOTAL_EARNING|970|DEVENGOS|
+                31|980|TOTAL_DEDUCCIONES|Total a deducir|||370.57|TOTAL_DEDUCTION|980|DEDUCCIONES|
+                32|990|LIQUIDO_A_PAGAR|Liquido total a percibir|||1349.43|NET_PAY|990|LIQUIDO|
+                """);
+    }
+
+    /**
+     * El mismo recibo con {@code cuantas} lineas de salario de mas ({@code backend#125}).
+     *
+     * <p>Sirve para medir cuanto aire le queda a la maqueta. Se copian lineas del {@code 101}
+     * porque es lo que de verdad se repite: un mes partido en mas tramos deja un {@code 101} por
+     * tramo, y es asi como un recibo crece sin que nadie anada un concepto al catalogo.
+     */
+    static Payroll conLineasDeMas(Payroll payroll, int cuantas) {
+        List<PayrollConcept> lineas = new ArrayList<>(payroll.getConcepts());
+        PayrollConcept modelo = lineas.stream()
+                .filter(c -> "101".equals(c.getConceptCode()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("el recibo no tiene ninguna linea 101"));
+        for (int i = 0; i < cuantas; i++) {
+            lineas.add(new PayrollConcept(
+                    lineas.size() + 1, modelo.getConceptCode(), modelo.getConceptMnemonic(),
+                    modelo.getConceptLabel(), modelo.getAmount(), modelo.getQuantity(),
+                    modelo.getRate(), modelo.getConceptNatureCode(), modelo.getOriginPeriodCode(),
+                    modelo.getDisplayOrder(), modelo.getMergedStepCount(),
+                    modelo.getPayslipSectionCode(), modelo.getPayslipSubsectionCode()));
+        }
+        return Payroll.rehydrate(
+                payroll.getId(), payroll.getRuleSystemCode(), payroll.getEmployeeTypeCode(),
+                payroll.getEmployeeNumber(), payroll.getPayrollPeriodCode(),
+                payroll.getPayrollTypeCode(), payroll.getPresenceNumber(), payroll.getStatus(),
+                payroll.getStatusReasonCode(), payroll.getCalculatedAt(),
+                payroll.getCalculationEngineCode(), payroll.getCalculationEngineVersion(),
+                payroll.getRunId(), payroll.getWarnings(), lineas,
+                payroll.getContextSnapshots(), payroll.getSegments(),
+                payroll.getCreatedAt(), payroll.getUpdatedAt());
+    }
+
     /** El mismo recibo ya cerrado: lo que cambia es que deja de ser un borrador. */
     static Payroll cerrado(Payroll payroll) {
         return payroll.finalizePayroll();

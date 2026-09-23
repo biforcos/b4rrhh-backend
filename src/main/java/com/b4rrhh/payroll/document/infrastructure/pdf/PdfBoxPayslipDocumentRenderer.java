@@ -38,10 +38,15 @@ import java.io.UncheckedIOException;
  *
  * <h2>Una pagina, pero sin recortar</h2>
  *
- * <p>El criterio 7 pide que el recibo quepa en una hoja, y cabe: el mas largo de la semilla tiene
- * dieciocho lineas. Aun asi hay salto de pagina, porque la alternativa a saltar no es «siempre una
- * hoja», es <b>perder lineas en silencio</b> el dia que un convenio traiga cuarenta conceptos. Un
- * documento que se entrega no puede terminar a mitad.
+ * <p>El recibo tiene que caber en una hoja, y cabe: el mas largo de la semilla tiene
+ * <b>treinta y dos lineas</b> y entra con sitio para cuatro mas. Eso no salio solo —con las tres
+ * bases del {@code backend#121} se salia a una segunda pagina— y lo arreglo el
+ * {@code backend#125} apretando el aire: interlineado, margen y las alturas de los rotulos. <b>No
+ * se quito ninguna linea</b>, que son las del modelo oficial, ni se bajo el cuerpo de letra.
+ *
+ * <p>Aun asi hay salto de pagina, porque la alternativa a saltar no es «siempre una hoja», es
+ * <b>perder lineas en silencio</b> el dia que un convenio traiga cuarenta conceptos. Un documento
+ * que se entrega no puede terminar a mitad.
  */
 @Component
 public class PdfBoxPayslipDocumentRenderer implements PayslipDocumentRenderer {
@@ -49,7 +54,14 @@ public class PdfBoxPayslipDocumentRenderer implements PayslipDocumentRenderer {
     private static final String CONTENT_TYPE = "application/pdf";
 
     // --- La hoja ---------------------------------------------------------
-    private static final float MARGEN = 42f;
+    /**
+     * El margen bajo de 42 a 36 ({@code backend#125}).
+     *
+     * <p>Seis puntos, que son los seis que le faltaban al recibo mas largo por arriba. El ancho
+     * crece con el —las columnas se miden desde aqui— y eso le viene bien a la columna de
+     * concepto, que es la que recorta.
+     */
+    private static final float MARGEN = 36f;
     private static final float DERECHA = PDRectangle.A4.getWidth() - MARGEN;
     private static final float ALTO = PDRectangle.A4.getHeight();
     /** Por debajo de aqui empieza el pie con la procedencia, y no se escribe encima. */
@@ -65,12 +77,26 @@ public class PdfBoxPayslipDocumentRenderer implements PayslipDocumentRenderer {
     private static final float FIN_IMPORTE = DERECHA;
 
     // --- Alturas ---------------------------------------------------------
-    private static final float ALTO_LINEA = 12f;
-    private static final float ALTO_CABECERA_TABLA = 12f;
-    private static final float ALTO_ROTULO_BLOQUE = 15f;
+    /**
+     * Las alturas apretadas para que el recibo mas largo del modelo oficial quepa en una hoja
+     * ({@code backend#125}).
+     *
+     * <p>Venian de cuando el recibo mas largo tenia diecinueve lineas. Con las tres bases son
+     * treinta y dos, y con las de antes —linea 12, rotulo 15, hueco 9— hacian falta 597 puntos
+     * donde hay 537. <b>Aqui no se quita ninguna linea</b>: son las del modelo oficial. Lo que se
+     * quita es aire.
+     *
+     * <p>El grueso lo pone el interlineado: dos puntos por linea, treinta y una veces. El cuerpo
+     * de letra <b>no se toca</b> —8 y 6,8 puntos— porque un recibo de salarios se lee; lo que se
+     * ajusta es el aire entre lineas, y 10 puntos para una tipografia de 8 es el interlineado
+     * corriente de una tabla.
+     */
+    private static final float ALTO_LINEA = 10f;
+    private static final float ALTO_CABECERA_TABLA = 11f;
+    private static final float ALTO_ROTULO_BLOQUE = 13f;
     /** El rotulo de un apartado, mas bajo que el del bloque: es un escalon, no otro bloque. */
-    private static final float ALTO_ROTULO_APARTADO = 12f;
-    private static final float HUECO_ENTRE_BLOQUES = 9f;
+    private static final float ALTO_ROTULO_APARTADO = 11f;
+    private static final float HUECO_ENTRE_BLOQUES = 7f;
 
     private static final float CUERPO = 8f;
     private static final float MENUDA = 6.8f;
@@ -112,7 +138,7 @@ public class PdfBoxPayslipDocumentRenderer implements PayslipDocumentRenderer {
     // ---------------------------------------------------------------------
 
     private void cabecera(Hoja hoja, PayslipDocumentContent content) throws IOException {
-        hoja.texto(negrita, 14f, MARGEN, hoja.bajar(20f), "Recibo de nómina");
+        hoja.texto(negrita, 14f, MARGEN, hoja.bajar(18f), "Recibo de nómina");
 
         if (content.draft()) {
             hoja.color(0.72f, 0.16f, 0.16f);
@@ -123,10 +149,13 @@ public class PdfBoxPayslipDocumentRenderer implements PayslipDocumentRenderer {
 
         float arriba = hoja.bajar(8f);
         float anchoCaja = (DERECHA - MARGEN - 11f) / 2f;
-        float alto = 56f;
+        // 52 y no 56: la caja mas llena es la del trabajador, con nombre y cuatro detalles, y su
+        // ultima linea cae a nueve puntos del borde de abajo. Cuatro puntos menos de aire y ni un
+        // dato fuera (backend#125).
+        float alto = 52f;
         caja(hoja, MARGEN, arriba - alto, anchoCaja, alto, content.company());
         caja(hoja, MARGEN + anchoCaja + 11f, arriba - alto, anchoCaja, alto, content.employee());
-        hoja.situar(arriba - alto - 12f);
+        hoja.situar(arriba - alto - 9f);
 
         datosLaborales(hoja, content.labor());
     }
@@ -137,7 +166,10 @@ public class PdfBoxPayslipDocumentRenderer implements PayslipDocumentRenderer {
         float linea = y + alto - 13f;
         hoja.texto(negrita, 9.5f, x + 7f, linea, recortar(party.name(), negrita, 9.5f, ancho - 14f));
         for (String detalle : party.details()) {
-            linea -= 10f;
+            // Nueve y no diez: la caja del trabajador lleva cuatro detalles -NIF, matricula y dos
+            // lineas de domicilio- y con diez la ultima se apoyaba en la raya de abajo desde que
+            // la caja bajo a 52 (backend#125).
+            linea -= 9f;
             hoja.texto(normal, CUERPO, x + 7f, linea, recortar(detalle, normal, CUERPO, ancho - 14f));
         }
     }
@@ -150,7 +182,9 @@ public class PdfBoxPayslipDocumentRenderer implements PayslipDocumentRenderer {
      * «...de grand…», y un convenio a medias en un recibo no identifica ningun convenio.
      */
     private void datosLaborales(Hoja hoja, PayslipDocumentContent.LaborData labor) throws IOException {
-        float alto = 54f;
+        // 51 y no 54: la fila de abajo escribe su valor a 48,5 del borde de arriba, asi que este
+        // es el minimo que la deja dentro con holgura (backend#125).
+        float alto = 51f;
         float arriba = hoja.y();
         hoja.recuadro(MARGEN, arriba - alto, DERECHA - MARGEN, alto);
         hoja.color(0.35f, 0.35f, 0.35f);
