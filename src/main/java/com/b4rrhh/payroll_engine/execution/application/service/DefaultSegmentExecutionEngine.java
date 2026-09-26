@@ -171,7 +171,8 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
                         context.getCnaeCode(),
                         context.getContractCode(),
                         context.getAbsence(),
-                        context.getPreviousPeriodDailyContributionBase()
+                        context.getPreviousPeriodDailyContributionBase(),
+                        context.getRetroArrears()
                 ));
             }
 

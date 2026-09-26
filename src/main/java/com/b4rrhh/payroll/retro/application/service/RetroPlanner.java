@@ -48,11 +48,21 @@ public class RetroPlanner {
             String ruleSystemCode,
             String employeeTypeCode,
             String employeeNumber,
+            Integer presenceNumber,
             String openPeriodCode,
             PayrollRetroRequest retro
     ) {
+        // Solo las marcas de ESTA presencia, y eso salio al montar la invariante del #133: la linea de
+        // atraso se paga en el recibo de su presencia, asi que una marca de la presencia 1 de alguien
+        // que ceso y volvio no la puede pagar el recibo de la presencia 2. Si se pagara alli, lo cobrado
+        // por aquel mes no cuadraria con su vigente en ninguna de las dos.
+        //
+        // Una marca cuya presencia no tiene recibo en el mes abierto no se paga y no se calla: lo dice
+        // la corrida (RETRO_MARK_WITHOUT_A_RECEIPT_TO_PAY_IT, V162) y la marca sigue activa.
         List<RetroMark> activas = marks.findActiveByEmployee(
-                ruleSystemCode, employeeTypeCode, employeeNumber);
+                        ruleSystemCode, employeeTypeCode, employeeNumber).stream()
+                .filter(m -> presenceNumber != null && presenceNumber.equals(m.getPresenceNumber()))
+                .toList();
 
         if (!retro.allowsRetro()) {
             // Sin limite no hay retro, y no se inventa uno. Lo que se devuelve es «no hay tramo, y
@@ -97,6 +107,26 @@ public class RetroPlanner {
         }
 
         return new RetroPlan(desde, hasta.format(PERIODO), List.copyOf(fueraDelLimite), false);
+    }
+
+    /**
+     * Las marcas activas de este empleado que <b>no son de ninguna</b> de las presencias que este
+     * lanzamiento va a calcular ({@code backend#133}).
+     *
+     * <p>Nadie las puede pagar: la linea de atraso va al recibo de su presencia, y esa presencia no tiene
+     * recibo en el periodo abierto. Quien lanza lo dice en los mensajes de la corrida y la marca sigue
+     * activa.
+     */
+    public List<RetroMark> activeMarksWithoutAPresenceIn(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber,
+            List<Integer> presenciasDelPeriodo
+    ) {
+        return marks.findActiveByEmployee(ruleSystemCode, employeeTypeCode, employeeNumber).stream()
+                .filter(m -> m.getPresenceNumber() == null
+                        || !presenciasDelPeriodo.contains(m.getPresenceNumber()))
+                .toList();
     }
 
     /**

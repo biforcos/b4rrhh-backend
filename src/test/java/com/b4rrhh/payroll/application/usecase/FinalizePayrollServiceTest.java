@@ -4,6 +4,7 @@ import com.b4rrhh.payroll.document.application.service.PayslipDocumentArchiver;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
+import com.b4rrhh.payroll.retro.application.service.RetroMarkConsumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,11 +30,21 @@ class FinalizePayrollServiceTest {
     @Mock
     private PayslipDocumentArchiver payslipDocumentArchiver;
 
+    /**
+     * El consumidor de marcas de retroactividad ({@code backend#133}).
+     *
+     * <p>Doble sin comportamiento: lo que estos tests prueban es el cierre, y que cerrar consuma
+     * las marcas lo prueba el escenario del {@code #133}.
+     */
+    @Mock
+    private RetroMarkConsumer retroMarkConsumer;
+
     private FinalizePayrollService service;
 
     @BeforeEach
     void setUp() {
-        service = new FinalizePayrollService(payrollRepository, payslipDocumentArchiver);
+        service = new FinalizePayrollService(payrollRepository, payslipDocumentArchiver,
+                retroMarkConsumer);
     }
 
     @Test

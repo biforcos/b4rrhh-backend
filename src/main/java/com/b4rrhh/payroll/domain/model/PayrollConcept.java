@@ -66,6 +66,16 @@ public class PayrollConcept {
      * <p>Uno en la inmensa mayoria. Mas de uno cuando el folio ha fundido varios tramos del
      * mismo concepto al mismo precio, que pueden <b>no ser contiguos</b>: la linea es correcta
      * y cuenta una historia falsa si nada dice que es una suma.
+     *
+     * <p><b>Y cero en una linea de atraso</b> ({@code backend#133}). Una linea de atraso no viene de
+     * ningun paso de <i>este</i> calculo: viene de comparar lo que otro mes vale con lo que por ese mes
+     * se ha pagado. Sus pasos, si los hubiera, serian los del vigente de aquel mes, que no se guardan
+     * (ADR-076 §1).
+     *
+     * <p>El cero no es un hueco: es la respuesta, y es la que le dice a la pestana «Calculo» que no
+     * busque pasos para esta linea. Lo que esa linea tiene que contar son los tres numeros del
+     * {@code backend#134} —lo que vale hoy, lo que se ha pagado, la diferencia— y no una travesia del
+     * grafo que no existe.
      */
     private final Integer mergedStepCount;
 
@@ -148,7 +158,7 @@ public class PayrollConcept {
         this.conceptNatureCode = requireCode(conceptNatureCode, "conceptNatureCode", 30);
         this.originPeriodCode = normalizeOptional(originPeriodCode, "originPeriodCode", 30);
         this.displayOrder = requirePositive(displayOrder, "displayOrder");
-        this.mergedStepCount = requirePositive(mergedStepCount, "mergedStepCount");
+        this.mergedStepCount = requireNonNegative(mergedStepCount, "mergedStepCount");
         this.payslipSectionCode = normalizeOptional(payslipSectionCode, "payslipSectionCode", 30);
         this.payslipSubsectionCode =
                 normalizeOptional(payslipSubsectionCode, "payslipSubsectionCode", 30);
@@ -157,6 +167,23 @@ public class PayrollConcept {
     private static Integer requirePositive(Integer value, String fieldName) {
         if (value == null || value <= 0) {
             throw new InvalidPayrollArgumentException(fieldName + " must be a positive integer");
+        }
+        return value;
+    }
+
+    /**
+     * Cero vale y negativo no.
+     *
+     * <p>Lo usa <b>solo</b> {@code mergedStepCount}, y el cero entro con las lineas de atraso del
+     * {@code backend#133}: una linea que no viene de ningun paso de este calculo cuenta cero pasos, y
+     * decir uno seria mentir sobre algo que la pestana «Calculo» va a ir a buscar.
+     *
+     * <p>El numero de linea y el orden siguen siendo estrictamente positivos, y por eso hay dos
+     * comprobaciones y no una relajada: una linea cero no existe.
+     */
+    private static Integer requireNonNegative(Integer value, String fieldName) {
+        if (value == null || value < 0) {
+            throw new InvalidPayrollArgumentException(fieldName + " must be zero or a positive integer");
         }
         return value;
     }

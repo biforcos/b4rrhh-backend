@@ -4,6 +4,7 @@ import com.b4rrhh.payroll.document.application.service.PayslipDocumentArchiver;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
+import com.b4rrhh.payroll.retro.application.service.RetroMarkConsumer;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,15 +42,18 @@ public class BulkFinalizePayrollService implements BulkFinalizePayrollUseCase {
     private final PayrollRepository payrollRepository;
     private final PayrollBulkTargetExpander targetExpander;
     private final PayslipDocumentArchiver payslipDocumentArchiver;
+    private final RetroMarkConsumer retroMarkConsumer;
 
     public BulkFinalizePayrollService(
             PayrollRepository payrollRepository,
             PayrollBulkTargetExpander targetExpander,
-            PayslipDocumentArchiver payslipDocumentArchiver
+            PayslipDocumentArchiver payslipDocumentArchiver,
+            RetroMarkConsumer retroMarkConsumer
     ) {
         this.payrollRepository = payrollRepository;
         this.targetExpander = targetExpander;
         this.payslipDocumentArchiver = payslipDocumentArchiver;
+        this.retroMarkConsumer = retroMarkConsumer;
     }
 
     @Override
@@ -100,7 +104,10 @@ public class BulkFinalizePayrollService implements BulkFinalizePayrollUseCase {
                 // entera se deshace: no quedan ni recibos cerrados sin documento ni media tanda.
                 Payroll definitive = existing.finalizePayroll();
                 payslipDocumentArchiver.archive(definitive);
-                payrollRepository.save(definitive);
+                Payroll guardado = payrollRepository.save(definitive);
+                // Y sus marcas de retroactividad, como en el cierre de uno: la regla es «cerrar las
+                // consume», no «cerrarlo de uno en uno las consume» (backend#133).
+                retroMarkConsumer.consumeFor(guardado);
                 totalFinalized++;
             } else {
                 // NOT_VALID. No es un fallo y no se cuenta como tal: NOT_VALID -> DEFINITIVE no

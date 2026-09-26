@@ -68,7 +68,7 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
     private static final LocalDate JANUARY_1 = LocalDate.of(2025, 1, 1);
 
     /** Los pasos de un empleado de mes entero: uno por cada concepto del catalogo ESP. */
-    private static final int STEPS_IN_A_WHOLE_MONTH = 98;
+    private static final int STEPS_IN_A_WHOLE_MONTH = 101;
 
     /**
      * Y los de uno del mes partido: los conceptos de ambito SEGMENT se evaluan una vez por tramo.
@@ -104,8 +104,14 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
      * <p>Y 98 y 140 desde el {@code backend#129}: veinte conceptos mas, dieciseis {@code SEGMENT} y
      * cuatro {@code PERIOD}, asi que el mes entero sube veinte y el partido treinta y seis. La
      * diferencia pasa de veintiseis a cuarenta y dos.
+     *
+     * <p>Y 101 y 143 desde el {@code backend#133}: los tres conceptos de los atrasos, y los tres
+     * {@code PERIOD}. Suben tres los dos numeros y <b>la diferencia no se mueve</b>: sigue siendo
+     * cuarenta y dos. Es el mismo caso que el {@code 725} del {@code backend#114}, y por la misma razon
+     * -un atraso no pertenece a ningun dia del mes abierto-, asi que anade un paso y solo uno tenga el
+     * recibo los tramos que tenga.
      */
-    private static final int STEPS_IN_A_SPLIT_MONTH = 140;
+    private static final int STEPS_IN_A_SPLIT_MONTH = 143;
 
     /**
      * Los pasos que llevan orden de recibo: los que PUEDEN ser linea.

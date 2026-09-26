@@ -126,6 +126,15 @@ class CalculatePayrollUnitServiceTest {
      */
     @Mock
     private com.b4rrhh.payroll.retro.domain.port.CurrentCalculationRepository currentCalculationRepository;
+
+    /**
+     * El calculador de los atrasos ({@code backend#133}).
+     *
+     * <p>Doble sin comportamiento: estos tests calculan unidades sin tramo de retro, y en ese caso no se
+     * le pregunta nada. Que los deltas salgan bien lo prueba el escenario del {@code #133}.
+     */
+    @Mock
+    private com.b4rrhh.payroll.retro.application.service.RetroDeltaCalculator retroDeltaCalculator;
     // Motor real, no mock: lo que se prueba aqui es como el servicio reparte cada concepto
     // entre tramos y periodo segun su execution_scope, y eso solo se ve evaluando de verdad.
     private final SegmentExecutionEngine segmentExecutionEngine = new DefaultSegmentExecutionEngine(
@@ -167,7 +176,8 @@ class CalculatePayrollUnitServiceTest {
             conceptLabelRepository,
             payslipSectionRepository,
             previousPeriodContributionBaseLookupPort,
-            currentCalculationRepository
+            currentCalculationRepository,
+            retroDeltaCalculator
         );
 
         when(employeeTaxInfoLookupPort.findLatestOnOrBefore(
@@ -281,7 +291,8 @@ class CalculatePayrollUnitServiceTest {
             conceptLabelRepository,
             payslipSectionRepository,
             previousPeriodContributionBaseLookupPort,
-            currentCalculationRepository
+            currentCalculationRepository,
+            retroDeltaCalculator
         );
 
         lenient().when(employeeTaxInfoLookupPort.findLatestOnOrBefore(
@@ -397,7 +408,8 @@ class CalculatePayrollUnitServiceTest {
             conceptLabelRepository,
             payslipSectionRepository,
             previousPeriodContributionBaseLookupPort,
-            currentCalculationRepository
+            currentCalculationRepository,
+            retroDeltaCalculator
         );
 
         when(employeeTaxInfoLookupPort.findLatestOnOrBefore(

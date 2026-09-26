@@ -2,6 +2,7 @@ package com.b4rrhh.payroll.retro.application.usecase;
 
 import com.b4rrhh.payroll.application.usecase.CalculatePayrollUnitCommand;
 import com.b4rrhh.payroll.application.usecase.CalculatePayrollUnitUseCase;
+import com.b4rrhh.payroll.application.usecase.PayrollLaunchInputMissingException;
 import com.b4rrhh.payroll.retro.domain.model.CurrentCalculation;
 import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import com.b4rrhh.payroll_engine.metamodel.domain.port.RuleSystemMetamodelRepository;
@@ -92,20 +93,32 @@ public class RecalculateClosedPeriodsService implements RecalculateClosedPeriods
             RuleSystemMetamodel metamodelo = ruleSystemMetamodelRepository.load(
                     command.ruleSystemCode(), fin);
 
-            CalculatePayrollUnitUseCase.CurrentCalculationOutcome resultado =
-                    calculatePayrollUnitUseCase.calculateCurrent(new CalculatePayrollUnitCommand(
-                            command.ruleSystemCode(),
-                            command.employeeTypeCode(),
-                            command.employeeNumber(),
-                            periodo,
-                            command.payrollTypeCode(),
-                            command.presenceNumber(),
-                            inicio,
-                            fin,
-                            command.calculationEngineCode(),
-                            command.calculationEngineVersion(),
-                            command.runId(),
-                            metamodelo));
+            CalculatePayrollUnitUseCase.CurrentCalculationOutcome resultado;
+            try {
+                resultado = calculatePayrollUnitUseCase.calculateCurrent(new CalculatePayrollUnitCommand(
+                        command.ruleSystemCode(),
+                        command.employeeTypeCode(),
+                        command.employeeNumber(),
+                        periodo,
+                        command.payrollTypeCode(),
+                        command.presenceNumber(),
+                        inicio,
+                        fin,
+                        command.calculationEngineCode(),
+                        command.calculationEngineVersion(),
+                        command.runId(),
+                        metamodelo));
+            } catch (PayrollLaunchInputMissingException ex) {
+                // Ese mes no tiene con que calcularse para esta presencia: lo mas normal es que la
+                // presencia no existiera entonces -un readmitido cuyo tramo de retro alcanza meses
+                // anteriores a su vuelta-, y tambien pasa si falta una vertical.
+                //
+                // No aborta el tramo, y eso importa: los meses en los que la presencia SI existia se
+                // recalculan igual. Se cuenta y se dice, que es lo unico que no se admite dejar de
+                // hacer.
+                resultado = CalculatePayrollUnitUseCase.CurrentCalculationOutcome
+                        .notCalculated(ex.getReasonCode());
+            }
 
             if (resultado.wasCalculated()) {
                 escritos.add(resultado.calculation());

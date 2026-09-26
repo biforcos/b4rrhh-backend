@@ -36,7 +36,12 @@ import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.model.PayrollWarning;
 import com.b4rrhh.payroll.infrastructure.config.PayrollLaunchExecutionProperties;
 import com.b4rrhh.payroll.retro.domain.model.CurrentCalculation;
+import com.b4rrhh.payroll.retro.application.service.RetroDeltaCalculator;
 import com.b4rrhh.payroll.retro.domain.model.CurrentCalculationConcept;
+import com.b4rrhh.payroll.retro.domain.model.RetroBucketing;
+import com.b4rrhh.payroll.retro.domain.model.RetroConceptBucket;
+import com.b4rrhh.payroll.retro.domain.model.RetroDelta;
+import com.b4rrhh.payroll.retro.domain.model.RetroDeltaLine;
 import com.b4rrhh.payroll.retro.domain.port.CurrentCalculationRepository;
 import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
 import com.b4rrhh.payroll_engine.concept.domain.model.ConceptLabelLanguage;
@@ -53,6 +58,7 @@ import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import com.b4rrhh.payroll_engine.planning.application.service.BuildEligibleExecutionPlanUseCase;
 import com.b4rrhh.payroll_engine.planning.domain.model.EligibleExecutionPlanResult;
 import com.b4rrhh.payroll_engine.segment.domain.model.SegmentAbsence;
+import com.b4rrhh.payroll_engine.segment.domain.model.SegmentRetroArrears;
 import com.b4rrhh.payroll_engine.segment.domain.model.SegmentCalculationContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -141,6 +147,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     private final PayslipSectionRepository payslipSectionRepository;
     private final PreviousPeriodContributionBaseLookupPort previousPeriodContributionBaseLookupPort;
     private final CurrentCalculationRepository currentCalculationRepository;
+    private final RetroDeltaCalculator retroDeltaCalculator;
 
     public CalculatePayrollUnitService(
             CalculatePayrollUseCase calculatePayrollUseCase,
@@ -160,7 +167,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             ConceptLabelRepository conceptLabelRepository,
             PayslipSectionRepository payslipSectionRepository,
             PreviousPeriodContributionBaseLookupPort previousPeriodContributionBaseLookupPort,
-            CurrentCalculationRepository currentCalculationRepository
+            CurrentCalculationRepository currentCalculationRepository,
+            RetroDeltaCalculator retroDeltaCalculator
     ) {
         this.calculatePayrollUseCase = calculatePayrollUseCase;
         this.payrollLaunchEligibleInputLookupPort = payrollLaunchEligibleInputLookupPort;
@@ -180,6 +188,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         this.payslipSectionRepository = payslipSectionRepository;
         this.previousPeriodContributionBaseLookupPort = previousPeriodContributionBaseLookupPort;
         this.currentCalculationRepository = currentCalculationRepository;
+        this.retroDeltaCalculator = retroDeltaCalculator;
     }
 
     /**
@@ -312,6 +321,15 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         // (backend#128, ADR-074). Es la primera vez que un calculo mira fuera de su periodo, y mirar
         // puede terminar en que este recibo NO SE CALCULE: eso tiene que decidirse antes de que exista
         // un solo paso, no a mitad del grafo.
+        // Los atrasos que este recibo paga, UNA VEZ por unidad y antes de calcular nada
+        // (backend#133). Antes del grafo porque los tres conceptos tecnicos A_DEV, A_DED y A_EMP los
+        // reciben hechos y alimentan al 970, al 980 y al 725: las lineas de atraso tienen que ser
+        // dinero de este mes DENTRO del grafo, no una suma que alguien haga al pintar el folio.
+        //
+        // En modo retro no hay atrasos: el vigente de agosto es lo que agosto vale, y un atraso de un
+        // atraso no existe.
+        RetroDelta atrasos = modo.isRetro() ? RetroDelta.none() : resolverAtrasos(command);
+
         BaseReguladoraDelMesAnterior baseReguladora = resolverBaseReguladora(command, input, tipoNomina, modo);
         if (baseReguladora.noSeCalcula()) {
             // En modo retro NO se guarda nada. El camino normal escribe un recibo NOT_VALID porque es
@@ -426,7 +444,11 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     cnaeCode,
                     seg.vigencias().contractCode(),
                     seg.vigencias().absence(),
-                    baseReguladora.diaria()
+                    baseReguladora.diaria(),
+                    new SegmentRetroArrears(
+                            atrasos.totalEarnings(),
+                            atrasos.totalEmployeeDeductions(),
+                            atrasos.totalEmployerContributions())
             ));
             segmentStates.add(new SegmentExecutionState());
         }
@@ -438,7 +460,11 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 precalculoPorContexto.get(claveDePrecalculo(segments.getLast()));
         SegmentCalculationContext periodContext = periodContext(
                 command, segments, daysInPeriod, monthlySalary, employeeInputsForPeriod,
-                grupoCotizacionCode, tipoNomina, precalculoDelPeriodo.importes(), cnaeCode);
+                grupoCotizacionCode, tipoNomina, precalculoDelPeriodo.importes(), cnaeCode,
+                new SegmentRetroArrears(
+                        atrasos.totalEarnings(),
+                        atrasos.totalEmployeeDeductions(),
+                        atrasos.totalEmployerContributions()));
         SegmentExecutionState periodState = new SegmentExecutionState();
 
         // Una travesia y una proyeccion (backend#93). El recorrido arma un paso por evaluacion
@@ -500,7 +526,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
 
         List<ConceptRow> payslipRows = calculationSteps.stream()
                 .filter(PayrollCalculationStep::isPayslipLine)
-                .map(calculado -> toPayslipRow(calculado, conceptLabels))
+                .map(calculado -> toPayslipRow(calculado, conceptLabels, command.payrollPeriodCode()))
                 .collect(Collectors.toCollection(ArrayList::new));
 
         if (payrollLaunchExecutionProperties.isCollapseSegmentRows()) {
@@ -515,6 +541,30 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         payslipRows.removeIf(CalculatePayrollUnitService::noSeImprimePorValerCero);
         if (payslipRows.size() != antesDelCero) {
             log.info("[NÓMINA] Regla del cero: {} → {} lineas", antesDelCero, payslipRows.size());
+        }
+
+        // Las lineas de atraso entran en la proyeccion como las demas, y por eso aqui: antes de
+        // ordenar y antes de numerar. Cada una se imprime en el bloque de su concepto —un atraso de
+        // salario base va donde va el salario base— porque lleva el orden y la seccion del concepto
+        // del que viene (backend#133).
+        //
+        // La regla del cero ya paso, y no se les aplica: un delta nunca vale cero, porque una linea
+        // que vale cero no es un delta y no se genera.
+        for (RetroDeltaLine atraso : atrasos.lines()) {
+            payslipRows.add(new ConceptRow(
+                    atraso.conceptCode(),
+                    atraso.conceptMnemonic(),
+                    atraso.conceptLabel(),
+                    atraso.amount(),
+                    atraso.quantity(),
+                    atraso.rate(),
+                    atraso.conceptNatureCode(),
+                    // Sin bloque declarado va al final de su seccion, que es donde menos estorba, y
+                    // eso solo pasa con un concepto que ya no esta en el vigente: una ausencia que se
+                    // ve (backend#104).
+                    atraso.displayOrder() == null ? Integer.MAX_VALUE : atraso.displayOrder(),
+                    List.of(),
+                    atraso.originPeriodCode()));
         }
 
         payslipRows.sort(Comparator.comparingInt(ConceptRow::displayOrder));
@@ -540,7 +590,10 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     r.quantity(),
                     r.rate(),
                     r.nature(),
-                    command.payrollPeriodCode(),
+                    // El periodo de la LINEA y no el del recibo: en una de atraso son distintos, y
+                    // esa diferencia es lo que hace que el atraso se pueda atribuir a su mes
+                    // (backend#133).
+                    r.originPeriodCode(),
                     r.displayOrder(),
                     r.sourceExecutionOrders().size(),
                     // Nulo si la naturaleza no tiene seccion declarada, y eso se ve. Colocarla
@@ -666,7 +719,15 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             BigDecimal rate,
             String nature,
             int displayOrder,
-            List<Integer> sourceExecutionOrders
+            List<Integer> sourceExecutionOrders,
+            /**
+             * El periodo al que pertenece esta linea ({@code backend#133}).
+             *
+             * <p>El del recibo en las lineas propias, y el del <b>mes de origen</b> en las de atraso. Es
+             * lo que va a {@code payroll_concept.origin_period_code}, que toda linea lleva desde
+             * siempre; lo que el {@code #133} anade es que pueda ser distinta de la del recibo.
+             */
+            String originPeriodCode
     ) {}
 
     /**
@@ -904,7 +965,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             String grupoCotizacionCode,
             String tipoNomina,
             Map<String, BigDecimal> precomputedDirectAmounts,
-            String cnaeCode
+            String cnaeCode,
+            SegmentRetroArrears atrasos
     ) {
         long daysCovered = segments.stream().mapToLong(SegmentSpec::daysInSegment).sum();
         BigDecimal weightedWorkingTime = BigDecimal.ZERO;
@@ -938,7 +1000,16 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 cnaeCode,
                 // Y el contrato, por lo mismo: el tipo de desempleo es de tramo y no lo mira desde
                 // aqui, pero el contexto del periodo no puede quedarse sin contestar (backend#124).
-                segments.getLast().vigencias().contractCode()
+                segments.getLast().vigencias().contractCode(),
+                // Sin ausencia: la del periodo no significa nada, y quien la lee es de tramo.
+                null,
+                // Sin base del mes anterior: BR_CC es de tramo (ADR-074 §5).
+                null,
+                // Y CON los atrasos, que si son del periodo: los tres conceptos que los leen son de
+                // ambito PERIOD, asi que este es el unico contexto en el que se les pregunta. Sin esto
+                // A_DEV valia cero teniendo el recibo catorce lineas de atraso, y el 970 no las incluia
+                // (backend#133).
+                atrasos
         );
     }
 
@@ -980,7 +1051,11 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
      * RATE_BY_QUANTITY, la BASE de un PERCENTAGE—, y esa regla vive aqui, en un sitio, en vez de
      * estar implicita en que dos recorridos hagan lo mismo de dos maneras (backend#93).
      */
-    private ConceptRow toPayslipRow(PayrollCalculationStep step, Map<String, String> conceptLabels) {
+    private ConceptRow toPayslipRow(
+            PayrollCalculationStep step,
+            Map<String, String> conceptLabels,
+            String periodoDeEstaLinea
+    ) {
         return new ConceptRow(
                 step.conceptCode(),
                 step.conceptMnemonic(),
@@ -993,7 +1068,10 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 step.rate(),
                 step.functionalNature(),
                 Integer.parseInt(step.payslipOrderCode()),
-                List.of(step.executionOrder()));
+                List.of(step.executionOrder()),
+                // Una linea del propio mes. Toda linea lleva su periodo desde siempre; lo que el
+                // backend#133 anade es que una de atraso lleve otro.
+                periodoDeEstaLinea);
     }
 
     /** The payslip "quantity": the QUANTITY of a RATE_BY_QUANTITY, the BASE of a PERCENTAGE. */
@@ -1076,10 +1154,82 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     // Los pasos que esta linea funde, en orden de ejecucion. Es lo unico que hay
                     // que llevarse de la fusion: el resto ya lo dice la suma.
                     Stream.concat(existing.sourceExecutionOrders().stream(),
-                                  incoming.sourceExecutionOrders().stream()).toList()
+                                  incoming.sourceExecutionOrders().stream()).toList(),
+                    // El periodo es el mismo en las dos: solo se funden lineas del mismo concepto y
+                    // la misma tarifa, y una linea de atraso no se funde con una del propio mes
+                    // porque el colapso corre ANTES de que las de atraso existan.
+                    existing.originPeriodCode()
             ));
         }
         return new ArrayList<>(collapsed.values());
+    }
+
+    /**
+     * Los atrasos que este recibo paga ({@code backend#133}).
+     *
+     * <p>Se resuelven <b>antes</b> de ejecutar el grafo porque sus tres totales entran en el como
+     * conceptos tecnicos, y se resuelven <b>una vez</b> por unidad.
+     *
+     * <p>El tramo lo dice quien lanza y no lo adivina la unidad: es una decision de gestion acotada por
+     * el limite del lanzamiento ({@code backend#132}), y una unidad que se pusiera a buscar «todos los
+     * vigentes que hay» se saltaria el limite el dia que exista un vigente de una corrida anterior mas
+     * generosa.
+     */
+    private RetroDelta resolverAtrasos(CalculatePayrollUnitCommand command) {
+        if (command.retroFromPeriodCode() == null) {
+            return RetroDelta.none();
+        }
+        RetroDelta delta = retroDeltaCalculator.deltasOf(
+                command.ruleSystemCode(),
+                command.employeeTypeCode(),
+                command.employeeNumber(),
+                command.payrollTypeCode(),
+                command.presenceNumber(),
+                command.retroFromPeriodCode(),
+                command.retroToPeriodCode(),
+                bucketingDe(command.metamodel()));
+        if (!delta.isEmpty()) {
+            log.info("[NOMINA] Atrasos | {} lineas de {} a {} | devengos={} deducciones={} empresa={}",
+                    delta.lines().size(), command.retroFromPeriodCode(), command.retroToPeriodCode(),
+                    delta.totalEarnings(), delta.totalEmployeeDeductions(),
+                    delta.totalEmployerContributions());
+        }
+        return delta;
+    }
+
+    /**
+     * A que total suma cada concepto, <b>preguntandoselo al grafo</b> ({@code backend#133}).
+     *
+     * <p>Un concepto va a los devengos atrasados si alimenta al {@code 970}, a las deducciones si
+     * alimenta al {@code 980} y a la aportacion de la empresa si alimenta al {@code 725}. No hay ninguna
+     * lista escrita a mano, y eso tiene un premio: un concepto nuevo que alimente al {@code 970} lleva
+     * sus atrasos al {@code 970} sin que nadie toque este codigo.
+     *
+     * <p>Lo que no alimenta a ninguno de los tres son las <b>bases</b>, y esas no suman a nada de este
+     * mes: una base se atribuye a SU mes. Su linea con origen existe para que se pueda leer y para la
+     * liquidacion complementaria.
+     */
+    private RetroBucketing bucketingDe(RuleSystemMetamodel metamodel) {
+        Map<String, RetroConceptBucket> porConcepto = new HashMap<>();
+        anotarFuentes(metamodel, porConcepto, "970", RetroConceptBucket.EARNING);
+        anotarFuentes(metamodel, porConcepto, "980", RetroConceptBucket.EMPLOYEE_DEDUCTION);
+        anotarFuentes(metamodel, porConcepto, "725", RetroConceptBucket.EMPLOYER_CONTRIBUTION);
+        return conceptCode -> porConcepto.getOrDefault(conceptCode, RetroConceptBucket.NEITHER);
+    }
+
+    private void anotarFuentes(
+            RuleSystemMetamodel metamodel,
+            Map<String, RetroConceptBucket> porConcepto,
+            String agregado,
+            RetroConceptBucket bucket
+    ) {
+        metamodel.findConcept(agregado).ifPresent(total ->
+                metamodel.activeFeedsOf(total.getObject().getId()).forEach(feed -> {
+                    String codigo = feed.getSourceObject().getObjectCode();
+                    // El primero que lo reclama se lo queda. Un concepto que alimentara a dos de los
+                    // tres seria un error de catalogo y no una ambiguedad que resolver aqui.
+                    porConcepto.putIfAbsent(codigo, bucket);
+                }));
     }
 
     /**

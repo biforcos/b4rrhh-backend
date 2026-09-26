@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 public interface SpringDataCurrentCalculationRepository extends JpaRepository<CurrentCalculationEntity, Long> {
@@ -42,6 +43,30 @@ public interface SpringDataCurrentCalculationRepository extends JpaRepository<Cu
             @Param("payrollPeriodCode") String payrollPeriodCode,
             @Param("payrollTypeCode") String payrollTypeCode,
             @Param("conceptCode") String conceptCode
+    );
+
+    /**
+     * Que meses recalculo un run concreto para esta unidad ({@code backend#133}).
+     *
+     * <p>Es lo que decide que marcas consume un recibo al cerrarse: las que apuntan a un mes que
+     * <b>esta corrida</b> recalculo. Y no las que tienen linea de atraso, que no es lo mismo: una marca
+     * puede apuntar a un mes cuyo delta salio cero —alguien cambio algo y lo volvio a dejar como estaba—
+     * y esa marca esta atendida igual, asi que se consume igual.
+     */
+    @Query("select v.payrollPeriodCode from CurrentCalculationEntity v"
+            + " where v.ruleSystemCode = :ruleSystemCode"
+            + "   and v.employeeTypeCode = :employeeTypeCode"
+            + "   and v.employeeNumber = :employeeNumber"
+            + "   and v.payrollTypeCode = :payrollTypeCode"
+            + "   and v.presenceNumber = :presenceNumber"
+            + "   and v.runId = :runId")
+    List<String> findPeriodsRecalculatedByRun(
+            @Param("ruleSystemCode") String ruleSystemCode,
+            @Param("employeeTypeCode") String employeeTypeCode,
+            @Param("employeeNumber") String employeeNumber,
+            @Param("payrollTypeCode") String payrollTypeCode,
+            @Param("presenceNumber") Integer presenceNumber,
+            @Param("runId") Long runId
     );
 
     /** Si hay algun vigente de ese mes, sea cual sea su contenido. */

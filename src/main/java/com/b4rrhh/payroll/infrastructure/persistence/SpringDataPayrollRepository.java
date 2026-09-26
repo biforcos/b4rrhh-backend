@@ -113,4 +113,39 @@ public interface SpringDataPayrollRepository extends JpaRepository<PayrollEntity
             @Param("payrollPeriodCode") String payrollPeriodCode,
             @Param("payrollTypeCode") String payrollTypeCode
     );
+
+    /**
+     * Lo que ya se ha pagado por un mes, por concepto ({@code backend#133}).
+     *
+     * <p><b>Una sola condicion</b>, y eso es porque en este arbol <b>toda</b> linea lleva su periodo en
+     * {@code origin_period_code}: las propias el del recibo, y las de atraso el del mes al que
+     * pertenecen. Comprobado en la semilla, donde las 22.372 lineas llevan {@code 202609}. Asi que
+     * «lo pagado atribuido a agosto» es sumar las lineas con origen agosto, esten en el recibo de agosto
+     * o en el de cualquier mes posterior, y es esa suma la que hace que el segundo atraso del mismo mes
+     * pague la diferencia y no el total otra vez.
+     *
+     * <p>Si algun dia las lineas propias dejaran de llevar su periodo, esta consulta habria que
+     * reescribirla: diria que por agosto no se ha pagado nada y el atraso saldria por el total.
+     *
+     * <p>Solo de recibos {@code DEFINITIVE}, con el filtro escrito y no parametrizado (ADR-069 §2): un
+     * recibo que todavia puede cambiar no se le ha pagado a nadie, asi que contarlo como pagado dejaria
+     * al empleado sin ese dinero el dia que ese recibo se recalcule.
+     *
+     * <p>Por empleado y no por presencia, como la base de cotizacion de un mes (ADR-074 §3).
+     */
+    @Query("select c.conceptCode, sum(c.amount) from PayrollEntity p join p.concepts c"
+            + " where p.ruleSystemCode = :ruleSystemCode"
+            + "   and p.employeeTypeCode = :employeeTypeCode"
+            + "   and p.employeeNumber = :employeeNumber"
+            + "   and p.payrollTypeCode = :payrollTypeCode"
+            + "   and p.status = com.b4rrhh.payroll.domain.model.PayrollStatus.DEFINITIVE"
+            + "   and c.originPeriodCode = :periodCode"
+            + " group by c.conceptCode")
+    List<Object[]> sumPaidByConceptForPeriod(
+            @Param("ruleSystemCode") String ruleSystemCode,
+            @Param("employeeTypeCode") String employeeTypeCode,
+            @Param("employeeNumber") String employeeNumber,
+            @Param("payrollTypeCode") String payrollTypeCode,
+            @Param("periodCode") String periodCode
+    );
 }

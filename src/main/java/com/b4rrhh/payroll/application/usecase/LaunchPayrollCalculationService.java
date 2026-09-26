@@ -22,6 +22,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import com.b4rrhh.payroll.retro.application.service.RetroPlanner;
+import com.b4rrhh.payroll.retro.domain.model.RetroMark;
 import com.b4rrhh.payroll.retro.application.usecase.RecalculateClosedPeriodsCommand;
 import com.b4rrhh.payroll.retro.application.usecase.RecalculateClosedPeriodsUseCase;
 import org.slf4j.LoggerFactory;
@@ -257,7 +258,8 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                 }
                 run = processUnit(run, unit, normalizedLaunch.calculationEngineCode(),
                         normalizedLaunch.calculationEngineVersion(), metamodel,
-                        plan == null ? List.of() : plan.marksOutsideLimit());
+                        plan == null ? List.of() : plan.marksOutsideLimit(),
+                        plan);
             }
 
             String finalStatus = run.totalErrors() > 0
@@ -383,6 +385,7 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                     unit.ruleSystemCode(),
                     unit.employeeTypeCode(),
                     unit.employeeNumber(),
+                    unit.presenceNumber(),
                     normalizedLaunch.payrollPeriodCode(),
                     normalizedLaunch.retro());
             planes.put(clave, plan);
@@ -390,6 +393,16 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                 sinLimiteConMarcas++;
             }
         }
+
+        // Y las marcas que no tienen recibo donde cobrarse ({@code backend#133}). El plan es por
+        // PRESENCIA -la linea de atraso se paga en el recibo de su presencia-, asi que una marca de una
+        // presencia que no esta en este periodo no la puede pagar nadie: el empleado ceso y no ha
+        // vuelto, o volvio con otra presencia.
+        //
+        // No se paga, no se consume, y se dice. La marca sigue activa y aparecera en la checklist,
+        // porque lo que hay que mirar no es un recibo: es que hay dinero pendiente de alguien a quien
+        // este lanzamiento no alcanza.
+        avisarDeMarcasSinReciboDondeCobrarse(run, units, planes);
 
         // Una corrida sin limite no hace retro, y eso es correcto -no puede inventarse hasta donde
         // llega-, pero callarselo cuando habia marcas seria dejar sin pagar un atraso sin que nadie lo
@@ -404,6 +417,81 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
         }
 
         return planes;
+    }
+
+    /**
+     * Las marcas activas que <b>ninguna unidad de este lanzamiento puede pagar</b>
+     * ({@code backend#133}).
+     *
+     * <p>Una marca es de una presencia, y su linea de atraso se paga en el recibo de esa presencia. Si
+     * esa presencia no tiene unidad en el periodo abierto, no hay documento donde poner la linea: el
+     * empleado ceso y no ha vuelto, o volvio con otra presencia.
+     *
+     * <p>Se dice y no se paga, y la marca <b>sigue activa</b>. Pagarla en el recibo de otra presencia
+     * habria roto la invariante del {@code #133} en las dos: lo cobrado por aquel mes no cuadraria con
+     * su vigente ni aqui ni alli.
+     */
+    private void avisarDeMarcasSinReciboDondeCobrarse(
+            CalculationRun run,
+            List<PayrollCalculationUnit> units,
+            Map<String, RetroPlanner.RetroPlan> planes
+    ) {
+        Map<String, Integer> presenciasPorEmpleado = new LinkedHashMap<>();
+        for (PayrollCalculationUnit unit : units) {
+            if (unit.presenceNumber() != null) {
+                presenciasPorEmpleado.merge(
+                        unit.ruleSystemCode() + "|" + unit.employeeTypeCode() + "|" + unit.employeeNumber(),
+                        1, Integer::sum);
+            }
+        }
+
+        for (PayrollCalculationUnit unit : units) {
+            if (unit.presenceNumber() == null) {
+                continue;
+            }
+            List<RetroMark> huerfanas = retroPlanner.activeMarksWithoutAPresenceIn(
+                    unit.ruleSystemCode(), unit.employeeTypeCode(), unit.employeeNumber(),
+                    presenciasDe(units, unit));
+            if (huerfanas.isEmpty()) {
+                continue;
+            }
+            // Una vez por empleado y no una por unidad: el mensaje es del empleado.
+            if (!primeraUnidadDelEmpleado(units, unit)) {
+                continue;
+            }
+            for (RetroMark marca : huerfanas) {
+                saveRunMessage(run, "RETRO_MARK_WITHOUT_A_RECEIPT_TO_PAY_IT", "WARNING",
+                        "La marca de retroactividad de " + marca.getFromPeriodCode() + " es de la"
+                                + " presencia " + marca.getPresenceNumber() + ", que no tiene recibo en"
+                                + " este periodo: no hay documento donde poner su linea de atraso, asi"
+                                + " que no se ha pagado y la marca sigue activa",
+                        Map.of("retroMarkPeriodCode", marca.getFromPeriodCode(),
+                                "retroMarkPresenceNumber", marca.getPresenceNumber()),
+                        unit);
+            }
+        }
+    }
+
+    private static List<Integer> presenciasDe(
+            List<PayrollCalculationUnit> units, PayrollCalculationUnit delEmpleado) {
+        return units.stream()
+                .filter(u -> u.ruleSystemCode().equals(delEmpleado.ruleSystemCode())
+                        && u.employeeTypeCode().equals(delEmpleado.employeeTypeCode())
+                        && u.employeeNumber().equals(delEmpleado.employeeNumber()))
+                .map(PayrollCalculationUnit::presenceNumber)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+    }
+
+    private static boolean primeraUnidadDelEmpleado(
+            List<PayrollCalculationUnit> units, PayrollCalculationUnit unit) {
+        return units.stream()
+                .filter(u -> u.ruleSystemCode().equals(unit.ruleSystemCode())
+                        && u.employeeTypeCode().equals(unit.employeeTypeCode())
+                        && u.employeeNumber().equals(unit.employeeNumber()))
+                .findFirst()
+                .map(primera -> primera == unit)
+                .orElse(false);
     }
 
     /**
@@ -449,9 +537,16 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
         return calculationRunRepository.save(contado);
     }
 
-    /** La clave del empleado, para no planificar su tramo una vez por presencia. */
+    /**
+     * La clave de la unidad, que es por <b>presencia</b> y no por empleado ({@code backend#133}).
+     *
+     * <p>Empezo siendo por empleado, y el {@code #133} la corrigio: el tramo depende de las marcas de la
+     * presencia, porque la linea de atraso se paga en el recibo de SU presencia. Un empleado que ceso y
+     * volvio tiene dos recibos del mes abierto y dos tramos distintos.
+     */
     private static String claveDeEmpleado(PayrollCalculationUnit unit) {
-        return unit.ruleSystemCode() + "|" + unit.employeeTypeCode() + "|" + unit.employeeNumber();
+        return unit.ruleSystemCode() + "|" + unit.employeeTypeCode() + "|" + unit.employeeNumber()
+                + "|" + unit.presenceNumber();
     }
 
     private CalculationRun processUnit(
@@ -460,7 +555,8 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
             String calculationEngineCode,
             String calculationEngineVersion,
             RuleSystemMetamodel metamodel,
-            List<String> marcasFueraDelLimite
+            List<String> marcasFueraDelLimite,
+            RetroPlanner.RetroPlan plan
     ) {
         Optional<Payroll> existingPayroll = payrollRepository.findByBusinessKey(
                 unit.ruleSystemCode(),
@@ -528,7 +624,12 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                     calculationEngineVersion,
                     run.id(),
                     metamodel,
-                    marcasFueraDelLimite
+                    marcasFueraDelLimite,
+                    // El tramo que esta unidad tiene que pagar. Lo dice el plan y no lo busca la
+                    // unidad: el limite del lanzamiento es lo que acota hasta donde se paga
+                    // (backend#133).
+                    plan == null ? null : plan.fromPeriodCode(),
+                    plan == null ? null : plan.toPeriodCode()
             ));
             saveEligibleRealSuccessMessageIfPresent(run, unit, payroll);
             if (payroll.getStatus() == PayrollStatus.NOT_VALID) {

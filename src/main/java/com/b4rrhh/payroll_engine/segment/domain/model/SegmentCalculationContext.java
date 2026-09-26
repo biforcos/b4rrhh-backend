@@ -54,6 +54,7 @@ public final class SegmentCalculationContext {
     private final String contractCode;
     private final SegmentAbsence absence;
     private final BigDecimal previousPeriodDailyContributionBase;
+    private final SegmentRetroArrears retroArrears;
 
     /**
      * Sin la actividad economica de la empresa, que es opcional y casi ningun calculo mira
@@ -207,6 +208,46 @@ public final class SegmentCalculationContext {
             SegmentAbsence absence,
             BigDecimal previousPeriodDailyContributionBase
     ) {
+        this(ruleSystemCode, employeeTypeCode, employeeNumber, periodStart, periodEnd,
+                segmentStart, segmentEnd, firstSegment, lastSegment, daysInPeriod, daysInSegment,
+                workingTimePercentage, monthlySalaryAmount, employeeInputs, grupoCotizacionCode,
+                tipoNomina, precomputedDirectAmounts, extraPaymentsProrated, cnaeCode, contractCode,
+                absence, previousPeriodDailyContributionBase, SegmentRetroArrears.none());
+    }
+
+    /**
+     * El constructor entero, con los totales de los atrasos que este recibo paga
+     * ({@code backend#133}).
+     *
+     * <p>Los cuatro constructores de arriba siguen existiendo y pasan {@link SegmentRetroArrears#none()}:
+     * un recibo sin atrasos es el caso normal, y treinta y un sitios que ya construian un contexto no
+     * tienen que hablar de retroactividad para decir que no la usan.
+     */
+    public SegmentCalculationContext(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber,
+            LocalDate periodStart,
+            LocalDate periodEnd,
+            LocalDate segmentStart,
+            LocalDate segmentEnd,
+            boolean firstSegment,
+            boolean lastSegment,
+            long daysInPeriod,
+            long daysInSegment,
+            BigDecimal workingTimePercentage,
+            BigDecimal monthlySalaryAmount,
+            Map<String, BigDecimal> employeeInputs,
+            String grupoCotizacionCode,
+            String tipoNomina,
+            Map<String, BigDecimal> precomputedDirectAmounts,
+            boolean extraPaymentsProrated,
+            String cnaeCode,
+            String contractCode,
+            SegmentAbsence absence,
+            BigDecimal previousPeriodDailyContributionBase,
+            SegmentRetroArrears retroArrears
+    ) {
         requireNonBlank(ruleSystemCode, "ruleSystemCode");
         requireNonBlank(employeeTypeCode, "employeeTypeCode");
         requireNonBlank(employeeNumber, "employeeNumber");
@@ -267,6 +308,7 @@ public final class SegmentCalculationContext {
         // hay recibo cerrado del mes anterior, o esta unidad no necesita base reguladora porque no
         // tiene baja. En los dos casos el motor hace lo mismo (backend#128).
         this.previousPeriodDailyContributionBase = previousPeriodDailyContributionBase;
+        this.retroArrears = retroArrears == null ? SegmentRetroArrears.none() : retroArrears;
     }
 
     public String getRuleSystemCode() { return ruleSystemCode; }
@@ -337,6 +379,11 @@ public final class SegmentCalculationContext {
      */
     public BigDecimal getPreviousPeriodDailyContributionBase() {
         return previousPeriodDailyContributionBase;
+    }
+
+    /** Los totales de los atrasos que este recibo paga ({@code backend#133}). Nunca nulo. */
+    public SegmentRetroArrears getRetroArrears() {
+        return retroArrears;
     }
 
     /**

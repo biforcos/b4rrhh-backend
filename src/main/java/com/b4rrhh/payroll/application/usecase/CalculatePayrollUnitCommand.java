@@ -12,6 +12,12 @@ import java.util.List;
  *                  Quien lanza la ejecución lo carga una vez y se lo pasa a todas sus
  *                  unidades, y así todas calculan con las mismas reglas por construcción
  *                  (backend#87).
+ * @param retroFromPeriodCode el mes más antiguo del tramo de retro de esta corrida, o {@code null} si
+ *                  esta unidad no paga atrasos ({@code backend#133}). Lo dice quien lanza y no lo adivina
+ *                  la unidad: el tramo está acotado por el límite del lanzamiento, y una unidad que
+ *                  buscara «todos los vigentes que hay» se saltaría ese límite el día que exista un
+ *                  vigente de una corrida anterior más generosa
+ * @param retroToPeriodCode {@code P-1}, o {@code null}
  * @param retroMarksOutsideLimit los periodos de las marcas de retroactividad que el límite del
  *                  lanzamiento deja fuera ({@code backend#132}). Cada uno sale como aviso en el recibo
  *                  de este periodo: <b>no se paga y no se calla</b>. Viene dado y la unidad no lo
@@ -31,7 +37,9 @@ public record CalculatePayrollUnitCommand(
         String calculationEngineVersion,
         Long runId,
         RuleSystemMetamodel metamodel,
-        List<String> retroMarksOutsideLimit
+        List<String> retroMarksOutsideLimit,
+        String retroFromPeriodCode,
+        String retroToPeriodCode
 ) {
 
     public CalculatePayrollUnitCommand {
@@ -58,6 +66,6 @@ public record CalculatePayrollUnitCommand(
     ) {
         this(ruleSystemCode, employeeTypeCode, employeeNumber, payrollPeriodCode, payrollTypeCode,
                 presenceNumber, periodStart, periodEnd, calculationEngineCode, calculationEngineVersion,
-                runId, metamodel, List.of());
+                runId, metamodel, List.of(), null, null);
     }
 }

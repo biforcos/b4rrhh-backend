@@ -1,6 +1,7 @@
 package com.b4rrhh.payroll_engine.execution.domain.model;
 
 import com.b4rrhh.payroll_engine.segment.domain.model.SegmentAbsence;
+import com.b4rrhh.payroll_engine.segment.domain.model.SegmentRetroArrears;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -56,8 +57,19 @@ public record TechnicalConceptSegmentData(
          * <p>La leen los dos calculadores de la base reguladora y nadie mas. Nula quiere decir o que
          * no hay recibo cerrado del mes anterior, o que esta unidad no necesita base reguladora.
          */
-        BigDecimal previousPeriodDailyContributionBase
+        BigDecimal previousPeriodDailyContributionBase,
+        /**
+         * Los totales de los atrasos que este recibo paga ({@code backend#133}).
+         *
+         * <p>Los leen los tres calculadores {@code A_DEV}, {@code A_DED} y {@code A_EMP} y nadie mas.
+         * Nunca nulo: sin atrasos son tres ceros, y un cero no se imprime (backend#104).
+         */
+        SegmentRetroArrears retroArrears
 ) {
+
+    public TechnicalConceptSegmentData {
+        retroArrears = retroArrears == null ? SegmentRetroArrears.none() : retroArrears;
+    }
 
     /** Si en este tramo no se devengan dias, que es lo que significa traer ausencia. */
     public boolean isUnpaidAbsenceSegment() {

@@ -44,6 +44,21 @@ public class CurrentCalculationRepositoryAdapter implements CurrentCalculationRe
         entity.setPresenceNumber(calculation.getPresenceNumber());
         entity.setCalculatedAt(calculation.getCalculatedAt());
         entity.setRunId(calculation.getRunId());
+
+        // Las viejas se borran y SE VACIA la sesion antes de meter las nuevas.
+        //
+        // Sin ese vaciado, Hibernate inserta las nuevas antes de borrar las viejas -el orden de las
+        // sentencias es suyo, no el del codigo- y la clave unica (vigente, numero de linea) revienta al
+        // pisar un vigente que ya existia. Pisar un vigente es el caso normal, no el raro: pasa en cada
+        // retro del mismo mes, que es justo lo que el escenario del backend#133 hace dos veces.
+        //
+        // La alternativa era quitar la clave unica, y seria peor: dos lineas con el mismo numero en el
+        // mismo vigente no es un detalle de persistencia, es un vigente que no se puede comparar.
+        if (entity.getId() != null && !entity.getConcepts().isEmpty()) {
+            entity.getConcepts().clear();
+            jpa.saveAndFlush(entity);
+        }
+
         entity.replaceConcepts(calculation.getConcepts().stream()
                 .map(CurrentCalculationRepositoryAdapter::aEntidad).toList());
 

@@ -5,6 +5,7 @@ import com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException;
 import com.b4rrhh.payroll.domain.exception.PayrollNotFoundException;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
+import com.b4rrhh.payroll.retro.application.service.RetroMarkConsumer;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,13 +22,16 @@ public class FinalizePayrollService implements FinalizePayrollUseCase {
 
     private final PayrollRepository payrollRepository;
     private final PayslipDocumentArchiver payslipDocumentArchiver;
+    private final RetroMarkConsumer retroMarkConsumer;
 
     public FinalizePayrollService(
             PayrollRepository payrollRepository,
-            PayslipDocumentArchiver payslipDocumentArchiver
+            PayslipDocumentArchiver payslipDocumentArchiver,
+            RetroMarkConsumer retroMarkConsumer
     ) {
         this.payrollRepository = payrollRepository;
         this.payslipDocumentArchiver = payslipDocumentArchiver;
+        this.retroMarkConsumer = retroMarkConsumer;
     }
 
     @Override
@@ -62,7 +66,13 @@ public class FinalizePayrollService implements FinalizePayrollUseCase {
         // escribirse ningun DEFINITIVE. La transaccion lo desharia igual, pero el orden dice la
         // regla en voz alta — no se cierra lo que no se puede entregar.
         payslipDocumentArchiver.archive(definitive);
-        return payrollRepository.save(definitive);
+        Payroll guardado = payrollRepository.save(definitive);
+
+        // Y aqui se consumen las marcas de retroactividad que este recibo ha pagado, en la misma
+        // transaccion: cerrar es lo que las paga, no calcular (backend#133).
+        retroMarkConsumer.consumeFor(guardado);
+
+        return guardado;
     }
 
     private String normalizeCode(String value, String fieldName, int maxLength) {

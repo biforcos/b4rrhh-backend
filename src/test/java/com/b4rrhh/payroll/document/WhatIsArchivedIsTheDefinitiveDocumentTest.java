@@ -124,7 +124,11 @@ class WhatIsArchivedIsTheDefinitiveDocumentTest {
         Payroll existente = PayslipDocumentFixtures.emp000001();
 
         RepositorioDeMentira repositorio = new RepositorioDeMentira(existente);
-        FinalizePayrollService cierre = new FinalizePayrollService(repositorio, archivador);
+        // El consumidor de marcas no hace nada aqui, y da igual: este test comprueba que un cierre que
+        // no puede entregar el documento revienta ANTES de guardar, asi que nunca llega a consumir nada
+        // (backend#133).
+        FinalizePayrollService cierre = new FinalizePayrollService(repositorio, archivador,
+                new com.b4rrhh.payroll.retro.application.service.RetroMarkConsumer(null, null));
 
         PayslipDocumentStorageUnavailableException fallo = assertThrows(
                 PayslipDocumentStorageUnavailableException.class,

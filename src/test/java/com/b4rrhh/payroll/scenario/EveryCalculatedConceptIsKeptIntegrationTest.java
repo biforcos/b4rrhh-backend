@@ -100,8 +100,17 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * diaria <b>teorica</b> cuando no hay mes anterior del que leer: el espejo de las cuatro pagas
      * extras sobre un dia, su total, la prorrata diaria, la propia teorica y la puerta que la deja
      * pasar. Son once y no dos porque la teorica se calcula EN EL GRAFO y no en Java (ADR-074 §4).
+     *
+     * <p>Y eran 98 y 42 hasta el {@code backend#133}: los atrasos son <b>tres</b> conceptos mas, y los
+     * tres {@code PERIOD}. Son los que meten las lineas de atraso en los totales del mes que las paga
+     * -{@code A_DEV} en el {@code 970}, {@code A_DED} en el {@code 980}, {@code A_EMP} en el
+     * {@code 725}- y son tres y no uno porque van a tres sitios distintos: un solo concepto con el neto
+     * dentro daria el mismo liquido y un recibo que no distingue lo que se cobra de lo que se retiene.
+     *
+     * <p>Los tres son de periodo y no de tramo porque <b>un atraso no pertenece a ningun dia del mes
+     * abierto</b>, asi que anaden tres conceptos y tres pasos, no tres por tramo.
      */
-    private static final int CONCEPTS_IN_THE_ENGINE = 98;
+    private static final int CONCEPTS_IN_THE_ENGINE = 101;
     private static final int SEGMENT_SCOPED_CONCEPTS = 42;
 
     /**
@@ -122,8 +131,12 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * ejecutaria— y tres como operandos, que si se expanden. Y los veinte del {@code backend#129}
      * igual: trece asignados —los que alimentan a un agregado y los que no son operando de nadie— y
      * siete como operandos.
+     *
+     * <p>Y los tres del {@code backend#133} entran por asignacion propia: alimentan a un agregado, y las
+     * fuentes de un agregado <b>no se expanden</b> (ADR del {@code backend#110}), asi que sin asignacion
+     * no se ejecutarian y sus atrasos no llegarian a ningun total.
      */
-    private static final int CONCEPTS_IN_A_PLAN = 98;
+    private static final int CONCEPTS_IN_A_PLAN = 101;
 
     /**
      * Los conceptos con orden de recibo: los que PUEDEN ser linea.
@@ -229,7 +242,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
                         + " — B03, B04, B05, B06, B07, B_CP_MAX, B_CP, B08 y B09 — y los OCHO de la"
                         + " cadena de la base reguladora teorica del backend#128: las cuatro pagas"
                         + " por dia, su total, la prorrata diaria, la teorica y la puerta");
-        assertEquals(36, countStepsWithNature(pid, "TECHNICAL"),
+        assertEquals(39, countStepsWithNature(pid, "TECHNICAL"),
                 "conceptos TECHNICAL: los 19 de antes, los cuatro del backend#121 —los dos"
                         + " topes de la base profesional y los dos tipos de la cotizacion"
                         + " adicional por horas extraordinarias—, el tipo de accidentes de"
@@ -237,7 +250,12 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
                         + " el mes anterior —BR_ANT y J_SIN_ANT— y la propia BR_CC, que es tecnica"
                         + " porque no se imprime"
                         + ". Y los nueve del backend#129: cuatro que cuentan dias, tres porcentajes"
-                        + " de tramo, los dias con prestacion y el cero que hace de suelo");
+                        + " de tramo, los dias con prestacion y el cero que hace de suelo"
+                        + ". Y los TRES del backend#133: A_DEV, A_DED y A_EMP, que meten las lineas"
+                        + " de atraso en los totales del mes que las paga. Son tecnicos y no se"
+                        + " imprimen a proposito: lo que se imprime son las lineas de atraso, una"
+                        + " por concepto y con su origen, y un total suyo al lado seria el mismo"
+                        + " dinero dos veces a la vista");
 
         // El recibo tiene 18 lineas: las 17 de antes mas la prorrata que cotiza, que es la puerta
         // que le toca a este empleado. Siguen sin ser TODOS los pasos con orden de recibo: hay 20,
