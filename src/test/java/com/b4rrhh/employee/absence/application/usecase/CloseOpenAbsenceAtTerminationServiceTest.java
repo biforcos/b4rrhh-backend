@@ -41,7 +41,7 @@ class CloseOpenAbsenceAtTerminationServiceTest {
         when(getEmployee.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
             .thenReturn(Optional.of(employee()));
         Absence openAbsence = Absence.rehydrate(1L, 1L, "VACATION", MAY_1, 0,
-            null, null, LocalDateTime.now(), LocalDateTime.now());
+            null, null, true, LocalDateTime.now(), LocalDateTime.now());
         when(absenceRepository.findByEmployeeIdOrderByStartDateDescStartTimeDesc(1L))
             .thenReturn(List.of(openAbsence));
 
@@ -58,7 +58,7 @@ class CloseOpenAbsenceAtTerminationServiceTest {
         when(getEmployee.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
             .thenReturn(Optional.of(employee()));
         Absence closed = Absence.rehydrate(1L, 1L, "VACATION", MAY_1, 0,
-            LocalDate.of(2026, 5, 15), null, LocalDateTime.now(), LocalDateTime.now());
+            LocalDate.of(2026, 5, 15), null, true, LocalDateTime.now(), LocalDateTime.now());
         when(absenceRepository.findByEmployeeIdOrderByStartDateDescStartTimeDesc(1L))
             .thenReturn(List.of(closed));
 

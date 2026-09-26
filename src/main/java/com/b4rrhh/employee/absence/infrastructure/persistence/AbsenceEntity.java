@@ -38,6 +38,10 @@ public class AbsenceEntity {
     @Column(name = "end_time")
     private Integer endTime;
 
+    /** Si la baja lleva derecho a prestacion; con derecho por omision ({@code backend#129}). */
+    @Column(name = "benefit_entitled", nullable = false)
+    private boolean benefitEntitled = true;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -69,6 +73,10 @@ public class AbsenceEntity {
     public LocalDate getEndDate() { return endDate; }
     public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
     public Integer getEndTime() { return endTime; }
+
+    public boolean isBenefitEntitled() { return benefitEntitled; }
+
+    public void setBenefitEntitled(boolean benefitEntitled) { this.benefitEntitled = benefitEntitled; }
     public void setEndTime(Integer endTime) { this.endTime = endTime; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

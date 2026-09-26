@@ -47,7 +47,7 @@ class ListEmployeeAbsencesServiceTest {
             .thenReturn(Optional.of(new Employee(1L, "ESP", "INTERNAL", "EMP001",
                 "Ana", "Lopez", null, null, "ACTIVE", LocalDateTime.now(), LocalDateTime.now(), null)));
         Absence a = Absence.rehydrate(1L, 1L, "VACATION", LocalDate.of(2026, 5, 14), 0,
-            null, null, LocalDateTime.now(), LocalDateTime.now());
+            null, null, true, LocalDateTime.now(), LocalDateTime.now());
         when(absenceRepository.findByEmployeeIdOrderByStartDateDescStartTimeDesc(1L))
             .thenReturn(List.of(a));
 

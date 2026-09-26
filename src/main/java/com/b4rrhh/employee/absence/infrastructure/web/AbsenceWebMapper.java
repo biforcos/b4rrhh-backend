@@ -14,6 +14,7 @@ public class AbsenceWebMapper {
             minutesToHHmm(absence.getStartTime()),
             absence.getEndDate(),
             absence.getEndTime() != null ? minutesToHHmm(absence.getEndTime()) : null,
+            absence.isBenefitEntitled(),
             absence.getCreatedAt(),
             absence.getUpdatedAt()
         );

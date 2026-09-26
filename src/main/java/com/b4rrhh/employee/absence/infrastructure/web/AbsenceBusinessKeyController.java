@@ -77,7 +77,8 @@ public class AbsenceBusinessKeyController {
         Integer endTimeMinutes = request.endTime() != null
             ? mapper.parseHHmmToMinutes(request.endTime()) : null;
         UpsertAbsenceCommand cmd = new UpsertAbsenceCommand(rs, et, en, typeCode,
-            startDate, startTimeMinutes, request.endDate(), endTimeMinutes);
+            startDate, startTimeMinutes, request.endDate(), endTimeMinutes,
+            request.benefitEntitled());
         Absence absence = upsert.upsert(cmd);
         return mapper.toResponse(absence);
     }

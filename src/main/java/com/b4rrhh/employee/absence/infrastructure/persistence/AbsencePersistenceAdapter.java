@@ -60,7 +60,7 @@ public class AbsencePersistenceAdapter implements AbsenceRepository {
     private Absence toDomain(AbsenceEntity e) {
         return Absence.rehydrate(e.getId(), e.getEmployeeId(), e.getAbsenceTypeCode(),
             e.getStartDate(), e.getStartTime(), e.getEndDate(), e.getEndTime(),
-            e.getCreatedAt(), e.getUpdatedAt());
+            e.isBenefitEntitled(), e.getCreatedAt(), e.getUpdatedAt());
     }
 
     private AbsenceEntity toEntity(Absence a) {
@@ -72,6 +72,7 @@ public class AbsencePersistenceAdapter implements AbsenceRepository {
         e.setStartTime(a.getStartTime());
         e.setEndDate(a.getEndDate());
         e.setEndTime(a.getEndTime());
+        e.setBenefitEntitled(a.isBenefitEntitled());
         e.setCreatedAt(a.getCreatedAt());
         e.setUpdatedAt(a.getUpdatedAt());
         return e;

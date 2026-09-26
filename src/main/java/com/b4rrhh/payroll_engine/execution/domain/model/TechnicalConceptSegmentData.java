@@ -73,6 +73,6 @@ public record TechnicalConceptSegmentData(
      * esconde nada y ahorra tener que preguntar dos veces lo mismo.
      */
     public boolean needsDailyRegulatoryBase() {
-        return absence != null && absence.isCommonSickLeave();
+        return absence != null && absence.paysTemporaryDisabilityBenefit();
     }
 }

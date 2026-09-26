@@ -83,19 +83,25 @@ class ThePayslipGroupingsAreDeclaredAndNotDeducedFromCodeRangesTest {
      * ({@code backend#121}).
      *
      * <p>Es la diferencia con la seccion, y la razon de que la subseccion cuelgue del concepto:
-     * las diez lineas del recuadro son todas {@code BASE} y viven en cuatro apartados distintos.
-     * Una regla que dedujera el apartado de la naturaleza las metaria a las diez en el mismo.
+     * las once lineas del recuadro son todas {@code BASE} y viven en cuatro apartados distintos.
+     * Una regla que dedujera el apartado de la naturaleza las metaria a las once en el mismo.
+     *
+     * <p>Eran diez hasta el {@code backend#129}, que anade {@code B10} —la base de cotizacion durante
+     * la incapacidad temporal— al primer bloque, entre la prorrata y la base de cotizacion.
      */
     @Test
     void whichPartALineGoesInIsDeclaredByTheConceptAndNotByItsNature() {
         Map<String, String> byConcept = payslipSectionRepository.findSubsectionCodeByConcept("ESP");
 
-        assertEquals(Map.of(
-                        "B03", "BASE_CC", "B04", "BASE_CC", "B01", "BASE_CC", "B_CC", "BASE_CC",
-                        "B05", "BASE_CP", "B06", "BASE_CP", "B07", "BASE_CP", "B_CP", "BASE_CP",
-                        "B08", "BASE_HE", "B09", "BASE_IRPF"),
+        assertEquals(Map.ofEntries(
+                        Map.entry("B03", "BASE_CC"), Map.entry("B04", "BASE_CC"),
+                        Map.entry("B10", "BASE_CC"), Map.entry("B01", "BASE_CC"),
+                        Map.entry("B_CC", "BASE_CC"),
+                        Map.entry("B05", "BASE_CP"), Map.entry("B06", "BASE_CP"),
+                        Map.entry("B07", "BASE_CP"), Map.entry("B_CP", "BASE_CP"),
+                        Map.entry("B08", "BASE_HE"), Map.entry("B09", "BASE_IRPF")),
                 byConcept,
-                "los diez del recuadro, y solo ellos: un concepto de mas aqui es una linea que va"
+                "los once del recuadro, y solo ellos: un concepto de mas aqui es una linea que va"
                         + " a salir bajo un rotulo que no le toca");
     }
 

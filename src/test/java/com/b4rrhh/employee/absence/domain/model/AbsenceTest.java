@@ -9,7 +9,7 @@ class AbsenceTest {
 
     @Test
     void createSetsFieldsAndNullsId() {
-        Absence a = Absence.create(1L, "VACATION", LocalDate.of(2026, 5, 14), 0, null, null);
+        Absence a = Absence.create(1L, "VACATION", LocalDate.of(2026, 5, 14), 0, null, null, true);
         assertNull(a.getId());
         assertEquals(1L, a.getEmployeeId());
         assertEquals("VACATION", a.getAbsenceTypeCode());
@@ -26,7 +26,7 @@ class AbsenceTest {
         LocalDateTime ts = LocalDateTime.of(2026, 5, 1, 9, 0);
         Absence a = Absence.rehydrate(42L, 1L, "VACATION",
             LocalDate.of(2026, 5, 14), 540,
-            LocalDate.of(2026, 5, 18), null, ts, ts);
+            LocalDate.of(2026, 5, 18), null, true, ts, ts);
         assertEquals(42L, a.getId());
         assertEquals(540, a.getStartTime());
         assertEquals(LocalDate.of(2026, 5, 18), a.getEndDate());
@@ -35,8 +35,8 @@ class AbsenceTest {
 
     @Test
     void updateReturnsNewAbsenceWithEndFields() {
-        Absence original = Absence.create(1L, "VACATION", LocalDate.of(2026, 5, 14), 0, null, null);
-        Absence updated = original.update(LocalDate.of(2026, 5, 20), null);
+        Absence original = Absence.create(1L, "VACATION", LocalDate.of(2026, 5, 14), 0, null, null, true);
+        Absence updated = original.update(LocalDate.of(2026, 5, 20), null, true);
         assertEquals(LocalDate.of(2026, 5, 20), updated.getEndDate());
         assertNull(updated.getEndTime());
         assertNull(original.getEndDate()); // original unchanged
@@ -44,7 +44,7 @@ class AbsenceTest {
 
     @Test
     void closeAtReturnsNewAbsenceWithTerminationDate() {
-        Absence original = Absence.create(1L, "VACATION", LocalDate.of(2026, 5, 14), 0, null, null);
+        Absence original = Absence.create(1L, "VACATION", LocalDate.of(2026, 5, 14), 0, null, null, true);
         Absence closed = original.closeAt(LocalDate.of(2026, 5, 31));
         assertEquals(LocalDate.of(2026, 5, 31), closed.getEndDate());
         assertNull(closed.getEndTime());
@@ -53,14 +53,14 @@ class AbsenceTest {
 
     @Test
     void isOpenReturnsTrueWhenEndDateNull() {
-        Absence a = Absence.create(1L, "VACATION", LocalDate.of(2026, 5, 14), 0, null, null);
+        Absence a = Absence.create(1L, "VACATION", LocalDate.of(2026, 5, 14), 0, null, null, true);
         assertTrue(a.isOpen());
     }
 
     @Test
     void isOpenReturnsFalseWhenEndDateSet() {
         Absence a = Absence.create(1L, "VACATION", LocalDate.of(2026, 5, 14), 0,
-            LocalDate.of(2026, 5, 18), null);
+            LocalDate.of(2026, 5, 18), null, true);
         assertFalse(a.isOpen());
     }
 }

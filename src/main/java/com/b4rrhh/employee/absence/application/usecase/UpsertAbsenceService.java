@@ -96,14 +96,15 @@ public class UpsertAbsenceService implements UpsertAbsenceUseCase {
                 throw new AbsenceOverlapException(
                         "Absence overlaps with an existing absence for employee " + employeeNumber);
             }
-            Absence updated = current.update(endDate, endTime);
+            Absence updated = current.update(endDate, endTime, command.benefitEntitledOrDefault());
             return absenceRepository.save(updated);
         } else {
             if (absenceRepository.existsOverlappingAbsence(employeeId, startDate, endDate)) {
                 throw new AbsenceOverlapException(
                         "Absence overlaps with an existing absence for employee " + employeeNumber);
             }
-            Absence newAbsence = Absence.create(employeeId, absenceTypeCode, startDate, startTime, endDate, endTime);
+            Absence newAbsence = Absence.create(employeeId, absenceTypeCode, startDate, startTime,
+                    endDate, endTime, command.benefitEntitledOrDefault());
             return absenceRepository.save(newAbsence);
         }
     }

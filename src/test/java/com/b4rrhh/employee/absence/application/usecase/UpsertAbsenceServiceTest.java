@@ -79,12 +79,12 @@ class UpsertAbsenceServiceTest {
 
     private UpsertAbsenceCommand commandFor(LocalDate start, LocalDate end) {
         return new UpsertAbsenceCommand(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER, ABSENCE_TYPE,
-                start, 480, end, end != null ? 960 : null);
+                start, 480, end, end != null ? 960 : null, null);
     }
 
     private UpsertAbsenceCommand commandSameDay(int startTime, int endTime) {
         return new UpsertAbsenceCommand(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER, ABSENCE_TYPE,
-                MAY_14, startTime, MAY_14, endTime);
+                MAY_14, startTime, MAY_14, endTime, null);
     }
 
     // ---- Tests ----
@@ -168,7 +168,7 @@ class UpsertAbsenceServiceTest {
 
         // endDate before startDate
         UpsertAbsenceCommand cmd = new UpsertAbsenceCommand(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER, ABSENCE_TYPE,
-                MAY_18, 480, MAY_14, 960);
+                MAY_18, 480, MAY_14, 960, null);
 
         assertThrows(InvalidAbsenceDateRangeException.class, () -> service.upsert(cmd));
     }
@@ -220,7 +220,7 @@ class UpsertAbsenceServiceTest {
         when(absenceRepository.existsOverlappingAbsence(eq(42L), eq(MAY_14), any(LocalDate.class)))
                 .thenReturn(false);
 
-        Absence saved = Absence.rehydrate(99L, 42L, ABSENCE_TYPE, MAY_14, 480, MAY_18, 960, NOW, NOW);
+        Absence saved = Absence.rehydrate(99L, 42L, ABSENCE_TYPE, MAY_14, 480, MAY_18, 960, true, NOW, NOW);
         when(absenceRepository.save(any(Absence.class))).thenReturn(saved);
 
         UpsertAbsenceCommand cmd = commandFor(MAY_14, MAY_18);
@@ -240,13 +240,13 @@ class UpsertAbsenceServiceTest {
         when(listPresences.listByEmployeeBusinessKey(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER))
                 .thenReturn(List.of(mayPresence()));
 
-        Absence existing = Absence.rehydrate(77L, 42L, ABSENCE_TYPE, MAY_14, 480, null, null, NOW, NOW);
+        Absence existing = Absence.rehydrate(77L, 42L, ABSENCE_TYPE, MAY_14, 480, null, null, true, NOW, NOW);
         when(absenceRepository.findByKey(42L, ABSENCE_TYPE, MAY_14, 480))
                 .thenReturn(Optional.of(existing));
         when(absenceRepository.existsOverlappingAbsenceExcluding(eq(42L), eq(MAY_14), any(LocalDate.class), eq(77L)))
                 .thenReturn(false);
 
-        Absence updated = existing.update(MAY_18, 960);
+        Absence updated = existing.update(MAY_18, 960, true);
         when(absenceRepository.save(any(Absence.class))).thenReturn(updated);
 
         UpsertAbsenceCommand cmd = commandFor(MAY_14, MAY_18);

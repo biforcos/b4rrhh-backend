@@ -40,7 +40,7 @@ class DeleteAbsenceServiceTest {
         when(getEmployee.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
             .thenReturn(Optional.of(employee()));
         Absence absence = Absence.rehydrate(1L, 1L, "VACATION", MAY_14, 0,
-            null, null, LocalDateTime.now(), LocalDateTime.now());
+            null, null, true, LocalDateTime.now(), LocalDateTime.now());
         when(absenceRepository.findByKey(1L, "VACATION", MAY_14, 0))
             .thenReturn(Optional.of(absence));
 

@@ -18,10 +18,14 @@ import java.time.LocalDate;
  * (ADR-073).
  *
  * @param endDate nulo es una ausencia sin cerrar: llega hasta donde llegue el periodo
+ * @param benefitEntitled si la baja lleva derecho a prestacion ({@code backend#129}). Sin el, la baja
+ *        quita dias igual y no paga nada ni cotiza: es dato y no regla, y lo pone quien registra la
+ *        baja con la resolucion del INSS
  */
 public record PayrollLaunchAbsenceWindowContext(
         LocalDate startDate,
         LocalDate endDate,
-        String absenceTypeCode
+        String absenceTypeCode,
+        boolean benefitEntitled
 ) implements PayrollPeriodSegmentation.DatedWindow {
 }

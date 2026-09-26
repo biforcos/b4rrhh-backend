@@ -397,6 +397,22 @@ public class PayrollScenarioFixtures {
     }
 
     /**
+     * Una baja <b>sin derecho a prestacion</b> ({@code backend#129}).
+     *
+     * <p>El testigo viene con derecho por omision, que es el caso normal: la carencia de 180 dias en
+     * cinco anos la cumple casi todo el mundo. Quien no, lo dice la resolucion del INSS, y entonces la
+     * baja quita dias y no paga nada.
+     */
+    public void insertAbsenceWithoutBenefit(
+            long employeeId, String absenceTypeCode, LocalDate from, LocalDate to) {
+        insertAbsence(employeeId, absenceTypeCode, from, to);
+        jdbc.update(
+                "update employee.employee_absence set benefit_entitled = false" +
+                " where employee_id = ? and absence_type_code = ? and start_date = ?",
+                employeeId, absenceTypeCode, from);
+    }
+
+    /**
      * Un recibo ya existente de otro periodo, con una sola linea ({@code backend#128}).
      *
      * <p>Sirve para poner en pie «el mes anterior»: la base reguladora de una baja sale de la base de

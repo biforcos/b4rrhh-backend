@@ -9,6 +9,8 @@ public record AbsenceResponse(
     String startTime,
     LocalDate endDate,
     String endTime,
+    /** Si la baja lleva derecho a prestacion ({@code backend#129}). */
+    boolean benefitEntitled,
     LocalDateTime createdAt,
     LocalDateTime updatedAt
 ) {}

@@ -712,7 +712,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 // dias detras. No es leer otro mes, es una fecha (backend#127).
                 ausencia == null ? null : new SegmentAbsence(
                         ausencia.absenceTypeCode(),
-                        ChronoUnit.DAYS.between(ausencia.startDate(), dia)));
+                        ChronoUnit.DAYS.between(ausencia.startDate(), dia),
+                        ausencia.benefitEntitled()));
     }
 
     /**

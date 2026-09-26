@@ -228,7 +228,7 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
 
     private static PayrollLaunchAbsenceWindowContext toAbsenceWindow(AbsenceEntity e) {
         return new PayrollLaunchAbsenceWindowContext(
-                e.getStartDate(), e.getEndDate(), e.getAbsenceTypeCode());
+                e.getStartDate(), e.getEndDate(), e.getAbsenceTypeCode(), e.isBenefitEntitled());
     }
 
     private PayrollLaunchWorkingTimeWindowContext toWorkingTimeWindow(WorkingTimeEntity workingTime) {

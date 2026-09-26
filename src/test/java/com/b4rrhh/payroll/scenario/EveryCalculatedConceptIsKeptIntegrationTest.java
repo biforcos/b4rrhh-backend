@@ -87,6 +87,13 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * quince conceptos mas, los quince {@code PERIOD}. Y 65 hasta el {@code backend#122}, que
      * anade la cuota de accidentes de trabajo y el tipo del que sale.
      *
+     * <p>Y eran 78 y 26 hasta el {@code backend#129}: la prestacion por incapacidad temporal son
+     * <b>veinte</b> conceptos mas, dieciseis {@code SEGMENT} y cuatro {@code PERIOD}. Los cuatro de
+     * periodo son los tres porcentajes de los tramos -un porcentaje legal no depende de como se parta
+     * el mes- y el cero que hace de suelo del complemento. De los dieciseis de tramo, cuatro cuentan
+     * dias, seis son la prestacion de los tres tramos y su suma, cuatro el complemento del convenio, y
+     * el ultimo es la base durante la baja.
+     *
      * <p>Y eran 67 y 15 hasta el {@code backend#128}: la base reguladora diaria son <b>once</b>
      * conceptos mas, y los once {@code SEGMENT}. Dos leen el mes anterior —la base que viene de el y
      * el coeficiente que dice que no hay—, y los otros nueve son la cadena que calcula la base
@@ -94,8 +101,8 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * extras sobre un dia, su total, la prorrata diaria, la propia teorica y la puerta que la deja
      * pasar. Son once y no dos porque la teorica se calcula EN EL GRAFO y no en Java (ADR-074 §4).
      */
-    private static final int CONCEPTS_IN_THE_ENGINE = 78;
-    private static final int SEGMENT_SCOPED_CONCEPTS = 26;
+    private static final int CONCEPTS_IN_THE_ENGINE = 98;
+    private static final int SEGMENT_SCOPED_CONCEPTS = 42;
 
     /**
      * Y los 38 entran en algun plan, que es lo que cambio en el backend#96.
@@ -112,9 +119,11 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      *
      * <p>Y los once del {@code backend#128} entran todos: ocho por asignacion propia —los que son
      * fuente de un agregado, mas {@code BR_CC}, que hoy no lo lee nadie y sin asignacion no se
-     * ejecutaria— y tres como operandos, que si se expanden.
+     * ejecutaria— y tres como operandos, que si se expanden. Y los veinte del {@code backend#129}
+     * igual: trece asignados —los que alimentan a un agregado y los que no son operando de nadie— y
+     * siete como operandos.
      */
-    private static final int CONCEPTS_IN_A_PLAN = 78;
+    private static final int CONCEPTS_IN_A_PLAN = 98;
 
     /**
      * Los conceptos con orden de recibo: los que PUEDEN ser linea.
@@ -123,8 +132,11 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
      * backend#111, que imprimio el recuadro de bases de cotizacion: {@code B_CC} y {@code B01}
      * se calculaban desde siempre y ahora ademas salen en el papel. Y son 18 desde el
      * backend#114, que le dio total propio al recuadro de aportacion empresarial.
+     *
+     * <p>Y son 34 desde el {@code backend#129}: las dos lineas de prestacion por incapacidad
+     * temporal, el complemento del convenio y la base de cotizacion durante la baja.
      */
-    private static final int CONCEPTS_WITH_A_PAYSLIP_ORDER = 30;
+    private static final int CONCEPTS_WITH_A_PAYSLIP_ORDER = 34;
 
     /**
      * Y las lineas que un empleado sin horas extra acaba teniendo en el folio, que son 16.
@@ -212,18 +224,20 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
         assertEquals(CONCEPTS_IN_A_PLAN, countSteps(pid), "pasos guardados");
 
         // Y los que antes se tiraban estan, con nombre y apellido.
-        assertEquals(30, countStepsWithNature(pid, "BASE"),
+        assertEquals(38, countStepsWithNature(pid, "BASE"),
                 "conceptos BASE: los 13 de antes del backend#121, los nueve de las tres bases"
                         + " — B03, B04, B05, B06, B07, B_CP_MAX, B_CP, B08 y B09 — y los OCHO de la"
                         + " cadena de la base reguladora teorica del backend#128: las cuatro pagas"
                         + " por dia, su total, la prorrata diaria, la teorica y la puerta");
-        assertEquals(27, countStepsWithNature(pid, "TECHNICAL"),
+        assertEquals(36, countStepsWithNature(pid, "TECHNICAL"),
                 "conceptos TECHNICAL: los 19 de antes, los cuatro del backend#121 —los dos"
                         + " topes de la base profesional y los dos tipos de la cotizacion"
                         + " adicional por horas extraordinarias—, el tipo de accidentes de"
                         + " trabajo del backend#122 y los TRES del backend#128: los dos que miran"
                         + " el mes anterior —BR_ANT y J_SIN_ANT— y la propia BR_CC, que es tecnica"
-                        + " porque no se imprime");
+                        + " porque no se imprime"
+                        + ". Y los nueve del backend#129: cuatro que cuentan dias, tres porcentajes"
+                        + " de tramo, los dias con prestacion y el cero que hace de suelo");
 
         // El recibo tiene 18 lineas: las 17 de antes mas la prorrata que cotiza, que es la puerta
         // que le toca a este empleado. Siguen sin ser TODOS los pasos con orden de recibo: hay 20,
@@ -240,7 +254,9 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
         // imprimieron. El paso existe —el calculo ocurrio— y la linea no. Esa es la regla del cero
         // (backend#104), y es lo que hace que las dos puertas de la prorrata puedan estar las dos
         // asignadas a todo el mundo y salga impresa exactamente una (backend#119).
-        assertEquals(List.of("102", "103", "704", "726", "B06", "B08"), jdbc.queryForList(
+        assertEquals(List.of("102", "103", "110", "111", "112", "704", "726", "B06", "B08",
+                        "B10"),
+                jdbc.queryForList(
                 "select concept_code from payroll.payroll_calculation_step"
                         + " where payroll_id = ? and payslip_order_code is not null"
                         + "   and payslip_line_number is null order by concept_code",
@@ -250,7 +266,9 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
                         + " por la otra puerta, el B02— y los cinco que cuelgan de las horas extra"
                         + " que no ha hecho: el 102, su base (B08), la linea con la que entra en"
                         + " la base profesional (B06) y las dos cuotas de cotizacion adicional"
-                        + " (704 y 726)");
+                        + " (704 y 726). Y los cuatro del backend#129, que son de una baja que este"
+                        + " empleado no ha tenido: las dos lineas de prestacion, el complemento del"
+                        + " convenio y la base de cotizacion durante la baja");
 
         // El recuadro de bases, por los dos lados (backend#111).
         //
@@ -273,10 +291,12 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
                         + " B04, B01, B_CC), profesionales (B05, B07, B_CP), y la base sujeta a"
                         + " retencion (B09). Las dos lineas de horas extra del recuadro —B06 y"
                         + " B08— valen cero en este recibo y no se imprimen (backend#121)");
-        assertEquals(List.of("B02", "B_CC_MAX", "B_CP_MAX", "BR_ACT", "BR_TEO", "P01", "P02", "P03",
+        assertEquals(List.of("111_D60", "111_D75",
+                        "B02", "B_CC_MAX", "B_CP_MAX", "BR_ACT", "BR_TEO",
+                        "IT_100", "IT_DIF", "P01", "P02", "P03",
                         "PE_1", "PE_1_DIA", "PE_2", "PE_2_DIA", "PE_3", "PE_3_DIA",
                         "PE_4", "PE_4_DIA", "PE_TOTAL", "PE_TOTAL_DIA", "P_PRORRATA",
-                        "P_PRORRATA_DIA"),
+                        "P_PRORRATA_DIA", "T_IT_D60", "T_IT_D75", "T_IT_E60"),
                 jdbc.queryForList(
                 "select s.concept_code from payroll.payroll_calculation_step s"
                         + " where s.payroll_id = ? and s.functional_nature = 'BASE'"

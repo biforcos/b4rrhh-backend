@@ -84,14 +84,17 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
     private static final Map<String, Integer> PERSISTED_WITH_A_PAYSLIP_ORDER = new LinkedHashMap<>();
 
     static {
-        // Los diez del recuadro, en los cuatro bloques del modelo oficial (V148):
-        //   1. comunes        B03, B04, B01, B_CC
+        // Los once del recuadro, en los cuatro bloques del modelo oficial (V148):
+        //   1. comunes        B03, B04, B10, B01, B_CC   (B10 desde el backend#129)
         //   2. profesionales  B05, B06, B07, B_CP
         //   3. horas extra    B08
         //   4. base del IRPF  B09
-        PERSISTED_WITH_A_PAYSLIP_ORDER.put("BASE", 10);
+        PERSISTED_WITH_A_PAYSLIP_ORDER.put("BASE", 11);
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("DEDUCTION", 6);        // 700, 701, 702, 703, 704, 800
-        PERSISTED_WITH_A_PAYSLIP_ORDER.put("EARNING", 3);          // 101, 102, 103
+        // 101, 102, 103 y las tres del backend#129: las dos de prestacion por IT y el complemento
+        // del convenio. Las tres son devengos NO salariales -tributan y no cotizan-, y eso no lo
+        // dice su naturaleza sino a quien alimentan: al 970 y no a B01 (art. 147.2.d) LGSS).
+        PERSISTED_WITH_A_PAYSLIP_ORDER.put("EARNING", 6);          // 101, 102, 103, 110, 111, 112
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("INFORMATIONAL", 7);    // 720 a 724, 726 y 727
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("NET_PAY", 1);          // 990
         PERSISTED_WITH_A_PAYSLIP_ORDER.put("TOTAL_DEDUCTION", 1);  // 980
@@ -176,23 +179,26 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
      * que ver; ni {@code B02}, que desde la {@code V148} sale sumada con el {@code 103} dentro
      * del {@code B04}; ni {@code P01}, {@code P02} y {@code P03}, que son <b>precios</b> y llevan
      * naturaleza {@code BASE} sólo porque el motor los usa como operando {@code BASE}. Un
-     * undécimo concepto en esta lista es, casi seguro, uno de esos precios colado en el recuadro.
+     * duodécimo concepto en esta lista es, casi seguro, uno de esos precios colado en el recuadro.
+     *
+     * <p>Eran diez hasta el {@code backend#129}: el undécimo es {@code B10}, la base de cotización
+     * durante la incapacidad temporal, que sí es una base de cotización y sí va al papel.
      *
      * <p>{@code TECHNICAL} sigue sin llevar ninguno, y eso no ha cambiado: un concepto técnico no
      * va al papel.
      */
     @Test
     void onlyTheBasesOfTheOfficialBlockArePrinted_andNoTechnicalConceptIs() {
-        assertEquals(Map.of("BASE", 10), censusByNature("BASE", "TECHNICAL"),
+        assertEquals(Map.of("BASE", 11), censusByNature("BASE", "TECHNICAL"),
                 """
                 Ha cambiado que conceptos BASE o TECHNICAL llevan orden de recibo.
 
-                Del recuadro de bases se imprimen DIEZ y estan elegidos uno a uno: los cuatro de \
-                contingencias comunes (B03, B04, B01, B_CC), los cuatro de profesionales (B05, \
+                Del recuadro de bases se imprimen ONCE y estan elegidos uno a uno: los cinco de \
+                contingencias comunes (B03, B04, B10, B01, B_CC), los cuatro de profesionales (B05, \
                 B06, B07, B_CP), la base de horas extraordinarias (B08) y la sujeta a retencion \
                 del IRPF (B09).
 
-                Si han subido a once o mas, mira si lo que has anadido es una base de verdad o \
+                Si han subido a doce o mas, mira si lo que has anadido es una base de verdad o \
                 uno de los precios: P01, P02 y P03 llevan naturaleza BASE porque el motor los usa \
                 como operando BASE, y no son bases de cotizacion. B_CC_MAX y B_CP_MAX tampoco: \
                 son los pasos intermedios de los topes y en el papel no hay nada entre una base y \
@@ -205,15 +211,18 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
         // en que sitio del bloque. Sale del payslip_order_code y no del codigo del concepto, que
         // aqui empieza por letra y no ordena.
         assertEquals(
-                List.of("401", "402", "403", "404", "411", "412", "413", "414", "421", "431"),
+                List.of("401", "402", "403", "404", "405",
+                        "411", "412", "413", "414", "421", "431"),
                 conceptsWithPayslipOrderOfNature("BASE"),
                 """
-                Los ordenes de recibo de los BASE ya no son los diez del modelo oficial (V148):
+                Los ordenes de recibo de los BASE ya no son los once del modelo oficial (V148 y
+                backend#129):
 
                   401 B03  Remuneracion mensual          411 B05  Base de contingencias comunes
                   402 B04  Prorrata de pagas extras      412 B06  Horas extraordinarias
-                  403 B01  Base de cotizacion            413 B07  Base de cotizacion
-                  404 B_CC Base tras topes               414 B_CP Base tras topes
+                  403 B10  Base durante la baja          413 B07  Base de cotizacion
+                  404 B01  Base de cotizacion            414 B_CP Base tras topes
+                  405 B_CC Base tras topes
                   421 B08  Base                          431 B09  Base
 
                 Cada bloque se lee de arriba abajo y cierra con la base sobre la que se cotiza de \
@@ -303,8 +312,8 @@ class WhatIsPersistedAndWhatThePayslipPaintsAreTwoCriteriaTest {
                 .mapToInt(Map.Entry::getValue)
                 .sum();
 
-        assertEquals(30, persisted, "conceptos con sitio en el recibo");
-        assertEquals(30, painted,
+        assertEquals(34, persisted, "conceptos con sitio en el recibo");
+        assertEquals(34, painted,
                 """
                 Los conceptos que el folio pinta han dejado de ser treinta.
 
