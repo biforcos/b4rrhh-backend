@@ -8,6 +8,9 @@ import com.b4rrhh.employee.extra_payment_regime.domain.exception.ExtraPaymentReg
 import com.b4rrhh.employee.extra_payment_regime.domain.exception.ExtraPaymentRegimeNotFoundException;
 import com.b4rrhh.employee.extra_payment_regime.domain.model.ExtraPaymentRegime;
 import com.b4rrhh.employee.extra_payment_regime.domain.port.ExtraPaymentRegimeRepository;
+import com.b4rrhh.employee.shared.application.port.DatedWrite;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
+import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,18 +23,23 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class DeleteExtraPaymentRegimeService implements DeleteExtraPaymentRegimeUseCase {
 
+    private static final String TABLA = "employee.extra_payment_regime";
+
     private final ExtraPaymentRegimeRepository extraPaymentRegimeRepository;
     private final EmployeeExtraPaymentRegimeLookupPort employeeExtraPaymentRegimeLookupPort;
     private final ExtraPaymentRegimeTimelineService extraPaymentRegimeTimelineService;
+    private final DatedWriteNoticePort datedWrites;
 
     public DeleteExtraPaymentRegimeService(
             ExtraPaymentRegimeRepository extraPaymentRegimeRepository,
             EmployeeExtraPaymentRegimeLookupPort employeeExtraPaymentRegimeLookupPort,
-            ExtraPaymentRegimeTimelineService extraPaymentRegimeTimelineService
+            ExtraPaymentRegimeTimelineService extraPaymentRegimeTimelineService,
+            DatedWriteNoticePort datedWrites
     ) {
         this.extraPaymentRegimeRepository = extraPaymentRegimeRepository;
         this.employeeExtraPaymentRegimeLookupPort = employeeExtraPaymentRegimeLookupPort;
         this.extraPaymentRegimeTimelineService = extraPaymentRegimeTimelineService;
+        this.datedWrites = datedWrites;
     }
 
     @Override
@@ -85,6 +93,11 @@ public class DeleteExtraPaymentRegimeService implements DeleteExtraPaymentRegime
         }
 
         extraPaymentRegimeRepository.delete(existing);
+
+        // La fila ya no esta, y la marca es lo unico que queda de ella (backend#130).
+        datedWrites.notice(DatedWrite.on(existing.getStartDate(),
+                normalizedRuleSystemCode, normalizedEmployeeTypeCode, normalizedEmployeeNumber,
+                DatedWriteSources.EXTRA_PAYMENT_REGIME, TABLA, existing.getId()));
     }
 
     private String normalizeRuleSystemCode(String ruleSystemCode) {

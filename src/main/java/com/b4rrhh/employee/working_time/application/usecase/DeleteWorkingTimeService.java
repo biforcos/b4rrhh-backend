@@ -1,5 +1,8 @@
 package com.b4rrhh.employee.working_time.application.usecase;
 
+import com.b4rrhh.employee.shared.application.port.DatedWrite;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
+import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
 import com.b4rrhh.employee.working_time.application.model.WorkingTimePlan;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeContext;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeLookupPort;
@@ -20,18 +23,23 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class DeleteWorkingTimeService implements DeleteWorkingTimeUseCase {
 
+    private static final String TABLA = "employee.working_time";
+
     private final WorkingTimeRepository workingTimeRepository;
     private final EmployeeWorkingTimeLookupPort employeeWorkingTimeLookupPort;
     private final WorkingTimeTimelineService workingTimeTimelineService;
+    private final DatedWriteNoticePort datedWrites;
 
     public DeleteWorkingTimeService(
             WorkingTimeRepository workingTimeRepository,
             EmployeeWorkingTimeLookupPort employeeWorkingTimeLookupPort,
-            WorkingTimeTimelineService workingTimeTimelineService
+            WorkingTimeTimelineService workingTimeTimelineService,
+            DatedWriteNoticePort datedWrites
     ) {
         this.workingTimeRepository = workingTimeRepository;
         this.employeeWorkingTimeLookupPort = employeeWorkingTimeLookupPort;
         this.workingTimeTimelineService = workingTimeTimelineService;
+        this.datedWrites = datedWrites;
     }
 
     @Override
@@ -85,6 +93,12 @@ public class DeleteWorkingTimeService implements DeleteWorkingTimeUseCase {
         }
 
         workingTimeRepository.delete(existing);
+
+        // La fila ya no esta, asi que la marca es lo unico que queda de ella: su id se guarda igual
+        // para que la ficha pueda decir cual era (backend#130).
+        datedWrites.notice(DatedWrite.on(existing.getStartDate(),
+                normalizedRuleSystemCode, normalizedEmployeeTypeCode, normalizedEmployeeNumber,
+                DatedWriteSources.WORKING_TIME, TABLA, existing.getId()));
     }
 
     private String normalizeRuleSystemCode(String ruleSystemCode) {

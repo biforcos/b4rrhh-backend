@@ -4,14 +4,17 @@ import com.b4rrhh.employee.contract.application.command.UpdateContractCommand;
 import com.b4rrhh.employee.contract.application.model.ContractPlan;
 import com.b4rrhh.employee.contract.application.port.EmployeeContractContext;
 import com.b4rrhh.employee.contract.application.port.EmployeeContractLookupPort;
-import com.b4rrhh.employee.contract.application.service.ContractSubtypeRelationValidator;
 import com.b4rrhh.employee.contract.application.service.ContractCatalogValidator;
+import com.b4rrhh.employee.contract.application.service.ContractSubtypeRelationValidator;
 import com.b4rrhh.employee.contract.application.service.ContractTimelineService;
 import com.b4rrhh.employee.contract.domain.exception.ContractEmployeeNotFoundException;
 import com.b4rrhh.employee.contract.domain.exception.ContractNotFoundException;
 import com.b4rrhh.employee.contract.domain.exception.InvalidContractDateRangeException;
 import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.contract.domain.port.ContractRepository;
+import com.b4rrhh.employee.shared.application.port.DatedWrite;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
+import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
 import com.b4rrhh.employee.temporal.support.DateRange;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,24 +31,29 @@ import java.time.LocalDate;
 @Service
 public class UpdateContractService implements UpdateContractUseCase {
 
+    private static final String TABLA = "employee.contract";
+
     private final ContractRepository contractRepository;
     private final EmployeeContractLookupPort employeeContractLookupPort;
     private final ContractCatalogValidator contractCatalogValidator;
     private final ContractSubtypeRelationValidator contractSubtypeRelationValidator;
     private final ContractTimelineService contractTimelineService;
+    private final DatedWriteNoticePort datedWrites;
 
     public UpdateContractService(
             ContractRepository contractRepository,
             EmployeeContractLookupPort employeeContractLookupPort,
             ContractCatalogValidator contractCatalogValidator,
             ContractSubtypeRelationValidator contractSubtypeRelationValidator,
-            ContractTimelineService contractTimelineService
+            ContractTimelineService contractTimelineService,
+            DatedWriteNoticePort datedWrites
     ) {
         this.contractRepository = contractRepository;
         this.employeeContractLookupPort = employeeContractLookupPort;
         this.contractCatalogValidator = contractCatalogValidator;
         this.contractSubtypeRelationValidator = contractSubtypeRelationValidator;
         this.contractTimelineService = contractTimelineService;
+        this.datedWrites = datedWrites;
     }
 
     @Override
@@ -122,6 +130,16 @@ public class UpdateContractService implements UpdateContractUseCase {
         );
 
         contractRepository.update(corrected, normalizedStartDate);
+
+        // La mas antigua de las dos fechas de inicio: corregir una vigencia puede moverla hacia atras,
+        // y entonces el cambio alcanza desde la nueva; si la mueve hacia delante, desde la vieja, que
+        // es donde deja de estar (backend#130).
+        datedWrites.notice(DatedWrite.on(
+                corrected.getStartDate().isBefore(normalizedStartDate)
+                        ? corrected.getStartDate() : normalizedStartDate,
+                normalizedRuleSystemCode, normalizedEmployeeTypeCode, normalizedEmployeeNumber,
+                DatedWriteSources.CONTRACT, TABLA, corrected.getStartDate().toString()));
+
         return corrected;
     }
 

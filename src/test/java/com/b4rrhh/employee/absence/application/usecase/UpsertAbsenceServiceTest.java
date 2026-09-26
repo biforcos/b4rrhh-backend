@@ -11,6 +11,7 @@ import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKey
 import com.b4rrhh.employee.employee.domain.model.Employee;
 import com.b4rrhh.employee.presence.application.usecase.ListEmployeePresencesUseCase;
 import com.b4rrhh.employee.presence.domain.model.Presence;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,8 @@ class UpsertAbsenceServiceTest {
     @Mock private GetEmployeeByBusinessKeyUseCase getEmployee;
     @Mock private ListEmployeePresencesUseCase listPresences;
     @Mock private AbsenceRepository absenceRepository;
+    /** Doble sin comportamiento: lo vigila el candado, no este test ({@code backend#130}). */
+    @Mock private DatedWriteNoticePort datedWrites;
 
     @InjectMocks private UpsertAbsenceService service;
 

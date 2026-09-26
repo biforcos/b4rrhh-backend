@@ -62,8 +62,18 @@ class NoOutputReadsAnythingButDefinitiveTest {
      * <p>{@code basesalary} busca filas de tabla salarial para el motor: no saca nada del sistema y
      * no lee recibos. De hecho no tiene capa de aplicacion, asi que hoy no haria falta nombrarlo;
      * esta escrito para que el dia que la tenga, la pregunta se haga.
+     *
+     * <p>{@code retro} son las marcas de retroactividad ({@code backend#130}): <b>estado interno,
+     * no un documento</b>. No se entrega, no se imprime y nadie de fuera la ve; lo que sale del
+     * sistema son las lineas de atraso del recibo, y ese recibo es del vertical raiz.
+     *
+     * <p>Si <b>lee</b> recibos —pregunta que presencias tienen ya uno entregado de un periodo, que es
+     * lo que decide si una escritura deja marca— y lo hace filtrando por {@code DEFINITIVE}. El filtro
+     * esta escrito en la consulta, en {@code SpringDataPayrollRepository}, que es donde el ADR-069 §2
+     * dice que tiene que estar; este test no lo ve porque mira el fichero que llama y no el que
+     * consulta. Quien vigila esa lectura es el {@code OnlyOnePortReadsAPayrollOfAnotherPeriodTest}.
      */
-    private static final List<String> NO_SON_SALIDAS = List.of("basesalary");
+    private static final List<String> NO_SON_SALIDAS = List.of("basesalary", "retro");
 
     /** Carpetas de capa del vertical raiz, que no son verticales. */
     private static final List<String> CAPAS = List.of("application", "domain", "infrastructure");

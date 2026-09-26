@@ -2,16 +2,26 @@ package com.b4rrhh.employee.payroll_input.application.usecase;
 
 import com.b4rrhh.employee.payroll_input.domain.exception.EmployeePayrollInputNotFoundException;
 import com.b4rrhh.employee.payroll_input.domain.port.EmployeePayrollInputRepository;
+import com.b4rrhh.employee.shared.application.port.DatedWrite;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
+import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class DeleteEmployeePayrollInputService implements DeleteEmployeePayrollInputUseCase {
 
-    private final EmployeePayrollInputRepository repository;
+    private static final String TABLA = "employee.employee_payroll_input";
 
-    public DeleteEmployeePayrollInputService(EmployeePayrollInputRepository repository) {
+    private final EmployeePayrollInputRepository repository;
+    private final DatedWriteNoticePort datedWrites;
+
+    public DeleteEmployeePayrollInputService(
+            EmployeePayrollInputRepository repository,
+            DatedWriteNoticePort datedWrites
+    ) {
         this.repository = repository;
+        this.datedWrites = datedWrites;
     }
 
     @Override
@@ -26,5 +36,10 @@ public class DeleteEmployeePayrollInputService implements DeleteEmployeePayrollI
             throw new EmployeePayrollInputNotFoundException(cc, command.period());
         }
         repository.deleteByBusinessKey(rsc, etc, en, cc, command.period());
+
+        // Borrar unas horas de un mes cerrado mueve su recibo igual que anadirlas: el atraso sale
+        // negativo (backend#130).
+        datedWrites.notice(DatedWrite.forPeriod(command.period(), rsc, etc, en,
+                DatedWriteSources.PAYROLL_INPUT, TABLA, cc + "/" + command.period()));
     }
 }

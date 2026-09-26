@@ -10,6 +10,9 @@ import com.b4rrhh.employee.labor_classification.application.service.LaborClassif
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationEmployeeNotFoundException;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.labor_classification.domain.port.LaborClassificationRepository;
+import com.b4rrhh.employee.shared.application.port.DatedWrite;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
+import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
 import com.b4rrhh.employee.temporal.support.DateRange;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,24 +28,29 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class CreateLaborClassificationService implements CreateLaborClassificationUseCase {
 
+    private static final String TABLA = "employee.labor_classification";
+
     private final LaborClassificationRepository laborClassificationRepository;
     private final EmployeeLaborClassificationLookupPort employeeLaborClassificationLookupPort;
     private final LaborClassificationCatalogValidator laborClassificationCatalogValidator;
     private final AgreementCategoryRelationValidator agreementCategoryRelationValidator;
     private final LaborClassificationTimelineService laborClassificationTimelineService;
+    private final DatedWriteNoticePort datedWrites;
 
     public CreateLaborClassificationService(
             LaborClassificationRepository laborClassificationRepository,
             EmployeeLaborClassificationLookupPort employeeLaborClassificationLookupPort,
             LaborClassificationCatalogValidator laborClassificationCatalogValidator,
             AgreementCategoryRelationValidator agreementCategoryRelationValidator,
-            LaborClassificationTimelineService laborClassificationTimelineService
+            LaborClassificationTimelineService laborClassificationTimelineService,
+            DatedWriteNoticePort datedWrites
     ) {
         this.laborClassificationRepository = laborClassificationRepository;
         this.employeeLaborClassificationLookupPort = employeeLaborClassificationLookupPort;
         this.laborClassificationCatalogValidator = laborClassificationCatalogValidator;
         this.agreementCategoryRelationValidator = agreementCategoryRelationValidator;
         this.laborClassificationTimelineService = laborClassificationTimelineService;
+        this.datedWrites = datedWrites;
     }
 
     @Override
@@ -117,6 +125,14 @@ public class CreateLaborClassificationService implements CreateLaborClassificati
         }
 
         laborClassificationRepository.save(newLaborClassification);
+
+        // Un aviso y no dos: la vigencia anterior que se cierra pierde cobertura justo el dia en que
+        // empieza esta. La clasificacion no tiene id surrogado -se identifica por empleado y fecha de
+        // inicio-, asi que la marca guarda esa clave (backend#130).
+        datedWrites.notice(DatedWrite.on(newLaborClassification.getStartDate(),
+                normalizedRuleSystemCode, normalizedEmployeeTypeCode, normalizedEmployeeNumber,
+                DatedWriteSources.LABOR_CLASSIFICATION, TABLA, newLaborClassification.getStartDate().toString()));
+
         return newLaborClassification;
     }
 

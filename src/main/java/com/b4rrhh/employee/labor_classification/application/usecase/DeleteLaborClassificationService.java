@@ -9,6 +9,9 @@ import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassifica
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationNotFoundException;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.labor_classification.domain.port.LaborClassificationRepository;
+import com.b4rrhh.employee.shared.application.port.DatedWrite;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
+import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,18 +26,23 @@ import java.time.LocalDate;
 @Service
 public class DeleteLaborClassificationService implements DeleteLaborClassificationUseCase {
 
+    private static final String TABLA = "employee.labor_classification";
+
     private final LaborClassificationRepository laborClassificationRepository;
     private final EmployeeLaborClassificationLookupPort employeeLaborClassificationLookupPort;
     private final LaborClassificationTimelineService laborClassificationTimelineService;
+    private final DatedWriteNoticePort datedWrites;
 
     public DeleteLaborClassificationService(
             LaborClassificationRepository laborClassificationRepository,
             EmployeeLaborClassificationLookupPort employeeLaborClassificationLookupPort,
-            LaborClassificationTimelineService laborClassificationTimelineService
+            LaborClassificationTimelineService laborClassificationTimelineService,
+            DatedWriteNoticePort datedWrites
     ) {
         this.laborClassificationRepository = laborClassificationRepository;
         this.employeeLaborClassificationLookupPort = employeeLaborClassificationLookupPort;
         this.laborClassificationTimelineService = laborClassificationTimelineService;
+        this.datedWrites = datedWrites;
     }
 
     @Override
@@ -86,6 +94,11 @@ public class DeleteLaborClassificationService implements DeleteLaborClassificati
         }
 
         laborClassificationRepository.delete(existing);
+
+        // La fila ya no esta, y la marca es lo unico que queda de ella (backend#130).
+        datedWrites.notice(DatedWrite.on(existing.getStartDate(),
+                normalizedRuleSystemCode, normalizedEmployeeTypeCode, normalizedEmployeeNumber,
+                DatedWriteSources.LABOR_CLASSIFICATION, TABLA, existing.getStartDate().toString()));
     }
 
     private String normalizeRuleSystemCode(String ruleSystemCode) {

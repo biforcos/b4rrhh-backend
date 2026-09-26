@@ -86,4 +86,31 @@ public interface SpringDataPayrollRepository extends JpaRepository<PayrollEntity
             @Param("payrollTypeCode") String payrollTypeCode,
             @Param("conceptCode") String conceptCode
     );
+
+    /**
+     * Que presencias de este empleado tienen ya un recibo <b>entregado</b> de un periodo
+     * ({@code backend#130}).
+     *
+     * <p>No lee ningun importe ni ninguna linea: solo el numero de presencia. Es la pregunta que
+     * decide si una escritura con fecha deja marca de retroactividad, y por eso <b>no es una lectura
+     * de calculo</b> —no alimenta a nadie— aunque toque la misma tabla que las dos de arriba.
+     *
+     * <p>El filtro por {@code DEFINITIVE} va escrito en la consulta y no parametrizado, como el de
+     * {@link #sumDefinitiveConceptAmount} y por la misma razon (ADR-069 §2): un mes calculado y sin
+     * cerrar <b>no es pasado</b>, se vuelve a calcular y no se le ha contado a nadie.
+     */
+    @Query("select distinct p.presenceNumber from PayrollEntity p"
+            + " where p.ruleSystemCode = :ruleSystemCode"
+            + "   and p.employeeTypeCode = :employeeTypeCode"
+            + "   and p.employeeNumber = :employeeNumber"
+            + "   and p.payrollPeriodCode = :payrollPeriodCode"
+            + "   and p.payrollTypeCode = :payrollTypeCode"
+            + "   and p.status = com.b4rrhh.payroll.domain.model.PayrollStatus.DEFINITIVE")
+    List<Integer> findPresenceNumbersWithDefinitivePayroll(
+            @Param("ruleSystemCode") String ruleSystemCode,
+            @Param("employeeTypeCode") String employeeTypeCode,
+            @Param("employeeNumber") String employeeNumber,
+            @Param("payrollPeriodCode") String payrollPeriodCode,
+            @Param("payrollTypeCode") String payrollTypeCode
+    );
 }

@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.working_time.application.usecase;
 
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeContext;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeLookupPort;
 import com.b4rrhh.employee.working_time.application.service.StandardWorkingTimeDerivationPolicy;
@@ -7,8 +8,8 @@ import com.b4rrhh.employee.working_time.application.service.WorkingTimePresenceC
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeAlreadyClosedException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeNotFoundException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeOutsidePresencePeriodException;
-import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
 import com.b4rrhh.employee.working_time.domain.port.WorkingTimeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,8 @@ class CloseWorkingTimeServiceTest {
     private EmployeeWorkingTimeLookupPort employeeWorkingTimeLookupPort;
     @Mock
     private WorkingTimePresenceConsistencyValidator workingTimePresenceConsistencyValidator;
+    /** Doble sin comportamiento: lo vigila el candado, no este test ({@code backend#130}). */
+    @Mock private DatedWriteNoticePort datedWrites;
 
     private CloseWorkingTimeService service;
 
@@ -52,7 +55,8 @@ class CloseWorkingTimeServiceTest {
         service = new CloseWorkingTimeService(
                 workingTimeRepository,
                 employeeWorkingTimeLookupPort,
-                workingTimePresenceConsistencyValidator
+                workingTimePresenceConsistencyValidator,
+                datedWrites
         );
     }
 

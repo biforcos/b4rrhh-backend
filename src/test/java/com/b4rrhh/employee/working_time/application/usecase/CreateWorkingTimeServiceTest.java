@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.working_time.application.usecase;
 
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
 import com.b4rrhh.employee.temporal.support.DateRange;
 import com.b4rrhh.employee.working_time.application.port.AgreementAnnualHoursLookupPort;
 import com.b4rrhh.employee.working_time.application.port.EmployeeAgreementContext;
@@ -74,6 +75,17 @@ class CreateWorkingTimeServiceTest {
     @Mock
     private WorkingTimeDerivationPolicy workingTimeDerivationPolicy;
 
+    /**
+     * El puerto que avisa de que la escritura ha tocado el pasado ({@code backend#130}).
+     *
+     * <p>Aqui es un doble sin comportamiento a proposito: lo que este test prueba es la regla de
+     * la vertical, y que la marca se escriba cuando toca es del escenario del {@code #130}. Lo que
+     * si vigila es el candado {@code EveryDatedWriteAnnouncesItselfThroughOnePortTest}, que exige
+     * que este puerto este inyectado.
+     */
+    @Mock
+    private DatedWriteNoticePort datedWrites;
+
     private CreateWorkingTimeService service;
 
     @BeforeEach
@@ -84,7 +96,8 @@ class CreateWorkingTimeServiceTest {
                 employeeAgreementContextLookupPort,
                 agreementAnnualHoursLookupPort,
                 new WorkingTimeTimelineService(workingTimeRepository, presencePort),
-                workingTimeDerivationPolicy
+                workingTimeDerivationPolicy,
+                datedWrites
         );
     }
 

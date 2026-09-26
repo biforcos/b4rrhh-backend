@@ -10,6 +10,9 @@ import com.b4rrhh.employee.contract.domain.exception.ContractEmployeeNotFoundExc
 import com.b4rrhh.employee.contract.domain.exception.ContractNotFoundException;
 import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.contract.domain.port.ContractRepository;
+import com.b4rrhh.employee.shared.application.port.DatedWrite;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
+import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
 import com.b4rrhh.employee.temporal.support.DateRange;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,18 +35,23 @@ import java.time.LocalDate;
 @Service
 public class CloseContractService implements CloseContractUseCase {
 
+    private static final String TABLA = "employee.contract";
+
     private final ContractRepository contractRepository;
     private final EmployeeContractLookupPort employeeContractLookupPort;
     private final ContractTimelineService contractTimelineService;
+    private final DatedWriteNoticePort datedWrites;
 
     public CloseContractService(
             ContractRepository contractRepository,
             EmployeeContractLookupPort employeeContractLookupPort,
-            ContractTimelineService contractTimelineService
+            ContractTimelineService contractTimelineService,
+            DatedWriteNoticePort datedWrites
     ) {
         this.contractRepository = contractRepository;
         this.employeeContractLookupPort = employeeContractLookupPort;
         this.contractTimelineService = contractTimelineService;
+        this.datedWrites = datedWrites;
     }
 
     @Override
@@ -94,6 +102,13 @@ public class CloseContractService implements CloseContractUseCase {
         );
 
         contractRepository.update(closed, closed.getStartDate());
+
+        // El dia SIGUIENTE al cierre: cerrar el 20 de agosto no cambia nada hasta el 21, que es cuando
+        // la cobertura desaparece (backend#130).
+        datedWrites.notice(DatedWrite.on(closed.getEndDate().plusDays(1),
+                normalizedRuleSystemCode, normalizedEmployeeTypeCode, normalizedEmployeeNumber,
+                DatedWriteSources.CONTRACT, TABLA, closed.getStartDate().toString()));
+
         return closed;
     }
 

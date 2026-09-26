@@ -13,6 +13,9 @@ import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow
 import com.b4rrhh.employee.cost_center.domain.port.CostCenterRepository;
 import com.b4rrhh.employee.cost_center.domain.service.CostCenterDistributionTimelineValidator;
 import com.b4rrhh.employee.cost_center.domain.service.CostCenterDistributionWindowGrouper;
+import com.b4rrhh.employee.shared.application.port.DatedWrite;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
+import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
 import com.b4rrhh.employee.temporal.support.DateRange;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,12 +35,15 @@ import java.util.List;
 @Service
 public class UpdateCostCenterDistributionService implements UpdateCostCenterDistributionUseCase {
 
+    private static final String TABLA = "employee.cost_center";
+
     private final CostCenterRepository costCenterRepository;
     private final EmployeeCostCenterLookupPort employeeCostCenterLookupPort;
     private final CostCenterCatalogValidator costCenterCatalogValidator;
     private final CostCenterTimelineService costCenterTimelineService;
     private final CostCenterDistributionTimelineValidator timelineValidator;
     private final CostCenterDistributionWindowGrouper windowGrouper;
+    private final DatedWriteNoticePort datedWrites;
 
     public UpdateCostCenterDistributionService(
             CostCenterRepository costCenterRepository,
@@ -45,7 +51,8 @@ public class UpdateCostCenterDistributionService implements UpdateCostCenterDist
             CostCenterCatalogValidator costCenterCatalogValidator,
             CostCenterTimelineService costCenterTimelineService,
             CostCenterDistributionTimelineValidator timelineValidator,
-            CostCenterDistributionWindowGrouper windowGrouper
+            CostCenterDistributionWindowGrouper windowGrouper,
+            DatedWriteNoticePort datedWrites
     ) {
         this.costCenterRepository = costCenterRepository;
         this.employeeCostCenterLookupPort = employeeCostCenterLookupPort;
@@ -53,6 +60,7 @@ public class UpdateCostCenterDistributionService implements UpdateCostCenterDist
         this.costCenterTimelineService = costCenterTimelineService;
         this.timelineValidator = timelineValidator;
         this.windowGrouper = windowGrouper;
+        this.datedWrites = datedWrites;
     }
 
     @Override
@@ -109,6 +117,14 @@ public class UpdateCostCenterDistributionService implements UpdateCostCenterDist
 
         costCenterRepository.deleteAllForWindow(employee.employeeId(), existing.getStartDate());
         costCenterRepository.saveAll(corrected);
+
+        // La mas antigua de las dos fechas de inicio: corregir la ventana puede moverla hacia atras, y
+        // entonces el cambio alcanza desde la nueva; si la mueve hacia delante, desde la vieja, que es
+        // donde deja de estar (backend#130).
+        datedWrites.notice(DatedWrite.on(
+                startDate.isBefore(existing.getStartDate()) ? startDate : existing.getStartDate(),
+                ruleSystemCode, employeeTypeCode, employeeNumber,
+                DatedWriteSources.COST_CENTER, TABLA, startDate.toString()));
 
         return new CostCenterDistributionWindow(startDate, endDate, corrected);
     }

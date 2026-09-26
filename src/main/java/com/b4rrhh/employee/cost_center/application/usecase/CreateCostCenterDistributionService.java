@@ -11,6 +11,9 @@ import com.b4rrhh.employee.cost_center.domain.model.CostCenterAllocation;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow;
 import com.b4rrhh.employee.cost_center.domain.port.CostCenterRepository;
 import com.b4rrhh.employee.cost_center.domain.service.CostCenterDistributionTimelineValidator;
+import com.b4rrhh.employee.shared.application.port.DatedWrite;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
+import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
 import com.b4rrhh.employee.temporal.support.DateRange;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,24 +34,29 @@ import java.util.List;
 @Service
 public class CreateCostCenterDistributionService implements CreateCostCenterDistributionUseCase {
 
+    private static final String TABLA = "employee.cost_center";
+
     private final CostCenterRepository costCenterRepository;
     private final EmployeeCostCenterLookupPort employeeCostCenterLookupPort;
     private final CostCenterCatalogValidator costCenterCatalogValidator;
     private final CostCenterTimelineService costCenterTimelineService;
     private final CostCenterDistributionTimelineValidator timelineValidator;
+    private final DatedWriteNoticePort datedWrites;
 
     public CreateCostCenterDistributionService(
             CostCenterRepository costCenterRepository,
             EmployeeCostCenterLookupPort employeeCostCenterLookupPort,
             CostCenterCatalogValidator costCenterCatalogValidator,
             CostCenterTimelineService costCenterTimelineService,
-            CostCenterDistributionTimelineValidator timelineValidator
+            CostCenterDistributionTimelineValidator timelineValidator,
+            DatedWriteNoticePort datedWrites
     ) {
         this.costCenterRepository = costCenterRepository;
         this.employeeCostCenterLookupPort = employeeCostCenterLookupPort;
         this.costCenterCatalogValidator = costCenterCatalogValidator;
         this.costCenterTimelineService = costCenterTimelineService;
         this.timelineValidator = timelineValidator;
+        this.datedWrites = datedWrites;
     }
 
     @Override
@@ -103,6 +111,12 @@ public class CreateCostCenterDistributionService implements CreateCostCenterDist
         }
 
         costCenterRepository.saveAll(allocations);
+
+        // La ventana no tiene id surrogado: se identifica por empleado y fecha de inicio
+        // (backend#130).
+        datedWrites.notice(DatedWrite.on(command.startDate(),
+                ruleSystemCode, employeeTypeCode, employeeNumber,
+                DatedWriteSources.COST_CENTER, TABLA, command.startDate().toString()));
 
         return new CostCenterDistributionWindow(command.startDate(), command.endDate(), allocations);
     }

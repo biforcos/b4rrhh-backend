@@ -11,6 +11,7 @@ import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassifica
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassificationPeriod;
 import com.b4rrhh.employee.labor_classification.domain.port.LaborClassificationRepository;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,6 +50,17 @@ class CloseLaborClassificationServiceTest {
     @Mock
     private LaborClassificationPresenceConsistencyPort presencePort;
 
+    /**
+     * El puerto que avisa de que la escritura ha tocado el pasado ({@code backend#130}).
+     *
+     * <p>Aqui es un doble sin comportamiento a proposito: lo que este test prueba es la regla de
+     * la vertical, y que la marca se escriba cuando toca es del escenario del {@code #130}. Lo que
+     * si vigila es el candado {@code EveryDatedWriteAnnouncesItselfThroughOnePortTest}, que exige
+     * que este puerto este inyectado.
+     */
+    @Mock
+    private DatedWriteNoticePort datedWrites;
+
     private CloseLaborClassificationService service;
 
     @BeforeEach
@@ -56,7 +68,8 @@ class CloseLaborClassificationServiceTest {
         service = new CloseLaborClassificationService(
                 laborClassificationRepository,
                 employeeLaborClassificationLookupPort,
-                new LaborClassificationTimelineService(laborClassificationRepository, presencePort)
+                new LaborClassificationTimelineService(laborClassificationRepository, presencePort),
+                datedWrites
         );
     }
 

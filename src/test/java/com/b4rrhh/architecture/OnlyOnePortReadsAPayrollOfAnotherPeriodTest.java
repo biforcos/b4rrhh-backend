@@ -61,8 +61,12 @@ class OnlyOnePortReadsAPayrollOfAnotherPeriodTest {
     private static final Map<String, String> PUEDEN_LEER_RECIBOS = new TreeMap<>(Map.of(
             "SpringDataPayrollRepository.java",
                     "el repositorio del vertical. Lee el recibo de SU unidad por clave de negocio, la"
-                            + " lista de una pantalla, y -para la base reguladora- el estado y la base"
-                            + " de OTRO periodo, esto ultimo filtrando por DEFINITIVE en la consulta",
+                            + " lista de una pantalla, -para la base reguladora- el estado y la base"
+                            + " de OTRO periodo, y -para las marcas de retroactividad del backend#130-"
+                            + " que presencias tienen ya un recibo entregado de un periodo; las dos"
+                            + " ultimas filtrando por DEFINITIVE escrito en la consulta. La del #130 no"
+                            + " lee ningun importe ni ninguna linea: solo el numero de presencia, asi"
+                            + " que no es una lectura de calculo aunque toque la misma tabla",
             "DemoCountsQuery.java",
                     "cuenta filas para la pantalla de la demo: un count(*) sobre la tabla entera, sin"
                             + " periodo y sin leer ningun importe"));

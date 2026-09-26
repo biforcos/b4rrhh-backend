@@ -12,6 +12,9 @@ import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassifica
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationNotFoundException;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.labor_classification.domain.port.LaborClassificationRepository;
+import com.b4rrhh.employee.shared.application.port.DatedWrite;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
+import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
 import com.b4rrhh.employee.temporal.support.DateRange;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,24 +31,29 @@ import java.time.LocalDate;
 @Service
 public class UpdateLaborClassificationService implements UpdateLaborClassificationUseCase {
 
+    private static final String TABLA = "employee.labor_classification";
+
     private final LaborClassificationRepository laborClassificationRepository;
     private final EmployeeLaborClassificationLookupPort employeeLaborClassificationLookupPort;
     private final LaborClassificationCatalogValidator laborClassificationCatalogValidator;
     private final AgreementCategoryRelationValidator agreementCategoryRelationValidator;
     private final LaborClassificationTimelineService laborClassificationTimelineService;
+    private final DatedWriteNoticePort datedWrites;
 
     public UpdateLaborClassificationService(
             LaborClassificationRepository laborClassificationRepository,
             EmployeeLaborClassificationLookupPort employeeLaborClassificationLookupPort,
             LaborClassificationCatalogValidator laborClassificationCatalogValidator,
             AgreementCategoryRelationValidator agreementCategoryRelationValidator,
-            LaborClassificationTimelineService laborClassificationTimelineService
+            LaborClassificationTimelineService laborClassificationTimelineService,
+            DatedWriteNoticePort datedWrites
     ) {
         this.laborClassificationRepository = laborClassificationRepository;
         this.employeeLaborClassificationLookupPort = employeeLaborClassificationLookupPort;
         this.laborClassificationCatalogValidator = laborClassificationCatalogValidator;
         this.agreementCategoryRelationValidator = agreementCategoryRelationValidator;
         this.laborClassificationTimelineService = laborClassificationTimelineService;
+        this.datedWrites = datedWrites;
     }
 
     @Override
@@ -122,6 +130,16 @@ public class UpdateLaborClassificationService implements UpdateLaborClassificati
         );
 
         laborClassificationRepository.update(corrected, normalizedStartDate);
+
+        // La mas antigua de las dos fechas de inicio: si la correccion mueve la vigencia hacia atras el
+        // cambio alcanza desde la nueva, y si la mueve hacia delante, desde la vieja, que es donde deja
+        // de estar (backend#130).
+        datedWrites.notice(DatedWrite.on(
+                corrected.getStartDate().isBefore(normalizedStartDate)
+                        ? corrected.getStartDate() : normalizedStartDate,
+                normalizedRuleSystemCode, normalizedEmployeeTypeCode, normalizedEmployeeNumber,
+                DatedWriteSources.LABOR_CLASSIFICATION, TABLA, corrected.getStartDate().toString()));
+
         return corrected;
     }
 

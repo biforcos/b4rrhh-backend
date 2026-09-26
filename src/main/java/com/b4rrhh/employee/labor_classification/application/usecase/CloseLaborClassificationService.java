@@ -10,6 +10,9 @@ import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassifica
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationNotFoundException;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.labor_classification.domain.port.LaborClassificationRepository;
+import com.b4rrhh.employee.shared.application.port.DatedWrite;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
+import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
 import com.b4rrhh.employee.temporal.support.DateRange;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,18 +35,23 @@ import java.time.LocalDate;
 @Service
 public class CloseLaborClassificationService implements CloseLaborClassificationUseCase {
 
+    private static final String TABLA = "employee.labor_classification";
+
     private final LaborClassificationRepository laborClassificationRepository;
     private final EmployeeLaborClassificationLookupPort employeeLaborClassificationLookupPort;
     private final LaborClassificationTimelineService laborClassificationTimelineService;
+    private final DatedWriteNoticePort datedWrites;
 
     public CloseLaborClassificationService(
             LaborClassificationRepository laborClassificationRepository,
             EmployeeLaborClassificationLookupPort employeeLaborClassificationLookupPort,
-            LaborClassificationTimelineService laborClassificationTimelineService
+            LaborClassificationTimelineService laborClassificationTimelineService,
+            DatedWriteNoticePort datedWrites
     ) {
         this.laborClassificationRepository = laborClassificationRepository;
         this.employeeLaborClassificationLookupPort = employeeLaborClassificationLookupPort;
         this.laborClassificationTimelineService = laborClassificationTimelineService;
+        this.datedWrites = datedWrites;
     }
 
     @Override
@@ -94,6 +102,12 @@ public class CloseLaborClassificationService implements CloseLaborClassification
         );
 
         laborClassificationRepository.update(closed, closed.getStartDate());
+
+        // El dia SIGUIENTE al cierre, que es cuando la cobertura desaparece (backend#130).
+        datedWrites.notice(DatedWrite.on(closed.getEndDate().plusDays(1),
+                normalizedRuleSystemCode, normalizedEmployeeTypeCode, normalizedEmployeeNumber,
+                DatedWriteSources.LABOR_CLASSIFICATION, TABLA, closed.getStartDate().toString()));
+
         return closed;
     }
 

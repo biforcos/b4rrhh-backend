@@ -97,6 +97,9 @@ import com.b4rrhh.payroll.application.service.PayrollRuleFreshnessService;
 import com.b4rrhh.payroll.infrastructure.persistence.PayrollLaunchEligibleInputLookupAdapter;
 import com.b4rrhh.payroll.infrastructure.persistence.PayrollPersistenceAdapter;
 import com.b4rrhh.payroll.infrastructure.persistence.RuleSystemLastChangeLookupAdapter;
+import com.b4rrhh.payroll.retro.application.service.RetroMarkWriter;
+import com.b4rrhh.payroll.retro.infrastructure.persistence.ClosedPeriodPresenceLookupAdapter;
+import com.b4rrhh.payroll.retro.infrastructure.persistence.RetroMarkRepositoryAdapter;
 import com.b4rrhh.payroll_engine.concept.infrastructure.persistence.ConceptLabelPersistenceAdapter;
 import com.b4rrhh.payroll_engine.concept.infrastructure.persistence.PayrollConceptOperandPersistenceAdapter;
 import com.b4rrhh.payroll_engine.concept.infrastructure.persistence.PayrollConceptPersistenceAdapter;
@@ -256,6 +259,13 @@ import java.lang.annotation.Target;
         PayrollLaunchEligibleInputLookupAdapter.class,
         // payroll: si las reglas cambiaron desde que se calculo el recibo (backend#107, #116)
         PayrollPersistenceAdapter.class,
+        // Las marcas de retroactividad (backend#130). Estan aqui y no en un test porque toda
+        // escritura con fecha de las verticales de arriba pasa por el puerto que RetroMarkWriter
+        // implementa: sin estos tres, cualquier test que cree una jornada o una clasificacion se
+        // queda sin contexto.
+        RetroMarkWriter.class,
+        RetroMarkRepositoryAdapter.class,
+        ClosedPeriodPresenceLookupAdapter.class,
         RuleSystemLastChangeLookupAdapter.class,
         PayrollRuleFreshnessService.class,
         // payroll: binding de objetos y tablas

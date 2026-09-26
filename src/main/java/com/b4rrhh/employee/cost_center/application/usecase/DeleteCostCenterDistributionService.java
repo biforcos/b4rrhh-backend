@@ -10,6 +10,9 @@ import com.b4rrhh.employee.cost_center.domain.exception.CostCenterEmployeeNotFou
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow;
 import com.b4rrhh.employee.cost_center.domain.port.CostCenterRepository;
 import com.b4rrhh.employee.cost_center.domain.service.CostCenterDistributionWindowGrouper;
+import com.b4rrhh.employee.shared.application.port.DatedWrite;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
+import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,21 +28,26 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class DeleteCostCenterDistributionService implements DeleteCostCenterDistributionUseCase {
 
+    private static final String TABLA = "employee.cost_center";
+
     private final CostCenterRepository costCenterRepository;
     private final EmployeeCostCenterLookupPort employeeCostCenterLookupPort;
     private final CostCenterTimelineService costCenterTimelineService;
     private final CostCenterDistributionWindowGrouper windowGrouper;
+    private final DatedWriteNoticePort datedWrites;
 
     public DeleteCostCenterDistributionService(
             CostCenterRepository costCenterRepository,
             EmployeeCostCenterLookupPort employeeCostCenterLookupPort,
             CostCenterTimelineService costCenterTimelineService,
-            CostCenterDistributionWindowGrouper windowGrouper
+            CostCenterDistributionWindowGrouper windowGrouper,
+            DatedWriteNoticePort datedWrites
     ) {
         this.costCenterRepository = costCenterRepository;
         this.employeeCostCenterLookupPort = employeeCostCenterLookupPort;
         this.costCenterTimelineService = costCenterTimelineService;
         this.windowGrouper = windowGrouper;
+        this.datedWrites = datedWrites;
     }
 
     @Override
@@ -78,6 +86,11 @@ public class DeleteCostCenterDistributionService implements DeleteCostCenterDist
         }
 
         costCenterRepository.deleteAllForWindow(employee.employeeId(), existing.getStartDate());
+
+        // La ventana ya no esta, y la marca es lo unico que queda de ella (backend#130).
+        datedWrites.notice(DatedWrite.on(existing.getStartDate(),
+                ruleSystemCode, employeeTypeCode, employeeNumber,
+                DatedWriteSources.COST_CENTER, TABLA, existing.getStartDate().toString()));
     }
 
     private String normalizeRuleSystemCode(String value) {

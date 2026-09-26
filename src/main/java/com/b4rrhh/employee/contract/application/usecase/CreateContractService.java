@@ -4,12 +4,15 @@ import com.b4rrhh.employee.contract.application.command.CreateContractCommand;
 import com.b4rrhh.employee.contract.application.model.ContractPlan;
 import com.b4rrhh.employee.contract.application.port.EmployeeContractContext;
 import com.b4rrhh.employee.contract.application.port.EmployeeContractLookupPort;
-import com.b4rrhh.employee.contract.application.service.ContractSubtypeRelationValidator;
 import com.b4rrhh.employee.contract.application.service.ContractCatalogValidator;
+import com.b4rrhh.employee.contract.application.service.ContractSubtypeRelationValidator;
 import com.b4rrhh.employee.contract.application.service.ContractTimelineService;
 import com.b4rrhh.employee.contract.domain.exception.ContractEmployeeNotFoundException;
 import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.contract.domain.port.ContractRepository;
+import com.b4rrhh.employee.shared.application.port.DatedWrite;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
+import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
 import com.b4rrhh.employee.temporal.support.DateRange;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,24 +28,29 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class CreateContractService implements CreateContractUseCase {
 
+    private static final String TABLA = "employee.contract";
+
     private final ContractRepository contractRepository;
     private final EmployeeContractLookupPort employeeContractLookupPort;
     private final ContractCatalogValidator contractCatalogValidator;
     private final ContractSubtypeRelationValidator contractSubtypeRelationValidator;
     private final ContractTimelineService contractTimelineService;
+    private final DatedWriteNoticePort datedWrites;
 
     public CreateContractService(
             ContractRepository contractRepository,
             EmployeeContractLookupPort employeeContractLookupPort,
             ContractCatalogValidator contractCatalogValidator,
             ContractSubtypeRelationValidator contractSubtypeRelationValidator,
-            ContractTimelineService contractTimelineService
+            ContractTimelineService contractTimelineService,
+            DatedWriteNoticePort datedWrites
     ) {
         this.contractRepository = contractRepository;
         this.employeeContractLookupPort = employeeContractLookupPort;
         this.contractCatalogValidator = contractCatalogValidator;
         this.contractSubtypeRelationValidator = contractSubtypeRelationValidator;
         this.contractTimelineService = contractTimelineService;
+        this.datedWrites = datedWrites;
     }
 
     @Override
@@ -116,6 +124,15 @@ public class CreateContractService implements CreateContractUseCase {
         }
 
         contractRepository.save(newContract);
+
+        // Un aviso y no dos, aunque arriba se haya cerrado tambien la vigencia anterior: pierde
+        // cobertura justo el dia en que empieza esta, asi que la fecha mas antigua a la que alcanza el
+        // cambio es la misma. El contrato no tiene id surrogado -se identifica por empleado y fecha de
+        // inicio-, asi que la marca guarda esa clave (backend#130).
+        datedWrites.notice(DatedWrite.on(newContract.getStartDate(),
+                normalizedRuleSystemCode, normalizedEmployeeTypeCode, normalizedEmployeeNumber,
+                DatedWriteSources.CONTRACT, TABLA, newContract.getStartDate().toString()));
+
         return newContract;
     }
 

@@ -1,6 +1,5 @@
 package com.b4rrhh.employee.extra_payment_regime.application.usecase;
 
-import com.b4rrhh.employee.temporal.support.DateRange;
 import com.b4rrhh.employee.extra_payment_regime.application.model.ExtraPaymentRegimePlan;
 import com.b4rrhh.employee.extra_payment_regime.application.port.EmployeeExtraPaymentRegimeContext;
 import com.b4rrhh.employee.extra_payment_regime.application.port.EmployeeExtraPaymentRegimeLookupPort;
@@ -9,6 +8,10 @@ import com.b4rrhh.employee.extra_payment_regime.domain.exception.ExtraPaymentReg
 import com.b4rrhh.employee.extra_payment_regime.domain.exception.ExtraPaymentRegimeNotFoundException;
 import com.b4rrhh.employee.extra_payment_regime.domain.model.ExtraPaymentRegime;
 import com.b4rrhh.employee.extra_payment_regime.domain.port.ExtraPaymentRegimeRepository;
+import com.b4rrhh.employee.shared.application.port.DatedWrite;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
+import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
+import com.b4rrhh.employee.temporal.support.DateRange;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,18 +25,23 @@ import java.time.LocalDate;
 @Service
 public class UpdateExtraPaymentRegimeService implements UpdateExtraPaymentRegimeUseCase {
 
+    private static final String TABLA = "employee.extra_payment_regime";
+
     private final ExtraPaymentRegimeRepository extraPaymentRegimeRepository;
     private final EmployeeExtraPaymentRegimeLookupPort employeeExtraPaymentRegimeLookupPort;
     private final ExtraPaymentRegimeTimelineService extraPaymentRegimeTimelineService;
+    private final DatedWriteNoticePort datedWrites;
 
     public UpdateExtraPaymentRegimeService(
             ExtraPaymentRegimeRepository extraPaymentRegimeRepository,
             EmployeeExtraPaymentRegimeLookupPort employeeExtraPaymentRegimeLookupPort,
-            ExtraPaymentRegimeTimelineService extraPaymentRegimeTimelineService
+            ExtraPaymentRegimeTimelineService extraPaymentRegimeTimelineService,
+            DatedWriteNoticePort datedWrites
     ) {
         this.extraPaymentRegimeRepository = extraPaymentRegimeRepository;
         this.employeeExtraPaymentRegimeLookupPort = employeeExtraPaymentRegimeLookupPort;
         this.extraPaymentRegimeTimelineService = extraPaymentRegimeTimelineService;
+        this.datedWrites = datedWrites;
     }
 
     @Override
@@ -90,7 +98,15 @@ public class UpdateExtraPaymentRegimeService implements UpdateExtraPaymentRegime
                 normalizedEmployeeNumber
         );
 
-        return extraPaymentRegimeRepository.save(updated);
+        ExtraPaymentRegime guardado = extraPaymentRegimeRepository.save(updated);
+
+        // Desde el inicio de la vigencia corregida: el regimen decide por que puerta entra la prorrata
+        // (ADR-070), asi que cambiarlo mueve la base desde ese dia (backend#130).
+        datedWrites.notice(DatedWrite.on(updated.getStartDate(),
+                normalizedRuleSystemCode, normalizedEmployeeTypeCode, normalizedEmployeeNumber,
+                DatedWriteSources.EXTRA_PAYMENT_REGIME, TABLA, updated.getId()));
+
+        return guardado;
     }
 
     private String normalizeRuleSystemCode(String ruleSystemCode) {

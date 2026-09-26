@@ -11,6 +11,9 @@ import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKey
 import com.b4rrhh.employee.employee.domain.model.Employee;
 import com.b4rrhh.employee.presence.application.usecase.ListEmployeePresencesUseCase;
 import com.b4rrhh.employee.presence.domain.model.Presence;
+import com.b4rrhh.employee.shared.application.port.DatedWrite;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
+import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,21 +25,26 @@ import java.util.Optional;
 @Service
 public class UpsertAbsenceService implements UpsertAbsenceUseCase {
 
+    private static final String TABLA = "employee.employee_absence";
+
     private final RuleEntityRepository ruleEntityRepository;
     private final GetEmployeeByBusinessKeyUseCase getEmployee;
     private final ListEmployeePresencesUseCase listPresences;
     private final AbsenceRepository absenceRepository;
+    private final DatedWriteNoticePort datedWrites;
 
     public UpsertAbsenceService(
             RuleEntityRepository ruleEntityRepository,
             GetEmployeeByBusinessKeyUseCase getEmployee,
             ListEmployeePresencesUseCase listPresences,
-            AbsenceRepository absenceRepository
+            AbsenceRepository absenceRepository,
+            DatedWriteNoticePort datedWrites
     ) {
         this.ruleEntityRepository = ruleEntityRepository;
         this.getEmployee = getEmployee;
         this.listPresences = listPresences;
         this.absenceRepository = absenceRepository;
+        this.datedWrites = datedWrites;
     }
 
     @Override
@@ -90,6 +98,7 @@ public class UpsertAbsenceService implements UpsertAbsenceUseCase {
         // 5. Look up existing absence by business key
         Optional<Absence> existing = absenceRepository.findByKey(employeeId, absenceTypeCode, startDate, startTime);
 
+        Absence guardada;
         if (existing.isPresent()) {
             Absence current = existing.get();
             if (absenceRepository.existsOverlappingAbsenceExcluding(employeeId, startDate, endDate, current.getId())) {
@@ -97,7 +106,7 @@ public class UpsertAbsenceService implements UpsertAbsenceUseCase {
                         "Absence overlaps with an existing absence for employee " + employeeNumber);
             }
             Absence updated = current.update(endDate, endTime, command.benefitEntitledOrDefault());
-            return absenceRepository.save(updated);
+            guardada = absenceRepository.save(updated);
         } else {
             if (absenceRepository.existsOverlappingAbsence(employeeId, startDate, endDate)) {
                 throw new AbsenceOverlapException(
@@ -105,8 +114,21 @@ public class UpsertAbsenceService implements UpsertAbsenceUseCase {
             }
             Absence newAbsence = Absence.create(employeeId, absenceTypeCode, startDate, startTime,
                     endDate, endTime, command.benefitEntitledOrDefault());
-            return absenceRepository.save(newAbsence);
+            guardada = absenceRepository.save(newAbsence);
         }
+
+        // Por la fecha de INICIO y no por la de fin, aunque una baja del 28 de agosto al 4 de
+        // septiembre mueva los dos meses: quien recalcula lo hace hacia delante desde el mas antiguo
+        // (el #131), asi que decir agosto ya dice septiembre. Al contrario no (backend#130).
+        //
+        // La fecha es la del mandato y no la de lo guardado: la sabe quien llama, asi que no hay razon
+        // para ir a buscarla. El id si sale de lo guardado, porque en un alta solo lo sabe el
+        // repositorio.
+        datedWrites.notice(DatedWrite.on(startDate,
+                ruleSystemCode, employeeTypeCode, employeeNumber,
+                DatedWriteSources.ABSENCE, TABLA, guardada.getId()));
+
+        return guardada;
     }
 
     private boolean isCoveredByAnyPresence(List<Presence> presences, LocalDate date) {

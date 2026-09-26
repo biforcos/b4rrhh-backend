@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.working_time.application.usecase;
 
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
 import com.b4rrhh.employee.temporal.support.DateRange;
 import com.b4rrhh.employee.working_time.application.port.AgreementAnnualHoursLookupPort;
 import com.b4rrhh.employee.working_time.application.port.EmployeeAgreementContext;
@@ -67,6 +68,8 @@ class UpdateWorkingTimeServiceTest {
     @Mock private AgreementAnnualHoursLookupPort agreementAnnualHoursLookupPort;
     @Mock private WorkingTimePresenceConsistencyPort presencePort;
     @Mock private WorkingTimeDerivationPolicy workingTimeDerivationPolicy;
+    /** Doble sin comportamiento: lo vigila el candado, no este test ({@code backend#130}). */
+    @Mock private DatedWriteNoticePort datedWrites;
 
     private UpdateWorkingTimeService service;
 
@@ -78,7 +81,8 @@ class UpdateWorkingTimeServiceTest {
                 employeeAgreementContextLookupPort,
                 agreementAnnualHoursLookupPort,
                 new WorkingTimeTimelineService(workingTimeRepository, presencePort),
-                workingTimeDerivationPolicy
+                workingTimeDerivationPolicy,
+                datedWrites
         );
     }
 

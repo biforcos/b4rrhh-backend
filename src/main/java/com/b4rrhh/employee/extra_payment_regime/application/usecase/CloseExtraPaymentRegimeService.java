@@ -7,24 +7,32 @@ import com.b4rrhh.employee.extra_payment_regime.domain.exception.ExtraPaymentReg
 import com.b4rrhh.employee.extra_payment_regime.domain.exception.ExtraPaymentRegimeNotFoundException;
 import com.b4rrhh.employee.extra_payment_regime.domain.model.ExtraPaymentRegime;
 import com.b4rrhh.employee.extra_payment_regime.domain.port.ExtraPaymentRegimeRepository;
+import com.b4rrhh.employee.shared.application.port.DatedWrite;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
+import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CloseExtraPaymentRegimeService implements CloseExtraPaymentRegimeUseCase {
 
+    private static final String TABLA = "employee.extra_payment_regime";
+
     private final ExtraPaymentRegimeRepository extraPaymentRegimeRepository;
     private final EmployeeExtraPaymentRegimeLookupPort employeeExtraPaymentRegimeLookupPort;
     private final ExtraPaymentRegimePresenceConsistencyValidator extraPaymentRegimePresenceConsistencyValidator;
+    private final DatedWriteNoticePort datedWrites;
 
     public CloseExtraPaymentRegimeService(
             ExtraPaymentRegimeRepository extraPaymentRegimeRepository,
             EmployeeExtraPaymentRegimeLookupPort employeeExtraPaymentRegimeLookupPort,
-            ExtraPaymentRegimePresenceConsistencyValidator extraPaymentRegimePresenceConsistencyValidator
+            ExtraPaymentRegimePresenceConsistencyValidator extraPaymentRegimePresenceConsistencyValidator,
+            DatedWriteNoticePort datedWrites
     ) {
         this.extraPaymentRegimeRepository = extraPaymentRegimeRepository;
         this.employeeExtraPaymentRegimeLookupPort = employeeExtraPaymentRegimeLookupPort;
         this.extraPaymentRegimePresenceConsistencyValidator = extraPaymentRegimePresenceConsistencyValidator;
+        this.datedWrites = datedWrites;
     }
 
     @Override
@@ -69,7 +77,14 @@ public class CloseExtraPaymentRegimeService implements CloseExtraPaymentRegimeUs
                 normalizedEmployeeNumber
         );
 
-        return extraPaymentRegimeRepository.save(closed);
+        ExtraPaymentRegime guardado = extraPaymentRegimeRepository.save(closed);
+
+        // El dia SIGUIENTE al cierre, que es cuando la cobertura desaparece (backend#130).
+        datedWrites.notice(DatedWrite.on(closed.getEndDate().plusDays(1),
+                normalizedRuleSystemCode, normalizedEmployeeTypeCode, normalizedEmployeeNumber,
+                DatedWriteSources.EXTRA_PAYMENT_REGIME, TABLA, closed.getId()));
+
+        return guardado;
     }
 
     private String normalizeRuleSystemCode(String ruleSystemCode) {

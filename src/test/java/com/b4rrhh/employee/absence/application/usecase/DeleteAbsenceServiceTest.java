@@ -6,6 +6,7 @@ import com.b4rrhh.employee.absence.domain.model.Absence;
 import com.b4rrhh.employee.absence.domain.port.AbsenceRepository;
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
 import com.b4rrhh.employee.employee.domain.model.Employee;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -25,6 +26,8 @@ class DeleteAbsenceServiceTest {
 
     @Mock private GetEmployeeByBusinessKeyUseCase getEmployee;
     @Mock private AbsenceRepository absenceRepository;
+    /** Doble sin comportamiento: lo vigila el candado, no este test ({@code backend#130}). */
+    @Mock private DatedWriteNoticePort datedWrites;
     @InjectMocks private DeleteAbsenceService service;
 
     private static final LocalDate MAY_14 = LocalDate.of(2026, 5, 14);

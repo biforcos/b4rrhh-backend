@@ -1,17 +1,20 @@
 package com.b4rrhh.employee.extra_payment_regime.application.usecase;
 
-import com.b4rrhh.employee.temporal.support.DateRange;
 import com.b4rrhh.employee.extra_payment_regime.application.model.ExtraPaymentRegimePlan;
 import com.b4rrhh.employee.extra_payment_regime.application.port.AgreementExtraPaymentProrationLookupPort;
-import com.b4rrhh.employee.extra_payment_regime.application.port.ExtraPaymentRegimeAgreementContext;
-import com.b4rrhh.employee.extra_payment_regime.application.port.ExtraPaymentRegimeAgreementContextLookupPort;
 import com.b4rrhh.employee.extra_payment_regime.application.port.EmployeeExtraPaymentRegimeContext;
 import com.b4rrhh.employee.extra_payment_regime.application.port.EmployeeExtraPaymentRegimeLookupPort;
+import com.b4rrhh.employee.extra_payment_regime.application.port.ExtraPaymentRegimeAgreementContext;
+import com.b4rrhh.employee.extra_payment_regime.application.port.ExtraPaymentRegimeAgreementContextLookupPort;
 import com.b4rrhh.employee.extra_payment_regime.application.service.ExtraPaymentRegimeTimelineService;
 import com.b4rrhh.employee.extra_payment_regime.domain.exception.ExtraPaymentRegimeEmployeeNotFoundException;
 import com.b4rrhh.employee.extra_payment_regime.domain.exception.ExtraPaymentRegimeNumberConflictException;
 import com.b4rrhh.employee.extra_payment_regime.domain.model.ExtraPaymentRegime;
 import com.b4rrhh.employee.extra_payment_regime.domain.port.ExtraPaymentRegimeRepository;
+import com.b4rrhh.employee.shared.application.port.DatedWrite;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
+import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
+import com.b4rrhh.employee.temporal.support.DateRange;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,24 +29,29 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class CreateExtraPaymentRegimeService implements CreateExtraPaymentRegimeUseCase {
 
+    private static final String TABLA = "employee.extra_payment_regime";
+
     private final ExtraPaymentRegimeRepository extraPaymentRegimeRepository;
     private final EmployeeExtraPaymentRegimeLookupPort employeeExtraPaymentRegimeLookupPort;
     private final ExtraPaymentRegimeAgreementContextLookupPort employeeAgreementContextLookupPort;
     private final AgreementExtraPaymentProrationLookupPort agreementExtraPaymentProrationLookupPort;
     private final ExtraPaymentRegimeTimelineService extraPaymentRegimeTimelineService;
+    private final DatedWriteNoticePort datedWrites;
 
     public CreateExtraPaymentRegimeService(
             ExtraPaymentRegimeRepository extraPaymentRegimeRepository,
             EmployeeExtraPaymentRegimeLookupPort employeeExtraPaymentRegimeLookupPort,
             ExtraPaymentRegimeAgreementContextLookupPort employeeAgreementContextLookupPort,
             AgreementExtraPaymentProrationLookupPort agreementExtraPaymentProrationLookupPort,
-            ExtraPaymentRegimeTimelineService extraPaymentRegimeTimelineService
+            ExtraPaymentRegimeTimelineService extraPaymentRegimeTimelineService,
+            DatedWriteNoticePort datedWrites
     ) {
         this.extraPaymentRegimeRepository = extraPaymentRegimeRepository;
         this.employeeExtraPaymentRegimeLookupPort = employeeExtraPaymentRegimeLookupPort;
         this.employeeAgreementContextLookupPort = employeeAgreementContextLookupPort;
         this.agreementExtraPaymentProrationLookupPort = agreementExtraPaymentProrationLookupPort;
         this.extraPaymentRegimeTimelineService = extraPaymentRegimeTimelineService;
+        this.datedWrites = datedWrites;
     }
 
     @Override
@@ -111,7 +119,15 @@ public class CreateExtraPaymentRegimeService implements CreateExtraPaymentRegime
         }
 
         try {
-            return extraPaymentRegimeRepository.save(newRegime);
+            ExtraPaymentRegime guardado = extraPaymentRegimeRepository.save(newRegime);
+
+            // Un aviso y no dos: la vigencia anterior que se cierra pierde cobertura justo el dia en
+            // que empieza esta (backend#130).
+            datedWrites.notice(DatedWrite.on(guardado.getStartDate(),
+                    normalizedRuleSystemCode, normalizedEmployeeTypeCode, normalizedEmployeeNumber,
+                    DatedWriteSources.EXTRA_PAYMENT_REGIME, TABLA, guardado.getId()));
+
+            return guardado;
         } catch (DataIntegrityViolationException ex) {
             throw new ExtraPaymentRegimeNumberConflictException(
                     normalizedRuleSystemCode,

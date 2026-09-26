@@ -5,8 +5,8 @@ import com.b4rrhh.employee.contract.application.port.ContractPresenceConsistency
 import com.b4rrhh.employee.contract.application.port.EmployeeContractContext;
 import com.b4rrhh.employee.contract.application.port.EmployeeContractLookupPort;
 import com.b4rrhh.employee.contract.application.port.PresencePeriod;
-import com.b4rrhh.employee.contract.application.service.ContractSubtypeRelationValidator;
 import com.b4rrhh.employee.contract.application.service.ContractCatalogValidator;
+import com.b4rrhh.employee.contract.application.service.ContractSubtypeRelationValidator;
 import com.b4rrhh.employee.contract.application.service.ContractTimelineService;
 import com.b4rrhh.employee.contract.domain.exception.ContractCoverageIncompleteException;
 import com.b4rrhh.employee.contract.domain.exception.ContractNotFoundException;
@@ -17,6 +17,7 @@ import com.b4rrhh.employee.contract.domain.exception.InvalidContractDateRangeExc
 import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.contract.domain.model.ContractPeriod;
 import com.b4rrhh.employee.contract.domain.port.ContractRepository;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -57,6 +58,17 @@ class UpdateContractServiceTest {
     @Mock
     private ContractPresenceConsistencyPort presencePort;
 
+    /**
+     * El puerto que avisa de que la escritura ha tocado el pasado ({@code backend#130}).
+     *
+     * <p>Aqui es un doble sin comportamiento a proposito: lo que este test prueba es la regla de
+     * la vertical, y que la marca se escriba cuando toca es del escenario del {@code #130}. Lo que
+     * si vigila es el candado {@code EveryDatedWriteAnnouncesItselfThroughOnePortTest}, que exige
+     * que este puerto este inyectado.
+     */
+    @Mock
+    private DatedWriteNoticePort datedWrites;
+
     private TestContractCatalogValidator contractCatalogValidator;
     private TestContractSubtypeRelationValidator contractSubtypeRelationValidator;
     private UpdateContractService service;
@@ -71,7 +83,8 @@ class UpdateContractServiceTest {
                 employeeContractLookupPort,
                 contractCatalogValidator,
                 contractSubtypeRelationValidator,
-                new ContractTimelineService(contractRepository, presencePort)
+                new ContractTimelineService(contractRepository, presencePort),
+                datedWrites
         );
     }
 

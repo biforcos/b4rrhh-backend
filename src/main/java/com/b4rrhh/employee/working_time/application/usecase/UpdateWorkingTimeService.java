@@ -1,12 +1,15 @@
 package com.b4rrhh.employee.working_time.application.usecase;
 
+import com.b4rrhh.employee.shared.application.port.DatedWrite;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
+import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
+import com.b4rrhh.employee.temporal.support.DateRange;
+import com.b4rrhh.employee.working_time.application.model.WorkingTimePlan;
 import com.b4rrhh.employee.working_time.application.port.AgreementAnnualHoursLookupPort;
 import com.b4rrhh.employee.working_time.application.port.EmployeeAgreementContext;
 import com.b4rrhh.employee.working_time.application.port.EmployeeAgreementContextLookupPort;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeContext;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeLookupPort;
-import com.b4rrhh.employee.temporal.support.DateRange;
-import com.b4rrhh.employee.working_time.application.model.WorkingTimePlan;
 import com.b4rrhh.employee.working_time.application.service.WorkingTimeTimelineService;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeEmployeeNotFoundException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeNotFoundException;
@@ -29,12 +32,15 @@ import java.time.LocalDate;
 @Service
 public class UpdateWorkingTimeService implements UpdateWorkingTimeUseCase {
 
+    private static final String TABLA = "employee.working_time";
+
     private final WorkingTimeRepository workingTimeRepository;
     private final EmployeeWorkingTimeLookupPort employeeWorkingTimeLookupPort;
     private final EmployeeAgreementContextLookupPort employeeAgreementContextLookupPort;
     private final AgreementAnnualHoursLookupPort agreementAnnualHoursLookupPort;
     private final WorkingTimeTimelineService workingTimeTimelineService;
     private final WorkingTimeDerivationPolicy workingTimeDerivationPolicy;
+    private final DatedWriteNoticePort datedWrites;
 
     public UpdateWorkingTimeService(
             WorkingTimeRepository workingTimeRepository,
@@ -42,7 +48,8 @@ public class UpdateWorkingTimeService implements UpdateWorkingTimeUseCase {
             EmployeeAgreementContextLookupPort employeeAgreementContextLookupPort,
             AgreementAnnualHoursLookupPort agreementAnnualHoursLookupPort,
             WorkingTimeTimelineService workingTimeTimelineService,
-            WorkingTimeDerivationPolicy workingTimeDerivationPolicy
+            WorkingTimeDerivationPolicy workingTimeDerivationPolicy,
+            DatedWriteNoticePort datedWrites
     ) {
         this.workingTimeRepository = workingTimeRepository;
         this.employeeWorkingTimeLookupPort = employeeWorkingTimeLookupPort;
@@ -50,6 +57,7 @@ public class UpdateWorkingTimeService implements UpdateWorkingTimeUseCase {
         this.agreementAnnualHoursLookupPort = agreementAnnualHoursLookupPort;
         this.workingTimeTimelineService = workingTimeTimelineService;
         this.workingTimeDerivationPolicy = workingTimeDerivationPolicy;
+        this.datedWrites = datedWrites;
     }
 
     @Override
@@ -118,7 +126,15 @@ public class UpdateWorkingTimeService implements UpdateWorkingTimeUseCase {
                 normalizedEmployeeNumber
         );
 
-        return workingTimeRepository.save(updated);
+        WorkingTime guardada = workingTimeRepository.save(updated);
+
+        // La fecha de inicio de la vigencia que se corrige: cambiarle el porcentaje mueve el precio
+        // del dia desde ese dia, no desde hoy. Se lee del objeto que ya existia (backend#130).
+        datedWrites.notice(DatedWrite.on(updated.getStartDate(),
+                normalizedRuleSystemCode, normalizedEmployeeTypeCode, normalizedEmployeeNumber,
+                DatedWriteSources.WORKING_TIME, TABLA, updated.getId()));
+
+        return guardada;
     }
 
     private String normalizeRuleSystemCode(String ruleSystemCode) {

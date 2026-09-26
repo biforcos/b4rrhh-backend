@@ -3,6 +3,7 @@ package com.b4rrhh.employee.payroll_input.application.usecase;
 import com.b4rrhh.employee.payroll_input.domain.exception.EmployeePayrollInputAlreadyExistsException;
 import com.b4rrhh.employee.payroll_input.domain.model.EmployeePayrollInput;
 import com.b4rrhh.employee.payroll_input.domain.port.EmployeePayrollInputRepository;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,11 +25,22 @@ class CreateEmployeePayrollInputServiceTest {
     @Mock
     private EmployeePayrollInputRepository repository;
 
+    /**
+     * El puerto que avisa de que la escritura ha tocado el pasado ({@code backend#130}).
+     *
+     * <p>Aqui es un doble sin comportamiento a proposito: lo que este test prueba es la regla de
+     * la vertical, y que la marca se escriba cuando toca es del escenario del {@code #130}. Lo que
+     * si vigila es el candado {@code EveryDatedWriteAnnouncesItselfThroughOnePortTest}, que exige
+     * que este puerto este inyectado.
+     */
+    @Mock
+    private DatedWriteNoticePort datedWrites;
+
     private CreateEmployeePayrollInputService service;
 
     @BeforeEach
     void setUp() {
-        service = new CreateEmployeePayrollInputService(repository);
+        service = new CreateEmployeePayrollInputService(repository, datedWrites);
     }
 
     @Test

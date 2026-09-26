@@ -1,17 +1,20 @@
 package com.b4rrhh.employee.working_time.application.usecase;
 
+import com.b4rrhh.employee.shared.application.port.DatedWrite;
+import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
+import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
+import com.b4rrhh.employee.temporal.support.DateRange;
+import com.b4rrhh.employee.working_time.application.model.WorkingTimePlan;
 import com.b4rrhh.employee.working_time.application.port.AgreementAnnualHoursLookupPort;
 import com.b4rrhh.employee.working_time.application.port.EmployeeAgreementContext;
 import com.b4rrhh.employee.working_time.application.port.EmployeeAgreementContextLookupPort;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeContext;
 import com.b4rrhh.employee.working_time.application.port.EmployeeWorkingTimeLookupPort;
-import com.b4rrhh.employee.temporal.support.DateRange;
-import com.b4rrhh.employee.working_time.application.model.WorkingTimePlan;
 import com.b4rrhh.employee.working_time.application.service.WorkingTimeTimelineService;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeEmployeeNotFoundException;
 import com.b4rrhh.employee.working_time.domain.exception.WorkingTimeNumberConflictException;
-import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
+import com.b4rrhh.employee.working_time.domain.model.WorkingTimeDerivedHours;
 import com.b4rrhh.employee.working_time.domain.port.WorkingTimeRepository;
 import com.b4rrhh.employee.working_time.domain.service.WorkingTimeDerivationPolicy;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -23,12 +26,15 @@ import java.math.BigDecimal;
 @Service
 public class CreateWorkingTimeService implements CreateWorkingTimeUseCase {
 
+    private static final String TABLA = "employee.working_time";
+
     private final WorkingTimeRepository workingTimeRepository;
     private final EmployeeWorkingTimeLookupPort employeeWorkingTimeLookupPort;
     private final EmployeeAgreementContextLookupPort employeeAgreementContextLookupPort;
     private final AgreementAnnualHoursLookupPort agreementAnnualHoursLookupPort;
     private final WorkingTimeTimelineService workingTimeTimelineService;
     private final WorkingTimeDerivationPolicy workingTimeDerivationPolicy;
+    private final DatedWriteNoticePort datedWrites;
 
     public CreateWorkingTimeService(
             WorkingTimeRepository workingTimeRepository,
@@ -36,7 +42,8 @@ public class CreateWorkingTimeService implements CreateWorkingTimeUseCase {
             EmployeeAgreementContextLookupPort employeeAgreementContextLookupPort,
             AgreementAnnualHoursLookupPort agreementAnnualHoursLookupPort,
             WorkingTimeTimelineService workingTimeTimelineService,
-            WorkingTimeDerivationPolicy workingTimeDerivationPolicy
+            WorkingTimeDerivationPolicy workingTimeDerivationPolicy,
+            DatedWriteNoticePort datedWrites
     ) {
         this.workingTimeRepository = workingTimeRepository;
         this.employeeWorkingTimeLookupPort = employeeWorkingTimeLookupPort;
@@ -44,6 +51,7 @@ public class CreateWorkingTimeService implements CreateWorkingTimeUseCase {
         this.agreementAnnualHoursLookupPort = agreementAnnualHoursLookupPort;
         this.workingTimeTimelineService = workingTimeTimelineService;
         this.workingTimeDerivationPolicy = workingTimeDerivationPolicy;
+        this.datedWrites = datedWrites;
     }
 
     @Override
@@ -123,7 +131,16 @@ public class CreateWorkingTimeService implements CreateWorkingTimeUseCase {
         }
 
         try {
-            return workingTimeRepository.save(newWorkingTime);
+            WorkingTime guardada = workingTimeRepository.save(newWorkingTime);
+
+            // Un aviso y no dos, aunque arriba se hayan escrito dos filas: la que se ajusta pierde
+            // cobertura justo desde el dia en que empieza la nueva, asi que la fecha mas antigua a la
+            // que alcanza el cambio es la misma para las dos (backend#130).
+            datedWrites.notice(DatedWrite.on(guardada.getStartDate(),
+                    normalizedRuleSystemCode, normalizedEmployeeTypeCode, normalizedEmployeeNumber,
+                    DatedWriteSources.WORKING_TIME, TABLA, guardada.getId()));
+
+            return guardada;
         } catch (DataIntegrityViolationException ex) {
             throw new WorkingTimeNumberConflictException(
                     normalizedRuleSystemCode,
