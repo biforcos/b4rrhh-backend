@@ -75,7 +75,10 @@ class PayrollCalculationRunControllerTest {
                         com.b4rrhh.payroll.application.usecase.PayrollLaunchTargetSelectionType.SINGLE_EMPLOYEE,
                         new PayrollLaunchEmployeeTargetRequest("INTERNAL", "EMP001"),
                         null
-                )
+                ),
+                // El limite que el formulario propone, confirmado por quien lanza (backend#132).
+                "202401",
+                null
         ), new TestingAuthenticationToken("hr.manager@b4rrhh", "n/a"));
 
         // 202: la ejecucion esta aceptada y en marcha, no terminada (#75).
@@ -89,6 +92,9 @@ class PayrollCalculationRunControllerTest {
         assertEquals("NORMAL", captor.getValue().payrollTypeCode());
         assertEquals("INTERNAL", captor.getValue().targetSelection().employee().employeeTypeCode());
         assertEquals("hr.manager@b4rrhh", captor.getValue().requestedBy());
+        assertEquals("202401", captor.getValue().retro().limitPeriodCode(),
+                "el limite de retroactividad de la peticion llega al mandato: es con lo que el recibo y"
+                        + " la checklist podran decir con que se calculo (backend#132)");
     }
 
         @Test
@@ -105,7 +111,9 @@ class PayrollCalculationRunControllerTest {
                 com.b4rrhh.payroll.application.usecase.PayrollLaunchTargetSelectionType.ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD,
                 null,
                 null
-            )
+            ),
+            "202401",
+            null
         ), null);
 
         assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
@@ -215,6 +223,12 @@ class PayrollCalculationRunControllerTest {
                 0,
                 0,
                 1,
+                0,
+                0,
+                // Sin retro: los dos parametros a nulo y los tres contadores a cero (backend#132).
+                null,
+                null,
+                0,
                 0,
                 0,
                 LocalDateTime.of(2026, 4, 11, 10, 1),

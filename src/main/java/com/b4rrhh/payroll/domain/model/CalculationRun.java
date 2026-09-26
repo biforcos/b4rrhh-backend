@@ -93,6 +93,42 @@ public record CalculationRun(
         Integer totalCalculated,
         Integer totalNotValid,
         Integer totalErrors,
+        /**
+         * Hasta que mes atras permite recalcular esta corrida ({@code backend#132}).
+         *
+         * <p>Nulo significa que <b>no hace retro</b>, y eso es lo que era toda corrida antes del
+         * {@code #132}. No se lo calla: si encuentra empleados con marcas activas lo dice en sus
+         * mensajes ({@code RETRO_SKIPPED_NO_LIMIT}).
+         */
+        String retroLimitPeriodCode,
+        /**
+         * El suelo obligatorio para todos, si lo hay: todo empleado recalcula desde aqui aunque no tenga
+         * marca ({@code backend#132}). Nulo es lo normal.
+         */
+        String retroFloorPeriodCode,
+        /**
+         * <b>El universo de la retro</b>: unidades empleado x mes que hay que recalcular, contadas una
+         * vez y al principio, como {@code totalCandidates}.
+         *
+         * <p>Es una terna aparte y no se suma a los nueve de arriba, y eso es una decision: una unidad
+         * de retro <b>no acaba en ninguno de esos cajones</b> —no escribe recibo, escribe vigente—, asi
+         * que meterla en el universo habria roto la particion sin que nada avisara.
+         *
+         * <p>Su propia particion, que es lo que tiene que cuadrar cuando la corrida termino:
+         *
+         * <pre>
+         * totalRetroUnits = totalRetroRecalculated + totalRetroNotRecalculated
+         * </pre>
+         *
+         * <p>Y el trabajo de verdad de la corrida, que es lo que la pantalla ensena, es
+         * {@code totalCandidates + totalRetroUnits}. Sin eso, un lanzamiento con suelo para todos parece
+         * colgado: dice «873 candidatos» y esta calculando siete mil meses.
+         */
+        Integer totalRetroUnits,
+        /** Vigentes escritos. */
+        Integer totalRetroRecalculated,
+        /** Meses del tramo que no se pudieron recalcular, con su mensaje en la corrida. */
+        Integer totalRetroNotRecalculated,
         LocalDateTime startedAt,
         LocalDateTime finishedAt,
         String summaryJson,
@@ -121,6 +157,11 @@ public record CalculationRun(
                                 totalCalculated,
                                 totalNotValid,
                                 totalErrors,
+                                retroLimitPeriodCode,
+                                retroFloorPeriodCode,
+                                totalRetroUnits,
+                                totalRetroRecalculated,
+                                totalRetroNotRecalculated,
                                 startedAt,
                                 finishedAt,
                                 summaryJson,
@@ -150,6 +191,11 @@ public record CalculationRun(
                                 totalCalculated,
                                 totalNotValid,
                                 totalErrors,
+                                retroLimitPeriodCode,
+                                retroFloorPeriodCode,
+                                totalRetroUnits,
+                                totalRetroRecalculated,
+                                totalRetroNotRecalculated,
                                 newStartedAt,
                                 finishedAt,
                                 summaryJson,
@@ -179,6 +225,11 @@ public record CalculationRun(
                                 totalCalculated,
                                 totalNotValid,
                                 totalErrors,
+                                retroLimitPeriodCode,
+                                retroFloorPeriodCode,
+                                totalRetroUnits,
+                                totalRetroRecalculated,
+                                totalRetroNotRecalculated,
                                 startedAt,
                                 newFinishedAt,
                                 newSummaryJson,
@@ -227,6 +278,11 @@ public record CalculationRun(
                                 totalCalculated,
                                 totalNotValid,
                                 totalErrors,
+                                retroLimitPeriodCode,
+                                retroFloorPeriodCode,
+                                totalRetroUnits,
+                                totalRetroRecalculated,
+                                totalRetroNotRecalculated,
                                 startedAt,
                                 finishedAt,
                                 summaryJson,
@@ -234,6 +290,122 @@ public record CalculationRun(
                                 updatedAt
                 );
         }
+
+        /**
+         * El universo de la retro, contado <b>una vez y al principio</b> ({@code backend#132}).
+         *
+         * <p>Como {@code withTotalCandidates} y por lo mismo: es un total y no un acumulador, asi que es
+         * el unico denominador legitimo del porcentaje de la retro.
+         */
+        public CalculationRun withTotalRetroUnits(int newTotalRetroUnits) {
+                return new CalculationRun(
+                                id,
+                                ruleSystemCode,
+                                payrollPeriodCode,
+                                payrollTypeCode,
+                                calculationEngineCode,
+                                calculationEngineVersion,
+                                requestedAt,
+                                requestedBy,
+                                status,
+                                targetSelectionJson,
+                                totalCandidates,
+                                totalEligible,
+                                totalClaimed,
+                                totalSkippedNotEligible,
+                                totalSkippedAlreadyClaimed,
+                                totalSkippedMissingInput,
+                                totalCalculated,
+                                totalNotValid,
+                                totalErrors,
+                                retroLimitPeriodCode,
+                                retroFloorPeriodCode,
+                                newTotalRetroUnits,
+                                totalRetroRecalculated,
+                                totalRetroNotRecalculated,
+                                startedAt,
+                                finishedAt,
+                                summaryJson,
+                                createdAt,
+                                updatedAt
+                );
+        }
+
+        /** Un vigente mas escrito ({@code backend#132}). */
+        public CalculationRun incrementTotalRetroRecalculated() {
+                return new CalculationRun(
+                                id,
+                                ruleSystemCode,
+                                payrollPeriodCode,
+                                payrollTypeCode,
+                                calculationEngineCode,
+                                calculationEngineVersion,
+                                requestedAt,
+                                requestedBy,
+                                status,
+                                targetSelectionJson,
+                                totalCandidates,
+                                totalEligible,
+                                totalClaimed,
+                                totalSkippedNotEligible,
+                                totalSkippedAlreadyClaimed,
+                                totalSkippedMissingInput,
+                                totalCalculated,
+                                totalNotValid,
+                                totalErrors,
+                                retroLimitPeriodCode,
+                                retroFloorPeriodCode,
+                                totalRetroUnits,
+                                totalRetroRecalculated + 1,
+                                totalRetroNotRecalculated,
+                                startedAt,
+                                finishedAt,
+                                summaryJson,
+                                createdAt,
+                                updatedAt
+                );
+        }
+
+        /**
+         * Un mes del tramo que no se pudo recalcular ({@code backend#132}).
+         *
+         * <p>No es un error de la corrida: el recibo de aquel mes no se ha tocado y el resto del tramo ha
+         * seguido. Lo que hay que mirar lo dice su mensaje.
+         */
+        public CalculationRun incrementTotalRetroNotRecalculated() {
+                return new CalculationRun(
+                                id,
+                                ruleSystemCode,
+                                payrollPeriodCode,
+                                payrollTypeCode,
+                                calculationEngineCode,
+                                calculationEngineVersion,
+                                requestedAt,
+                                requestedBy,
+                                status,
+                                targetSelectionJson,
+                                totalCandidates,
+                                totalEligible,
+                                totalClaimed,
+                                totalSkippedNotEligible,
+                                totalSkippedAlreadyClaimed,
+                                totalSkippedMissingInput,
+                                totalCalculated,
+                                totalNotValid,
+                                totalErrors,
+                                retroLimitPeriodCode,
+                                retroFloorPeriodCode,
+                                totalRetroUnits,
+                                totalRetroRecalculated,
+                                totalRetroNotRecalculated + 1,
+                                startedAt,
+                                finishedAt,
+                                summaryJson,
+                                createdAt,
+                                updatedAt
+                );
+        }
+
 
         public CalculationRun incrementTotalEligible() {
                 return new CalculationRun(
@@ -256,6 +428,11 @@ public record CalculationRun(
                                 totalCalculated,
                                 totalNotValid,
                                 totalErrors,
+                                retroLimitPeriodCode,
+                                retroFloorPeriodCode,
+                                totalRetroUnits,
+                                totalRetroRecalculated,
+                                totalRetroNotRecalculated,
                                 startedAt,
                                 finishedAt,
                                 summaryJson,
@@ -285,6 +462,11 @@ public record CalculationRun(
                                 totalCalculated,
                                 totalNotValid,
                                 totalErrors,
+                                retroLimitPeriodCode,
+                                retroFloorPeriodCode,
+                                totalRetroUnits,
+                                totalRetroRecalculated,
+                                totalRetroNotRecalculated,
                                 startedAt,
                                 finishedAt,
                                 summaryJson,
@@ -314,6 +496,11 @@ public record CalculationRun(
                                 totalCalculated,
                                 totalNotValid,
                                 totalErrors,
+                                retroLimitPeriodCode,
+                                retroFloorPeriodCode,
+                                totalRetroUnits,
+                                totalRetroRecalculated,
+                                totalRetroNotRecalculated,
                                 startedAt,
                                 finishedAt,
                                 summaryJson,
@@ -343,6 +530,11 @@ public record CalculationRun(
                                 totalCalculated,
                                 totalNotValid,
                                 totalErrors,
+                                retroLimitPeriodCode,
+                                retroFloorPeriodCode,
+                                totalRetroUnits,
+                                totalRetroRecalculated,
+                                totalRetroNotRecalculated,
                                 startedAt,
                                 finishedAt,
                                 summaryJson,
@@ -372,6 +564,11 @@ public record CalculationRun(
                                 totalCalculated,
                                 totalNotValid,
                                 totalErrors,
+                                retroLimitPeriodCode,
+                                retroFloorPeriodCode,
+                                totalRetroUnits,
+                                totalRetroRecalculated,
+                                totalRetroNotRecalculated,
                                 startedAt,
                                 finishedAt,
                                 summaryJson,
@@ -401,6 +598,11 @@ public record CalculationRun(
                                 totalCalculated + 1,
                                 totalNotValid,
                                 totalErrors,
+                                retroLimitPeriodCode,
+                                retroFloorPeriodCode,
+                                totalRetroUnits,
+                                totalRetroRecalculated,
+                                totalRetroNotRecalculated,
                                 startedAt,
                                 finishedAt,
                                 summaryJson,
@@ -430,6 +632,11 @@ public record CalculationRun(
                                 totalCalculated,
                                 totalNotValid + 1,
                                 totalErrors,
+                                retroLimitPeriodCode,
+                                retroFloorPeriodCode,
+                                totalRetroUnits,
+                                totalRetroRecalculated,
+                                totalRetroNotRecalculated,
                                 startedAt,
                                 finishedAt,
                                 summaryJson,
@@ -459,6 +666,11 @@ public record CalculationRun(
                                 totalCalculated,
                                 totalNotValid,
                                 totalErrors + 1,
+                                retroLimitPeriodCode,
+                                retroFloorPeriodCode,
+                                totalRetroUnits,
+                                totalRetroRecalculated,
+                                totalRetroNotRecalculated,
                                 startedAt,
                                 finishedAt,
                                 summaryJson,

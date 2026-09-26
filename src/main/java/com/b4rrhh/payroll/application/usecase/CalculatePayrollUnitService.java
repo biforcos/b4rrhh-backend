@@ -1257,16 +1257,51 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         ));
     }
 
-    /** Los avisos del recibo: el de siempre, y el de la base reguladora cuando hay algo que decir. */
+    /**
+     * Los avisos del recibo: el de siempre, el de la base reguladora cuando hay algo que decir, y uno
+     * por cada marca de retroactividad que el limite del lanzamiento deja fuera ({@code backend#132}).
+     *
+     * <p>Los de la retro son <b>uno por marca y no uno resumido</b>: lo que hay que poder leer es que
+     * habia una correccion de abril y otra de mayo, con sus meses, porque cada una es una decision
+     * distinta que alguien va a tener que tomar.
+     */
     private List<PayrollWarning> avisos(
             CalculatePayrollUnitCommand command,
             PayrollLaunchEligibleInputContext input,
             BaseReguladoraDelMesAnterior baseReguladora
     ) {
-        PayrollWarning deSiempre = eligibleRealWarning(command, input);
-        return baseReguladora.aviso() == null
-                ? List.of(deSiempre)
-                : List.of(deSiempre, baseReguladora.aviso());
+        List<PayrollWarning> todos = new ArrayList<>();
+        todos.add(eligibleRealWarning(command, input));
+        if (baseReguladora.aviso() != null) {
+            todos.add(baseReguladora.aviso());
+        }
+        for (String periodoDeLaMarca : command.retroMarksOutsideLimit()) {
+            todos.add(avisoDeMarcaFueraDelLimite(command, periodoDeLaMarca));
+        }
+        return List.copyOf(todos);
+    }
+
+    /**
+     * Una correccion conocida de un mes que el limite del lanzamiento no alcanza: <b>no se paga y no se
+     * calla</b> ({@code backend#132}).
+     *
+     * <p>{@code WARNING} y no {@code ERROR}: el recibo de este mes esta bien calculado con lo que este
+     * lanzamiento permitia. Lo que hace falta es que se vea, y que la marca siga activa para que
+     * aparezca en la checklist del ciclo — porque la decision de pagarla o no es de alguien, no del
+     * motor.
+     */
+    private PayrollWarning avisoDeMarcaFueraDelLimite(
+            CalculatePayrollUnitCommand command,
+            String periodoDeLaMarca
+    ) {
+        Map<String, Object> detalles = new LinkedHashMap<>();
+        detalles.put("retroMarkPeriodCode", periodoDeLaMarca);
+        detalles.put("employeeTypeCode", command.employeeTypeCode());
+        detalles.put("employeeNumber", command.employeeNumber());
+        return new PayrollWarning(null, null, "RETRO_MARK_OUTSIDE_LIMIT", "WARNING",
+                "Hay una correccion pendiente de " + periodoDeLaMarca + ", mas antigua que el limite de"
+                        + " retroactividad de esta nomina, asi que no se ha pagado en este recibo",
+                toJson(detalles));
     }
 
     private PayrollWarning aviso(

@@ -292,7 +292,10 @@ class RecalculatePayrollServiceTest {
                 run.totalCandidates(), run.totalEligible(), run.totalClaimed(),
                 run.totalSkippedNotEligible(), run.totalSkippedAlreadyClaimed(),
                 run.totalSkippedMissingInput(), run.totalCalculated(), run.totalNotValid(),
-                run.totalErrors(), run.startedAt(), run.finishedAt(), run.summaryJson(),
+                run.totalErrors(),
+                run.retroLimitPeriodCode(), run.retroFloorPeriodCode(),
+                run.totalRetroUnits(), run.totalRetroRecalculated(), run.totalRetroNotRecalculated(),
+                run.startedAt(), run.finishedAt(), run.summaryJson(),
                 run.createdAt(), run.updatedAt());
     }
 

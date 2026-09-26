@@ -7417,6 +7417,26 @@ components:
           type: string
         targetSelection:
           $ref: "#/components/schemas/PayrollLaunchTargetSelectionRequest"
+        retroLimitPeriodCode:
+          type: string
+          description: >-
+            Hasta que mes atras permite recalcular este lanzamiento (backend#132). El formulario propone
+            un valor CON SU MOTIVO ESCRITO al lado -doce meses atras, por el lio con seguros sociales y
+            Hacienda mas atras de eso- y quien lanza lo confirma o lo cambia; no es un 12 magico.
+            Si falta, la corrida no recalcula ningun mes cerrado, y si habia empleados con marcas activas
+            lo dice en sus mensajes (RETRO_SKIPPED_NO_LIMIT): no puede inventarse hasta donde tiene
+            permiso, y tampoco puede dejar de pagar un atraso en silencio.
+          example: "202510"
+        retroFloorPeriodCode:
+          type: string
+          nullable: true
+          description: >-
+            Suelo obligatorio para todos: todo empleado del lanzamiento recalcula desde aqui aunque no
+            tenga ninguna marca. Es la forma humana de una revision de convenio -"todos desde enero"- y
+            nulo es lo normal. Un suelo mas antiguo que el limite se rechaza con un 400: son dos cosas
+            contrarias y no hay forma de cumplir las dos. Un suelo sin limite tambien, porque sin limite
+            no hay retro y el suelo no llegaria a ninguna parte.
+          example: "202601"
 
     PayrollCalculationRunResponse:
       type: object
@@ -7437,6 +7457,9 @@ components:
         - totalCalculated
         - totalNotValid
         - totalErrors
+        - totalRetroUnits
+        - totalRetroRecalculated
+        - totalRetroNotRecalculated
         - requestedAt
       properties:
         runId:
@@ -7460,6 +7483,36 @@ components:
           description: >-
             Expanded candidate calculation units after presence overlap resolution for the payroll
             month.
+          type: integer
+          format: int32
+        retroLimitPeriodCode:
+          type: string
+          nullable: true
+          description: >-
+            Con que limite de retroactividad se calculo esta corrida (backend#132). Null en las corridas
+            de antes del #132 y en las que no hacen retro. El recibo y la checklist lo leen de aqui.
+        retroFloorPeriodCode:
+          type: string
+          nullable: true
+          description: El suelo para todos con el que se calculo, si lo hubo.
+        totalRetroUnits:
+          description: >-
+            El universo de la retro: unidades EMPLEADO x MES que hay que recalcular, contadas una vez y
+            al principio, como totalCandidates. Es una terna aparte y no se suma a los nueve contadores
+            del recibo, porque una unidad de retro no acaba en ninguno de esos cajones: no escribe
+            recibo, escribe calculo vigente. El trabajo de verdad de la corrida, que es lo que la
+            pantalla tiene que ensenar, es totalCandidates + totalRetroUnits.
+          type: integer
+          format: int32
+        totalRetroRecalculated:
+          description: Vigentes escritos. Su particion es totalRetroUnits = recalculated + notRecalculated.
+          type: integer
+          format: int32
+        totalRetroNotRecalculated:
+          description: >-
+            Meses del tramo que no se pudieron recalcular, cada uno con su mensaje en la corrida
+            (RETRO_MONTH_NOT_RECALCULATED). No es un error: el recibo de aquel mes no se ha tocado y el
+            resto del tramo ha seguido.
           type: integer
           format: int32
         totalEligible:

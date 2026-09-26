@@ -21,6 +21,9 @@ import com.b4rrhh.payroll_engine.planning.application.service.UnreachableConcept
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
+import com.b4rrhh.payroll.retro.application.service.RetroPlanner;
+import com.b4rrhh.payroll.retro.application.usecase.RecalculateClosedPeriodsCommand;
+import com.b4rrhh.payroll.retro.application.usecase.RecalculateClosedPeriodsUseCase;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -57,6 +60,8 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
     private final RuleSystemMetamodelRepository ruleSystemMetamodelRepository;
     private final UnreachableConceptFinder unreachableConceptFinder;
     private final ObjectMapper objectMapper;
+    private final RetroPlanner retroPlanner;
+    private final RecalculateClosedPeriodsUseCase recalculateClosedPeriodsUseCase;
 
     public LaunchPayrollCalculationService(
             CalculationRunRepository calculationRunRepository,
@@ -68,7 +73,9 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
             PayrollLaunchWorkerPort payrollLaunchWorkerPort,
             RuleSystemMetamodelRepository ruleSystemMetamodelRepository,
             UnreachableConceptFinder unreachableConceptFinder,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            RetroPlanner retroPlanner,
+            RecalculateClosedPeriodsUseCase recalculateClosedPeriodsUseCase
     ) {
         this.calculationRunRepository = calculationRunRepository;
         this.calculationClaimRepository = calculationClaimRepository;
@@ -80,6 +87,8 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
         this.ruleSystemMetamodelRepository = ruleSystemMetamodelRepository;
         this.unreachableConceptFinder = unreachableConceptFinder;
         this.objectMapper = objectMapper;
+        this.retroPlanner = retroPlanner;
+        this.recalculateClosedPeriodsUseCase = recalculateClosedPeriodsUseCase;
     }
 
     /**
@@ -136,7 +145,12 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                 normalizeTargetSelection(command.targetSelection()),
                 normalizeOptionalText(command.requestedBy(), "requestedBy", 100),
                 periodBounds[0],
-                periodBounds[1]
+                periodBounds[1],
+                // La validacion de los dos parametros de la retro vive en el propio
+                // PayrollRetroRequest, y por eso aqui no hay nada que comprobar: un suelo mas antiguo
+                // que el limite no se puede construir, asi que no puede llegar hasta aqui
+                // (backend#132).
+                command.retro()
         );
     }
 
@@ -158,6 +172,15 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                 0,
                 0,
                 0,
+                0,
+                0,
+                0,
+                // Los dos parametros de la retro se guardan con el run desde que nace, y no al
+                // empezar a calcular: el recibo y la checklist tienen que poder decir con que se
+                // calculo, y una corrida que muere encolada tambien tiene que poder contarlo
+                // (backend#132).
+                normalizedLaunch.retro().limitPeriodCode(),
+                normalizedLaunch.retro().floorPeriodCode(),
                 0,
                 0,
                 0,
@@ -210,12 +233,31 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                     // totalCandidates counts expanded calculation units after presence overlap resolution, not raw target employees.
             run = calculationRunRepository.save(run.withTotalCandidates(units.size()));
 
+            // El tramo de retro de cada empleado, planificado ANTES de calcular nada y contado una
+            // vez: es lo que la pantalla ensena como empleado x mes, y sin eso un lanzamiento con
+            // suelo para todos parece colgado (backend#132).
+            Map<String, RetroPlanner.RetroPlan> planesDeRetro = planificarRetro(
+                    run, units, normalizedLaunch);
+            int unidadesDeRetro = planesDeRetro.values().stream()
+                    .mapToInt(RetroPlanner.RetroPlan::monthCount).sum();
+            if (unidadesDeRetro > 0) {
+                run = calculationRunRepository.save(run.withTotalRetroUnits(unidadesDeRetro));
+            }
+
             // Secuencial a proposito: los ocho contadores de CalculationRun se suman leyendo el
             // objeto, sumando uno y guardando la fila entera, asi que un parallelStream aqui los
             // dejaria mintiendo sin un solo error en los registros (backend#83).
             for (PayrollCalculationUnit unit : units) {
+                // La retro de este empleado va PRIMERO, y el orden no es cosmetico: el recibo del
+                // periodo abierto se calcula con los vigentes ya escritos, que es lo que el
+                // backend#133 necesita para sacar los deltas.
+                RetroPlanner.RetroPlan plan = planesDeRetro.get(claveDeEmpleado(unit));
+                if (plan != null && plan.hasRange()) {
+                    run = recalcularElTramo(run, unit, plan, normalizedLaunch);
+                }
                 run = processUnit(run, unit, normalizedLaunch.calculationEngineCode(),
-                        normalizedLaunch.calculationEngineVersion(), metamodel);
+                        normalizedLaunch.calculationEngineVersion(), metamodel,
+                        plan == null ? List.of() : plan.marksOutsideLimit());
             }
 
             String finalStatus = run.totalErrors() > 0
@@ -254,7 +296,8 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
             PayrollLaunchTargetSelection targetSelection,
             String requestedBy,
             LocalDate periodStart,
-            LocalDate periodEnd
+            LocalDate periodEnd,
+            PayrollRetroRequest retro
     ) {
     }
 
@@ -312,12 +355,112 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
         return units;
     }
 
+    /**
+     * El tramo de retro de cada empleado del lanzamiento ({@code backend#132}).
+     *
+     * <p>Se planifica <b>antes de calcular nada</b> y se cuenta una vez, como {@code totalCandidates}:
+     * es lo que la pantalla ensena, y una corrida que dijera «873 candidatos» mientras calcula siete mil
+     * meses pareceria colgada.
+     *
+     * <p>Por empleado y no por unidad: el tramo es del empleado, y un empleado con dos presencias en el
+     * mes abierto no recalcula su pasado dos veces. Cada presencia recalcula el suyo, pero el plan
+     * -desde cuando- es el mismo.
+     */
+    private Map<String, RetroPlanner.RetroPlan> planificarRetro(
+            CalculationRun run,
+            List<PayrollCalculationUnit> units,
+            NormalizedLaunch normalizedLaunch
+    ) {
+        Map<String, RetroPlanner.RetroPlan> planes = new LinkedHashMap<>();
+        int sinLimiteConMarcas = 0;
+
+        for (PayrollCalculationUnit unit : units) {
+            String clave = claveDeEmpleado(unit);
+            if (planes.containsKey(clave)) {
+                continue;
+            }
+            RetroPlanner.RetroPlan plan = retroPlanner.planFor(
+                    unit.ruleSystemCode(),
+                    unit.employeeTypeCode(),
+                    unit.employeeNumber(),
+                    normalizedLaunch.payrollPeriodCode(),
+                    normalizedLaunch.retro());
+            planes.put(clave, plan);
+            if (plan.hadMarksButNoLimit()) {
+                sinLimiteConMarcas++;
+            }
+        }
+
+        // Una corrida sin limite no hace retro, y eso es correcto -no puede inventarse hasta donde
+        // llega-, pero callarselo cuando habia marcas seria dejar sin pagar un atraso sin que nadie lo
+        // sepa. Un mensaje para toda la corrida y no uno por empleado: lo que hay que mirar es la
+        // decision del lanzamiento, no cada empleado.
+        if (sinLimiteConMarcas > 0) {
+            saveRunMessage(run, "RETRO_SKIPPED_NO_LIMIT", "WARNING",
+                    "El lanzamiento no lleva limite de retroactividad, asi que no se ha recalculado"
+                            + " ningun mes cerrado; " + sinLimiteConMarcas + " empleado(s) tenian marcas"
+                            + " activas y no se les ha pagado nada por ellas",
+                    Map.of("employeesWithActiveMarks", sinLimiteConMarcas), null);
+        }
+
+        return planes;
+    }
+
+    /**
+     * Recalcula el tramo de un empleado y cuenta el resultado ({@code backend#132}).
+     *
+     * <p>Los meses que no se pudieron recalcular se cuentan y <b>se nombran uno por uno</b> en los
+     * mensajes de la corrida. Van aqui y no en un recibo porque el recibo de aquel mes esta entregado y
+     * no se toca ni para decir que algo ha ido mal (ADR-076 §6).
+     */
+    private CalculationRun recalcularElTramo(
+            CalculationRun run,
+            PayrollCalculationUnit unit,
+            RetroPlanner.RetroPlan plan,
+            NormalizedLaunch normalizedLaunch
+    ) {
+        RecalculateClosedPeriodsUseCase.RecalculateClosedPeriodsResult resultado =
+                recalculateClosedPeriodsUseCase.recalculate(new RecalculateClosedPeriodsCommand(
+                        unit.ruleSystemCode(),
+                        unit.employeeTypeCode(),
+                        unit.employeeNumber(),
+                        unit.presenceNumber(),
+                        unit.payrollTypeCode(),
+                        plan.fromPeriodCode(),
+                        plan.toPeriodCode(),
+                        normalizedLaunch.calculationEngineCode(),
+                        normalizedLaunch.calculationEngineVersion(),
+                        run.id()));
+
+        CalculationRun contado = run;
+        for (int i = 0; i < resultado.written().size(); i++) {
+            contado = contado.incrementTotalRetroRecalculated();
+        }
+        for (RecalculateClosedPeriodsUseCase.RecalculateClosedPeriodsResult.NotCalculatedMonth mes
+                : resultado.notCalculated()) {
+            contado = contado.incrementTotalRetroNotRecalculated();
+            saveRunMessage(contado, "RETRO_MONTH_NOT_RECALCULATED", "WARNING",
+                    "El mes " + mes.payrollPeriodCode() + " del tramo de retroactividad no se ha podido"
+                            + " recalcular: " + mes.reason() + ". Su recibo no se ha tocado",
+                    Map.of("retroPeriodCode", mes.payrollPeriodCode(),
+                            "reasonCode", mes.reason() == null ? "UNKNOWN" : mes.reason()),
+                    unit);
+        }
+        return calculationRunRepository.save(contado);
+    }
+
+    /** La clave del empleado, para no planificar su tramo una vez por presencia. */
+    private static String claveDeEmpleado(PayrollCalculationUnit unit) {
+        return unit.ruleSystemCode() + "|" + unit.employeeTypeCode() + "|" + unit.employeeNumber();
+    }
+
     private CalculationRun processUnit(
             CalculationRun run,
             PayrollCalculationUnit unit,
             String calculationEngineCode,
             String calculationEngineVersion,
-            RuleSystemMetamodel metamodel
+            RuleSystemMetamodel metamodel,
+            List<String> marcasFueraDelLimite
     ) {
         Optional<Payroll> existingPayroll = payrollRepository.findByBusinessKey(
                 unit.ruleSystemCode(),
@@ -384,7 +527,8 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                     calculationEngineCode,
                     calculationEngineVersion,
                     run.id(),
-                    metamodel
+                    metamodel,
+                    marcasFueraDelLimite
             ));
             saveEligibleRealSuccessMessageIfPresent(run, unit, payroll);
             if (payroll.getStatus() == PayrollStatus.NOT_VALID) {

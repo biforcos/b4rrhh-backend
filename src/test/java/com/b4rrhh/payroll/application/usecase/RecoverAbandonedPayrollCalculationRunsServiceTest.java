@@ -123,6 +123,12 @@ class RecoverAbandonedPayrollCalculationRunsServiceTest {
                 7,
                 0,
                 0,
+                // Sin retro: los dos parametros a nulo y los tres contadores a cero (backend#132).
+                null,
+                null,
+                0,
+                0,
+                0,
                 startedAt,
                 null,
                 null,

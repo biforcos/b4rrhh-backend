@@ -251,6 +251,14 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
                 0,
                 0,
                 0,
+                // Un recalculo de una unidad no hace retro: recalcula UN recibo NOT_VALID, que es lo
+                // unico que se recalcula. Sin limite y sin suelo, y los tres contadores de la retro a
+                // cero (backend#132).
+                null,
+                null,
+                0,
+                0,
+                0,
                 ahora,
                 null,
                 null,

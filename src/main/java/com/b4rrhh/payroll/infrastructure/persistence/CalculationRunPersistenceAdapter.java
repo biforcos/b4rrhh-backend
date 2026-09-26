@@ -55,6 +55,11 @@ public class CalculationRunPersistenceAdapter implements CalculationRunRepositor
                 entity.getTotalCalculated(),
                 entity.getTotalNotValid(),
                 entity.getTotalErrors(),
+                entity.getRetroLimitPeriodCode(),
+                entity.getRetroFloorPeriodCode(),
+                entity.getTotalRetroUnits(),
+                entity.getTotalRetroRecalculated(),
+                entity.getTotalRetroNotRecalculated(),
                 entity.getStartedAt(),
                 entity.getFinishedAt(),
                 entity.getSummaryJson(),
@@ -84,6 +89,11 @@ public class CalculationRunPersistenceAdapter implements CalculationRunRepositor
         entity.setTotalCalculated(calculationRun.totalCalculated());
         entity.setTotalNotValid(calculationRun.totalNotValid());
         entity.setTotalErrors(calculationRun.totalErrors());
+        entity.setRetroLimitPeriodCode(calculationRun.retroLimitPeriodCode());
+        entity.setRetroFloorPeriodCode(calculationRun.retroFloorPeriodCode());
+        entity.setTotalRetroUnits(calculationRun.totalRetroUnits());
+        entity.setTotalRetroRecalculated(calculationRun.totalRetroRecalculated());
+        entity.setTotalRetroNotRecalculated(calculationRun.totalRetroNotRecalculated());
         entity.setStartedAt(calculationRun.startedAt());
         entity.setFinishedAt(calculationRun.finishedAt());
         entity.setSummaryJson(calculationRun.summaryJson());

@@ -76,6 +76,21 @@ public class CalculationRunEntity {
     @Column(name = "total_errors", nullable = false)
     private Integer totalErrors;
 
+    @Column(name = "retro_limit_period_code", length = 30)
+    private String retroLimitPeriodCode;
+
+    @Column(name = "retro_floor_period_code", length = 30)
+    private String retroFloorPeriodCode;
+
+    @Column(name = "total_retro_units", nullable = false)
+    private Integer totalRetroUnits = 0;
+
+    @Column(name = "total_retro_recalculated", nullable = false)
+    private Integer totalRetroRecalculated = 0;
+
+    @Column(name = "total_retro_not_recalculated", nullable = false)
+    private Integer totalRetroNotRecalculated = 0;
+
     @Column(name = "started_at")
     private LocalDateTime startedAt;
 
@@ -147,6 +162,21 @@ public class CalculationRunEntity {
     public void setTotalNotValid(Integer totalNotValid) { this.totalNotValid = totalNotValid; }
     public Integer getTotalErrors() { return totalErrors; }
     public void setTotalErrors(Integer totalErrors) { this.totalErrors = totalErrors; }
+
+    public String getRetroLimitPeriodCode() { return retroLimitPeriodCode; }
+    public void setRetroLimitPeriodCode(String v) { this.retroLimitPeriodCode = v; }
+
+    public String getRetroFloorPeriodCode() { return retroFloorPeriodCode; }
+    public void setRetroFloorPeriodCode(String v) { this.retroFloorPeriodCode = v; }
+
+    public Integer getTotalRetroUnits() { return totalRetroUnits; }
+    public void setTotalRetroUnits(Integer v) { this.totalRetroUnits = v; }
+
+    public Integer getTotalRetroRecalculated() { return totalRetroRecalculated; }
+    public void setTotalRetroRecalculated(Integer v) { this.totalRetroRecalculated = v; }
+
+    public Integer getTotalRetroNotRecalculated() { return totalRetroNotRecalculated; }
+    public void setTotalRetroNotRecalculated(Integer v) { this.totalRetroNotRecalculated = v; }
     public LocalDateTime getStartedAt() { return startedAt; }
     public void setStartedAt(LocalDateTime startedAt) { this.startedAt = startedAt; }
     public LocalDateTime getFinishedAt() { return finishedAt; }

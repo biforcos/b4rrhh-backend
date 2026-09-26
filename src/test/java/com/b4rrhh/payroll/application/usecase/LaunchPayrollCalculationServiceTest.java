@@ -15,6 +15,7 @@ import com.b4rrhh.payroll.domain.port.CalculationRunMessageRepository;
 import com.b4rrhh.payroll.domain.port.CalculationRunRepository;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
 import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
+import com.b4rrhh.payroll.retro.application.service.RetroPlanner;
 import com.b4rrhh.payroll_engine.metamodel.domain.port.RuleSystemMetamodelRepository;
 import com.b4rrhh.payroll_engine.planning.application.service.DefaultEligibleConceptExpansionService;
 import com.b4rrhh.payroll_engine.planning.application.service.UnreachableConceptFinder;
@@ -72,6 +73,12 @@ class LaunchPayrollCalculationServiceTest {
     @Mock
     private RuleSystemMetamodelRepository ruleSystemMetamodelRepository;
 
+    @Mock
+    private com.b4rrhh.payroll.retro.domain.port.RetroMarkRepository retroMarkRepository;
+
+    @Mock
+    private com.b4rrhh.payroll.retro.application.usecase.RecalculateClosedPeriodsUseCase recalculateClosedPeriodsUseCase;
+
     private LaunchPayrollCalculationService service;
     private RecordingWorker worker;
 
@@ -91,7 +98,12 @@ class LaunchPayrollCalculationServiceTest {
                 // que este test ya construye, y para una reglamentacion sin conceptos es la lista
                 // vacia. Un mock aqui solo anadiria una linea que mantener (backend#110).
                 new UnreachableConceptFinder(new DefaultEligibleConceptExpansionService()),
-                new ObjectMapper()
+                new ObjectMapper(),
+                // El planificador de la retro, con su repositorio de marcas en doble: estos tests
+                // lanzan sin limite, asi que no hay tramo que planificar y no se le pregunta a nadie.
+                // Que el tramo se planifique bien lo prueba el escenario del #132 (backend#132).
+                new RetroPlanner(retroMarkRepository),
+                recalculateClosedPeriodsUseCase
         );
 
         // La ejecucion lee su reglamentacion al empezar. Lo que se prueba aqui es la cola y
@@ -124,6 +136,11 @@ class LaunchPayrollCalculationServiceTest {
                     run.totalCalculated(),
                     run.totalNotValid(),
                     run.totalErrors(),
+                    run.retroLimitPeriodCode(),
+                    run.retroFloorPeriodCode(),
+                    run.totalRetroUnits(),
+                    run.totalRetroRecalculated(),
+                    run.totalRetroNotRecalculated(),
                     run.startedAt(),
                     run.finishedAt(),
                     run.summaryJson(),

@@ -14,6 +14,7 @@ import com.b4rrhh.payroll.infrastructure.web.dto.LaunchPayrollCalculationRequest
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollCalculationRunMessagesResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollCalculationRunResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollLaunchEmployeeTargetRequest;
+import com.b4rrhh.payroll.application.usecase.PayrollRetroRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollLaunchTargetSelectionRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -61,7 +62,11 @@ public class PayrollCalculationRunController {
                 request.calculationEngineCode(),
                 request.calculationEngineVersion(),
                 toTargetSelection(request.targetSelection()),
-                authentication == null ? null : authentication.getName()
+                authentication == null ? null : authentication.getName(),
+                // La validacion de los dos —que el suelo no sea mas antiguo que el limite, y que un
+                // suelo sin limite no se pueda pedir— vive en el propio PayrollRetroRequest, asi que un
+                // encargo imposible se contesta con un 400 y no deja ejecucion ninguna (backend#132).
+                new PayrollRetroRequest(request.retroFloorPeriodCode(), request.retroLimitPeriodCode())
         ));
 
         // 202 y no 201: lo que se ha creado es la ejecucion, no el resultado. Los recibos
