@@ -148,4 +148,38 @@ public interface SpringDataPayrollRepository extends JpaRepository<PayrollEntity
             @Param("payrollTypeCode") String payrollTypeCode,
             @Param("periodCode") String periodCode
     );
+
+    /**
+     * Lo pagado por un mes, <b>desglosado por el recibo que lo pago</b> ({@code backend#134}).
+     *
+     * <p>Es la mitad de la explicacion de una linea de atraso que un numero solo no puede dar: «por
+     * agosto se han pagado 59,40» no explica nada, y «el recibo de agosto pago 0 y el de septiembre pago
+     * 59,40 como atraso» si. La otra mitad es el vigente, que dice lo que agosto vale hoy.
+     *
+     * <p>Mismo filtro y misma razon que {@link #sumPaidByConceptForPeriod}: solo recibos cerrados.
+     *
+     * <p>Y <b>sin el recibo que se esta explicando</b>: lo que hace falta es lo que se habia pagado
+     * ANTES de esa linea. Con el dentro, la diferencia saldria cero para un recibo ya cerrado -porque su
+     * propia linea de atraso ya estaria contada como pagada- y los tres numeros no sumarian el importe
+     * que la linea dice. Ese descuadre no seria un fallo del calculo, seria esta consulta mirandose a si
+     * misma.
+     */
+    @Query("select p.payrollPeriodCode, c.conceptCode, sum(c.amount) from PayrollEntity p join p.concepts c"
+            + " where p.ruleSystemCode = :ruleSystemCode"
+            + "   and p.employeeTypeCode = :employeeTypeCode"
+            + "   and p.employeeNumber = :employeeNumber"
+            + "   and p.payrollTypeCode = :payrollTypeCode"
+            + "   and p.status = com.b4rrhh.payroll.domain.model.PayrollStatus.DEFINITIVE"
+            + "   and c.originPeriodCode = :periodCode"
+            + "   and p.payrollPeriodCode <> :excludingPayingPeriodCode"
+            + " group by p.payrollPeriodCode, c.conceptCode"
+            + " order by p.payrollPeriodCode")
+    List<Object[]> sumPaidByPayingPeriodForPeriod(
+            @Param("ruleSystemCode") String ruleSystemCode,
+            @Param("employeeTypeCode") String employeeTypeCode,
+            @Param("employeeNumber") String employeeNumber,
+            @Param("payrollTypeCode") String payrollTypeCode,
+            @Param("periodCode") String periodCode,
+            @Param("excludingPayingPeriodCode") String excludingPayingPeriodCode
+    );
 }

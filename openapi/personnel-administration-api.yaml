@@ -7159,6 +7159,61 @@ paths:
               schema:
                 $ref: '#/components/schemas/RetroMarkErrorResponse'
 
+  /payrolls/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}/arrears-explanation:
+    get:
+      tags: [Payroll]
+      operationId: explainPayrollArrears
+      summary: Where each arrears line of this payroll comes from
+      description: >-
+        La explicacion de las lineas de atraso de un recibo (backend#134). Es la condicion de este camino
+        aplicada al paso dificil: el recibo tiene que seguir explicandose cuando la nomina deja de ser
+        facil.
+
+        Una linea de atraso NO se explica con una travesia del grafo, porque no viene de ningun paso de
+        este calculo -su mergedStepCount es cero-. Se explica con tres numeros: agosto vale hoy X, por
+        agosto se habia pagado Y, esta linea es X menos Y. Por eso este endpoint esta al lado de
+        /steps y no dentro: meter las lineas de atraso en la lista de pasos habria obligado a inventar
+        pasos que no existen.
+
+        La Y es lo pagado ANTES de este recibo: sin excluirlo, la diferencia de un recibo ya cerrado
+        saldria cero, porque su propia linea ya estaria contada como pagada.
+
+        Un recibo sin lineas de atraso contesta 200 con la lista vacia, y eso es el caso normal.
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema: { type: string }
+        - name: employeeTypeCode
+          in: path
+          required: true
+          schema: { type: string }
+        - name: employeeNumber
+          in: path
+          required: true
+          schema: { type: string }
+        - name: payrollPeriodCode
+          in: path
+          required: true
+          schema: { type: string }
+        - name: payrollTypeCode
+          in: path
+          required: true
+          schema: { type: string }
+        - name: presenceNumber
+          in: path
+          required: true
+          schema: { type: integer, format: int32 }
+      responses:
+        "200":
+          description: One entry per arrears line, or an empty array
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ArrearExplanationResponse"
+
 components:
   parameters:
     AcceptLanguage:
@@ -7174,6 +7229,88 @@ components:
         type: string
         example: es-ES
   schemas:
+    ArrearExplanationResponse:
+      type: object
+      description: >-
+        De donde sale una linea de atraso (backend#134).
+      required:
+        - originPeriodCode
+        - conceptCode
+        - conceptLabel
+        - lineAmount
+        - currentValue
+        - alreadyPaid
+        - paidIn
+        - difference
+        - addsUp
+      properties:
+        originPeriodCode:
+          type: string
+          description: El mes al que pertenece la linea.
+          example: "202508"
+        conceptCode:
+          type: string
+          example: "102"
+        conceptLabel:
+          type: string
+          description: >-
+            El literal congelado en la linea, con su origen a la vista. Un sufijo sobre el nombre del
+            concepto y no un concepto nuevo por mes: un catalogo con "Salario base de agosto" y "Salario
+            base de septiembre" como conceptos distintos se llenaria de conceptos que no son conceptos.
+          example: "Importe horas extra (atraso 08/2025)"
+        lineAmount:
+          type: number
+          description: Lo que la linea dice. Es el documento, y es lo que manda.
+        currentValue:
+          type: number
+          description: >-
+            La X: lo que ese mes vale HOY para ese concepto, leido de su calculo vigente. Cero si no hay
+            vigente, y entonces currentValueCalculatedAt viene a null y lo dice en vez de callarlo.
+        currentValueCalculatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Cuando se calculo ese vigente.
+        alreadyPaid:
+          type: number
+          description: >-
+            La Y: lo pagado atribuido a ese mes ANTES de este recibo. Sin excluir este recibo, un recibo
+            ya cerrado se contaria a si mismo.
+        paidIn:
+          type: array
+          description: >-
+            El desglose de la Y, un renglon por recibo que pago algo. Es la mitad que la hace util: "por
+            agosto se han pagado 59,40" no explica nada, y "el recibo de agosto pago 0 y el de septiembre
+            pago 59,40 como atraso" si.
+          items:
+            $ref: "#/components/schemas/ArrearPaidInResponse"
+        difference:
+          type: number
+          description: X menos Y, que es lo que esta linea deberia valer.
+        addsUp:
+          type: boolean
+          description: >-
+            Si los tres numeros cuadran con el importe de la linea. Puede ser false, y no es un defecto de
+            la explicacion: pasa cuando esta linea se pago en una corrida anterior y desde entonces el
+            vigente se ha vuelto a pisar. Decirlo es mejor que esconderlo: la pantalla lo puede marcar en
+            vez de ensenar tres numeros que no suman.
+
+    ArrearPaidInResponse:
+      type: object
+      required:
+        - payrollPeriodCode
+        - amount
+      properties:
+        payrollPeriodCode:
+          type: string
+          description: El recibo que pago.
+          example: "202509"
+        amount:
+          type: number
+          description: >-
+            Cuanto pago atribuido al mes de origen. En el propio mes es su linea normal; en un mes
+            posterior es una linea de atraso.
+
     RetroMarkResponse:
       type: object
       description: >-
