@@ -68,7 +68,7 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
     private static final LocalDate JANUARY_1 = LocalDate.of(2025, 1, 1);
 
     /** Los pasos de un empleado de mes entero: uno por cada concepto del catalogo ESP. */
-    private static final int STEPS_IN_A_WHOLE_MONTH = 67;
+    private static final int STEPS_IN_A_WHOLE_MONTH = 78;
 
     /**
      * Y los de uno del mes partido: los conceptos de ambito SEGMENT se evaluan una vez por tramo.
@@ -95,8 +95,13 @@ class CalculationStepsAreServedInExecutionOrderIntegrationTest {
      *
      * <p>Y 67 y 82 desde el {@code backend#122}: la cuota de accidentes de trabajo y su tipo, los
      * dos {@code PERIOD}.
+     *
+     * <p>Y 78 y 104 desde el {@code backend#128}: los once conceptos de la base reguladora diaria,
+     * y los once {@code SEGMENT}. Por eso el mes entero sube once y el partido veintidos, y por eso
+     * la diferencia entre los dos numeros pasa de quince a veintiseis: son los conceptos de tramo
+     * evaluados una vez de mas.
      */
-    private static final int STEPS_IN_A_SPLIT_MONTH = 82;
+    private static final int STEPS_IN_A_SPLIT_MONTH = 104;
 
     /**
      * Los pasos que llevan orden de recibo: los que PUEDEN ser linea.

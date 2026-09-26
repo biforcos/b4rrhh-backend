@@ -22,6 +22,8 @@ import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputLookupPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchExtraPaymentRegimeWindowContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchWorkingTimeWindowContext;
+import com.b4rrhh.payroll.application.port.PreviousPeriodContributionBase;
+import com.b4rrhh.payroll.application.port.PreviousPeriodContributionBaseLookupPort;
 import com.b4rrhh.payroll.application.port.TableRowOrigin;
 import com.b4rrhh.payroll.application.service.PayrollConceptExecutionContext;
 import com.b4rrhh.payroll.application.service.PayrollConceptExecutionResult;
@@ -60,6 +62,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -99,6 +103,23 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     private static final Set<String> AUSENCIAS_QUE_NO_SE_PAGAN =
             Set.of(SegmentAbsence.IT_COMMON, SegmentAbsence.UNPAID_LEAVE);
 
+    /** Como se escribe un periodo de nomina: {@code 202609}. */
+    private static final DateTimeFormatter PERIODO = DateTimeFormatter.ofPattern("yyyyMM");
+
+    /**
+     * Los dias entre los que se reparte la base del mes anterior para dar la base reguladora diaria
+     * ({@code backend#128}).
+     *
+     * <p>Treinta y no los dias naturales del mes: para un empleado de nomina mensual la base del mes
+     * es siempre de un mes de treinta dias, dijera lo que dijera el calendario, que es la misma
+     * convencion que el {@code D01}. Para nomina diaria se reparte entre los dias reales de aquel
+     * mes, que son los que se cotizaron.
+     */
+    private static final BigDecimal DIAS_DEL_MES_NOMINA = BigDecimal.valueOf(30);
+
+    /** Nomina diaria, que es la que no reparte entre treinta. */
+    private static final String TIPO_NOMINA_DIARIA = "DIARIO";
+
     private final CalculatePayrollUseCase calculatePayrollUseCase;
     private final PayrollLaunchEligibleInputLookupPort payrollLaunchEligibleInputLookupPort;
     private final PayrollLaunchExecutionProperties payrollLaunchExecutionProperties;
@@ -115,6 +136,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     private final PayrollCalculationStepWritePort payrollCalculationStepWritePort;
     private final ConceptLabelRepository conceptLabelRepository;
     private final PayslipSectionRepository payslipSectionRepository;
+    private final PreviousPeriodContributionBaseLookupPort previousPeriodContributionBaseLookupPort;
 
     public CalculatePayrollUnitService(
             CalculatePayrollUseCase calculatePayrollUseCase,
@@ -132,7 +154,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             EmployeeTaxInfoPayrollLookupPort employeeTaxInfoLookupPort,
             PayrollCalculationStepWritePort payrollCalculationStepWritePort,
             ConceptLabelRepository conceptLabelRepository,
-            PayslipSectionRepository payslipSectionRepository
+            PayslipSectionRepository payslipSectionRepository,
+            PreviousPeriodContributionBaseLookupPort previousPeriodContributionBaseLookupPort
     ) {
         this.calculatePayrollUseCase = calculatePayrollUseCase;
         this.payrollLaunchEligibleInputLookupPort = payrollLaunchEligibleInputLookupPort;
@@ -150,6 +173,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         this.payrollCalculationStepWritePort = payrollCalculationStepWritePort;
         this.conceptLabelRepository = conceptLabelRepository;
         this.payslipSectionRepository = payslipSectionRepository;
+        this.previousPeriodContributionBaseLookupPort = previousPeriodContributionBaseLookupPort;
     }
 
     /**
@@ -232,6 +256,15 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                         .findByRuleSystemAndCode(command.ruleSystemCode(), input.companyCode())
                         .map(CompanyProfileContext::cnaeCode)
                         .orElse(null);
+
+        // La base reguladora del mes anterior, UNA VEZ por unidad y antes de calcular nada
+        // (backend#128, ADR-074). Es la primera vez que un calculo mira fuera de su periodo, y mirar
+        // puede terminar en que este recibo NO SE CALCULE: eso tiene que decidirse antes de que exista
+        // un solo paso, no a mitad del grafo.
+        BaseReguladoraDelMesAnterior baseReguladora = resolverBaseReguladora(command, input, tipoNomina);
+        if (baseReguladora.noSeCalcula()) {
+            return recibioNoCalculado(command, input, baseReguladora);
+        }
 
         EmployeeAssignmentContext assignmentContext = new EmployeeAssignmentContext(
                 command.ruleSystemCode(),
@@ -335,7 +368,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     seg.vigencias().extraPaymentsProrated(),
                     cnaeCode,
                     seg.vigencias().contractCode(),
-                    seg.vigencias().absence()
+                    seg.vigencias().absence(),
+                    baseReguladora.diaria()
             ));
             segmentStates.add(new SegmentExecutionState());
         }
@@ -496,7 +530,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 command.calculationEngineCode(),
                 command.calculationEngineVersion(),
                 command.runId(),
-                List.of(eligibleRealWarning(command, input)),
+                avisos(command, input, baseReguladora),
                 payrollConcepts,
                 buildSnapshots(command, input),
                 payrollSegments
@@ -945,6 +979,208 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             ));
         }
         return new ArrayList<>(collapsed.values());
+    }
+
+    /**
+     * Lo que se supo del mes anterior, y lo que hay que hacer con ello ({@code backend#128}).
+     *
+     * @param diaria la base reguladora diaria leida del recibo cerrado del mes anterior, o
+     *        {@code null} si no hay recibo cerrado o si esta unidad no necesita base reguladora. En
+     *        los dos casos el motor hace lo mismo: usar la base teorica de este mes, que la calcula
+     *        el grafo
+     * @param aviso lo que el recibo tiene que decir de esto, o {@code null} si no hay nada que decir
+     * @param motivoNoCalculada el codigo de estado con el que el recibo queda {@code NOT_VALID}, o
+     *        {@code null} si se calcula
+     */
+    private record BaseReguladoraDelMesAnterior(
+            BigDecimal diaria,
+            PayrollWarning aviso,
+            String motivoNoCalculada
+    ) {
+        boolean noSeCalcula() {
+            return motivoNoCalculada != null;
+        }
+    }
+
+    /**
+     * La base reguladora diaria de este empleado, o el motivo por el que su recibo no se calcula
+     * ({@code backend#128}, ADR-074).
+     *
+     * <h4>Se pregunta solo si hace falta</h4>
+     *
+     * <p>Si el empleado no tiene ninguna baja por enfermedad comun en el periodo, <b>no se lee
+     * nada</b>: no hay prestacion que calcular ni base durante la baja, asi que no hay ninguna razon
+     * para que el mes anterior de este empleado tenga que estar cerrado. Lo contrario seria dejar sin
+     * calcular los ochocientos sesenta recibos de una empresa porque el mes pasado quedo uno a medio
+     * revisar.
+     *
+     * <h4>Las tres respuestas</h4>
+     *
+     * <ol>
+     *   <li><b>Recibo cerrado</b> - su base de contingencias comunes entre los dias del mes.</li>
+     *   <li><b>Recibo que todavia puede cambiar</b> - este recibo no se calcula y queda
+     *       {@code NOT_VALID} con su motivo, como cuando falta una entrada. Un numero que puede
+     *       cambiar no se lee.</li>
+     *   <li><b>No hay recibo</b> - la base teorica de este mes, que la calcula el grafo. Con aviso,
+     *       salvo que el empleado entrara este mes: entonces es lo que dice la ley y no hay nada de
+     *       lo que avisar.</li>
+     * </ol>
+     */
+    private BaseReguladoraDelMesAnterior resolverBaseReguladora(
+            CalculatePayrollUnitCommand command,
+            PayrollLaunchEligibleInputContext input,
+            String tipoNomina
+    ) {
+        if (!tieneBajaPorEnfermedadComun(input)) {
+            return new BaseReguladoraDelMesAnterior(null, null, null);
+        }
+
+        String periodoAnterior = periodoAnterior(command.payrollPeriodCode());
+        PreviousPeriodContributionBase anterior =
+                previousPeriodContributionBaseLookupPort.findByEmployeeAndPeriod(
+                        command.ruleSystemCode(),
+                        command.employeeTypeCode(),
+                        command.employeeNumber(),
+                        command.payrollTypeCode(),
+                        periodoAnterior);
+
+        log.info("[NOMINA] Base reguladora | periodo anterior={} -> {}",
+                periodoAnterior, anterior.outcome());
+
+        return switch (anterior.outcome()) {
+            case DEFINITIVE -> new BaseReguladoraDelMesAnterior(
+                    baseDiaria(anterior.contributionBase(), tipoNomina, periodoAnterior), null, null);
+
+            case NOT_DEFINITIVE -> new BaseReguladoraDelMesAnterior(
+                    null,
+                    aviso("PREVIOUS_PAYROLL_NOT_DEFINITIVE", "ERROR",
+                            "El recibo de " + periodoAnterior + " existe y no es definitivo: la base"
+                                    + " reguladora saldria de un numero que todavia puede cambiar,"
+                                    + " asi que este recibo no se calcula",
+                            command, input, periodoAnterior),
+                    "PREVIOUS_PAYROLL_NOT_DEFINITIVE");
+
+            case NONE -> entroEnEstePeriodo(command, input)
+                    ? new BaseReguladoraDelMesAnterior(null, null, null)
+                    : new BaseReguladoraDelMesAnterior(
+                            null,
+                            aviso("REGULATORY_BASE_FROM_CURRENT_PERIOD", "WARNING",
+                                    "Base reguladora tomada del mes en curso: no hay recibo"
+                                            + " definitivo de " + periodoAnterior,
+                                    command, input, periodoAnterior),
+                            null);
+        };
+    }
+
+    /**
+     * Si esta unidad necesita base reguladora: tiene alguna baja por enfermedad comun en el periodo.
+     *
+     * <p>El permiso no retribuido <b>no</b> cuenta, aunque tambien quite dias: no paga prestacion y
+     * no cotiza, asi que no hay ninguna base que regular.
+     */
+    private boolean tieneBajaPorEnfermedadComun(PayrollLaunchEligibleInputContext input) {
+        if (input.absenceWindows() == null) return false;
+        return input.absenceWindows().stream()
+                .anyMatch(a -> SegmentAbsence.IT_COMMON.equals(a.absenceTypeCode()));
+    }
+
+    /** Si el empleado entro en este mismo periodo, que es el caso que la ley resuelve sin aviso. */
+    private boolean entroEnEstePeriodo(
+            CalculatePayrollUnitCommand command,
+            PayrollLaunchEligibleInputContext input
+    ) {
+        return input.presenceStartDate() != null
+                && !input.presenceStartDate().isBefore(command.periodStart());
+    }
+
+    /**
+     * El periodo anterior. Que sea el mes de antes es una regla de negocio y por eso se decide aqui y
+     * no en la consulta.
+     */
+    private String periodoAnterior(String payrollPeriodCode) {
+        return YearMonth.parse(payrollPeriodCode, PERIODO).minusMonths(1).format(PERIODO);
+    }
+
+    /**
+     * La base del mes anterior repartida entre sus dias.
+     *
+     * <p>Se divide con seis decimales y <b>no se redondea aqui</b>: el redondeo es del concepto que
+     * recibe el numero, y se aplica una sola vez (ADR-066).
+     */
+    private BigDecimal baseDiaria(BigDecimal baseDelMes, String tipoNomina, String periodoAnterior) {
+        BigDecimal dias = TIPO_NOMINA_DIARIA.equals(tipoNomina)
+                ? BigDecimal.valueOf(YearMonth.parse(periodoAnterior, PERIODO).lengthOfMonth())
+                : DIAS_DEL_MES_NOMINA;
+        return baseDelMes.divide(dias, 6, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * El recibo que no se calcula ({@code backend#128}).
+     *
+     * <p>Se guarda, y por eso: un recibo {@code NOT_VALID} con su motivo es lo que hace visible que
+     * este empleado falta, y ademas es lo unico desde donde se puede recalcular cuando el mes
+     * anterior se cierre. No guardar nada dejaria el hueco sin explicacion, que es la forma de fallo
+     * que este proyecto no admite.
+     *
+     * <p>Sin lineas y sin pasos, porque no se ha calculado nada. Lo que lleva es el aviso, que es
+     * donde esta escrito con palabras que le pasa.
+     */
+    private Payroll recibioNoCalculado(
+            CalculatePayrollUnitCommand command,
+            PayrollLaunchEligibleInputContext input,
+            BaseReguladoraDelMesAnterior baseReguladora
+    ) {
+        log.warn("[NOMINA] Recibo NO CALCULADO | empleado={} periodo={} motivo={}",
+                command.employeeNumber(), command.payrollPeriodCode(),
+                baseReguladora.motivoNoCalculada());
+
+        return calculatePayrollUseCase.calculate(new CalculatePayrollCommand(
+                command.ruleSystemCode(),
+                command.employeeTypeCode(),
+                command.employeeNumber(),
+                command.payrollPeriodCode(),
+                command.payrollTypeCode(),
+                command.presenceNumber(),
+                PayrollStatus.NOT_VALID,
+                baseReguladora.motivoNoCalculada(),
+                Instant.now(),
+                command.calculationEngineCode(),
+                command.calculationEngineVersion(),
+                command.runId(),
+                avisos(command, input, baseReguladora),
+                List.of(),
+                buildSnapshots(command, input),
+                List.of()
+        ));
+    }
+
+    /** Los avisos del recibo: el de siempre, y el de la base reguladora cuando hay algo que decir. */
+    private List<PayrollWarning> avisos(
+            CalculatePayrollUnitCommand command,
+            PayrollLaunchEligibleInputContext input,
+            BaseReguladoraDelMesAnterior baseReguladora
+    ) {
+        PayrollWarning deSiempre = eligibleRealWarning(command, input);
+        return baseReguladora.aviso() == null
+                ? List.of(deSiempre)
+                : List.of(deSiempre, baseReguladora.aviso());
+    }
+
+    private PayrollWarning aviso(
+            String codigo,
+            String severidad,
+            String mensaje,
+            CalculatePayrollUnitCommand command,
+            PayrollLaunchEligibleInputContext input,
+            String periodoAnterior
+    ) {
+        Map<String, Object> detalles = new LinkedHashMap<>();
+        detalles.put("previousPeriodCode", periodoAnterior);
+        detalles.put("employeeTypeCode", command.employeeTypeCode());
+        detalles.put("employeeNumber", command.employeeNumber());
+        detalles.put("presenceStartDate",
+                input.presenceStartDate() == null ? null : input.presenceStartDate().toString());
+        return new PayrollWarning(null, null, codigo, severidad, mensaje, toJson(detalles));
     }
 
     private PayrollWarning eligibleRealWarning(

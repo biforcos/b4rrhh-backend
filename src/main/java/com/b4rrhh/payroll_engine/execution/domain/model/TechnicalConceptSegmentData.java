@@ -48,11 +48,31 @@ public record TechnicalConceptSegmentData(
          * dias por tramo de porcentaje del {@code backend#129}. Unas vacaciones no dejan tramo
          * propio: no hay nada a lo que preguntarle por ellas (ADR-073).
          */
-        SegmentAbsence absence
+        SegmentAbsence absence,
+        /**
+         * La base de cotizacion diaria del recibo cerrado del mes anterior, o {@code null}
+         * ({@code backend#128}).
+         *
+         * <p>La leen los dos calculadores de la base reguladora y nadie mas. Nula quiere decir o que
+         * no hay recibo cerrado del mes anterior, o que esta unidad no necesita base reguladora.
+         */
+        BigDecimal previousPeriodDailyContributionBase
 ) {
 
     /** Si en este tramo no se devengan dias, que es lo que significa traer ausencia. */
     public boolean isUnpaidAbsenceSegment() {
         return absence != null;
+    }
+
+    /**
+     * Si de este tramo sale base reguladora: es un tramo de baja por enfermedad comun
+     * ({@code backend#128}).
+     *
+     * <p>Un tramo trabajado no la necesita, y por eso la base reguladora vale <b>cero</b> en el: lo
+     * que la lee —la prestacion y la base durante la baja— tambien vale cero ahi, asi que el cero no
+     * esconde nada y ahorra tener que preguntar dos veces lo mismo.
+     */
+    public boolean needsDailyRegulatoryBase() {
+        return absence != null && absence.isCommonSickLeave();
     }
 }

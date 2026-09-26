@@ -397,6 +397,53 @@ public class PayrollScenarioFixtures {
     }
 
     /**
+     * Un recibo ya existente de otro periodo, con una sola linea ({@code backend#128}).
+     *
+     * <p>Sirve para poner en pie «el mes anterior»: la base reguladora de una baja sale de la base de
+     * contingencias comunes del recibo del mes anterior, y <b>solo si esta cerrado</b>. El estado se
+     * pasa para poder escribir los dos casos, que es donde esta la decision del issue.
+     *
+     * <p>Se escribe por SQL y no calculando el mes anterior de verdad: lo que estos escenarios prueban
+     * es la regla de lectura, no que el motor sepa calcular marzo.
+     */
+    public void insertPayrollWithConcept(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber,
+            String payrollPeriodCode,
+            String payrollTypeCode,
+            int presenceNumber,
+            String status,
+            String conceptCode,
+            BigDecimal amount
+    ) {
+        jdbc.update(
+                "insert into payroll.payroll" +
+                " (rule_system_code, employee_type_code, employee_number, payroll_period_code," +
+                "  payroll_type_code, presence_number, status, calculated_at," +
+                "  calculation_engine_code, calculation_engine_version, created_at, updated_at)" +
+                " values (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 'ENGINE', '1.0'," +
+                "         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                ruleSystemCode, employeeTypeCode, employeeNumber, payrollPeriodCode,
+                payrollTypeCode, presenceNumber, status);
+
+        Long payrollId = jdbc.queryForObject(
+                "select id from payroll.payroll" +
+                " where rule_system_code = ? and employee_type_code = ? and employee_number = ?" +
+                "   and payroll_period_code = ? and payroll_type_code = ? and presence_number = ?",
+                Long.class,
+                ruleSystemCode, employeeTypeCode, employeeNumber, payrollPeriodCode,
+                payrollTypeCode, presenceNumber);
+
+        jdbc.update(
+                "insert into payroll.payroll_concept" +
+                " (payroll_id, line_number, concept_code, concept_mnemonic, concept_label, amount," +
+                "  concept_nature_code, display_order, merged_step_count)" +
+                " values (?, 1, ?, ?, ?, ?, 'BASE', 1, 1)",
+                payrollId, conceptCode, conceptCode, conceptCode, amount);
+    }
+
+    /**
      * Anade al grafo la cadena del tope y el suelo de cotizacion, igual que la siembra
      * ESP (V88): B_CC_MAX = LEAST(B01, P_TOPE_MAX), B_CC = GREATEST(B_CC_MAX, P_TOPE_MIN),
      * y los porcentajes 700 y 703 pasan a leer B_CC en vez de B01. Los cuatro conceptos

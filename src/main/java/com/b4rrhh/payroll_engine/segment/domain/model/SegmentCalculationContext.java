@@ -53,6 +53,7 @@ public final class SegmentCalculationContext {
     private final String cnaeCode;
     private final String contractCode;
     private final SegmentAbsence absence;
+    private final BigDecimal previousPeriodDailyContributionBase;
 
     /**
      * Sin la actividad economica de la empresa, que es opcional y casi ningun calculo mira
@@ -119,7 +120,8 @@ public final class SegmentCalculationContext {
     }
 
     /**
-     * Sin la ausencia del tramo, que la mayoria de los tramos no tienen ({@code backend#127}).
+     * Sin la ausencia del tramo, que la mayoria de los tramos no tienen ({@code backend#127}), y sin
+     * la base diaria del mes anterior, que solo hace falta con una baja ({@code backend#128}).
      */
     public SegmentCalculationContext(
             String ruleSystemCode,
@@ -147,7 +149,38 @@ public final class SegmentCalculationContext {
                 segmentStart, segmentEnd, firstSegment, lastSegment, daysInPeriod, daysInSegment,
                 workingTimePercentage, monthlySalaryAmount, employeeInputs, grupoCotizacionCode,
                 tipoNomina, precomputedDirectAmounts, extraPaymentsProrated, cnaeCode, contractCode,
-                null);
+                null, null);
+    }
+
+    /** Sin la base diaria del mes anterior ({@code backend#128}). */
+    public SegmentCalculationContext(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber,
+            LocalDate periodStart,
+            LocalDate periodEnd,
+            LocalDate segmentStart,
+            LocalDate segmentEnd,
+            boolean firstSegment,
+            boolean lastSegment,
+            long daysInPeriod,
+            long daysInSegment,
+            BigDecimal workingTimePercentage,
+            BigDecimal monthlySalaryAmount,
+            Map<String, BigDecimal> employeeInputs,
+            String grupoCotizacionCode,
+            String tipoNomina,
+            Map<String, BigDecimal> precomputedDirectAmounts,
+            boolean extraPaymentsProrated,
+            String cnaeCode,
+            String contractCode,
+            SegmentAbsence absence
+    ) {
+        this(ruleSystemCode, employeeTypeCode, employeeNumber, periodStart, periodEnd,
+                segmentStart, segmentEnd, firstSegment, lastSegment, daysInPeriod, daysInSegment,
+                workingTimePercentage, monthlySalaryAmount, employeeInputs, grupoCotizacionCode,
+                tipoNomina, precomputedDirectAmounts, extraPaymentsProrated, cnaeCode, contractCode,
+                absence, null);
     }
 
     public SegmentCalculationContext(
@@ -171,7 +204,8 @@ public final class SegmentCalculationContext {
             boolean extraPaymentsProrated,
             String cnaeCode,
             String contractCode,
-            SegmentAbsence absence
+            SegmentAbsence absence,
+            BigDecimal previousPeriodDailyContributionBase
     ) {
         requireNonBlank(ruleSystemCode, "ruleSystemCode");
         requireNonBlank(employeeTypeCode, "employeeTypeCode");
@@ -229,6 +263,10 @@ public final class SegmentCalculationContext {
         this.contractCode = contractCode;
         // Nula es el caso normal: un tramo sin ausencia, que son casi todos (backend#127).
         this.absence = absence;
+        // Nula quiere decir DOS cosas a la vez, y se distinguen mirando la ausencia del tramo: o no
+        // hay recibo cerrado del mes anterior, o esta unidad no necesita base reguladora porque no
+        // tiene baja. En los dos casos el motor hace lo mismo (backend#128).
+        this.previousPeriodDailyContributionBase = previousPeriodDailyContributionBase;
     }
 
     public String getRuleSystemCode() { return ruleSystemCode; }
@@ -283,6 +321,23 @@ public final class SegmentCalculationContext {
 
     /** Si en este tramo no se devengan dias, que es lo que significa tener ausencia aqui. */
     public boolean isUnpaidAbsenceSegment() { return absence != null; }
+
+    /**
+     * La base de cotizacion por contingencias comunes del recibo <b>cerrado</b> del mes anterior,
+     * ya dividida entre los dias del mes, o {@code null} ({@code backend#128}).
+     *
+     * <p>Es la primera vez que un dato de otro periodo entra en un calculo, y por eso entra <b>como
+     * dato y no como consulta</b>: lo resuelve una vez la unidad, por un solo puerto que filtra por
+     * {@code DEFINITIVE}, y el motor lo recibe hecho (ADR-074).
+     *
+     * <p><b>Nula es el caso normal</b>, y quiere decir dos cosas que al motor le dan igual: que no hay
+     * recibo cerrado del mes anterior —y entonces la base reguladora es la teorica de este mes, que la
+     * calcula el grafo— o que esta unidad no tiene ninguna baja y no necesita base reguladora. El
+     * tercer caso —hay recibo y no esta cerrado— no llega hasta aqui: ese recibo no se calcula.
+     */
+    public BigDecimal getPreviousPeriodDailyContributionBase() {
+        return previousPeriodDailyContributionBase;
+    }
 
     /**
      * Si en este tramo las pagas extras del empleado se prorratean ({@code backend#118}).

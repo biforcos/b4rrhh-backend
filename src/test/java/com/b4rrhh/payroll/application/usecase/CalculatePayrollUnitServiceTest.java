@@ -107,6 +107,15 @@ class CalculatePayrollUnitServiceTest {
      */
     @Mock
     private com.b4rrhh.payroll_engine.concept.domain.port.PayslipSectionRepository payslipSectionRepository;
+
+    /**
+     * El puerto que lee el mes anterior ({@code backend#128}). Aqui es un mock que no contesta nada, y
+     * eso basta: ninguno de estos casos tiene una baja por enfermedad comun, asi que la lectura no se
+     * pide. Si algun dia se pide sin baja, este mock devolvera {@code null} y el test se caera, que es
+     * lo que se quiere.
+     */
+    @Mock
+    private com.b4rrhh.payroll.application.port.PreviousPeriodContributionBaseLookupPort previousPeriodContributionBaseLookupPort;
     // Motor real, no mock: lo que se prueba aqui es como el servicio reparte cada concepto
     // entre tramos y periodo segun su execution_scope, y eso solo se ve evaluando de verdad.
     private final SegmentExecutionEngine segmentExecutionEngine = new DefaultSegmentExecutionEngine(
@@ -146,7 +155,8 @@ class CalculatePayrollUnitServiceTest {
             employeeTaxInfoLookupPort,
             payrollCalculationStepWritePort,
             conceptLabelRepository,
-            payslipSectionRepository
+            payslipSectionRepository,
+            previousPeriodContributionBaseLookupPort
         );
 
         when(employeeTaxInfoLookupPort.findLatestOnOrBefore(
@@ -258,7 +268,8 @@ class CalculatePayrollUnitServiceTest {
             employeeTaxInfoLookupPort,
             payrollCalculationStepWritePort,
             conceptLabelRepository,
-            payslipSectionRepository
+            payslipSectionRepository,
+            previousPeriodContributionBaseLookupPort
         );
 
         lenient().when(employeeTaxInfoLookupPort.findLatestOnOrBefore(
@@ -372,7 +383,8 @@ class CalculatePayrollUnitServiceTest {
             employeeTaxInfoLookupPort,
             payrollCalculationStepWritePort,
             conceptLabelRepository,
-            payslipSectionRepository
+            payslipSectionRepository,
+            previousPeriodContributionBaseLookupPort
         );
 
         when(employeeTaxInfoLookupPort.findLatestOnOrBefore(

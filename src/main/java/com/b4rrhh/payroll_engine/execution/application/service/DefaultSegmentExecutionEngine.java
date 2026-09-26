@@ -170,7 +170,8 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
                         context.isExtraPaymentsProrated(),
                         context.getCnaeCode(),
                         context.getContractCode(),
-                        context.getAbsence()
+                        context.getAbsence(),
+                        context.getPreviousPeriodDailyContributionBase()
                 ));
             }
 
