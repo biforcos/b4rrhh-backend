@@ -13,6 +13,17 @@ import java.math.BigDecimal;
  * 31-day month still accrue 30 days; partial-month employees accrue actual days.
  *
  * <p>Formula: {@code min(daysInSegment, 30)}
+ *
+ * <h2>Y cero en el tramo de ausencia ({@code backend#127})</h2>
+ *
+ * <p>Un tramo de baja por enfermedad comun o de permiso no retribuido <b>no devenga dias</b>. Con
+ * eso solo, todo lo que cuelga de los dias cae solo: el {@code 101}, y con el las cuatro pagas
+ * extras y la prorrata, que son agregados suyos. No hace falta tocar ningun otro calculador.
+ *
+ * <p>La decision de cuales ausencias llegan hasta aqui no esta en esta clase: un tramo trae ausencia
+ * si y solo si es de las que no se pagan, y eso lo resuelve quien arma el tramo (ADR-073). Aqui la
+ * pregunta es una sola —«tiene ausencia este tramo»— y por eso no hay una lista de tipos que
+ * mantener en dos sitios.
  */
 @Component
 public class AccrualDaysConceptCalculator implements TechnicalConceptCalculator {
@@ -26,6 +37,9 @@ public class AccrualDaysConceptCalculator implements TechnicalConceptCalculator 
 
     @Override
     public BigDecimal resolve(TechnicalConceptSegmentData context) {
+        if (context.isUnpaidAbsenceSegment()) {
+            return BigDecimal.ZERO;
+        }
         return BigDecimal.valueOf(Math.min(context.daysInSegment(), PAYROLL_MONTH_CAP));
     }
 }

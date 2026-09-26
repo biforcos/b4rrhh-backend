@@ -378,6 +378,25 @@ public class PayrollScenarioFixtures {
     }
 
     /**
+     * Una ausencia del empleado ({@code backend#127}).
+     *
+     * <p>Se inserta por SQL y no por el caso de uso a proposito: lo que estos escenarios prueban es
+     * que el motor la lee, no que la validacion la deje entrar. Asi se pueden declarar ausencias que
+     * vienen de antes del periodo o que lo pasan de largo, que es justo donde esta el caso
+     * interesante y lo que el caso de uso no deja escribir de un tiron.
+     *
+     * <p>{@code to} nulo es una ausencia sin cerrar, que llega hasta el fin del periodo.
+     */
+    public void insertAbsence(long employeeId, String absenceTypeCode, LocalDate from, LocalDate to) {
+        jdbc.update(
+                "insert into employee.employee_absence" +
+                " (employee_id, absence_type_code, start_date, start_time, end_date, end_time," +
+                "  created_at, updated_at)" +
+                " values (?, ?, ?, 0, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                employeeId, absenceTypeCode, from, to, to == null ? null : 1439);
+    }
+
+    /**
      * Anade al grafo la cadena del tope y el suelo de cotizacion, igual que la siembra
      * ESP (V88): B_CC_MAX = LEAST(B01, P_TOPE_MAX), B_CC = GREATEST(B_CC_MAX, P_TOPE_MIN),
      * y los porcentajes 700 y 703 pasan a leer B_CC en vez de B01. Los cuatro conceptos

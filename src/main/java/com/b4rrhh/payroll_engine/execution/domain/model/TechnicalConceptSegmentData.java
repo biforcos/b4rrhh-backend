@@ -1,5 +1,7 @@
 package com.b4rrhh.payroll_engine.execution.domain.model;
 
+import com.b4rrhh.payroll_engine.segment.domain.model.SegmentAbsence;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
@@ -37,5 +39,20 @@ public record TechnicalConceptSegmentData(
          * cotiza el tramo -indefinida o de duracion determinada-, y es el quien se queja si falta:
          * ningun otro calculador lo necesita.
          */
-        String contractCode
-) {}
+        String contractCode,
+        /**
+         * La ausencia que hace que este tramo exista, o {@code null} ({@code backend#127}).
+         *
+         * <p>Solo la traen los tramos de ausencia <b>que no se paga</b>. La lee
+         * {@code AccrualDaysConceptCalculator} para no devengar dias, y la leeran los contadores de
+         * dias por tramo de porcentaje del {@code backend#129}. Unas vacaciones no dejan tramo
+         * propio: no hay nada a lo que preguntarle por ellas (ADR-073).
+         */
+        SegmentAbsence absence
+) {
+
+    /** Si en este tramo no se devengan dias, que es lo que significa traer ausencia. */
+    public boolean isUnpaidAbsenceSegment() {
+        return absence != null;
+    }
+}

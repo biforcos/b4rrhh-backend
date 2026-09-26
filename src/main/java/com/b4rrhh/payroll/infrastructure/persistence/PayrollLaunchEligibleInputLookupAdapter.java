@@ -1,5 +1,7 @@
 package com.b4rrhh.payroll.infrastructure.persistence;
 
+import com.b4rrhh.employee.absence.infrastructure.persistence.AbsenceEntity;
+import com.b4rrhh.employee.absence.infrastructure.persistence.SpringDataAbsenceRepository;
 import com.b4rrhh.employee.contract.infrastructure.persistence.ContractEntity;
 import com.b4rrhh.employee.extra_payment_regime.infrastructure.persistence.ExtraPaymentRegimeEntity;
 import com.b4rrhh.employee.extra_payment_regime.infrastructure.persistence.SpringDataExtraPaymentRegimeRepository;
@@ -14,6 +16,7 @@ import com.b4rrhh.employee.working_time.infrastructure.persistence.EmployeeAgree
 import com.b4rrhh.employee.working_time.infrastructure.persistence.SpringDataWorkingTimeRepository;
 import com.b4rrhh.employee.working_time.infrastructure.persistence.WorkingTimeEntity;
 import com.b4rrhh.employee.workcenter.infrastructure.persistence.SpringDataWorkCenterRepository;
+import com.b4rrhh.payroll.application.port.PayrollLaunchAbsenceWindowContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchAgreementWindowContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchContractWindowContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputContext;
@@ -40,6 +43,7 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
     private final SpringDataLaborClassificationRepository laborClassificationRepository;
     private final SpringDataContractRepository contractRepository;
     private final SpringDataExtraPaymentRegimeRepository extraPaymentRegimeRepository;
+    private final SpringDataAbsenceRepository absenceRepository;
 
     public PayrollLaunchEligibleInputLookupAdapter(
             EmployeeBusinessKeyLookupSupport employeeLookupSupport,
@@ -50,7 +54,8 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
             SpringDataWorkCenterRepository workCenterRepository,
             SpringDataLaborClassificationRepository laborClassificationRepository,
             SpringDataContractRepository contractRepository,
-            SpringDataExtraPaymentRegimeRepository extraPaymentRegimeRepository
+            SpringDataExtraPaymentRegimeRepository extraPaymentRegimeRepository,
+            SpringDataAbsenceRepository absenceRepository
     ) {
         this.employeeLookupSupport = employeeLookupSupport;
         this.presenceRepository = presenceRepository;
@@ -61,6 +66,7 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
         this.laborClassificationRepository = laborClassificationRepository;
         this.contractRepository = contractRepository;
         this.extraPaymentRegimeRepository = extraPaymentRegimeRepository;
+        this.absenceRepository = absenceRepository;
     }
 
     @Override
@@ -136,6 +142,15 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
                         .map(PayrollLaunchEligibleInputLookupAdapter::toExtraPaymentRegimeWindow)
                         .toList();
 
+        // Las ausencias que tocan el periodo, TODAS y sin filtrar por tipo (backend#127). Cuales
+        // parten y cuales quitan dias lo decide el calculo (ADR-073): repartir esa decision entre la
+        // consulta y el calculo la dejaria en dos sitios, y es una.
+        List<PayrollLaunchAbsenceWindowContext> absenceWindows = absenceRepository
+                .findOverlappingByEmployeeIdAndPeriodOrdered(employeeId, periodStart, periodEnd)
+                .stream()
+                .map(PayrollLaunchEligibleInputLookupAdapter::toAbsenceWindow)
+                .toList();
+
         String workCenterCode = workCenterRepository
                 .findActiveByEmployeeIdAndReferenceDate(employeeId, referenceDate, PageRequest.of(0, 1))
                 .stream().findFirst()
@@ -156,6 +171,7 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
                 agreementWindows,
                 contractWindows,
                 extraPaymentRegimeWindows,
+                absenceWindows,
                 presence.getStartDate(),
                 presence.getEndDate(),
                 workCenterCode,
@@ -208,6 +224,11 @@ public class PayrollLaunchEligibleInputLookupAdapter implements PayrollLaunchEli
     ) {
         return new PayrollLaunchExtraPaymentRegimeWindowContext(
                 e.getStartDate(), e.getEndDate(), Boolean.TRUE.equals(e.getProrated()));
+    }
+
+    private static PayrollLaunchAbsenceWindowContext toAbsenceWindow(AbsenceEntity e) {
+        return new PayrollLaunchAbsenceWindowContext(
+                e.getStartDate(), e.getEndDate(), e.getAbsenceTypeCode());
     }
 
     private PayrollLaunchWorkingTimeWindowContext toWorkingTimeWindow(WorkingTimeEntity workingTime) {

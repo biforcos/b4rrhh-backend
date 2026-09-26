@@ -19,6 +19,10 @@ import java.util.List;
  * @param extraPaymentRegimeWindows los tramos de regimen de pagas extras que tocan el periodo, en
  *        orden. Rompen el periodo por la misma razon: la prorrata de un tramo prorrateado y la de
  *        uno que no lo es entran por puertas distintas (backend#118, backend#119)
+ * @param absenceWindows las ausencias del empleado que tocan el periodo, en orden. Rompen el
+ *        periodo las que cambian lo que se paga —la baja por enfermedad comun y el permiso no
+ *        retribuido—, y aqui vienen TODAS: quien decide cuales parten es el calculo, en un solo
+ *        sitio (ADR-073, backend#127)
  * @param presenceStartDate el arranque de la presencia de ESTA unidad
  * @param seniorityDate la antiguedad del empleado, como fecha: el arranque de su presencia mas
  *        antigua, cortes incluidos, asi que quien se readmite la conserva del primer alta
@@ -36,6 +40,7 @@ public record PayrollLaunchEligibleInputContext(
         List<PayrollLaunchAgreementWindowContext> agreementWindows,
         List<PayrollLaunchContractWindowContext> contractWindows,
         List<PayrollLaunchExtraPaymentRegimeWindowContext> extraPaymentRegimeWindows,
+        List<PayrollLaunchAbsenceWindowContext> absenceWindows,
         LocalDate presenceStartDate,
         LocalDate presenceEndDate,
         String workCenterCode,

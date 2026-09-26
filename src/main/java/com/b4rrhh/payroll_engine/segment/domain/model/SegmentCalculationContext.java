@@ -52,6 +52,7 @@ public final class SegmentCalculationContext {
     private final boolean extraPaymentsProrated;
     private final String cnaeCode;
     private final String contractCode;
+    private final SegmentAbsence absence;
 
     /**
      * Sin la actividad economica de la empresa, que es opcional y casi ningun calculo mira
@@ -117,6 +118,9 @@ public final class SegmentCalculationContext {
                 tipoNomina, precomputedDirectAmounts, extraPaymentsProrated, cnaeCode, null);
     }
 
+    /**
+     * Sin la ausencia del tramo, que la mayoria de los tramos no tienen ({@code backend#127}).
+     */
     public SegmentCalculationContext(
             String ruleSystemCode,
             String employeeTypeCode,
@@ -138,6 +142,36 @@ public final class SegmentCalculationContext {
             boolean extraPaymentsProrated,
             String cnaeCode,
             String contractCode
+    ) {
+        this(ruleSystemCode, employeeTypeCode, employeeNumber, periodStart, periodEnd,
+                segmentStart, segmentEnd, firstSegment, lastSegment, daysInPeriod, daysInSegment,
+                workingTimePercentage, monthlySalaryAmount, employeeInputs, grupoCotizacionCode,
+                tipoNomina, precomputedDirectAmounts, extraPaymentsProrated, cnaeCode, contractCode,
+                null);
+    }
+
+    public SegmentCalculationContext(
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String employeeNumber,
+            LocalDate periodStart,
+            LocalDate periodEnd,
+            LocalDate segmentStart,
+            LocalDate segmentEnd,
+            boolean firstSegment,
+            boolean lastSegment,
+            long daysInPeriod,
+            long daysInSegment,
+            BigDecimal workingTimePercentage,
+            BigDecimal monthlySalaryAmount,
+            Map<String, BigDecimal> employeeInputs,
+            String grupoCotizacionCode,
+            String tipoNomina,
+            Map<String, BigDecimal> precomputedDirectAmounts,
+            boolean extraPaymentsProrated,
+            String cnaeCode,
+            String contractCode,
+            SegmentAbsence absence
     ) {
         requireNonBlank(ruleSystemCode, "ruleSystemCode");
         requireNonBlank(employeeTypeCode, "employeeTypeCode");
@@ -193,6 +227,8 @@ public final class SegmentCalculationContext {
         // Igual que el CNAE: puede venir nulo y no se valida aqui. El unico que lo necesita es el
         // tipo de desempleo, y es el quien tiene que decir que falta (backend#124).
         this.contractCode = contractCode;
+        // Nula es el caso normal: un tramo sin ausencia, que son casi todos (backend#127).
+        this.absence = absence;
     }
 
     public String getRuleSystemCode() { return ruleSystemCode; }
@@ -234,6 +270,19 @@ public final class SegmentCalculationContext {
      * <p><b>Puede ser nulo</b> en los contextos que no lo traen.
      */
     public String getContractCode() { return contractCode; }
+
+    /**
+     * La ausencia que hace que este tramo exista, o {@code null} si el tramo no es de ausencia
+     * ({@code backend#127}).
+     *
+     * <p>Solo la tienen los tramos de ausencia <b>que no se paga</b>: la baja por enfermedad comun y
+     * el permiso no retribuido. Unas vacaciones no parten el periodo y no dejan tramo propio, asi
+     * que no hay tramo al que preguntarle por ellas (ADR-073).
+     */
+    public SegmentAbsence getAbsence() { return absence; }
+
+    /** Si en este tramo no se devengan dias, que es lo que significa tener ausencia aqui. */
+    public boolean isUnpaidAbsenceSegment() { return absence != null; }
 
     /**
      * Si en este tramo las pagas extras del empleado se prorratean ({@code backend#118}).

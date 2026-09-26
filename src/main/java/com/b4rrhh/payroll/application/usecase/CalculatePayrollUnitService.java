@@ -15,6 +15,7 @@ import com.b4rrhh.payroll.application.port.EmployeePersonalDataContext;
 import com.b4rrhh.payroll.application.port.EmployeePersonalDataLookupPort;
 import com.b4rrhh.payroll.application.port.PayrollCalculationStep;
 import com.b4rrhh.payroll.application.port.PayrollCalculationStepWritePort;
+import com.b4rrhh.payroll.application.port.PayrollLaunchAbsenceWindowContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchAgreementWindowContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchContractWindowContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEligibleInputContext;
@@ -46,6 +47,7 @@ import com.b4rrhh.payroll_engine.execution.domain.model.SegmentExecutionState;
 import com.b4rrhh.payroll_engine.metamodel.domain.model.RuleSystemMetamodel;
 import com.b4rrhh.payroll_engine.planning.application.service.BuildEligibleExecutionPlanUseCase;
 import com.b4rrhh.payroll_engine.planning.domain.model.EligibleExecutionPlanResult;
+import com.b4rrhh.payroll_engine.segment.domain.model.SegmentAbsence;
 import com.b4rrhh.payroll_engine.segment.domain.model.SegmentCalculationContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,6 +69,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -74,6 +77,27 @@ import java.util.stream.Stream;
 public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(CalculatePayrollUnitService.class);
+
+    /**
+     * Las ausencias que llegan al calculo, y son las que <b>no se pagan</b> (ADR-073,
+     * {@code backend#127}).
+     *
+     * <p>Estas dos parten el periodo y en su tramo no se devengan dias. Las demas —vacaciones,
+     * permiso retribuido, fuerza mayor— se cobran enteras y <b>no parten</b>: un tramo para ellas
+     * seria un paso de calculo mas que no cambia ningun numero.
+     *
+     * <p>{@code IT_WORK_ACCIDENT} y {@code PARENTAL_LEAVE} tampoco estan, y eso es el alcance de la
+     * v1 y no un olvido: el accidente de trabajo tiene otra base reguladora —la de profesionales, con
+     * las horas extra del ano anterior— y el 75 % desde el dia siguiente. Hasta que se implemente,
+     * siguen cobrando entero, y el ADR-073 lo dice con palabras.
+     *
+     * <p>Es una constante de Java y no una columna del catalogo a proposito: hoy es una decision de
+     * alcance del producto, la misma para todos los sistemas de reglas. El dia que un sistema de
+     * reglas necesite otra lista, esto se convierte en una propiedad del tipo de ausencia; mientras
+     * no haga falta, una tabla de un solo valor esconderia la decision en vez de declararla.
+     */
+    private static final Set<String> AUSENCIAS_QUE_NO_SE_PAGAN =
+            Set.of(SegmentAbsence.IT_COMMON, SegmentAbsence.UNPAID_LEAVE);
 
     private final CalculatePayrollUseCase calculatePayrollUseCase;
     private final PayrollLaunchEligibleInputLookupPort payrollLaunchEligibleInputLookupPort;
@@ -310,7 +334,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     precalculoPorContexto.get(claveDePrecalculo(seg)).importes(),
                     seg.vigencias().extraPaymentsProrated(),
                     cnaeCode,
-                    seg.vigencias().contractCode()
+                    seg.vigencias().contractCode(),
+                    seg.vigencias().absence()
             ));
             segmentStates.add(new SegmentExecutionState());
         }
@@ -515,8 +540,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
      *
      * <p>Antes esto llevaba el porcentaje de jornada como campo propio, y eso era decir que la
      * jornada es la unica causa por la que un periodo se parte. Ahora lleva las vigencias de todas
-     * las verticales que parten, y la jornada es una de ellas: anadir una cuarta es anadir un campo
-     * aqui, no volver a escribir la particion.
+     * las verticales que parten, y la jornada es una de ellas: anadir una mas es anadir un campo
+     * aqui, no volver a escribir la particion. La ausencia del {@code backend#127} entro asi.
      */
     private record SegmentSpec(
             LocalDate segmentStart,
@@ -533,7 +558,10 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     + " jornada=" + vigencias.workingTimePercentage() + "%"
                     + " categoria=" + vigencias.agreementCategoryCode()
                     + " contrato=" + vigencias.contractCode()
-                    + " prorrateadas=" + vigencias.extraPaymentsProrated();
+                    + " prorrateadas=" + vigencias.extraPaymentsProrated()
+                    + (vigencias.absence() == null ? ""
+                       : " ausencia=" + vigencias.absence().absenceTypeCode()
+                         + "(+" + vigencias.absence().daysBeforeSegment() + "d)");
         }
     }
 
@@ -550,7 +578,9 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             String agreementCategoryCode,
             String contractCode,
             String contractSubtypeCode,
-            boolean extraPaymentsProrated
+            boolean extraPaymentsProrated,
+            /** La ausencia que no se paga vigente en el tramo, o {@code null} (backend#127). */
+            SegmentAbsence absence
     ) {}
 
     /**
@@ -577,10 +607,16 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
      *
      * <h4>Que verticales rompen, y por que estas</h4>
      *
-     * <p>La lista es una decision de negocio y el issue la fija en su minimo: jornada, clasificacion
-     * laboral y contrato. El centro de trabajo y la distribucion de coste se quedan fuera <b>hasta
-     * que alguien decida que entran</b>, no porque no quepan: caben con una linea aqui y otra en
-     * {@code vigenciasEn}.
+     * <p>La lista es una decision de negocio y va creciendo por decisiones escritas: jornada,
+     * clasificacion laboral y contrato (ADR-068), el regimen de pagas extras (ADR-070) y la ausencia
+     * que no se paga (ADR-073). El centro de trabajo y la distribucion de coste se quedan fuera
+     * <b>hasta que alguien decida que entran</b>, no porque no quepan: caben con una linea aqui y
+     * otra en {@code vigenciasEn}.
+     *
+     * <p>Y hay un candado que lo vigila:
+     * {@code TheUnionOfCutsCoversEveryVerticalThatBreaksThePeriodTest} falla si alguien quita una
+     * causa. Hace falta porque quitar la del contrato no pondria en rojo ningun importe —hoy no lo
+     * lee nadie, y el ADR-068 §2 dice que rompe aun asi—.
      *
      * <h4>La jornada sin ventanas</h4>
      *
@@ -602,6 +638,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         cortes.addAll(PayrollPeriodSegmentation.cutsOf(input.agreementWindows()));
         cortes.addAll(PayrollPeriodSegmentation.cutsOf(input.contractWindows()));
         cortes.addAll(PayrollPeriodSegmentation.cutsOf(input.extraPaymentRegimeWindows()));
+        cortes.addAll(PayrollPeriodSegmentation.cutsOf(ausenciasQueParten(input)));
 
         return PayrollPeriodSegmentation.split(presenceStart, presenceEnd, cortes).stream()
                 .map(tramo -> new SegmentSpec(
@@ -621,6 +658,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         PayrollLaunchAgreementWindowContext convenio = enVigor(input.agreementWindows(), dia);
         PayrollLaunchContractWindowContext contrato = enVigor(input.contractWindows(), dia);
         PayrollLaunchExtraPaymentRegimeWindowContext regimen = enVigor(input.extraPaymentRegimeWindows(), dia);
+        PayrollLaunchAbsenceWindowContext ausencia = enVigor(ausenciasQueParten(input), dia);
 
         return new Vigencias(
                 jornada != null ? jornada.workingTimePercentage() : BigDecimal.valueOf(100),
@@ -634,7 +672,29 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                 // Sin tramo de regimen se supone que no se prorratea, que es lo que significa no
                 // tener la vertical: los empleados anteriores al backend#118 no la tienen, y sus
                 // recibos salen como salian.
-                regimen != null && regimen.prorated());
+                regimen != null && regimen.prorated(),
+                // Los dias de ausencia ya transcurridos se cuentan desde su inicio, que puede estar
+                // en otro mes: una baja que empezo el 20 de agosto llega al 1 de septiembre con doce
+                // dias detras. No es leer otro mes, es una fecha (backend#127).
+                ausencia == null ? null : new SegmentAbsence(
+                        ausencia.absenceTypeCode(),
+                        ChronoUnit.DAYS.between(ausencia.startDate(), dia)));
+    }
+
+    /**
+     * Las ausencias del empleado que parten el periodo: las que no se pagan ({@code backend#127}).
+     *
+     * <p>El lanzador trae todas las que solapan el periodo, del tipo que sean, y el filtro esta aqui
+     * y solo aqui. Que la consulta las trajera ya filtradas repartiria la decision entre dos capas, y
+     * la decision —<b>parte la ausencia que cambia lo que se paga</b>— es una (ADR-073).
+     */
+    private List<PayrollLaunchAbsenceWindowContext> ausenciasQueParten(
+            PayrollLaunchEligibleInputContext input
+    ) {
+        if (input.absenceWindows() == null) return List.of();
+        return input.absenceWindows().stream()
+                .filter(a -> AUSENCIAS_QUE_NO_SE_PAGAN.contains(a.absenceTypeCode()))
+                .toList();
     }
 
     /** El ultimo tramo que cubre ese dia, o {@code null} si ninguno lo cubre. */

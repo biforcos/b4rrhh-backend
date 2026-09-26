@@ -9,7 +9,28 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-interface SpringDataAbsenceRepository extends JpaRepository<AbsenceEntity, Long> {
+public interface SpringDataAbsenceRepository extends JpaRepository<AbsenceEntity, Long> {
+
+    /**
+     * Las ausencias que solapan el periodo, en orden ({@code backend#127}).
+     *
+     * <p>Contra el periodo entero y no contra la presencia: el recorte contra la presencia lo hace
+     * la particion, que es donde estan las dos fechas a la vez. Y una ausencia sin cerrar
+     * ({@code endDate} nulo) solapa cualquier periodo que empiece despues de su inicio, que es lo
+     * que dice el {@code coalesce}.
+     */
+    @Query("""
+        select a from AbsenceEntity a
+         where a.employeeId = :employeeId
+           and a.startDate <= :periodEnd
+           and (a.endDate is null or a.endDate >= :periodStart)
+         order by a.startDate asc, a.startTime asc
+        """)
+    List<AbsenceEntity> findOverlappingByEmployeeIdAndPeriodOrdered(
+            @Param("employeeId") Long employeeId,
+            @Param("periodStart") LocalDate periodStart,
+            @Param("periodEnd") LocalDate periodEnd
+    );
 
     Optional<AbsenceEntity> findByEmployeeIdAndAbsenceTypeCodeAndStartDateAndStartTime(
         Long employeeId, String absenceTypeCode, LocalDate startDate, int startTime);

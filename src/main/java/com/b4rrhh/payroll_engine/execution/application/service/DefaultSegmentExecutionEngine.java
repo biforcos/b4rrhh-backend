@@ -169,7 +169,8 @@ public class DefaultSegmentExecutionEngine implements SegmentExecutionEngine {
                         context.getTipoNomina(),
                         context.isExtraPaymentsProrated(),
                         context.getCnaeCode(),
-                        context.getContractCode()
+                        context.getContractCode(),
+                        context.getAbsence()
                 ));
             }
 
