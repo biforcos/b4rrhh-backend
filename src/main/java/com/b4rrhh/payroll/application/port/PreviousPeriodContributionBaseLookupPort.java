@@ -19,19 +19,23 @@ public interface PreviousPeriodContributionBaseLookupPort {
     /**
      * La base de contingencias comunes del periodo anterior de este empleado.
      *
-     * <p><b>Solo de recibos {@code DEFINITIVE}</b>, y el filtro va en la consulta y no despues
-     * (ADR-069 §2). Si el empleado tiene mas de un recibo en aquel periodo —cese y readmision el
-     * mismo mes— se suman: la base de cotizacion de un mes es la del mes, no la de una presencia.
+     * <p>Si el empleado tiene mas de un recibo en aquel periodo —cese y readmision el mismo mes— se
+     * suman: la base de cotizacion de un mes es la del mes, no la de una presencia.
      *
      * @param previousPeriodCode el periodo anterior, ya calculado por quien llama: {@code 202608}
      *        para {@code 202609}. Se pasa hecho y no se deduce aqui porque «el mes anterior» es una
      *        regla de negocio y no una consulta
+     * @param source de donde se lee ({@code backend#131}, ADR-076 §3). En el calculo normal, solo del
+     *        recibo cerrado, con el filtro escrito en la consulta y no despues (ADR-069 §2). En el
+     *        modo retro, del vigente si existe y del recibo cerrado si no: cuando le toca a agosto, el
+     *        vigente de julio ya existe y es lo que julio vale <i>ahora</i>
      */
     PreviousPeriodContributionBase findByEmployeeAndPeriod(
             String ruleSystemCode,
             String employeeTypeCode,
             String employeeNumber,
             String payrollTypeCode,
-            String previousPeriodCode
+            String previousPeriodCode,
+            PreviousPeriodSource source
     );
 }

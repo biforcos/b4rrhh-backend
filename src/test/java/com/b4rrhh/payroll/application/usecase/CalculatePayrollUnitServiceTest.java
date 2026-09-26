@@ -116,6 +116,16 @@ class CalculatePayrollUnitServiceTest {
      */
     @Mock
     private com.b4rrhh.payroll.application.port.PreviousPeriodContributionBaseLookupPort previousPeriodContributionBaseLookupPort;
+
+    /**
+     * El repositorio del calculo vigente ({@code backend#131}).
+     *
+     * <p>Doble sin comportamiento: estos tests calculan en modo recibo, y en ese modo no se toca. Que el
+     * modo retro escriba el vigente y no el recibo lo prueban el escenario del {@code #131} y el candado
+     * {@code NoRetroPathWritesTheReceiptOfAClosedMonthTest}.
+     */
+    @Mock
+    private com.b4rrhh.payroll.retro.domain.port.CurrentCalculationRepository currentCalculationRepository;
     // Motor real, no mock: lo que se prueba aqui es como el servicio reparte cada concepto
     // entre tramos y periodo segun su execution_scope, y eso solo se ve evaluando de verdad.
     private final SegmentExecutionEngine segmentExecutionEngine = new DefaultSegmentExecutionEngine(
@@ -156,7 +166,8 @@ class CalculatePayrollUnitServiceTest {
             payrollCalculationStepWritePort,
             conceptLabelRepository,
             payslipSectionRepository,
-            previousPeriodContributionBaseLookupPort
+            previousPeriodContributionBaseLookupPort,
+            currentCalculationRepository
         );
 
         when(employeeTaxInfoLookupPort.findLatestOnOrBefore(
@@ -269,7 +280,8 @@ class CalculatePayrollUnitServiceTest {
             payrollCalculationStepWritePort,
             conceptLabelRepository,
             payslipSectionRepository,
-            previousPeriodContributionBaseLookupPort
+            previousPeriodContributionBaseLookupPort,
+            currentCalculationRepository
         );
 
         lenient().when(employeeTaxInfoLookupPort.findLatestOnOrBefore(
@@ -384,7 +396,8 @@ class CalculatePayrollUnitServiceTest {
             payrollCalculationStepWritePort,
             conceptLabelRepository,
             payslipSectionRepository,
-            previousPeriodContributionBaseLookupPort
+            previousPeriodContributionBaseLookupPort,
+            currentCalculationRepository
         );
 
         when(employeeTaxInfoLookupPort.findLatestOnOrBefore(

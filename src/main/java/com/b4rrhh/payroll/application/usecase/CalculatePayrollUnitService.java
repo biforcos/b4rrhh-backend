@@ -35,6 +35,9 @@ import com.b4rrhh.payroll.domain.model.PayrollSegment;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.model.PayrollWarning;
 import com.b4rrhh.payroll.infrastructure.config.PayrollLaunchExecutionProperties;
+import com.b4rrhh.payroll.retro.domain.model.CurrentCalculation;
+import com.b4rrhh.payroll.retro.domain.model.CurrentCalculationConcept;
+import com.b4rrhh.payroll.retro.domain.port.CurrentCalculationRepository;
 import com.b4rrhh.payroll_engine.concept.domain.model.CalculationType;
 import com.b4rrhh.payroll_engine.concept.domain.model.ConceptLabelLanguage;
 import com.b4rrhh.payroll_engine.concept.domain.model.ExecutionScope;
@@ -137,6 +140,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     private final ConceptLabelRepository conceptLabelRepository;
     private final PayslipSectionRepository payslipSectionRepository;
     private final PreviousPeriodContributionBaseLookupPort previousPeriodContributionBaseLookupPort;
+    private final CurrentCalculationRepository currentCalculationRepository;
 
     public CalculatePayrollUnitService(
             CalculatePayrollUseCase calculatePayrollUseCase,
@@ -155,7 +159,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             PayrollCalculationStepWritePort payrollCalculationStepWritePort,
             ConceptLabelRepository conceptLabelRepository,
             PayslipSectionRepository payslipSectionRepository,
-            PreviousPeriodContributionBaseLookupPort previousPeriodContributionBaseLookupPort
+            PreviousPeriodContributionBaseLookupPort previousPeriodContributionBaseLookupPort,
+            CurrentCalculationRepository currentCalculationRepository
     ) {
         this.calculatePayrollUseCase = calculatePayrollUseCase;
         this.payrollLaunchEligibleInputLookupPort = payrollLaunchEligibleInputLookupPort;
@@ -174,6 +179,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         this.conceptLabelRepository = conceptLabelRepository;
         this.payslipSectionRepository = payslipSectionRepository;
         this.previousPeriodContributionBaseLookupPort = previousPeriodContributionBaseLookupPort;
+        this.currentCalculationRepository = currentCalculationRepository;
     }
 
     /**
@@ -185,10 +191,55 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     @Override
     @Transactional
     public Payroll calculate(CalculatePayrollUnitCommand command) {
-        return calculateEligibleReal(command);
+        Resultado resultado = calculateEligibleReal(command, PayrollCalculationMode.RECEIPT);
+        return resultado.recibo();
     }
 
-    private Payroll calculateEligibleReal(CalculatePayrollUnitCommand command) {
+    /**
+     * El mismo calculo con otro final: escribe el <b>vigente</b> de un mes cerrado y no toca su recibo
+     * ({@code backend#131}, ADR-076).
+     */
+    @Override
+    @Transactional
+    public CurrentCalculationOutcome calculateCurrent(CalculatePayrollUnitCommand command) {
+        Resultado resultado = calculateEligibleReal(command, PayrollCalculationMode.CURRENT_CALCULATION);
+        return resultado.vigente() != null
+                ? CurrentCalculationOutcome.written(resultado.vigente())
+                : CurrentCalculationOutcome.notCalculated(resultado.motivoNoCalculado());
+    }
+
+    /**
+     * Lo que sale del calculo de una unidad, en uno de los dos modos.
+     *
+     * <p>Un tipo union y no dos metodos que se copien: el calculo es el mismo hasta la ultima linea, y
+     * duplicarlo seria la forma de que el vigente y el recibo se separen en silencio el dia que alguien
+     * toque uno de los dos.
+     *
+     * @param recibo el recibo, en modo {@code RECEIPT}. Puede ser un recibo {@code NOT_VALID}: en ese
+     *        modo el hueco <b>se guarda</b>, porque es lo que lo hace visible (ADR-074)
+     * @param vigente el calculo vigente, en modo {@code CURRENT_CALCULATION}
+     * @param motivoNoCalculado el motivo cuando el mes no se pudo calcular en modo retro. Ahi no se
+     *        guarda nada: el recibo de aquel mes esta entregado y no se toca ni para decirlo
+     */
+    private record Resultado(Payroll recibo, CurrentCalculation vigente, String motivoNoCalculado) {
+
+        static Resultado de(Payroll recibo) {
+            return new Resultado(recibo, null, null);
+        }
+
+        static Resultado de(CurrentCalculation vigente) {
+            return new Resultado(null, vigente, null);
+        }
+
+        static Resultado noCalculado(String motivo) {
+            return new Resultado(null, null, motivo);
+        }
+    }
+
+    private Resultado calculateEligibleReal(
+            CalculatePayrollUnitCommand command,
+            PayrollCalculationMode modo
+    ) {
         if (command.metamodel() == null) {
             throw new IllegalArgumentException(
                     "La unidad se calcula contra la reglamentación de su ejecución: el metamodelo "
@@ -196,8 +247,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         }
         command.metamodel().requireSameRuleSystem(command.ruleSystemCode());
 
-        log.info("[NÓMINA] ▶ Iniciando cálculo ELIGIBLE_REAL | empleado={} tipo={} periodo={} presencia={}",
-                command.employeeNumber(), command.employeeTypeCode(),
+        log.info("[NÓMINA] ▶ Iniciando cálculo ELIGIBLE_REAL | modo={} empleado={} tipo={} periodo={} presencia={}",
+                modo, command.employeeNumber(), command.employeeTypeCode(),
                 command.payrollPeriodCode(), command.presenceNumber());
 
         Optional<PayrollLaunchEligibleInputContext> inputOpt = payrollLaunchEligibleInputLookupPort.findByUnitAndPeriod(
@@ -261,9 +312,15 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         // (backend#128, ADR-074). Es la primera vez que un calculo mira fuera de su periodo, y mirar
         // puede terminar en que este recibo NO SE CALCULE: eso tiene que decidirse antes de que exista
         // un solo paso, no a mitad del grafo.
-        BaseReguladoraDelMesAnterior baseReguladora = resolverBaseReguladora(command, input, tipoNomina);
+        BaseReguladoraDelMesAnterior baseReguladora = resolverBaseReguladora(command, input, tipoNomina, modo);
         if (baseReguladora.noSeCalcula()) {
-            return recibioNoCalculado(command, input, baseReguladora);
+            // En modo retro NO se guarda nada. El camino normal escribe un recibo NOT_VALID porque es
+            // lo que hace visible el hueco (ADR-074), pero aqui el recibo de aquel mes esta entregado:
+            // tocarlo para decir que algo ha ido mal seria justo lo que este modo existe para no hacer.
+            // Lo cuenta quien lanza, en los mensajes de la corrida.
+            return modo.isRetro()
+                    ? Resultado.noCalculado(baseReguladora.motivoNoCalculada())
+                    : Resultado.de(recibioNoCalculado(command, input, baseReguladora));
         }
 
         EmployeeAssignmentContext assignmentContext = new EmployeeAssignmentContext(
@@ -503,6 +560,49 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
             return lineNumber == null ? calculado : calculado.enLinea(lineNumber);
         });
 
+        // ── El final del modo retro ─────────────────────────────────────────────
+        // Aqui estan las lineas ya proyectadas, numeradas y ordenadas: exactamente las que tendria el
+        // recibo. En modo retro se guardan como calculo vigente y el camino se termina, SIN pasar por
+        // calculatePayrollUseCase ni por writeStepsOf. Que sea el mismo punto y las mismas lineas es lo
+        // que hace comparable un vigente con un recibo (la invariante del backend#133); que el camino se
+        // corte aqui es lo que hace que el recibo entregado no se pueda tocar.
+        //
+        // No se guardan los pasos, y no es un olvido: el vigente no se explica, se compara. Guardarlos
+        // multiplicaria por treinta el tamano de esto para responder una pregunta que nadie hace de un
+        // numero que se va a pisar.
+        //
+        // Tampoco se guardan las fotos de contexto ni los avisos: los dos son del documento. Un aviso
+        // que nadie lee no es un aviso.
+        if (modo.isRetro()) {
+            CurrentCalculation vigente = currentCalculationRepository.save(CurrentCalculation.create(
+                    command.ruleSystemCode(),
+                    command.employeeTypeCode(),
+                    command.employeeNumber(),
+                    command.payrollPeriodCode(),
+                    command.payrollTypeCode(),
+                    command.presenceNumber(),
+                    Instant.now(),
+                    command.runId(),
+                    payrollConcepts.stream()
+                            .map(c -> new CurrentCalculationConcept(
+                                    c.getLineNumber(),
+                                    c.getConceptCode(),
+                                    c.getConceptMnemonic(),
+                                    c.getConceptLabel(),
+                                    c.getAmount(),
+                                    c.getQuantity(),
+                                    c.getRate(),
+                                    c.getConceptNatureCode(),
+                                    c.getDisplayOrder(),
+                                    c.getPayslipSectionCode(),
+                                    c.getPayslipSubsectionCode()))
+                            .toList()));
+
+            log.info("[NÓMINA] ✓ Vigente escrito | empleado={} periodo={} → {} líneas, el recibo sin tocar",
+                    command.employeeNumber(), command.payrollPeriodCode(), payrollConcepts.size());
+            return Resultado.de(vigente);
+        }
+
         LocalDate presenceStart = input.presenceStartDate();
         LocalDate presenceEnd = input.presenceEndDate();
         List<PayrollSegment> payrollSegments = segments.stream()
@@ -544,7 +644,7 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         log.info("[NÓMINA] ✓ Cálculo completado | empleado={} periodo={} → {} líneas en recibo, {} pasos",
                 command.employeeNumber(), command.payrollPeriodCode(),
                 payrollConcepts.size(), calculationSteps.size());
-        return result;
+        return Resultado.de(result);
     }
 
     /**
@@ -1030,7 +1130,8 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
     private BaseReguladoraDelMesAnterior resolverBaseReguladora(
             CalculatePayrollUnitCommand command,
             PayrollLaunchEligibleInputContext input,
-            String tipoNomina
+            String tipoNomina,
+            PayrollCalculationMode modo
     ) {
         if (!tieneBajaPorEnfermedadComun(input)) {
             return new BaseReguladoraDelMesAnterior(null, null, null);
@@ -1043,10 +1144,11 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                         command.employeeTypeCode(),
                         command.employeeNumber(),
                         command.payrollTypeCode(),
-                        periodoAnterior);
+                        periodoAnterior,
+                        modo.previousPeriodSource());
 
-        log.info("[NOMINA] Base reguladora | periodo anterior={} -> {}",
-                periodoAnterior, anterior.outcome());
+        log.info("[NOMINA] Base reguladora | periodo anterior={} fuente={} -> {}",
+                periodoAnterior, modo.previousPeriodSource(), anterior.outcome());
 
         return switch (anterior.outcome()) {
             case DEFINITIVE -> new BaseReguladoraDelMesAnterior(
