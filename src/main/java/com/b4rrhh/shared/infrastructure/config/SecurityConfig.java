@@ -52,6 +52,9 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/actuator/health", "/actuator/health/**").permitAll();
+                    // El commit del backend, sin token: lo pregunta crear-semilla.sh para anotar la
+                    // procedencia de una semilla, y un commit no es un secreto.
+                    auth.requestMatchers("/actuator/info").permitAll();
                     if (isDevAuthEnabled()) {
                         auth.requestMatchers("/dev/auth/token").permitAll();
                     }

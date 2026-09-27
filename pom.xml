@@ -122,6 +122,23 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+            <!--
+              El commit del que sale este backend, en git.properties, para que /actuator/info lo diga:
+              la procedencia de una semilla se le pregunta al backend que la produjo y no se escribe
+              a mano (b4rrhh/deploy, deploy.semilla). La version y la configuracion las pone el
+              parent de Spring Boot.
+
+              Sin .git no falla: la imagen se construye sin el directorio (.dockerignore), y en la CT
+              la procedencia sale de la etiqueta de imagen, que es lo que el compose sirve.
+            -->
+            <plugin>
+                <groupId>io.github.git-commit-id</groupId>
+                <artifactId>git-commit-id-maven-plugin</artifactId>
+                <configuration>
+                    <failOnNoGitDirectory>false</failOnNoGitDirectory>
+                    <offline>true</offline>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

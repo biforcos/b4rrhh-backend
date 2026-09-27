@@ -33,7 +33,13 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        # info dice de que commit es este backend (git.properties): crear-semilla.sh lo pregunta
+        # para anotar la procedencia de una semilla en vez de escribirla a mano.
+        include: health, info
+  info:
+    git:
+      # Rama, commit y hora. El modo completo publicaria el correo de quien construyo.
+      mode: simple
   health:
     livenessstate:
       enabled: true
