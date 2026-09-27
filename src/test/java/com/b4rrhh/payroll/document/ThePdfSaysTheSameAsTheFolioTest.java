@@ -86,8 +86,14 @@ class ThePdfSaysTheSameAsTheFolioTest {
         PayrollResponse pantalla = folio.toResponse(payroll, false);
         List<String> papel = lineasDe(pdfDe(payroll));
 
+        // Las filas se reconocen por lo que dicen y no por el periodo con el que empezaban: desde el
+        // backend#138 una fila del propio mes no imprime periodo.
+        List<String> filas = pantalla.concepts().stream()
+                .filter(c -> !"NET_PAY".equals(c.conceptNatureCode()))
+                .map(ThePdfSaysTheSameAsTheFolioTest::filaDe)
+                .toList();
         long filasDelPapel = papel.stream()
-                .filter(linea -> linea.startsWith("202609 "))
+                .filter(linea -> filas.stream().anyMatch(linea::contains))
                 .count();
         assertEquals(pantalla.concepts().size() - 1, filasDelPapel,
                 "El liquido no se pinta como fila de tabla, asi que el papel tiene que traer "
@@ -323,8 +329,10 @@ class ThePdfSaysTheSameAsTheFolioTest {
     }
 
     private static String filaDe(PayrollConceptResponse concept) {
+        // El periodo no entra: en una fila propia va en blanco (backend#138), y lo que se compara aqui
+        // es que las cifras y el nombre son los del folio. Donde sale y donde no lo mira
+        // ThePeriodColumnOnlySpeaksForALineOfAnotherMonthTest.
         return String.join(" ",
-                concept.originPeriodCode(),
                 concept.conceptCode(),
                 concept.conceptLabel(),
                 PayslipNumbers.valor(concept.quantity()),

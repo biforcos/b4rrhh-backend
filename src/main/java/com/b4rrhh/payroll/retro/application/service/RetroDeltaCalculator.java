@@ -192,6 +192,11 @@ public class RetroDeltaCalculator {
      * <b>la linea que se pago</b> ({@code backend#137}). No los del catalogo por codigo: el concepto puede
      * haber cambiado desde entonces, y lo que se devuelve es lo que se cobro.
      *
+     * <p>El literal es <b>el del concepto, tal cual</b> ({@code backend#138}). El {@code #134} le anadia
+     * el mes -«Salario base (atraso 08/2026)»-, y con una columna de periodo que hace su trabajo era
+     * decirlo dos veces; el origen viaja solo en {@code origin_period_code}, y el papel lo imprime en su
+     * columna unicamente en las lineas de otro mes.
+     *
      * <p>Aqui habia un «sin bloque, que es una ausencia que se ve». No se veia: la linea salia sin
      * mnemonico, la columna es obligatoria desde la V137 y el recibo entero no se podia calcular.
      */
@@ -207,7 +212,7 @@ public class RetroDeltaCalculator {
                     periodo,
                     conceptCode,
                     enElVigente.conceptMnemonic(),
-                    literalDelAtraso(enElVigente.conceptLabel(), periodo),
+                    enElVigente.conceptLabel(),
                     diferencia,
                     enElVigente.conceptNatureCode(),
                     enElVigente.displayOrder(),
@@ -225,44 +230,11 @@ public class RetroDeltaCalculator {
                 periodo,
                 conceptCode,
                 comoSePago.conceptMnemonic(),
-                literalDelAtraso(comoSePago.conceptLabel(), periodo),
+                comoSePago.conceptLabel(),
                 diferencia,
                 comoSePago.conceptNatureCode(),
                 comoSePago.displayOrder(),
                 comoSePago.payslipSectionCode(),
                 comoSePago.payslipSubsectionCode());
-    }
-
-    /**
-     * El literal de una linea de atraso: el nombre del concepto <b>y su origen a la vista</b>
-     * ({@code backend#134}).
-     *
-     * <blockquote>{@code Salario base (atraso 08/2026)}</blockquote>
-     *
-     * <p>Un sufijo sobre el nombre del concepto, y <b>no un concepto nuevo por mes</b>. Un catalogo con
-     * «Salario base de agosto» y «Salario base de septiembre» como conceptos distintos se llenaria de
-     * conceptos que no son conceptos, y el grafo -que es lo que explica un recibo- pasaria a tener una
-     * rama por mes de origen.
-     *
-     * <p>Se construye <b>aqui y se congela en la linea</b>, como el resto del literal: en cuanto existe el
-     * PDF el recibo tiene un gemelo fisico fuera del sistema, y si la pantalla compusiera el sufijo al
-     * pintar podria decir algo distinto de lo que el empleado tiene impreso (ADR-059, ADR-062).
-     *
-     * <p>El mes se escribe {@code MM/AAAA} y no {@code AAAAMM}: lo lee una persona en un papel. El codigo
-     * de periodo sigue estando en la columna {@code origin_period_code} para quien lo necesite en
-     * maquina.
-     */
-    private static String literalDelAtraso(String literalDelConcepto, String periodo) {
-        String mes = periodo.substring(4) + "/" + periodo.substring(0, 4);
-        String sufijo = " (atraso " + mes + ")";
-        // El literal de la linea tiene 200 caracteres en la base (V53). Si el nombre del concepto no
-        // deja sitio para el sufijo, se recorta EL NOMBRE y no el sufijo: un «Salario base» sin el mes
-        // seria una linea de atraso que no se distingue de una del propio mes, y eso es peor que un
-        // nombre a medias.
-        int sitio = 200 - sufijo.length();
-        String nombre = literalDelConcepto.length() > sitio
-                ? literalDelConcepto.substring(0, sitio)
-                : literalDelConcepto;
-        return nombre + sufijo;
     }
 }

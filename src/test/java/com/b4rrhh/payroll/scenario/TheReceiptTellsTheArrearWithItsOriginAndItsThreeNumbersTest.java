@@ -78,16 +78,16 @@ class TheReceiptTellsTheArrearWithItsOriginAndItsThreeNumbersTest {
     }
 
     /**
-     * El literal lleva el mes a la vista, y <b>el mes en la columna de período</b>.
+     * El literal es <b>el del concepto, tal cual</b>, y el mes va <b>sólo</b> en la columna de período
+     * ({@code backend#138}).
      *
-     * <p>Las dos cosas, y no una: el literal es lo que se lee en la línea —«Importe horas extra (atraso
-     * 08/2025)»— y la columna de período es lo que el modelo oficial tiene para eso y lo que el PDF ya
-     * imprimía desde el {@code backend#112}. Un sufijo sin columna obligaría a leer el paréntesis para
-     * ordenar; una columna sin sufijo dejaría una línea que en un listado sin esa columna no se distingue
-     * de una del propio mes.
+     * <p>El {@code #134} congeló el mes también en el literal —«Horas extraordinarias (atraso
+     * 08/2025)»—. Con una columna de período que hace su trabajo era decir lo mismo dos veces, y el
+     * literal congelado dejaba de ser el del concepto. El PDF imprime el mes en esa columna sólo en las
+     * líneas de otro mes, que es lo que hace que salte a la vista.
      */
     @Test
-    void elLiteralDeLaLineaDeAtrasoLlevaSuMesYLaColumnaDePeriodoTambien() {
+    void elLiteralDeLaLineaDeAtrasoEsElDelConceptoYElMesVaEnSuColumna() {
         String emp = numeroUnico();
         altaBasica(emp);
         calcularYCerrar(emp, AGOSTO, PayrollRetroRequest.none());
@@ -101,12 +101,17 @@ class TheReceiptTellsTheArrearWithItsOriginAndItsThreeNumbersTest {
 
         for (Map<String, Object> linea : atrasos) {
             String literal = (String) linea.get("concept_label");
-            assertTrue(literal.endsWith("(atraso 08/2025)"),
-                    "cada línea de atraso lleva su mes en el literal, en MM/AAAA porque lo lee una"
-                            + " persona en un papel: " + literal);
+            assertFalse(literal.contains("atraso"),
+                    "el literal de una línea de atraso es el del concepto, sin el mes: " + literal);
             assertEquals(AGOSTO, linea.get("origin_period_code"),
-                    "y el código del período en su columna, que es lo que lee una máquina");
+                    "el mes va en su columna, que es su sitio");
         }
+        Map<String, Object> laDeLasHorasDeAgosto = atrasos.stream()
+                .filter(l -> IMPORTE_HORAS.equals(l.get("concept_code")))
+                .findFirst().orElseThrow(() -> new AssertionError(
+                        "el atraso de las horas extra tiene que estar: " + atrasos));
+        assertEquals("Horas extraordinarias", laDeLasHorasDeAgosto.get("concept_label"),
+                "el literal es el del concepto tal cual, el mismo que en un recibo propio");
 
         // Y no hay dos conceptos: el sufijo va sobre el nombre del concepto de siempre.
         Map<String, Object> laDeLasHoras = atrasos.stream()

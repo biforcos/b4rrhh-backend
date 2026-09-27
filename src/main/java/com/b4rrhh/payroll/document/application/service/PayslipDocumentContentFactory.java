@@ -96,7 +96,7 @@ public class PayslipDocumentContentFactory {
                         workCenterLabel(snapshots),
                         seniorityLabel(snapshots)
                 ),
-                blocks(payroll.getConcepts(), sections),
+                blocks(payroll.getConcepts(), sections, payroll.getPayrollPeriodCode()),
                 provenance(payroll)
         );
     }
@@ -107,7 +107,8 @@ public class PayslipDocumentContentFactory {
 
     private List<PayslipDocumentContent.Block> blocks(
             List<PayrollConcept> concepts,
-            List<PayslipSection> sections
+            List<PayslipSection> sections,
+            String periodoDelRecibo
     ) {
         Map<String, List<PayrollConcept>> porSeccion = new LinkedHashMap<>();
         for (PayrollConcept concept : concepts) {
@@ -122,7 +123,7 @@ public class PayslipDocumentContentFactory {
         for (PayslipSection section : declaradas) {
             List<PayrollConcept> lineas = porSeccion.remove(section.sectionCode());
             if (lineas != null && !lineas.isEmpty()) {
-                blocks.add(block(section.label(), lineas, section.subsections()));
+                blocks.add(block(section.label(), lineas, section.subsections(), periodoDelRecibo));
             }
         }
 
@@ -132,21 +133,23 @@ public class PayslipDocumentContentFactory {
             blocks.add(block(
                     resto.getKey() == null ? "Sin bloque declarado" : resto.getKey(),
                     resto.getValue(),
-                    List.of()
+                    List.of(),
+                    periodoDelRecibo
             ));
         }
         return List.copyOf(blocks);
     }
 
     private PayslipDocumentContent.Block block(
-            String label, List<PayrollConcept> lineas, List<PayslipSubsection> apartados) {
+            String label, List<PayrollConcept> lineas, List<PayslipSubsection> apartados,
+            String periodoDelRecibo) {
 
         List<PayrollConcept> ordenadas = new ArrayList<>(lineas);
         ordenadas.sort(Comparator.comparingInt(PayrollConcept::getDisplayOrder));
 
         return new PayslipDocumentContent.Block(
                 label,
-                groups(ordenadas, apartados),
+                groups(ordenadas, apartados, periodoDelRecibo),
                 // Aqui ya no se suma nada, y hasta el backend#114 se sumaba una cosa: el recuadro
                 // de aportacion empresarial, que era el unico bloque con total en el modelo
                 // oficial al que el motor no le daba uno. Ahora se lo da —el 725 de la V141— y
@@ -176,7 +179,7 @@ public class PayslipDocumentContentFactory {
      * se puede recargar, y callarse una linea es peor que ensenarla mal colocada.
      */
     private List<PayslipDocumentContent.Group> groups(
-            List<PayrollConcept> ordenadas, List<PayslipSubsection> apartados) {
+            List<PayrollConcept> ordenadas, List<PayslipSubsection> apartados, String periodoDelRecibo) {
 
         Map<String, List<PayrollConcept>> porApartado = new LinkedHashMap<>();
         for (PayrollConcept concept : ordenadas) {
@@ -187,7 +190,7 @@ public class PayslipDocumentContentFactory {
         List<PayslipDocumentContent.Group> groups = new ArrayList<>();
         List<PayrollConcept> sinApartado = porApartado.remove(null);
         if (sinApartado != null && !sinApartado.isEmpty()) {
-            groups.add(group(null, sinApartado));
+            groups.add(group(null, sinApartado, periodoDelRecibo));
         }
 
         List<PayslipSubsection> declarados = new ArrayList<>(apartados);
@@ -195,29 +198,48 @@ public class PayslipDocumentContentFactory {
         for (PayslipSubsection apartado : declarados) {
             List<PayrollConcept> lineas = porApartado.remove(apartado.subsectionCode());
             if (lineas != null && !lineas.isEmpty()) {
-                groups.add(group(apartado.label(), lineas));
+                groups.add(group(apartado.label(), lineas, periodoDelRecibo));
             }
         }
         for (Map.Entry<String, List<PayrollConcept>> resto : porApartado.entrySet()) {
-            groups.add(group(resto.getKey(), resto.getValue()));
+            groups.add(group(resto.getKey(), resto.getValue(), periodoDelRecibo));
         }
         return List.copyOf(groups);
     }
 
-    private static PayslipDocumentContent.Group group(String label, List<PayrollConcept> lineas) {
+    private static PayslipDocumentContent.Group group(
+            String label, List<PayrollConcept> lineas, String periodoDelRecibo) {
         return new PayslipDocumentContent.Group(
-                label, lineas.stream().map(PayslipDocumentContentFactory::line).toList());
+                label, lineas.stream().map(c -> line(c, periodoDelRecibo)).toList());
     }
 
-    private static PayslipDocumentContent.Line line(PayrollConcept concept) {
+    private static PayslipDocumentContent.Line line(PayrollConcept concept, String periodoDelRecibo) {
         return new PayslipDocumentContent.Line(
-                concept.getOriginPeriodCode() == null ? SIN_DATO : concept.getOriginPeriodCode(),
+                periodoImpreso(concept.getOriginPeriodCode(), periodoDelRecibo),
                 concept.getConceptCode(),
                 concept.getConceptLabel(),
                 PayslipNumbers.valor(concept.getQuantity()),
                 PayslipNumbers.valor(concept.getRate()),
                 PayslipNumbers.valor(concept.getAmount())
         );
+    }
+
+    /**
+     * La columna de periodo <b>solo habla cuando la linea es de otro mes</b> ({@code backend#138}).
+     *
+     * <p>Con veinte filas del mismo mes la columna no informa; con una distinta, salta a la vista. Es la
+     * regla de los programas de nomina y la que la pantalla adopta en el {@code frontend#89}. Y el mes se
+     * escribe {@code MM/AAAA}, que es como lo lee una persona en un papel; el codigo {@code AAAAMM} sigue
+     * en la linea para quien lo lea en maquina.
+     */
+    static String periodoImpreso(String origen, String periodoDelRecibo) {
+        if (origen == null) {
+            return SIN_DATO;
+        }
+        if (origen.equals(periodoDelRecibo)) {
+            return "";
+        }
+        return origen.substring(4) + "/" + origen.substring(0, 4);
     }
 
     // ---------------------------------------------------------------------

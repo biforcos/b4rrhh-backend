@@ -253,6 +253,33 @@ final class PayslipDocumentFixtures {
                 payroll.getCreatedAt(), payroll.getUpdatedAt());
     }
 
+    /**
+     * El mismo recibo con una linea de atraso del {@code 101}, de {@code origen} ({@code backend#138}):
+     * el literal del concepto tal cual, sin cantidad ni tarifa ({@code backend#135}), y el mes en su
+     * columna.
+     */
+    static Payroll conUnAtraso(Payroll payroll, String origen) {
+        List<PayrollConcept> lineas = new ArrayList<>(payroll.getConcepts());
+        PayrollConcept modelo = lineas.stream()
+                .filter(c -> "101".equals(c.getConceptCode()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("el recibo no tiene ninguna linea 101"));
+        lineas.add(new PayrollConcept(
+                lineas.size() + 1, modelo.getConceptCode(), modelo.getConceptMnemonic(),
+                modelo.getConceptLabel(), new java.math.BigDecimal("-123.34"), null, null,
+                modelo.getConceptNatureCode(), origen, modelo.getDisplayOrder(), 0,
+                modelo.getPayslipSectionCode(), modelo.getPayslipSubsectionCode()));
+        return Payroll.rehydrate(
+                payroll.getId(), payroll.getRuleSystemCode(), payroll.getEmployeeTypeCode(),
+                payroll.getEmployeeNumber(), payroll.getPayrollPeriodCode(),
+                payroll.getPayrollTypeCode(), payroll.getPresenceNumber(), payroll.getStatus(),
+                payroll.getStatusReasonCode(), payroll.getCalculatedAt(),
+                payroll.getCalculationEngineCode(), payroll.getCalculationEngineVersion(),
+                payroll.getRunId(), payroll.getWarnings(), lineas,
+                payroll.getContextSnapshots(), payroll.getSegments(),
+                payroll.getCreatedAt(), payroll.getUpdatedAt());
+    }
+
     /** El mismo recibo ya cerrado: lo que cambia es que deja de ser un borrador. */
     static Payroll cerrado(Payroll payroll) {
         return payroll.finalizePayroll();
