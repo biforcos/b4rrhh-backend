@@ -18,12 +18,15 @@
 -- version del test lo pasa por posicion (?) porque JdbcTemplate no usa :nombre.
 --
 -- ---------------------------------------------------------
--- Que queda fuera, y por que son ocho
+-- Que queda fuera, y por que son nueve
 -- ---------------------------------------------------------
 -- Los conceptos del mes que PAGA, que no se atribuyen a un mes:
 --
 --   800                     la retencion de IRPF: es sobre lo que se paga cuando
 --                           se paga (ADR-070 §4)
+--   B09                     y su base (backend#140): el B09 de un mes lleva los
+--                           atrasos que ese mes pago, y su vigente no, asi que
+--                           comparado saldria descuadrado por exactamente eso
 --   970, 980, 990, 725      los totales: son sumas del mes que paga. El vigente
 --                           de agosto dice que agosto vale 1.543,80 de bruto, y
 --                           por agosto se han pagado 1.543,80 -pero repartidos
@@ -80,6 +83,6 @@ select m.employee_number, m.payroll_period_code,
    -- el IRPF, los cuatro totales y los tres tecnicos de los atrasos. Es la misma lista
    -- que RetroDeltaCalculator.NO_VIAJAN, y que sea la misma es la propiedad.
    and coalesce(v.concept_code, g.concept_code) not in
-       ('800', '970', '980', '990', '725', 'A_DEV', 'A_DED', 'A_EMP')
+       ('800', 'B09', '970', '980', '990', '725', 'A_DEV', 'A_DED', 'A_EMP')
    and coalesce(v.importe, 0) <> coalesce(g.importe, 0)
  order by 2, 3

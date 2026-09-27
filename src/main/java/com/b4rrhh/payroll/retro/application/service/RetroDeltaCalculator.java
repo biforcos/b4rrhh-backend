@@ -57,24 +57,55 @@ public class RetroDeltaCalculator {
     private static final DateTimeFormatter PERIODO = DateTimeFormatter.ofPattern("yyyyMM");
 
     /**
-     * Los conceptos que <b>no</b> se atribuyen a su mes de origen, con su motivo.
-     *
-     * <p>{@code 800} es la retencion de IRPF: se calcula sobre lo que se paga cuando se paga, asi que lo
-     * suyo de agosto ya esta pagado y lo de los atrasos lo absorbe el {@code 800} de este mes.
-     *
-     * <p>Los tres {@code A_*} son los conceptos tecnicos que meten los atrasos en los totales de este
-     * mes ({@code backend#133}, V162). No pueden viajar: <b>un atraso de un atraso no existe</b>, y si
-     * viajaran, el vigente de agosto llevaria el total de los atrasos que agosto genero y la invariante
-     * se perseguiria la cola.
-     *
-     * <p>Los totales tampoco: {@code 970}, {@code 980}, {@code 990} y {@code 725} son sumas de este mes,
-     * y sus lineas de atraso serian el mismo dinero contado dos veces en el mismo folio.
+     * La retencion de IRPF: se calcula sobre lo que se paga cuando se paga (ADR-070 §4), asi que lo suyo
+     * de agosto ya esta pagado y lo de los atrasos lo absorbe el {@code 800} de este mes.
      */
-    private static final Set<String> NO_VIAJAN = new LinkedHashSet<>(List.of(
-            "800", "A_DEV", "A_DED", "A_EMP", "970", "980", "990", "725"));
+    private static final Set<String> RETENCION = Set.of("800");
+
+    /**
+     * <b>Y su base</b> ({@code backend#140}), que es la mitad de la misma decision que nadie aplico. El
+     * {@code B09} de un mes es el {@code 970} de ese mes, con los atrasos que pago dentro; su vigente no
+     * los lleva -un atraso de un atraso no existe-, asi que cada mes que habia pagado un atraso y se
+     * recalculaba sacaba una linea de {@code B09} por exactamente ese atraso. No era dinero de nadie: es
+     * la base de una retencion que no viaja.
+     */
+    private static final Set<String> BASE_DE_LA_RETENCION = Set.of("B09");
+
+    /**
+     * Los totales del mes que paga: {@code 970}, {@code 980}, {@code 990} y {@code 725} son sumas de este
+     * mes, y sus lineas de atraso serian el mismo dinero contado dos veces en el mismo folio.
+     */
+    private static final Set<String> TOTALES_DEL_MES_QUE_PAGA = Set.of("970", "980", "990", "725");
+
+    /**
+     * Los tecnicos que meten los atrasos en esos totales ({@code backend#133}, V162). No pueden viajar:
+     * <b>un atraso de un atraso no existe</b>, y si viajaran, el vigente de agosto llevaria el total de los
+     * atrasos que agosto genero y la invariante se perseguiria la cola.
+     */
+    private static final Set<String> TECNICOS_DEL_ATRASO = Set.of("A_DEV", "A_DED", "A_EMP");
+
+    /**
+     * Lo que <b>no</b> se atribuye a su mes de origen: la retencion, su base, los totales y los tecnicos
+     * del atraso. Escrito por lo que es y no como una lista de casos, porque la proxima vez que falte uno
+     * sera uno de estos cuatro grupos y el nombre dice cual.
+     *
+     * <p>Es exactamente lo que la invariante del {@code #133} no puede comparar, y el candado
+     * {@code TheInvariantAndTheDeltaAgreeOnWhatDoesNotTravelTest} lo cruza con sus dos consultas.
+     */
+    public static final Set<String> NO_VIAJAN = union(
+            RETENCION, BASE_DE_LA_RETENCION, TOTALES_DEL_MES_QUE_PAGA, TECNICOS_DEL_ATRASO);
 
     private final CurrentCalculationRepository currentCalculations;
     private final PaidForPeriodLookupPort paidForPeriod;
+
+    @SafeVarargs
+    private static Set<String> union(Set<String>... grupos) {
+        Set<String> todos = new LinkedHashSet<>();
+        for (Set<String> grupo : grupos) {
+            todos.addAll(grupo);
+        }
+        return Set.copyOf(todos);
+    }
 
     public RetroDeltaCalculator(
             CurrentCalculationRepository currentCalculations,

@@ -219,6 +219,42 @@ class TheArrearIsTheDifferenceAgainstWhatWasPaidAndNotAgainstTheReceiptTest {
     }
 
     /**
+     * La base del IRPF <b>no viaja</b>, como la retención ({@code backend#140}).
+     *
+     * <p>Es el caso de {@code EMP000025} en la resiembra del 27/09: septiembre pagó un atraso de agosto y se
+     * cerró; en octubre se vuelve a corregir agosto, el tramo va de agosto a septiembre, y septiembre se
+     * recalcula sin tener nada que corregir. Su vigente no lleva los atrasos que septiembre pagó —un
+     * atraso de un atraso no existe— y lo que se pagó por septiembre sí, así que su {@code B09} salía
+     * como línea de atraso por exactamente el atraso que septiembre pagó. No es dinero de nadie: es la base
+     * de una retención que se hace sobre lo que se paga cuando se paga (ADR-070 §4).
+     */
+    @Test
+    void laBaseDelIrpfNoViajaAunqueElMesQuePagoUnAtrasoSeRecalcule() {
+        String emp = numeroUnico();
+        altaBasica(emp);
+        calcular(emp, AGOSTO, PayrollRetroRequest.none());
+        cerrar(emp, AGOSTO);
+
+        createInput.create(new CreateEmployeePayrollInputCommand(
+                RULE_SYSTEM, EMPLOYEE_TYPE, emp, HORAS, 202508, new BigDecimal("10")));
+        calcular(emp, SEPTIEMBRE, new PayrollRetroRequest(null, AGOSTO));
+        cerrar(emp, SEPTIEMBRE);
+
+        updateInput.update(new UpdateEmployeePayrollInputCommand(
+                RULE_SYSTEM, EMPLOYEE_TYPE, emp, HORAS, 202508, new BigDecimal("20")));
+        calcular(emp, OCTUBRE, new PayrollRetroRequest(null, AGOSTO));
+
+        Long octubreId = reciboId(emp, OCTUBRE);
+        assertEquals(List.of(), jdbc.queryForList(
+                        "select c.concept_code || '@' || c.origin_period_code || '=' || c.amount"
+                                + " from payroll.payroll_concept c join payroll.payroll p on p.id = c.payroll_id"
+                                + " where c.payroll_id = ? and c.concept_code in ('B09', '800')"
+                                + "   and c.origin_period_code <> p.payroll_period_code",
+                        String.class, octubreId),
+                "ni la retención ni su base tienen líneas de atraso; las de octubre: " + atrasos(octubreId));
+    }
+
+    /**
      * La invariante, que es lo que hace esto seguro.
      *
      * <blockquote>
@@ -347,10 +383,10 @@ class TheArrearIsTheDifferenceAgainstWhatWasPaidAndNotAgainstTheReceiptTest {
                and g.concept_code = v.concept_code
              where m.employee_number = ?
                -- Los conceptos del mes que PAGA, que no se atribuyen a un mes y por eso no viajan:
-               -- el IRPF, los cuatro totales y los tres tecnicos de los atrasos. Es la misma lista
+               -- el IRPF y su base (backend#140), los totales y los tecnicos. Es la misma lista
                -- que RetroDeltaCalculator.NO_VIAJAN, y que sea la misma es la propiedad.
                and coalesce(v.concept_code, g.concept_code) not in
-                   ('800', '970', '980', '990', '725', 'A_DEV', 'A_DED', 'A_EMP')
+                   ('800', 'B09', '970', '980', '990', '725', 'A_DEV', 'A_DED', 'A_EMP')
                and coalesce(v.importe, 0) <> coalesce(g.importe, 0)
              order by 2, 3
             """;

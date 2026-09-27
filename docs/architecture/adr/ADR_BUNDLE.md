@@ -17881,6 +17881,17 @@ lanzó, que lo cuenta en los mensajes de la corrida.
 Es la séptima regla del `workspace#3` —donde la salida dice «no se sabe del todo», nada se disfraza—
 aplicada al único sitio donde escribirlo sería peor que decirlo.
 
+### 7. Lo que no viaja: la retención, su base y los totales
+
+La diferencia de un mes baja al recibo abierto concepto a concepto, **salvo** cuatro grupos, que son
+del mes que paga y no del mes corregido (`RetroDeltaCalculator.NO_VIAJAN`): **la retención de IRPF
+(`800`) y su base (`B09`)**, porque se retiene sobre lo que se paga cuando se paga (ADR-070 §4); **los
+totales** (`970`, `980`, `990`, `725`), que son sumas de este mes; y **los técnicos del atraso**
+(`A_DEV`, `A_DED`, `A_EMP`), porque un atraso de un atraso no existe. La base del IRPF entró tarde
+(`backend#140`): viajaba, y cada mes que había pagado un atraso y se recalculaba sacaba una línea de
+`B09` por exactamente ese atraso. La invariante del `backend#133` excluye los mismos, y un candado lo
+cruza.
+
 ## Consecuencias
 
 - **Un candado nuevo: `NoRetroPathWritesTheReceiptOfAClosedMonthTest`.** Ningún fichero de

@@ -1,5 +1,6 @@
 package com.b4rrhh.architecture;
 
+import com.b4rrhh.payroll.retro.application.service.RetroDeltaCalculator;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -51,18 +52,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TheInvariantAndTheDeltaAgreeOnWhatDoesNotTravelTest {
 
-    private static final Path CALCULADOR = Path.of(
-            "src/main/java/com/b4rrhh/payroll/retro/application/service/RetroDeltaCalculator.java");
-
     private static final Path ESCENARIO = Path.of(
             "src/test/java/com/b4rrhh/payroll/scenario/"
                     + "TheArrearIsTheDifferenceAgainstWhatWasPaidAndNotAgainstTheReceiptTest.java");
 
     private static final Path CONSULTA = Path.of("docs/consultas/invariante-del-atraso.sql");
-
-    /** {@code NO_VIAJAN = new LinkedHashSet<>(List.of("800", "A_DEV", ...));} */
-    private static final Pattern LISTA_DEL_CALCULADOR = Pattern.compile(
-            "NO_VIAJAN\\s*=\\s*new LinkedHashSet<>\\(List\\.of\\(([^)]*)\\)\\)", Pattern.DOTALL);
 
     /** {@code not in ('800', '970', ...)} */
     private static final Pattern LISTA_DE_LA_CONSULTA = Pattern.compile(
@@ -72,14 +66,18 @@ class TheInvariantAndTheDeltaAgreeOnWhatDoesNotTravelTest {
 
     @Test
     void theDeltaAndTheInvariantExcludeExactlyTheSameConcepts() {
-        TreeSet<String> noViajan = codigosDe(LISTA_DEL_CALCULADOR, leer(CALCULADOR), CALCULADOR);
+        // El conjunto de verdad y no una expresión regular sobre el fuente: desde el backend#140 se
+        // escribe como la unión de lo que es —la retención, su base y los totales—, y leerlo del fichero
+        // obligaría a este test a saber cómo se escribe una unión.
+        TreeSet<String> noViajan = new TreeSet<>(RetroDeltaCalculator.NO_VIAJAN);
         TreeSet<String> excluidosEnElEscenario = codigosDe(LISTA_DE_LA_CONSULTA, leer(ESCENARIO), ESCENARIO);
         TreeSet<String> excluidosEnLaConsulta = codigosDe(LISTA_DE_LA_CONSULTA, leer(CONSULTA), CONSULTA);
 
-        assertTrue(noViajan.size() >= 5,
-                "Solo he encontrado " + noViajan.size() + " conceptos en NO_VIAJAN, y son ocho. Si la"
-                        + " lista se ha escrito de otra forma, este test esta mirando a otro sitio y hay"
-                        + " que reescribirlo: " + noViajan);
+        // La retención y SU BASE (backend#140). El IRPF no viaja porque se retiene sobre lo que se paga
+        // cuando se paga (ADR-070 §4), y su base es la mitad de esa decisión que nadie aplicó: el B09 salía
+        // como línea de atraso por el total de atrasos que el mes había pagado.
+        assertTrue(noViajan.containsAll(java.util.List.of("800", "B09")),
+                "Ni la retención ni su base viajan: " + noViajan);
 
         assertEquals(noViajan, excluidosEnElEscenario, """
                 La lista de lo que no viaja y la de lo que la invariante excluye no son la misma.
