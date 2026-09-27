@@ -13,11 +13,17 @@ import com.b4rrhh.payroll.domain.exception.PayrollTypeInvalidException;
 import com.b4rrhh.payroll.domain.exception.PayrollUnitAlreadyClaimedException;
 import com.b4rrhh.payroll.domain.model.CalculationClaim;
 import com.b4rrhh.payroll.domain.model.CalculationRun;
+import com.b4rrhh.payroll.domain.model.CalculationRunMessage;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.port.CalculationClaimRepository;
+import com.b4rrhh.payroll.domain.port.CalculationRunMessageRepository;
 import com.b4rrhh.payroll.domain.port.CalculationRunRepository;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
+import com.b4rrhh.payroll.retro.application.service.RetroPlanner;
+import com.b4rrhh.payroll.retro.application.usecase.RecalculateClosedPeriodsCommand;
+import com.b4rrhh.payroll.retro.application.usecase.RecalculateClosedPeriodsUseCase;
+import com.b4rrhh.payroll.retro.domain.model.DefaultRetroLimit;
 import com.b4rrhh.payroll_engine.metamodel.domain.port.RuleSystemMetamodelRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,7 +36,10 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class RecalculatePayrollService implements RecalculatePayrollUseCase {
@@ -81,6 +90,9 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
     private final RuleSystemMetamodelRepository ruleSystemMetamodelRepository;
     private final CalculationRunRepository calculationRunRepository;
     private final CalculationClaimRepository calculationClaimRepository;
+    private final CalculationRunMessageRepository calculationRunMessageRepository;
+    private final RetroPlanner retroPlanner;
+    private final RecalculateClosedPeriodsUseCase recalculateClosedPeriodsUseCase;
     private final ObjectMapper objectMapper;
 
     public RecalculatePayrollService(
@@ -89,6 +101,9 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
             RuleSystemMetamodelRepository ruleSystemMetamodelRepository,
             CalculationRunRepository calculationRunRepository,
             CalculationClaimRepository calculationClaimRepository,
+            CalculationRunMessageRepository calculationRunMessageRepository,
+            RetroPlanner retroPlanner,
+            RecalculateClosedPeriodsUseCase recalculateClosedPeriodsUseCase,
             ObjectMapper objectMapper
     ) {
         this.payrollRepository = payrollRepository;
@@ -96,6 +111,9 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
         this.ruleSystemMetamodelRepository = ruleSystemMetamodelRepository;
         this.calculationRunRepository = calculationRunRepository;
         this.calculationClaimRepository = calculationClaimRepository;
+        this.calculationRunMessageRepository = calculationRunMessageRepository;
+        this.retroPlanner = retroPlanner;
+        this.recalculateClosedPeriodsUseCase = recalculateClosedPeriodsUseCase;
         this.objectMapper = objectMapper;
     }
 
@@ -125,9 +143,25 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
         LocalDate periodStart = parsePeriodStart(command.payrollPeriodCode());
         LocalDate periodEnd = periodStart.withDayOfMonth(periodStart.lengthOfMonth());
 
-        CalculationRun run = abrirEjecucionDeUnaUnidad(command, payroll);
+        // El limite por defecto, el mismo que Operaciones propone, y sin suelo (backend#136). El recibo
+        // no pregunta: quien quiera otro limite lanza desde Operaciones.
+        String limite = DefaultRetroLimit.forPeriod(command.payrollPeriodCode());
+
+        CalculationRun run = abrirEjecucionDeUnaUnidad(command, payroll, limite);
         CalculationClaim claim = reservarLaUnidad(command, run);
         run = calculationRunRepository.save(run.incrementTotalClaimed());
+
+        // La retro del empleado va PRIMERO, como en el lanzamiento: el recibo se calcula con los
+        // vigentes ya escritos, que es de donde salen los atrasos (backend#133).
+        RetroPlanner.RetroPlan plan = retroPlanner.planFor(
+                command.ruleSystemCode(), command.employeeTypeCode(), command.employeeNumber(),
+                command.presenceNumber(), command.payrollPeriodCode(),
+                new PayrollRetroRequest(null, limite));
+        List<String> mesesNoRecalculados = new ArrayList<>();
+        if (plan.hasRange()) {
+            run = calculationRunRepository.save(run.withTotalRetroUnits(plan.monthCount()));
+            run = recalcularElTramo(run, command, payroll, plan, mesesNoRecalculados);
+        }
 
         // Un recalculo puntual tambien es una ejecucion, de una sola unidad: lee su
         // reglamentacion aqui y calcula contra ella. Por eso ve los cambios del grafo que
@@ -151,7 +185,13 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
                     payroll.getCalculationEngineCode(),
                     payroll.getCalculationEngineVersion(),
                     run.id(),
-                    ruleSystemMetamodelRepository.load(command.ruleSystemCode(), periodEnd)
+                    ruleSystemMetamodelRepository.load(command.ruleSystemCode(), periodEnd),
+                    // Lo que el limite deja fuera y lo que no se pudo recalcular: no se paga y el recibo
+                    // lo dice (backend#132, backend#136).
+                    plan.marksOutsideLimit(),
+                    plan.fromPeriodCode(),
+                    plan.toPeriodCode(),
+                    mesesNoRecalculados
             ));
         } catch (RuntimeException ex) {
             if (YA_TIENE_RESPUESTA.stream().anyMatch(tipo -> tipo.isInstance(ex))) {
@@ -226,7 +266,71 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
      * seria pagar el precio de un problema que no se tiene. Lo que si toma, desde el backend#101,
      * es la reserva de {@code calculation_claim}: ver {@link #reservarLaUnidad}.
      */
-    private CalculationRun abrirEjecucionDeUnaUnidad(RecalculatePayrollCommand command, Payroll payroll) {
+    /**
+     * El tramo de retro del empleado, recalculado y contado como lo cuenta el lanzamiento: cada mes que
+     * no se pudo recalcular se nombra en los mensajes de la ejecucion con su motivo, y ademas va al
+     * recibo, que es lo que quien recalcula esta mirando.
+     */
+    private CalculationRun recalcularElTramo(
+            CalculationRun run,
+            RecalculatePayrollCommand command,
+            Payroll payroll,
+            RetroPlanner.RetroPlan plan,
+            List<String> mesesNoRecalculados
+    ) {
+        RecalculateClosedPeriodsUseCase.RecalculateClosedPeriodsResult resultado =
+                recalculateClosedPeriodsUseCase.recalculate(new RecalculateClosedPeriodsCommand(
+                        command.ruleSystemCode(),
+                        command.employeeTypeCode(),
+                        command.employeeNumber(),
+                        command.presenceNumber(),
+                        command.payrollTypeCode(),
+                        plan.fromPeriodCode(),
+                        plan.toPeriodCode(),
+                        payroll.getCalculationEngineCode(),
+                        payroll.getCalculationEngineVersion(),
+                        run.id()));
+
+        CalculationRun contado = run;
+        for (int i = 0; i < resultado.written().size(); i++) {
+            contado = contado.incrementTotalRetroRecalculated();
+        }
+        for (RecalculateClosedPeriodsUseCase.RecalculateClosedPeriodsResult.NotCalculatedMonth mes
+                : resultado.notCalculated()) {
+            contado = contado.incrementTotalRetroNotRecalculated();
+            mesesNoRecalculados.add(mes.payrollPeriodCode());
+            Map<String, Object> detalles = new LinkedHashMap<>();
+            detalles.put("retroPeriodCode", mes.payrollPeriodCode());
+            detalles.put("reasonCode", mes.reason() == null ? "UNKNOWN" : mes.reason());
+            calculationRunMessageRepository.save(new CalculationRunMessage(
+                    null,
+                    contado.id(),
+                    "RETRO_MONTH_NOT_RECALCULATED",
+                    "WARNING",
+                    "El mes " + mes.payrollPeriodCode() + " del tramo de retroactividad no se ha podido"
+                            + " recalcular: " + mes.reason() + ". Su recibo no se ha tocado",
+                    json(detalles),
+                    command.ruleSystemCode(),
+                    command.employeeTypeCode(),
+                    command.employeeNumber(),
+                    command.payrollPeriodCode(),
+                    command.payrollTypeCode(),
+                    command.presenceNumber(),
+                    LocalDateTime.now()));
+        }
+        return calculationRunRepository.save(contado);
+    }
+
+    private String json(Map<String, ?> valor) {
+        try {
+            return objectMapper.writeValueAsString(valor);
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("Could not serialize the run message details", ex);
+        }
+    }
+
+    private CalculationRun abrirEjecucionDeUnaUnidad(
+            RecalculatePayrollCommand command, Payroll payroll, String limite) {
         LocalDateTime ahora = LocalDateTime.now();
         return calculationRunRepository.save(new CalculationRun(
                 null,
@@ -251,10 +355,10 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
                 0,
                 0,
                 0,
-                // Un recalculo de una unidad no hace retro: recalcula UN recibo NOT_VALID, que es lo
-                // unico que se recalcula. Sin limite y sin suelo, y los tres contadores de la retro a
-                // cero (backend#132).
-                null,
+                // El recalculo de un recibo hace la retro de su empleado con el limite por defecto y
+                // sin suelo, y lo guarda aqui como cualquier lanzamiento (backend#136). Hasta aqui no
+                // la hacia, y una marca activa se quedaba sin pagar sin que nadie lo dijera.
+                limite,
                 null,
                 0,
                 0,
@@ -306,7 +410,10 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
             return objectMapper.writeValueAsString(new RecalculationSummary(
                     run.totalCandidates(),
                     run.totalCalculated(),
-                    run.totalNotValid()
+                    run.totalNotValid(),
+                    // El limite de la retro no lo eligio nadie en este recalculo, asi que la ejecucion
+                    // dice de donde sale (backend#136).
+                    DefaultRetroLimit.REASON
             ));
         } catch (JsonProcessingException ex) {
             throw new IllegalStateException("Could not serialize the recalculation run summary", ex);
@@ -319,7 +426,12 @@ public class RecalculatePayrollService implements RecalculatePayrollUseCase {
     private record RecalculationUnit(String employeeTypeCode, String employeeNumber, Integer presenceNumber) {
     }
 
-    private record RecalculationSummary(Integer totalCandidates, Integer totalCalculated, Integer totalNotValid) {
+    private record RecalculationSummary(
+            Integer totalCandidates,
+            Integer totalCalculated,
+            Integer totalNotValid,
+            String retroLimitReason
+    ) {
     }
 
     private LocalDate parsePeriodStart(String periodCode) {

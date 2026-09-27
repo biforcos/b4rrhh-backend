@@ -1430,7 +1430,26 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
         for (String periodoDeLaMarca : command.retroMarksOutsideLimit()) {
             todos.add(avisoDeMarcaFueraDelLimite(command, periodoDeLaMarca));
         }
+        for (String mes : command.retroMonthsNotRecalculated()) {
+            todos.add(avisoDeMesNoRecalculado(command, mes));
+        }
         return List.copyOf(todos);
+    }
+
+    /**
+     * Un mes del tramo de retro que no se pudo recalcular: su atraso <b>no se paga y no se calla</b>
+     * ({@code backend#136}). El mismo principio que el aviso del limite, con otra causa y por eso con
+     * otro codigo: decir «mas antigua que el limite» de un mes que si estaba dentro seria mentir.
+     */
+    private PayrollWarning avisoDeMesNoRecalculado(CalculatePayrollUnitCommand command, String mes) {
+        Map<String, Object> detalles = new LinkedHashMap<>();
+        detalles.put("retroPeriodCode", mes);
+        detalles.put("employeeTypeCode", command.employeeTypeCode());
+        detalles.put("employeeNumber", command.employeeNumber());
+        return new PayrollWarning(null, null, "RETRO_MONTH_NOT_RECALCULATED", "WARNING",
+                "El mes " + mes + " tenia una correccion pendiente y no se ha podido recalcular, asi que"
+                        + " su atraso no se ha pagado en este recibo",
+                toJson(detalles));
     }
 
     /**

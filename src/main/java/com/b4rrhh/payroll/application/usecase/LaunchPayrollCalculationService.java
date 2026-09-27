@@ -629,7 +629,10 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                     // unidad: el limite del lanzamiento es lo que acota hasta donde se paga
                     // (backend#133).
                     plan == null ? null : plan.fromPeriodCode(),
-                    plan == null ? null : plan.toPeriodCode()
+                    plan == null ? null : plan.toPeriodCode(),
+                    // El lanzamiento cuenta los meses que no se pudieron recalcular en los mensajes de
+                    // la corrida (RETRO_MONTH_NOT_RECALCULATED), uno por mes y con su motivo.
+                    List.of()
             ));
             saveEligibleRealSuccessMessageIfPresent(run, unit, payroll);
             if (payroll.getStatus() == PayrollStatus.NOT_VALID) {

@@ -23,6 +23,9 @@ import java.util.List;
  *                  de este periodo: <b>no se paga y no se calla</b>. Viene dado y la unidad no lo
  *                  calcula, porque quién decide el límite es quien lanza y la unidad no tiene que saber
  *                  que existe una retro
+ * @param retroMonthsNotRecalculated los meses del tramo que no se pudieron recalcular
+ *                  ({@code backend#136}). Tampoco se pagan, y tampoco se callan: cada uno sale como aviso
+ *                  en el recibo de este periodo
  */
 public record CalculatePayrollUnitCommand(
         String ruleSystemCode,
@@ -39,7 +42,8 @@ public record CalculatePayrollUnitCommand(
         RuleSystemMetamodel metamodel,
         List<String> retroMarksOutsideLimit,
         String retroFromPeriodCode,
-        String retroToPeriodCode
+        String retroToPeriodCode,
+        List<String> retroMonthsNotRecalculated
 ) {
 
     public CalculatePayrollUnitCommand {
@@ -47,6 +51,8 @@ public record CalculatePayrollUnitCommand(
         // han dicho».
         retroMarksOutsideLimit = retroMarksOutsideLimit == null
                 ? List.of() : List.copyOf(retroMarksOutsideLimit);
+        retroMonthsNotRecalculated = retroMonthsNotRecalculated == null
+                ? List.of() : List.copyOf(retroMonthsNotRecalculated);
     }
 
     /** El mandato de siempre: sin marcas fuera de límite que avisar. */
@@ -66,6 +72,6 @@ public record CalculatePayrollUnitCommand(
     ) {
         this(ruleSystemCode, employeeTypeCode, employeeNumber, payrollPeriodCode, payrollTypeCode,
                 presenceNumber, periodStart, periodEnd, calculationEngineCode, calculationEngineVersion,
-                runId, metamodel, List.of(), null, null);
+                runId, metamodel, List.of(), null, null, List.of());
     }
 }

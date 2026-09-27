@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll.application.usecase;
 
+import com.b4rrhh.payroll.retro.application.service.RetroPlanner;
 import com.b4rrhh.payroll.domain.exception.PayrollCalculationFailedException;
 import com.b4rrhh.payroll.domain.exception.PayrollNotFoundException;
 import com.b4rrhh.payroll.domain.exception.PayrollRecalculationNotAllowedException;
@@ -43,6 +44,13 @@ class RecalculatePayrollServiceTest {
     private CalculationRunRepository calculationRunRepository;
     @Mock
     private CalculationClaimRepository calculationClaimRepository;
+    @Mock
+    private com.b4rrhh.payroll.domain.port.CalculationRunMessageRepository calculationRunMessageRepository;
+    @Mock
+    private RetroPlanner retroPlanner;
+    @Mock
+    private com.b4rrhh.payroll.retro.application.usecase.RecalculateClosedPeriodsUseCase
+            recalculateClosedPeriodsUseCase;
 
     private RecalculatePayrollService service;
 
@@ -50,7 +58,12 @@ class RecalculatePayrollServiceTest {
     void setUp() {
         service = new RecalculatePayrollService(
                 payrollRepository, calculatePayrollUnitUseCase, ruleSystemMetamodelRepository,
-                calculationRunRepository, calculationClaimRepository, new ObjectMapper());
+                calculationRunRepository, calculationClaimRepository, calculationRunMessageRepository,
+                retroPlanner, recalculateClosedPeriodsUseCase, new ObjectMapper());
+        // Sin marcas: estos tests miran el recibo, y el tramo de retro lo mira su escenario
+        // (RecalculatingAReceiptPaysItsRetroAndNeverInSilenceTest).
+        lenient().when(retroPlanner.planFor(any(), any(), any(), any(), any(), any()))
+                .thenReturn(new RetroPlanner.RetroPlan(null, null, java.util.List.of(), false));
         // lenient: los tests que se caen antes de reservar no llegan a pedir la reserva.
         lenient().when(calculationClaimRepository.save(any(CalculationClaim.class)))
                 .thenAnswer(invocation -> conIdDeReserva(invocation.getArgument(0)));
