@@ -556,8 +556,10 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     atraso.conceptMnemonic(),
                     atraso.conceptLabel(),
                     atraso.amount(),
-                    atraso.quantity(),
-                    atraso.rate(),
+                    // Sin cantidad y sin tarifa, que es lo que una linea de atraso lleva: su importe
+                    // es vigente - pagado y no el producto de nada (backend#135).
+                    null,
+                    null,
                     atraso.conceptNatureCode(),
                     // Sin bloque declarado va al final de su seccion, que es donde menos estorba, y
                     // eso solo pasa con un concepto que ya no esta en el vigente: una ausencia que se

@@ -180,11 +180,9 @@ public class RetroDeltaCalculator {
                     literalDelAtraso(
                             enElVigente == null ? conceptCode : enElVigente.conceptLabel(), periodo),
                     diferencia,
-                    // Cantidad y tarifa NO se restan: una diferencia de importe no tiene cantidad ni
-                    // precio propios. Se copian las del vigente cuando la linea existe alli, que es lo
-                    // que le permite al recibo decir «diez horas a 12,50» y nada mas.
-                    enElVigente == null ? null : enElVigente.quantity(),
-                    enElVigente == null ? null : enElVigente.rate(),
+                    // Sin cantidad ni tarifa: el importe es vigente - pagado, y las del vigente no lo
+                    // multiplican (backend#135). Los tres numeros que explican esta linea estan en la
+                    // explicacion del #134, no en la fila.
                     // La naturaleza y el bloque son los del concepto: un atraso de salario base se
                     // imprime donde se imprime el salario base. Cuando el concepto ya no esta en el
                     // vigente no hay de donde sacarlos, y entonces la linea sale sin bloque, que es una
