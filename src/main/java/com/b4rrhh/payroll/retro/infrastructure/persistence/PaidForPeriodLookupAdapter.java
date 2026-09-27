@@ -34,13 +34,27 @@ public class PaidForPeriodLookupAdapter implements PaidForPeriodLookupPort {
             String payrollTypeCode,
             String periodCode
     ) {
-        List<Object[]> filas = payrollRepository.sumPaidByConceptForPeriod(
+        List<Object[]> filas = payrollRepository.findPaidLinesForPeriod(
                 ruleSystemCode, employeeTypeCode, employeeNumber, payrollTypeCode, periodCode);
 
         Map<String, BigDecimal> porConcepto = new LinkedHashMap<>();
+        Map<String, PaidForPeriod.PaidLine> identidad = new LinkedHashMap<>();
+        Map<String, String> reciboDeLaIdentidad = new LinkedHashMap<>();
         for (Object[] fila : filas) {
-            porConcepto.put((String) fila[0], (BigDecimal) fila[1]);
+            String concepto = (String) fila[0];
+            porConcepto.merge(concepto, (BigDecimal) fila[1], BigDecimal::add);
+
+            // Las filas vienen por periodo del recibo, de antes a despues. Se queda la del propio mes
+            // si la hay y, si no, la ultima: la del recibo propio es la que el empleado tiene como suya.
+            String recibo = (String) fila[8];
+            String yaElegida = reciboDeLaIdentidad.get(concepto);
+            if (yaElegida == null || !periodCode.equals(yaElegida)) {
+                identidad.put(concepto, new PaidForPeriod.PaidLine(
+                        (String) fila[2], (String) fila[3], (String) fila[4],
+                        (Integer) fila[5], (String) fila[6], (String) fila[7]));
+                reciboDeLaIdentidad.put(concepto, recibo);
+            }
         }
-        return new PaidForPeriod(porConcepto);
+        return new PaidForPeriod(porConcepto, identidad);
     }
 }

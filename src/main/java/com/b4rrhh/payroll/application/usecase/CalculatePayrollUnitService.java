@@ -561,9 +561,9 @@ public class CalculatePayrollUnitService implements CalculatePayrollUnitUseCase 
                     null,
                     null,
                     atraso.conceptNatureCode(),
-                    // Sin bloque declarado va al final de su seccion, que es donde menos estorba, y
-                    // eso solo pasa con un concepto que ya no esta en el vigente: una ausencia que se
-                    // ve (backend#104).
+                    // El orden es el del concepto, del vigente o de la linea que se pago
+                    // (backend#137), y los dos lo llevan siempre. Si faltara, al final de su
+                    // seccion, que es donde menos estorba.
                     atraso.displayOrder() == null ? Integer.MAX_VALUE : atraso.displayOrder(),
                     List.of(),
                     atraso.originPeriodCode()));

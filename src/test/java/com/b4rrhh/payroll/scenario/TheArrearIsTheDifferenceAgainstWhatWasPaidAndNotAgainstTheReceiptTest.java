@@ -2,6 +2,8 @@ package com.b4rrhh.payroll.scenario;
 
 import com.b4rrhh.employee.payroll_input.application.usecase.CreateEmployeePayrollInputCommand;
 import com.b4rrhh.employee.payroll_input.application.usecase.CreateEmployeePayrollInputUseCase;
+import com.b4rrhh.employee.payroll_input.application.usecase.DeleteEmployeePayrollInputCommand;
+import com.b4rrhh.employee.payroll_input.application.usecase.DeleteEmployeePayrollInputUseCase;
 import com.b4rrhh.employee.payroll_input.application.usecase.UpdateEmployeePayrollInputCommand;
 import com.b4rrhh.employee.payroll_input.application.usecase.UpdateEmployeePayrollInputUseCase;
 import com.b4rrhh.payroll.application.usecase.BulkFinalizePayrollCommand;
@@ -76,6 +78,7 @@ class TheArrearIsTheDifferenceAgainstWhatWasPaidAndNotAgainstTheReceiptTest {
     @Autowired private BulkFinalizePayrollUseCase cerrarEnMasa;
     @Autowired private CreateEmployeePayrollInputUseCase createInput;
     @Autowired private UpdateEmployeePayrollInputUseCase updateInput;
+    @Autowired private DeleteEmployeePayrollInputUseCase deleteInput;
     @Autowired private ListEmployeeRetroMarksUseCase listMarks;
     @Autowired private JdbcTemplate jdbc;
 
@@ -167,6 +170,52 @@ class TheArrearIsTheDifferenceAgainstWhatWasPaidAndNotAgainstTheReceiptTest {
 
         // Y los dos recibos anteriores siguen intactos.
         assertEquals(huellaDeAgosto, huella(agostoId), "agosto sigue sin tocarse, dos meses después");
+    }
+
+    /**
+     * Borrar algo que ya se pagó: el atraso sale <b>negativo</b>, y se guarda ({@code backend#137}).
+     *
+     * <p>Es el caso de la demo del 162: horas de agosto pagadas, borradas después del cierre, y
+     * septiembre con retro. El vigente de agosto ya no tiene la línea de las horas, así que la línea de
+     * atraso no puede sacar de allí quién es; la saca de <b>la línea que se pagó</b>. Y se comprueba en
+     * la base y no en memoria, que es donde el defecto se escondía: la línea sin mnemónico se construía
+     * bien y reventaba al guardarse.
+     */
+    @Test
+    void borrarUnasHorasPagadasDevuelveElImporteConLaIdentidadDeLoQueSePago() {
+        String emp = numeroUnico();
+        altaBasica(emp);
+
+        createInput.create(new CreateEmployeePayrollInputCommand(
+                RULE_SYSTEM, EMPLOYEE_TYPE, emp, HORAS, 202508, new BigDecimal("10")));
+        calcular(emp, AGOSTO, PayrollRetroRequest.none());
+        cerrar(emp, AGOSTO);
+        Long agostoId = reciboId(emp, AGOSTO);
+        BigDecimal pagado = importe(agostoId, IMPORTE_HORAS);
+        assertTrue(pagado.compareTo(BigDecimal.ZERO) > 0, "agosto se cerró pagando las horas");
+        Map<String, Object> lineaPagada = jdbc.queryForMap(
+                "select concept_mnemonic, concept_nature_code, display_order, payslip_section_code"
+                        + " from payroll.payroll_concept where payroll_id = ? and concept_code = ?",
+                agostoId, IMPORTE_HORAS);
+
+        deleteInput.delete(new DeleteEmployeePayrollInputCommand(
+                RULE_SYSTEM, EMPLOYEE_TYPE, emp, HORAS, 202508));
+        calcular(emp, SEPTIEMBRE, new PayrollRetroRequest(null, AGOSTO));
+
+        Long septiembreId = reciboId(emp, SEPTIEMBRE);
+        Map<String, Object> devolucion = jdbc.queryForMap(
+                "select amount, concept_mnemonic, concept_nature_code, display_order, payslip_section_code"
+                        + " from payroll.payroll_concept"
+                        + " where payroll_id = ? and concept_code = ? and origin_period_code = ?",
+                septiembreId, IMPORTE_HORAS, AGOSTO);
+
+        assertEquals(0, ((BigDecimal) devolucion.get("amount")).compareTo(pagado.negate()),
+                "se devuelve exactamente lo que se pagó: " + devolucion + " frente a " + pagado);
+        for (String campo : List.of(
+                "concept_mnemonic", "concept_nature_code", "display_order", "payslip_section_code")) {
+            assertEquals(lineaPagada.get(campo), devolucion.get(campo),
+                    "la línea que devuelve es la que se cobró, con su bloque: " + campo);
+        }
     }
 
     /**

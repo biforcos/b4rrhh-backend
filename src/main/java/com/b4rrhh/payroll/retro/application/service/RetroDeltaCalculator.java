@@ -149,14 +149,17 @@ public class RetroDeltaCalculator {
             CurrentCalculation vigente,
             PaidForPeriod pagado
     ) {
-        Map<String, CurrentCalculationConcept> porConcepto = new LinkedHashMap<>();
+        // Un concepto puede venir en varias lineas del folio -los de ambito de tramo-, y lo que se
+        // compara es el total del mes por concepto: es lo que la invariante enuncia. La identidad es la
+        // de su primera linea.
+        Map<String, BigDecimal> valeHoyPorConcepto = new LinkedHashMap<>();
+        Map<String, CurrentCalculationConcept> primeraDelVigente = new LinkedHashMap<>();
         for (CurrentCalculationConcept c : vigente.getConcepts()) {
-            // Un concepto puede venir en varias lineas del folio -los de ambito de tramo-, y lo que se
-            // compara es el total del mes por concepto: es lo que la invariante enuncia.
-            porConcepto.merge(c.conceptCode(), c, RetroDeltaCalculator::sumadas);
+            valeHoyPorConcepto.merge(c.conceptCode(), c.amount(), BigDecimal::add);
+            primeraDelVigente.putIfAbsent(c.conceptCode(), c);
         }
 
-        Set<String> todos = new LinkedHashSet<>(porConcepto.keySet());
+        Set<String> todos = new LinkedHashSet<>(valeHoyPorConcepto.keySet());
         todos.addAll(pagado.amountsByConcept().keySet());
 
         List<RetroDeltaLine> lineas = new ArrayList<>();
@@ -164,8 +167,7 @@ public class RetroDeltaCalculator {
             if (NO_VIAJAN.contains(conceptCode)) {
                 continue;
             }
-            CurrentCalculationConcept enElVigente = porConcepto.get(conceptCode);
-            BigDecimal valeHoy = enElVigente == null ? BigDecimal.ZERO : enElVigente.amount();
+            BigDecimal valeHoy = valeHoyPorConcepto.getOrDefault(conceptCode, BigDecimal.ZERO);
             BigDecimal seHaPagado = pagado.of(conceptCode);
             BigDecimal diferencia = valeHoy.subtract(seHaPagado);
 
@@ -173,26 +175,62 @@ public class RetroDeltaCalculator {
                 continue;
             }
 
-            lineas.add(new RetroDeltaLine(
-                    periodo,
-                    conceptCode,
-                    enElVigente == null ? null : enElVigente.conceptMnemonic(),
-                    literalDelAtraso(
-                            enElVigente == null ? conceptCode : enElVigente.conceptLabel(), periodo),
-                    diferencia,
-                    // Sin cantidad ni tarifa: el importe es vigente - pagado, y las del vigente no lo
-                    // multiplican (backend#135). Los tres numeros que explican esta linea estan en la
-                    // explicacion del #134, no en la fila.
-                    // La naturaleza y el bloque son los del concepto: un atraso de salario base se
-                    // imprime donde se imprime el salario base. Cuando el concepto ya no esta en el
-                    // vigente no hay de donde sacarlos, y entonces la linea sale sin bloque, que es una
-                    // ausencia que se ve.
-                    enElVigente == null ? null : enElVigente.conceptNatureCode(),
-                    enElVigente == null ? null : enElVigente.displayOrder(),
-                    enElVigente == null ? null : enElVigente.payslipSectionCode(),
-                    enElVigente == null ? null : enElVigente.payslipSubsectionCode()));
+            // Sin cantidad ni tarifa: el importe es vigente - pagado, y las del vigente no lo
+            // multiplican (backend#135). Los tres numeros que explican esta linea estan en la
+            // explicacion del #134, no en la fila.
+            lineas.add(lineaDeAtraso(periodo, conceptCode, diferencia,
+                    primeraDelVigente.get(conceptCode), pagado.lineOf(conceptCode).orElse(null)));
         }
         return lineas;
+    }
+
+    /**
+     * Quien es la linea de atraso: mnemonico, literal, naturaleza, orden y bloque.
+     *
+     * <p>Los del vigente cuando el concepto sigue alli: un atraso de salario base se imprime donde se
+     * imprime el salario base. Y cuando <b>ya no esta</b> -unas horas pagadas que se borraron-, los de
+     * <b>la linea que se pago</b> ({@code backend#137}). No los del catalogo por codigo: el concepto puede
+     * haber cambiado desde entonces, y lo que se devuelve es lo que se cobro.
+     *
+     * <p>Aqui habia un «sin bloque, que es una ausencia que se ve». No se veia: la linea salia sin
+     * mnemonico, la columna es obligatoria desde la V137 y el recibo entero no se podia calcular.
+     */
+    private static RetroDeltaLine lineaDeAtraso(
+            String periodo,
+            String conceptCode,
+            BigDecimal diferencia,
+            CurrentCalculationConcept enElVigente,
+            PaidForPeriod.PaidLine comoSePago
+    ) {
+        if (enElVigente != null) {
+            return new RetroDeltaLine(
+                    periodo,
+                    conceptCode,
+                    enElVigente.conceptMnemonic(),
+                    literalDelAtraso(enElVigente.conceptLabel(), periodo),
+                    diferencia,
+                    enElVigente.conceptNatureCode(),
+                    enElVigente.displayOrder(),
+                    enElVigente.payslipSectionCode(),
+                    enElVigente.payslipSubsectionCode());
+        }
+        if (comoSePago == null) {
+            // Un concepto que no esta en el vigente solo llega aqui porque se pago, y lo pagado trae su
+            // linea. Si falta, la consulta de lo pagado ha dejado de traerla: mejor decirlo que
+            // construir una linea sin identidad.
+            throw new IllegalStateException("El concepto " + conceptCode + " de " + periodo
+                    + " tiene diferencia pero no esta ni en el vigente ni en lo pagado");
+        }
+        return new RetroDeltaLine(
+                periodo,
+                conceptCode,
+                comoSePago.conceptMnemonic(),
+                literalDelAtraso(comoSePago.conceptLabel(), periodo),
+                diferencia,
+                comoSePago.conceptNatureCode(),
+                comoSePago.displayOrder(),
+                comoSePago.payslipSectionCode(),
+                comoSePago.payslipSubsectionCode());
     }
 
     /**
@@ -226,30 +264,5 @@ public class RetroDeltaCalculator {
                 ? literalDelConcepto.substring(0, sitio)
                 : literalDelConcepto;
         return nombre + sufijo;
-    }
-
-    /** Dos lineas del mismo concepto en el vigente: el importe se suma y lo demas es de la primera. */
-    private static CurrentCalculationConcept sumadas(
-            CurrentCalculationConcept a, CurrentCalculationConcept b) {
-        return new CurrentCalculationConcept(
-                a.lineNumber(),
-                a.conceptCode(),
-                a.conceptMnemonic(),
-                a.conceptLabel(),
-                a.amount().add(b.amount()),
-                sumaONulo(a.quantity(), b.quantity()),
-                // La tarifa no se suma: dos tramos al mismo precio tienen ese precio, y a precios
-                // distintos no hay un precio. Se queda la del primero y el importe es la verdad.
-                a.rate(),
-                a.conceptNatureCode(),
-                a.displayOrder(),
-                a.payslipSectionCode(),
-                a.payslipSubsectionCode());
-    }
-
-    private static BigDecimal sumaONulo(BigDecimal a, BigDecimal b) {
-        if (a == null) return b;
-        if (b == null) return a;
-        return a.add(b);
     }
 }

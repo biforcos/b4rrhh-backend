@@ -132,16 +132,24 @@ public interface SpringDataPayrollRepository extends JpaRepository<PayrollEntity
      * al empleado sin ese dinero el dia que ese recibo se recalcule.
      *
      * <p>Por empleado y no por presencia, como la base de cotizacion de un mes (ADR-074 §3).
+     *
+     * <p><b>Linea a linea y no sumado</b> ({@code backend#137}): ademas del importe hace falta saber
+     * <b>como se pago</b> -mnemonico, literal, naturaleza, orden y bloque-, porque cuando el concepto ya
+     * no esta en el vigente la linea de atraso que lo devuelve no tiene otro sitio del que sacarlo. La
+     * suma la hace el adaptador. Columnas: codigo, importe, mnemonico, literal, naturaleza, orden,
+     * seccion, apartado y el periodo del recibo que la pago.
      */
-    @Query("select c.conceptCode, sum(c.amount) from PayrollEntity p join p.concepts c"
+    @Query("select c.conceptCode, c.amount, c.conceptMnemonic, c.conceptLabel, c.conceptNatureCode,"
+            + " c.displayOrder, c.payslipSectionCode, c.payslipSubsectionCode, p.payrollPeriodCode"
+            + " from PayrollEntity p join p.concepts c"
             + " where p.ruleSystemCode = :ruleSystemCode"
             + "   and p.employeeTypeCode = :employeeTypeCode"
             + "   and p.employeeNumber = :employeeNumber"
             + "   and p.payrollTypeCode = :payrollTypeCode"
             + "   and p.status = com.b4rrhh.payroll.domain.model.PayrollStatus.DEFINITIVE"
             + "   and c.originPeriodCode = :periodCode"
-            + " group by c.conceptCode")
-    List<Object[]> sumPaidByConceptForPeriod(
+            + " order by p.payrollPeriodCode, c.lineNumber")
+    List<Object[]> findPaidLinesForPeriod(
             @Param("ruleSystemCode") String ruleSystemCode,
             @Param("employeeTypeCode") String employeeTypeCode,
             @Param("employeeNumber") String employeeNumber,
