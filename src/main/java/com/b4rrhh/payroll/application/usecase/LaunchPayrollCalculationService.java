@@ -2,6 +2,7 @@ package com.b4rrhh.payroll.application.usecase;
 
 import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceLookupPort;
+import com.b4rrhh.payroll.application.port.PayrollLaunchTargetLookupPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchWorkerPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEmployeeContext;
 import com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException;
@@ -63,6 +64,7 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
     private final ObjectMapper objectMapper;
     private final RetroPlanner retroPlanner;
     private final RecalculateClosedPeriodsUseCase recalculateClosedPeriodsUseCase;
+    private final PayrollLaunchTargetLookupPort payrollLaunchTargetLookupPort;
 
     public LaunchPayrollCalculationService(
             CalculationRunRepository calculationRunRepository,
@@ -76,7 +78,8 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
             UnreachableConceptFinder unreachableConceptFinder,
             ObjectMapper objectMapper,
             RetroPlanner retroPlanner,
-            RecalculateClosedPeriodsUseCase recalculateClosedPeriodsUseCase
+            RecalculateClosedPeriodsUseCase recalculateClosedPeriodsUseCase,
+            PayrollLaunchTargetLookupPort payrollLaunchTargetLookupPort
     ) {
         this.calculationRunRepository = calculationRunRepository;
         this.calculationClaimRepository = calculationClaimRepository;
@@ -90,6 +93,7 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
         this.objectMapper = objectMapper;
         this.retroPlanner = retroPlanner;
         this.recalculateClosedPeriodsUseCase = recalculateClosedPeriodsUseCase;
+        this.payrollLaunchTargetLookupPort = payrollLaunchTargetLookupPort;
     }
 
     /**
@@ -136,14 +140,17 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
     private NormalizedLaunch normalize(LaunchPayrollCalculationCommand command) {
         String payrollPeriodCode = normalizeCode(command.payrollPeriodCode(), "payrollPeriodCode", 30);
         LocalDate[] periodBounds = parsePayrollPeriodBounds(payrollPeriodCode);
+        String ruleSystemCode = normalizeCode(command.ruleSystemCode(), "ruleSystemCode", 5);
+        PayrollLaunchTargetSelection targetSelection = normalizeTargetSelection(command.targetSelection());
+        comprobarQueLosEmpleadosExisten(ruleSystemCode, targetSelection);
 
         return new NormalizedLaunch(
-                normalizeCode(command.ruleSystemCode(), "ruleSystemCode", 5),
+                ruleSystemCode,
                 payrollPeriodCode,
                 normalizeCode(command.payrollTypeCode(), "payrollTypeCode", 30),
                 normalizeText(command.calculationEngineCode(), "calculationEngineCode", 50),
                 normalizeText(command.calculationEngineVersion(), "calculationEngineVersion", 50),
-                normalizeTargetSelection(command.targetSelection()),
+                targetSelection,
                 normalizeOptionalText(command.requestedBy(), "requestedBy", 100),
                 periodBounds[0],
                 periodBounds[1],
@@ -153,6 +160,47 @@ public class LaunchPayrollCalculationService implements LaunchPayrollCalculation
                 // (backend#132).
                 command.retro()
         );
+    }
+
+    /**
+     * Un empleado nombrado que no existe <b>se nombra</b> al contestar ({@code frontend#88}).
+     *
+     * <p>Hasta aqui el lanzamiento lo aceptaba, lo encolaba y dejaba en la ejecucion un «No relevant
+     * employee presence was found», que no dice si el tipo esta mal, el numero esta mal o el empleado no
+     * estaba ese mes. Lo primero y lo segundo se saben al pedir, y se contestan con un 400 que dice que
+     * falta; lo tercero sigue siendo cosa de la ejecucion, porque depende del mes.
+     */
+    private void comprobarQueLosEmpleadosExisten(
+            String ruleSystemCode, PayrollLaunchTargetSelection targetSelection) {
+        List<PayrollLaunchEmployeeTarget> nombrados = switch (targetSelection.selectionType()) {
+            case SINGLE_EMPLOYEE -> List.of(targetSelection.employee());
+            case EMPLOYEE_LIST -> targetSelection.employees();
+            case ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD -> List.of();
+        };
+        if (nombrados.isEmpty()) {
+            return;
+        }
+
+        for (PayrollLaunchEmployeeTarget nombrado : nombrados) {
+            String tipo = nombrado.employeeTypeCode() == null
+                    ? "" : nombrado.employeeTypeCode().trim().toUpperCase();
+            String numero = nombrado.employeeNumber() == null ? "" : nombrado.employeeNumber().trim();
+            if (payrollLaunchTargetLookupPort.employeeExists(ruleSystemCode, tipo, numero)) {
+                continue;
+            }
+            // No existe. Lo que queda es decir por que: si el tipo no es de este sistema de reglas, es
+            // el tipo, y se dicen los que hay; si lo es, es el numero. El catalogo solo se consulta aqui,
+            // en el camino del fallo: un empleado que existe se lanza aunque el sistema de reglas no
+            // tenga los tipos catalogados, que es como estan los de los tests.
+            List<String> tipos = payrollLaunchTargetLookupPort.findEmployeeTypeCodes(ruleSystemCode);
+            if (!tipos.isEmpty() && !tipos.contains(tipo)) {
+                throw new InvalidPayrollArgumentException("No existe el tipo de empleado «" + tipo
+                        + "» en el sistema de reglas " + ruleSystemCode + "; los que tiene son: "
+                        + String.join(", ", tipos));
+            }
+            throw new InvalidPayrollArgumentException("No existe el empleado «" + numero
+                    + "» de tipo " + tipo + " en el sistema de reglas " + ruleSystemCode);
+        }
     }
 
     private CalculationRun createRequestedRun(NormalizedLaunch normalizedLaunch) {

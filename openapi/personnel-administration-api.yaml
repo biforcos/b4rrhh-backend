@@ -5412,6 +5412,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PayrollCalculationRunResponse"
+        "400":
+          description: >-
+            El encargo no se puede lanzar, y no deja ejecucion. Entre otras cosas, un empleado nombrado
+            que no existe se nombra en el mensaje (frontend#88): si es el tipo, con los tipos que tiene el
+            sistema de reglas; si es el numero, con el numero.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayrollErrorResponse"
 
   /payroll/calculation-runs/{runId}:
     get:

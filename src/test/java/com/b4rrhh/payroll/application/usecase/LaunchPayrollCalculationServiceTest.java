@@ -103,7 +103,20 @@ class LaunchPayrollCalculationServiceTest {
                 // lanzan sin limite, asi que no hay tramo que planificar y no se le pregunta a nadie.
                 // Que el tramo se planifique bien lo prueba el escenario del #132 (backend#132).
                 new RetroPlanner(retroMarkRepository),
-                recalculateClosedPeriodsUseCase
+                recalculateClosedPeriodsUseCase,
+                // Todos existen: lo que se prueba aqui es la cola y los contadores. Que un empleado que
+                // no existe se nombre lo prueba ALaunchNamesTheEmployeeItCannotFindTest (frontend#88).
+                new com.b4rrhh.payroll.application.port.PayrollLaunchTargetLookupPort() {
+                    @Override
+                    public java.util.List<String> findEmployeeTypeCodes(String ruleSystemCode) {
+                        return java.util.List.of("INTERNAL");
+                    }
+
+                    @Override
+                    public boolean employeeExists(String rs, String tipo, String numero) {
+                        return true;
+                    }
+                }
         );
 
         // La ejecucion lee su reglamentacion al empezar. Lo que se prueba aqui es la cola y
