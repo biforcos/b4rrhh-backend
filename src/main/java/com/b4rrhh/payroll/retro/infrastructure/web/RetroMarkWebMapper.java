@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll.retro.infrastructure.web;
 
+import com.b4rrhh.payroll.retro.application.usecase.ListedRetroMark;
 import com.b4rrhh.payroll.retro.domain.model.RetroMark;
 import com.b4rrhh.payroll.retro.infrastructure.web.dto.RetroMarkResponse;
 import org.springframework.stereotype.Component;
@@ -7,7 +8,16 @@ import org.springframework.stereotype.Component;
 @Component
 public class RetroMarkWebMapper {
 
+    /** Una marca suelta, como la devuelve el descarte: ya no espera a nadie. */
     public RetroMarkResponse toResponse(RetroMark m) {
+        return toResponse(m, false);
+    }
+
+    public RetroMarkResponse toResponse(ListedRetroMark listed) {
+        return toResponse(listed.mark(), listed.withoutAReceiptToPayIt());
+    }
+
+    private RetroMarkResponse toResponse(RetroMark m, boolean withoutAReceiptToPayIt) {
         return new RetroMarkResponse(
                 m.getId(),
                 m.getPresenceNumber(),
@@ -23,6 +33,7 @@ public class RetroMarkWebMapper {
                 m.getDiscardReason(),
                 m.getConsumedAt(),
                 m.getConsumedPeriodCode(),
-                m.getConsumedRunId());
+                m.getConsumedRunId(),
+                withoutAReceiptToPayIt);
     }
 }

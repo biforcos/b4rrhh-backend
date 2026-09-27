@@ -35,7 +35,7 @@ public class EmployeeRetroMarkController {
             @PathVariable String employeeTypeCode,
             @PathVariable String employeeNumber
     ) {
-        return list.list(new ListEmployeeRetroMarksCommand(
+        return list.listWithReceiptStatus(new ListEmployeeRetroMarksCommand(
                         ruleSystemCode, employeeTypeCode, employeeNumber))
                 .stream().map(mapper::toResponse).toList();
     }

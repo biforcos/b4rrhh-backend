@@ -17892,6 +17892,16 @@ totales** (`970`, `980`, `990`, `725`), que son sumas de este mes; y **los técn
 `B09` por exactamente ese atraso. La invariante del `backend#133` excluye los mismos, y un candado lo
 cruza.
 
+### 8. Una marca de una presencia cesada no se paga en la presencia nueva
+
+El plan de retro es por presencia: lo que se pagó por una presencia se corrige en esa presencia. Cuando
+la presencia cesó y su último recibo ya está cerrado, a su marca **no le queda ningún recibo que la
+pague**, y pagarla en el recibo de la presencia nueva rompería la invariante del `backend#133` en las
+dos. Lo que corresponde es un **finiquito complementario**, que es otro tipo de recibo y otro camino, y
+no está construido. Mientras tanto no se paga y no se calla: la corrida lo cuenta
+(`RETRO_MARK_WITHOUT_A_RECEIPT_TO_PAY_IT`, `backend#133`) y la ficha lo dice —«sin recibo que la
+pague»— en vez de «pendiente» (`backend#139`).
+
 ## Consecuencias
 
 - **Un candado nuevo: `NoRetroPathWritesTheReceiptOfAClosedMonthTest`.** Ningún fichero de

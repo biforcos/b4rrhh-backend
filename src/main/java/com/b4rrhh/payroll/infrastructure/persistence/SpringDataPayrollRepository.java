@@ -190,4 +190,34 @@ public interface SpringDataPayrollRepository extends JpaRepository<PayrollEntity
             @Param("periodCode") String periodCode,
             @Param("excludingPayingPeriodCode") String excludingPayingPeriodCode
     );
+
+    /**
+     * Las presencias de un empleado que cesaron y cuyo recibo del mes del cese ya esta cerrado
+     * ({@code backend#139}): a una marca activa de una de ellas no la paga ningun recibo.
+     *
+     * <p>Solo {@code DEFINITIVE}, escrito en la consulta (ADR-069 §2): si el recibo del mes del cese
+     * todavia esta abierto, ese recibo aun puede pagarla. Lee el estado y nada mas, ningun importe.
+     */
+    @Query(value = """
+            select pr.presence_number
+              from employee.presence pr
+              join employee.employee e on e.id = pr.employee_id
+             where upper(trim(e.rule_system_code)) = :ruleSystemCode
+               and upper(trim(e.employee_type_code)) = :employeeTypeCode
+               and trim(e.employee_number) = :employeeNumber
+               and pr.end_date is not null
+               and exists (
+                   select 1 from payroll.payroll p
+                    where p.rule_system_code = e.rule_system_code
+                      and p.employee_type_code = e.employee_type_code
+                      and p.employee_number = e.employee_number
+                      and p.presence_number = pr.presence_number
+                      and p.payroll_period_code = to_char(pr.end_date, 'YYYYMM')
+                      and p.status = 'DEFINITIVE')
+            """, nativeQuery = true)
+    List<Number> findCeasedPresencesWhoseLastMonthIsClosed(
+            @Param("ruleSystemCode") String ruleSystemCode,
+            @Param("employeeTypeCode") String employeeTypeCode,
+            @Param("employeeNumber") String employeeNumber
+    );
 }

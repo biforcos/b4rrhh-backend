@@ -17,6 +17,7 @@ public record RetroMarkResponse(
         String discardReason,
         Instant consumedAt,
         String consumedPeriodCode,
-        Long consumedRunId
+        Long consumedRunId,
+        boolean withoutAReceiptToPayIt
 ) {
 }
