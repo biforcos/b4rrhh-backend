@@ -1,6 +1,7 @@
 package com.b4rrhh.payroll.infrastructure.persistence;
 
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,13 +24,28 @@ public interface SpringDataPayrollRepository extends JpaRepository<PayrollEntity
             Integer presenceNumber
     );
 
-    @Query("SELECT p FROM PayrollEntity p WHERE " +
+    /**
+     * La búsqueda de recibos, paginada y con su total ({@code b4rrhh/frontend#93}). Antes devolvía
+     * una lista y el adaptador la cortaba en 500 sin decirlo.
+     *
+     * <p>El orden es el período más reciente primero; dentro de un período, lo que no está cerrado
+     * antes que lo cerrado; y después por empleado, presencia y tipo, para que una página no cambie
+     * de contenido entre dos peticiones iguales.
+     */
+    @Query(value = "SELECT p FROM PayrollEntity p WHERE " +
            "(:ruleSystemCode IS NULL OR p.ruleSystemCode = :ruleSystemCode) AND " +
            "(:payrollPeriodCode IS NULL OR p.payrollPeriodCode = :payrollPeriodCode) AND " +
            "(:employeeNumber IS NULL OR p.employeeNumber = :employeeNumber) AND " +
            "(:status IS NULL OR p.status = :status) " +
-           "ORDER BY p.calculatedAt DESC")
-    List<PayrollEntity> findByFilters(
+           "ORDER BY p.payrollPeriodCode DESC, " +
+           "CASE WHEN p.status = com.b4rrhh.payroll.domain.model.PayrollStatus.DEFINITIVE THEN 1 ELSE 0 END, " +
+           "p.employeeNumber, p.presenceNumber, p.payrollTypeCode",
+           countQuery = "SELECT count(p) FROM PayrollEntity p WHERE " +
+           "(:ruleSystemCode IS NULL OR p.ruleSystemCode = :ruleSystemCode) AND " +
+           "(:payrollPeriodCode IS NULL OR p.payrollPeriodCode = :payrollPeriodCode) AND " +
+           "(:employeeNumber IS NULL OR p.employeeNumber = :employeeNumber) AND " +
+           "(:status IS NULL OR p.status = :status)")
+    Page<PayrollEntity> findPageByFilters(
             @Param("ruleSystemCode") String ruleSystemCode,
             @Param("payrollPeriodCode") String payrollPeriodCode,
             @Param("employeeNumber") String employeeNumber,

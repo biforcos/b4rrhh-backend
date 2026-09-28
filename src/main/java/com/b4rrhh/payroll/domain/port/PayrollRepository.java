@@ -17,7 +17,19 @@ public interface PayrollRepository {
             Integer presenceNumber
     );
 
-    List<Payroll> findByFilters(String ruleSystemCode, String payrollPeriodCode, String employeeNumber, PayrollStatus status);
+    /**
+     * Una página de los recibos que cumplen los filtros, con el total. El orden es el período más
+     * reciente primero y, dentro de un período, lo que no está cerrado antes que lo cerrado: así el
+     * primero de una búsqueda sin filtros es del período abierto, y la lista de un empleado empieza
+     * por su mes en curso ({@code b4rrhh/frontend#93}).
+     */
+    PayrollSearchPage findPageByFilters(
+            String ruleSystemCode,
+            String payrollPeriodCode,
+            String employeeNumber,
+            PayrollStatus status,
+            int page,
+            int size);
 
     Payroll save(Payroll payroll);
 

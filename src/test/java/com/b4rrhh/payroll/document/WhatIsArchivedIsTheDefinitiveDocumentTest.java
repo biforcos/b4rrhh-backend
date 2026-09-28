@@ -11,6 +11,7 @@ import com.b4rrhh.payroll.document.infrastructure.pdf.PdfBoxPayslipDocumentRende
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
+import com.b4rrhh.payroll.domain.port.PayrollSearchPage;
 import com.b4rrhh.payroll_engine.concept.domain.model.PayslipSection;
 import com.b4rrhh.payroll_engine.concept.domain.port.PayslipSectionRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -166,9 +167,10 @@ class WhatIsArchivedIsTheDefinitiveDocumentTest {
         }
 
         @Override
-        public List<Payroll> findByFilters(String ruleSystemCode, String payrollPeriodCode,
-                                           String employeeNumber, PayrollStatus status) {
-            return List.of();
+        public PayrollSearchPage findPageByFilters(
+                String ruleSystemCode, String payrollPeriodCode, String employeeNumber, PayrollStatus status,
+                int page, int size) {
+            throw new UnsupportedOperationException();
         }
 
         @Override

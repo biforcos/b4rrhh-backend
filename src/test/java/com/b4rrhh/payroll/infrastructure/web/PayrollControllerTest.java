@@ -47,8 +47,11 @@ import com.b4rrhh.payroll.application.usecase.RecalculatePayrollUseCase;
 import com.b4rrhh.payroll.application.usecase.SearchPayrollsQuery;
 import com.b4rrhh.payroll.application.usecase.SearchPayrollsUseCase;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollSummaryResponse;
+import com.b4rrhh.payroll.infrastructure.web.dto.PayrollSearchPageResponse;
+import com.b4rrhh.payroll.domain.port.PayrollSearchPage;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -215,24 +218,40 @@ class PayrollControllerTest {
 
 
     @Test
-    void searchesPayrollsByFilters() {
+    void searchesPayrollsByFiltersAndSaysHowManyThereAre() {
         Payroll payroll = payroll(PayrollStatus.CALCULATED, null);
-        when(searchPayrollsUseCase.search(any(SearchPayrollsQuery.class))).thenReturn(List.of(payroll));
+        when(searchPayrollsUseCase.search(any(SearchPayrollsQuery.class)))
+                .thenReturn(new PayrollSearchPage(List.of(payroll), 0, 50, 7908));
 
-        ResponseEntity<List<PayrollSummaryResponse>> response = controller.search(null, "202604", "MAS000001", "CALCULATED");
+        ResponseEntity<PayrollSearchPageResponse> response =
+                controller.search(null, "202604", "MAS000001", "CALCULATED", null, null);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(1, response.getBody().size());
+        assertEquals(1, response.getBody().items().size());
+        assertEquals(7908, response.getBody().total());
+        assertEquals(50, response.getBody().size());
 
         ArgumentCaptor<SearchPayrollsQuery> queryCaptor = ArgumentCaptor.forClass(SearchPayrollsQuery.class);
         verify(searchPayrollsUseCase).search(queryCaptor.capture());
         assertEquals("202604", queryCaptor.getValue().payrollPeriodCode());
         assertEquals(PayrollStatus.CALCULATED, queryCaptor.getValue().status());
+        assertEquals(0, queryCaptor.getValue().page());
+        assertEquals(50, queryCaptor.getValue().size());
 
-        PayrollSummaryResponse first = response.getBody().getFirst();
+        PayrollSummaryResponse first = response.getBody().items().getFirst();
         assertEquals("CALCULATED", first.status());
         assertEquals("EMP001", first.employeeNumber());
+    }
+
+    @Test
+    void rejectsAPageOutsideItsBounds() {
+        assertThrows(
+                com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException.class,
+                () -> controller.search(null, null, null, null, 0, 201));
+        assertThrows(
+                com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException.class,
+                () -> controller.search(null, null, null, null, -1, 50));
     }
 
     @Test

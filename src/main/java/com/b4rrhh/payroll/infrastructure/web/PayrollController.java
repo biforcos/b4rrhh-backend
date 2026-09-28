@@ -35,6 +35,8 @@ import com.b4rrhh.payroll.application.usecase.SearchPayrollsQuery;
 import com.b4rrhh.payroll.application.usecase.SearchPayrollsUseCase;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollSummaryResponse;
+import com.b4rrhh.payroll.infrastructure.web.dto.PayrollSearchPageResponse;
+import com.b4rrhh.payroll.domain.port.PayrollSearchPage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -290,12 +292,21 @@ public class PayrollController {
     }
 
     @GetMapping
-    public ResponseEntity<List<PayrollSummaryResponse>> search(
+    public ResponseEntity<PayrollSearchPageResponse> search(
             @RequestParam(required = false) String ruleSystemCode,
             @RequestParam(required = false) String payrollPeriodCode,
             @RequestParam(required = false) String employeeNumber,
-            @RequestParam(required = false) String status
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size
     ) {
+        int resolvedPage = page == null ? 0 : page;
+        int resolvedSize = size == null ? SearchPayrollsQuery.DEFAULT_SIZE : size;
+        if (resolvedPage < 0 || resolvedSize < 1 || resolvedSize > SearchPayrollsQuery.MAX_SIZE) {
+            throw new com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException(
+                "La página empieza en 0 y su tamaño va de 1 a " + SearchPayrollsQuery.MAX_SIZE
+                    + "; se pidió la página " + resolvedPage + " de " + resolvedSize + ".");
+        }
         PayrollStatus parsedStatus = null;
         if (status != null) {
             try {
@@ -305,12 +316,13 @@ public class PayrollController {
                     "Invalid status value: '" + status + "'. Valid values: " + java.util.Arrays.toString(PayrollStatus.values()));
             }
         }
-        List<PayrollSummaryResponse> body = searchPayrollsUseCase
-                .search(new SearchPayrollsQuery(ruleSystemCode, payrollPeriodCode, employeeNumber, parsedStatus))
-                .stream()
-                .map(payrollResponseAssembler::toSummaryResponse)
-                .toList();
-        return ResponseEntity.ok(body);
+        PayrollSearchPage result = searchPayrollsUseCase.search(new SearchPayrollsQuery(
+                ruleSystemCode, payrollPeriodCode, employeeNumber, parsedStatus, resolvedPage, resolvedSize));
+        return ResponseEntity.ok(new PayrollSearchPageResponse(
+                result.items().stream().map(payrollResponseAssembler::toSummaryResponse).toList(),
+                result.page(),
+                result.size(),
+                result.total()));
     }
 
     @PostMapping("/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/{payrollPeriodCode}/{payrollTypeCode}/{presenceNumber}/recalculate")

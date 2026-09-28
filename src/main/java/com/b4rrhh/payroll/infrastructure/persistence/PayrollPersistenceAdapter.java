@@ -7,6 +7,8 @@ import com.b4rrhh.payroll.domain.model.PayrollSegment;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.model.PayrollWarning;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
+import org.springframework.data.domain.Page;
+import com.b4rrhh.payroll.domain.port.PayrollSearchPage;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
@@ -45,12 +47,20 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
     }
 
     @Override
-    public List<Payroll> findByFilters(String ruleSystemCode, String payrollPeriodCode, String employeeNumber, PayrollStatus status) {
-        return springDataPayrollRepository
-                .findByFilters(ruleSystemCode, payrollPeriodCode, employeeNumber, status, PageRequest.of(0, 500))
-                .stream()
-                .map(this::toDomain)
-                .toList();
+    public PayrollSearchPage findPageByFilters(
+            String ruleSystemCode,
+            String payrollPeriodCode,
+            String employeeNumber,
+            PayrollStatus status,
+            int page,
+            int size) {
+        Page<PayrollEntity> result = springDataPayrollRepository
+                .findPageByFilters(ruleSystemCode, payrollPeriodCode, employeeNumber, status, PageRequest.of(page, size));
+        return new PayrollSearchPage(
+                result.getContent().stream().map(this::toDomain).toList(),
+                page,
+                size,
+                result.getTotalElements());
     }
 
     @Override

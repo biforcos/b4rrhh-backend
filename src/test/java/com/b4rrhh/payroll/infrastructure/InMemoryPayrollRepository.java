@@ -3,6 +3,7 @@ package com.b4rrhh.payroll.infrastructure;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
+import com.b4rrhh.payroll.domain.port.PayrollSearchPage;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -54,13 +55,17 @@ public class InMemoryPayrollRepository implements PayrollRepository {
     }
 
     @Override
-    public List<Payroll> findByFilters(String ruleSystemCode, String payrollPeriodCode, String employeeNumber, PayrollStatus status) {
-        return storage.values().stream()
+    public PayrollSearchPage findPageByFilters(
+            String ruleSystemCode, String payrollPeriodCode, String employeeNumber, PayrollStatus status,
+            int page, int size) {
+        List<Payroll> all = storage.values().stream()
                 .filter(p -> ruleSystemCode == null || Objects.equals(p.getRuleSystemCode(), ruleSystemCode))
                 .filter(p -> payrollPeriodCode == null || Objects.equals(p.getPayrollPeriodCode(), payrollPeriodCode))
                 .filter(p -> employeeNumber == null || Objects.equals(p.getEmployeeNumber(), employeeNumber))
                 .filter(p -> status == null || Objects.equals(p.getStatus(), status))
                 .toList();
+        List<Payroll> slice = all.stream().skip((long) page * size).limit(size).toList();
+        return new PayrollSearchPage(slice, page, size, all.size());
     }
 
     @Override

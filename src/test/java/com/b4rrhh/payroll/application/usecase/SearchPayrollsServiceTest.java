@@ -3,6 +3,7 @@ package com.b4rrhh.payroll.application.usecase;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
 import com.b4rrhh.payroll.domain.port.PayrollRepository;
+import com.b4rrhh.payroll.domain.port.PayrollSearchPage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,35 +33,26 @@ class SearchPayrollsServiceTest {
     }
 
     @Test
-    void returnsMatchingPayrollsForPeriodFilter() {
+    void returnsTheRepositoryPageWithItsTotal() {
         Payroll payroll = minimalPayroll("MAS000001", "202604", PayrollStatus.CALCULATED);
-        when(payrollRepository.findByFilters(eq(null), eq("202604"), eq(null), eq(null)))
-                .thenReturn(List.of(payroll));
+        when(payrollRepository.findPageByFilters(eq(null), eq("202604"), eq(null), eq(null), eq(0), eq(50)))
+                .thenReturn(new PayrollSearchPage(List.of(payroll), 0, 50, 7908));
 
-        List<Payroll> result = service.search(new SearchPayrollsQuery(null, "202604", null, null));
+        PayrollSearchPage result = service.search(new SearchPayrollsQuery(null, "202604", null, null, 0, 50));
 
-        assertEquals(1, result.size());
-        assertEquals("MAS000001", result.get(0).getEmployeeNumber());
+        assertEquals(1, result.items().size());
+        assertEquals("MAS000001", result.items().get(0).getEmployeeNumber());
+        assertEquals(7908, result.total());
     }
 
     @Test
-    void returnsEmptyListWhenNoMatch() {
-        when(payrollRepository.findByFilters(eq(null), eq("202605"), eq(null), eq(null)))
-                .thenReturn(List.of());
+    void passesAllFiltersAndThePageToRepository() {
+        when(payrollRepository.findPageByFilters("MAS", "202604", "MAS000001", PayrollStatus.CALCULATED, 3, 20))
+                .thenReturn(new PayrollSearchPage(List.of(), 3, 20, 0));
 
-        List<Payroll> result = service.search(new SearchPayrollsQuery(null, "202605", null, null));
+        service.search(new SearchPayrollsQuery("MAS", "202604", "MAS000001", PayrollStatus.CALCULATED, 3, 20));
 
-        assertEquals(0, result.size());
-    }
-
-    @Test
-    void passesAllFiltersToRepository() {
-        when(payrollRepository.findByFilters(eq("MAS"), eq("202604"), eq("MAS000001"), eq(PayrollStatus.CALCULATED)))
-                .thenReturn(List.of());
-
-        service.search(new SearchPayrollsQuery("MAS", "202604", "MAS000001", PayrollStatus.CALCULATED));
-
-        verify(payrollRepository).findByFilters("MAS", "202604", "MAS000001", PayrollStatus.CALCULATED);
+        verify(payrollRepository).findPageByFilters("MAS", "202604", "MAS000001", PayrollStatus.CALCULATED, 3, 20);
     }
 
     private Payroll minimalPayroll(String employeeNumber, String periodCode, PayrollStatus status) {
