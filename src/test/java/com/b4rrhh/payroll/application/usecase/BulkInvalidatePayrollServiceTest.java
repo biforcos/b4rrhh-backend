@@ -1,47 +1,41 @@
 package com.b4rrhh.payroll.application.usecase;
 
+import com.b4rrhh.payroll.application.port.PayrollBulkStatusTransitionPort;
 import com.b4rrhh.payroll.application.port.PayrollLaunchEmployeeContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceContext;
 import com.b4rrhh.payroll.application.port.PayrollLaunchPresenceLookupPort;
-import com.b4rrhh.payroll.domain.model.Payroll;
-import com.b4rrhh.payroll.domain.model.PayrollConcept;
-import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
 import com.b4rrhh.payroll.domain.model.PayrollStatus;
-import com.b4rrhh.payroll.domain.port.PayrollRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.LocalDateTime;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class BulkInvalidatePayrollServiceTest {
 
     @Mock
-    private PayrollRepository payrollRepository;
-    @Mock
     private PayrollLaunchPresenceLookupPort payrollLaunchPresenceLookupPort;
+
+    private final Map<String, PayrollStatus> rows = new HashMap<>();
+    private final RowsTransitions transitions = new RowsTransitions();
 
     private BulkInvalidatePayrollService service;
 
     @BeforeEach
     void setUp() {
         service = new BulkInvalidatePayrollService(
-                payrollRepository, new PayrollBulkTargetExpander(payrollLaunchPresenceLookupPort));
+                transitions, new PayrollBulkTargetExpander(payrollLaunchPresenceLookupPort));
     }
 
     // --- A: SINGLE_EMPLOYEE, existing CALCULATED -> totalInvalidated = 1 ---
@@ -50,9 +44,7 @@ class BulkInvalidatePayrollServiceTest {
     void singleEmployee_calculatedPayroll_isInvalidated() {
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(presence("INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
-                .thenReturn(Optional.of(payroll(1L, "INTERNAL", "EMP001", 1, PayrollStatus.CALCULATED)));
-        when(payrollRepository.save(any(Payroll.class))).thenAnswer(inv -> inv.getArgument(0));
+        rows.put(key("EMP001", 1), PayrollStatus.CALCULATED);
 
         BulkInvalidatePayrollResult result = service.invalidateBulk(command(
                 singleEmployeeSelection("INTERNAL", "EMP001")
@@ -65,10 +57,8 @@ class BulkInvalidatePayrollServiceTest {
         assertEquals(0, result.totalSkippedProtected());
         assertEquals(0, result.totalSkippedNotFound());
 
-        ArgumentCaptor<Payroll> captor = ArgumentCaptor.forClass(Payroll.class);
-        verify(payrollRepository).save(captor.capture());
-        assertEquals(PayrollStatus.NOT_VALID, captor.getValue().getStatus());
-        assertEquals("BULK_INVALIDATION", captor.getValue().getStatusReasonCode());
+        assertEquals(PayrollStatus.NOT_VALID, rows.get(key("EMP001", 1)));
+        assertEquals("BULK_INVALIDATION", transitions.reasonWritten);
     }
 
     // --- B: EMPLOYEE_LIST, multiple payrolls invalidated, totalCandidates reflects expanded units ---
@@ -79,13 +69,9 @@ class BulkInvalidatePayrollServiceTest {
                 .thenReturn(List.of(presence("INTERNAL", "EMP001", 1), presence("INTERNAL", "EMP001", 2)));
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP002"), any(), any()))
                 .thenReturn(List.of(presence("INTERNAL", "EMP002", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
-                .thenReturn(Optional.of(payroll(1L, "INTERNAL", "EMP001", 1, PayrollStatus.CALCULATED)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 2))
-                .thenReturn(Optional.of(payroll(2L, "INTERNAL", "EMP001", 2, PayrollStatus.CALCULATED)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP002", "202501", "NORMAL", 1))
-                .thenReturn(Optional.of(payroll(3L, "INTERNAL", "EMP002", 1, PayrollStatus.CALCULATED)));
-        when(payrollRepository.save(any(Payroll.class))).thenAnswer(inv -> inv.getArgument(0));
+        rows.put(key("EMP001", 1), PayrollStatus.CALCULATED);
+        rows.put(key("EMP001", 2), PayrollStatus.CALCULATED);
+        rows.put(key("EMP002", 1), PayrollStatus.CALCULATED);
 
         BulkInvalidatePayrollResult result = service.invalidateBulk(command(
                 employeeListSelection(List.of(
@@ -115,11 +101,8 @@ class BulkInvalidatePayrollServiceTest {
                 .thenReturn(List.of(presence("INTERNAL", "EMP010", 1)));
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP011"), any(), any()))
                 .thenReturn(List.of(presence("INTERNAL", "EMP011", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP010", "202501", "NORMAL", 1))
-                .thenReturn(Optional.of(payroll(10L, "INTERNAL", "EMP010", 1, PayrollStatus.CALCULATED)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP011", "202501", "NORMAL", 1))
-                .thenReturn(Optional.of(payroll(11L, "INTERNAL", "EMP011", 1, PayrollStatus.CALCULATED)));
-        when(payrollRepository.save(any(Payroll.class))).thenAnswer(inv -> inv.getArgument(0));
+        rows.put(key("EMP010", 1), PayrollStatus.CALCULATED);
+        rows.put(key("EMP011", 1), PayrollStatus.CALCULATED);
 
         BulkInvalidatePayrollResult result = service.invalidateBulk(command(
                 allEmployeesWithPresenceSelection()
@@ -138,8 +121,7 @@ class BulkInvalidatePayrollServiceTest {
     void alreadyNotValidPayroll_isSkipped() {
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(presence("INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
-                .thenReturn(Optional.of(payroll(1L, "INTERNAL", "EMP001", 1, PayrollStatus.NOT_VALID)));
+        rows.put(key("EMP001", 1), PayrollStatus.NOT_VALID);
 
         BulkInvalidatePayrollResult result = service.invalidateBulk(command(
                 singleEmployeeSelection("INTERNAL", "EMP001")
@@ -151,7 +133,7 @@ class BulkInvalidatePayrollServiceTest {
         assertEquals(1, result.totalSkippedAlreadyNotValid());
         assertEquals(0, result.totalSkippedProtected());
         assertEquals(0, result.totalSkippedNotFound());
-        verify(payrollRepository, never()).save(any());
+        assertEquals(0, transitions.moved);
     }
 
     // --- E: EXPLICIT_VALIDATED payroll -> protected, totalSkippedProtected increments ---
@@ -160,8 +142,7 @@ class BulkInvalidatePayrollServiceTest {
     void explicitValidatedPayroll_isProtectedAndSkipped() {
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(presence("INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
-                .thenReturn(Optional.of(payroll(1L, "INTERNAL", "EMP001", 1, PayrollStatus.EXPLICIT_VALIDATED)));
+        rows.put(key("EMP001", 1), PayrollStatus.EXPLICIT_VALIDATED);
 
         BulkInvalidatePayrollResult result = service.invalidateBulk(command(
                 singleEmployeeSelection("INTERNAL", "EMP001")
@@ -173,7 +154,7 @@ class BulkInvalidatePayrollServiceTest {
         assertEquals(0, result.totalSkippedAlreadyNotValid());
         assertEquals(1, result.totalSkippedProtected());
         assertEquals(0, result.totalSkippedNotFound());
-        verify(payrollRepository, never()).save(any());
+        assertEquals(0, transitions.moved);
     }
 
     // --- F: DEFINITIVE payroll -> protected, totalSkippedProtected increments ---
@@ -182,8 +163,7 @@ class BulkInvalidatePayrollServiceTest {
     void definitivePayroll_isProtectedAndSkipped() {
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(presence("INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
-                .thenReturn(Optional.of(payroll(1L, "INTERNAL", "EMP001", 1, PayrollStatus.DEFINITIVE)));
+        rows.put(key("EMP001", 1), PayrollStatus.DEFINITIVE);
 
         BulkInvalidatePayrollResult result = service.invalidateBulk(command(
                 singleEmployeeSelection("INTERNAL", "EMP001")
@@ -192,7 +172,7 @@ class BulkInvalidatePayrollServiceTest {
         assertEquals(0, result.totalInvalidated());
         assertEquals(0, result.totalSkippedAlreadyNotValid());
         assertEquals(1, result.totalSkippedProtected());
-        verify(payrollRepository, never()).save(any());
+        assertEquals(0, transitions.moved);
     }
 
     // --- G: payroll not found for candidate unit -> totalSkippedNotFound increments ---
@@ -201,8 +181,6 @@ class BulkInvalidatePayrollServiceTest {
     void payrollNotFoundForCandidateUnit_countsSkippedNotFound() {
         when(payrollLaunchPresenceLookupPort.findRelevantPresences(eq("ESP"), eq("INTERNAL"), eq("EMP001"), any(), any()))
                 .thenReturn(List.of(presence("INTERNAL", "EMP001", 1)));
-        when(payrollRepository.findByBusinessKey("ESP", "INTERNAL", "EMP001", "202501", "NORMAL", 1))
-                .thenReturn(Optional.empty());
 
         BulkInvalidatePayrollResult result = service.invalidateBulk(command(
                 singleEmployeeSelection("INTERNAL", "EMP001")
@@ -214,7 +192,7 @@ class BulkInvalidatePayrollServiceTest {
         assertEquals(0, result.totalSkippedAlreadyNotValid());
         assertEquals(0, result.totalSkippedProtected());
         assertEquals(1, result.totalSkippedNotFound());
-        verify(payrollRepository, never()).save(any());
+        assertEquals(0, transitions.moved);
     }
 
     // --- mixed: employee with no presences does not contribute to totalCandidates ---
@@ -231,8 +209,7 @@ class BulkInvalidatePayrollServiceTest {
         assertEquals(0, result.totalCandidates());
         assertEquals(0, result.totalFound());
         assertEquals(0, result.totalInvalidated());
-        verify(payrollRepository, never()).findByBusinessKey(any(), any(), any(), any(), any(), any());
-        verify(payrollRepository, never()).save(any());
+        assertEquals(0, transitions.moved);
     }
 
     // --- helpers ---
@@ -269,25 +246,42 @@ class BulkInvalidatePayrollServiceTest {
         return new PayrollLaunchPresenceContext("ESP", employeeTypeCode, employeeNumber, presenceNumber);
     }
 
-    private Payroll payroll(Long id, String employeeTypeCode, String employeeNumber, int presenceNumber, PayrollStatus status) {
-        return Payroll.rehydrate(
-                id,
-                "ESP",
-                employeeTypeCode,
-                employeeNumber,
-                "202501",
-                "NORMAL",
-                presenceNumber,
-                status,
-                null,
-                Instant.parse("2026-01-31T10:00:00Z"),
-                "ENGINE",
-                "1.0",
-                List.of(new PayrollConcept(1, "BASE", "SALARIO_BASE", "Base salary", new BigDecimal("1000.00"), null, null, "EARNING", "202501", 1)),
-                List.of(new PayrollContextSnapshot("PRESENCE", "EMPLOYEE", "{\"presenceNumber\":1}", "{\"companyCode\":\"ES01\"}")),
-                LocalDateTime.now(),
-                LocalDateTime.now()
-        );
+    private static String key(String employeeNumber, int presenceNumber) {
+        return "ESP/INTERNAL/" + employeeNumber + "/202501/NORMAL/" + presenceNumber;
+    }
+
+    /** Las filas de payroll.payroll de este test, y la sentencia unica que las cambia. */
+    private final class RowsTransitions implements PayrollBulkStatusTransitionPort {
+
+        private int moved;
+        private String reasonWritten;
+
+        @Override
+        public Map<PayrollStatus, Integer> moveStatus(
+                String ruleSystemCode,
+                String payrollPeriodCode,
+                String payrollTypeCode,
+                List<PayrollCalculationUnit> units,
+                PayrollStatus from,
+                PayrollStatus to,
+                String statusReasonCode
+        ) {
+            Map<PayrollStatus, Integer> before = new EnumMap<>(PayrollStatus.class);
+            for (PayrollCalculationUnit unit : units) {
+                String k = key(unit.employeeNumber(), unit.presenceNumber());
+                PayrollStatus status = rows.get(k);
+                if (status == null) {
+                    continue;
+                }
+                before.merge(status, 1, Integer::sum);
+                if (status == from) {
+                    rows.put(k, to);
+                    moved++;
+                    reasonWritten = statusReasonCode;
+                }
+            }
+            return before;
+        }
     }
 }
 

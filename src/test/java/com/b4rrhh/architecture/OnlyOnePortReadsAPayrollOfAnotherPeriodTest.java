@@ -69,7 +69,11 @@ class OnlyOnePortReadsAPayrollOfAnotherPeriodTest {
                             + " que no es una lectura de calculo aunque toque la misma tabla",
             "DemoCountsQuery.java",
                     "cuenta filas para la pantalla de la demo: un count(*) sobre la tabla entera, sin"
-                            + " periodo y sin leer ningun importe"));
+                            + " periodo y sin leer ningun importe",
+            "PayrollBulkStatusTransitionAdapter.java",
+                    "el invalidador en masa (backend#150): cambia el estado de los recibos de SU"
+                            + " periodo en una sola sentencia y cuenta cuantos habia en cada estado."
+                            + " No lee ningun importe ni ninguna linea, ni de otro periodo"));
 
     /** El unico puerto por el que un calculo puede leer un recibo de otro periodo. */
     private static final String PUERTO = "PreviousPeriodContributionBaseLookupPort";
