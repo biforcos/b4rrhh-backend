@@ -102,7 +102,6 @@ class EmployeeAgreementContextLookupAdapterTest {
         entity.setEmployeeNumber(employeeNumber);
         entity.setFirstName("Test");
         entity.setLastName1("Employee");
-        entity.setStatus("ACTIVE");
         return entity;
     }
 

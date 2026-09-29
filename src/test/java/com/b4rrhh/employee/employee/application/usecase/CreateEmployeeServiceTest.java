@@ -39,25 +39,12 @@ class CreateEmployeeServiceTest {
         assertEquals("00001", result.getEmployeeNumber());
         assertEquals("Juan", result.getFirstName());
         assertEquals("García", result.getLastName1());
-        assertTrue(result.isActive());
         verify(employeeRepository).save(any());
     }
 
     @Test
-    void setsStatusToActiveOnCreation() {
-        when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber(any(), any(), any()))
-                .thenReturn(Optional.empty());
-        when(employeeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        Employee result = service.create(new CreateEmployeeCommand("ESP", "ORD", "00001", "Juan", "García", null, null));
-
-        assertEquals("ACTIVE", result.getStatus());
-    }
-
-    @Test
     void failsWhenEmployeeWithSameBusinessKeyAlreadyExists() {
-        Employee existing = new Employee(1L, "ESP", "ORD", "00001", "Juan", "García", null, null,
-                "ACTIVE", java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), null);
+        Employee existing = new Employee(1L, "ESP", "ORD", "00001", "Juan", "García", null, null, java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), null);
         when(employeeRepository.findByRuleSystemCodeAndEmployeeTypeCodeAndEmployeeNumber("ESP", "ORD", "00001"))
                 .thenReturn(Optional.of(existing));
 

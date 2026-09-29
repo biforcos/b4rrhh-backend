@@ -99,8 +99,8 @@ class SeniorityIsTheFirstHireAlsoForARehiredEmployeeTest {
     private long insertEmployee(String employeeNumber) {
         jdbcTemplate.update("""
                 insert into employee.employee
-                    (rule_system_code, employee_type_code, employee_number, first_name, last_name_1, status)
-                values ('ESP', 'INTERNAL', ?, 'Nombre', 'Apellido', 'ACTIVE')
+                    (rule_system_code, employee_type_code, employee_number, first_name, last_name_1)
+                values ('ESP', 'INTERNAL', ?, 'Nombre', 'Apellido')
                 """, employeeNumber);
         return jdbcTemplate.queryForObject(
                 "select id from employee.employee where employee_number = ?", Long.class, employeeNumber);

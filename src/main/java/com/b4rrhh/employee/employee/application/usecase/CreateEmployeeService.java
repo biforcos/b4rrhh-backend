@@ -33,7 +33,6 @@ public class CreateEmployeeService implements CreateEmployeeUseCase {
                 command.lastName1(),
                 command.lastName2(),
                 command.preferredName(),
-                "ACTIVE", // status
                 LocalDateTime.now(), // createdAt
                 LocalDateTime.now(),  // updatedAt
                 null // photoUrl

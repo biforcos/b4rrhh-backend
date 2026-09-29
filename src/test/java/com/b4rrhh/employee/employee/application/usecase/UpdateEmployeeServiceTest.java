@@ -46,8 +46,7 @@ class UpdateEmployeeServiceTest {
                 "Ana",
                 "Lopez",
                 null,
-                null,
-                "ACTIVE"
+                null
         );
 
         when(ruleSystemRepository.findByCode("ESP")).thenReturn(Optional.of(ruleSystem("ESP")));
@@ -101,8 +100,7 @@ class UpdateEmployeeServiceTest {
                 "Ana",
                 "Lopez",
                 null,
-                null,
-                "ACTIVE"
+                null
         );
 
         when(ruleSystemRepository.findByCode("ESP")).thenReturn(Optional.of(ruleSystem("ESP")));
@@ -127,7 +125,6 @@ class UpdateEmployeeServiceTest {
         assertEquals("ESP", saved.getRuleSystemCode());
         assertEquals("INTERNAL", saved.getEmployeeTypeCode());
         assertEquals("EMP009", saved.getEmployeeNumber());
-        assertEquals("ACTIVE", saved.getStatus());
                 assertEquals(11L, saved.getId());
     }
 
@@ -139,8 +136,7 @@ class UpdateEmployeeServiceTest {
             String firstName,
             String lastName1,
             String lastName2,
-            String preferredName,
-            String status
+            String preferredName
     ) {
         return new Employee(
                 id,
@@ -151,7 +147,6 @@ class UpdateEmployeeServiceTest {
                 lastName1,
                 lastName2,
                 preferredName,
-                status,
                 LocalDateTime.now().minusDays(1),
                 LocalDateTime.now().minusDays(1),
                 null

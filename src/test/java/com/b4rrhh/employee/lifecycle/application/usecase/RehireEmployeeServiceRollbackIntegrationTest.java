@@ -85,18 +85,17 @@ class RehireEmployeeServiceRollbackIntegrationTest {
     @BeforeEach
     void setUpDatos() {
         jdbcTemplate.update(
-                "insert into employee.employee (rule_system_code, employee_type_code, employee_number, first_name, last_name_1, status, created_at, updated_at) values (?, ?, ?, ?, ?, ?, current_timestamp, current_timestamp)",
+                "insert into employee.employee (rule_system_code, employee_type_code, employee_number, first_name, last_name_1, created_at, updated_at) values (?, ?, ?, ?, ?, current_timestamp, current_timestamp)",
                 "ESP",
                 "INTERNAL",
                 "EMP001",
                 "Ana",
-                "Lopez",
-                "TERMINATED"
+                "Lopez"
         );
     }
 
     @Test
-    void rollsBackEmployeeStatusWhenWorkingTimeCreationFailsAfterRehire() {
+    void rollsBackThePresenceWhenWorkingTimeCreationFailsAfterIt() {
         RehireEmployeeCommand command = new RehireEmployeeCommand(
                 "ESP",
                 "INTERNAL",
@@ -115,15 +114,18 @@ class RehireEmployeeServiceRollbackIntegrationTest {
 
             assertThrows(RehireEmployeeBusinessValidationException.class, () -> service.rehire(command));
 
-        String persistedStatus = jdbcTemplate.queryForObject(
-                "select status from employee.employee where rule_system_code = ? and employee_type_code = ? and employee_number = ?",
-                String.class,
+        // La readmision ya no graba un estado en el empleado (b4rrhh/backend#148): lo que tiene que
+        // deshacer es la presencia, que se escribe de verdad antes de que reviente la jornada.
+        Integer presences = jdbcTemplate.queryForObject(
+                "select count(*) from employee.presence p join employee.employee e on e.id = p.employee_id"
+                        + " where e.rule_system_code = ? and e.employee_type_code = ? and e.employee_number = ?",
+                Integer.class,
                 "ESP",
                 "INTERNAL",
                 "EMP001"
         );
 
-        assertEquals("TERMINATED", persistedStatus);
+        assertEquals(0, presences);
     }
 
     @TestConfiguration
@@ -270,9 +272,22 @@ class RehireEmployeeServiceRollbackIntegrationTest {
                     ));
                 }
 
+        /** Escribe la presencia de verdad: es la escritura que el rollback tiene que deshacer. */
         @Bean
-        CreatePresenceUseCase createPresenceUseCase() {
-            return command -> new Presence(
+        CreatePresenceUseCase createPresenceUseCase(JdbcTemplate jdbcTemplate) {
+            return command -> {
+                jdbcTemplate.update(
+                        "insert into employee.presence (employee_id, presence_number, company_code, entry_reason_code,"
+                                + " start_date, created_at, updated_at)"
+                                + " select id, 2, ?, ?, ?, current_timestamp, current_timestamp from employee.employee"
+                                + " where rule_system_code = 'ESP' and employee_type_code = 'INTERNAL' and employee_number = 'EMP001'",
+                        command.companyCode(), command.entryReasonCode(), command.startDate());
+                return createdPresence(command);
+            };
+        }
+
+        private static Presence createdPresence(CreatePresenceCommand command) {
+            return new Presence(
                     11L,
                     100L,
                     2,

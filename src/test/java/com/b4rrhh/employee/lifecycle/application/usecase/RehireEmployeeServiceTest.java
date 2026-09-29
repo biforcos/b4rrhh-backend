@@ -14,7 +14,6 @@ import com.b4rrhh.employee.employee.application.service.EmployeeTypeCatalogValid
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
 import com.b4rrhh.employee.employee.domain.model.Employee;
 import com.b4rrhh.employee.employee.domain.exception.EmployeeTypeInvalidException;
-import com.b4rrhh.employee.employee.domain.port.EmployeeRepository;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import com.b4rrhh.employee.labor_classification.application.command.CreateLaborClassificationCommand;
@@ -83,8 +82,6 @@ class RehireEmployeeServiceTest {
     @Mock
     private GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase;
     @Mock
-    private EmployeeRepository employeeRepository;
-    @Mock
     private ListEmployeePresencesUseCase listEmployeePresencesUseCase;
     @Mock
     private ListEmployeeContractsUseCase listEmployeeContractsUseCase;
@@ -135,7 +132,6 @@ class RehireEmployeeServiceTest {
 
         service = new RehireEmployeeService(
                 getEmployeeByBusinessKeyUseCase,
-                employeeRepository,
                 listEmployeePresencesUseCase,
                 listEmployeeContractsUseCase,
                 listEmployeeLaborClassificationsUseCase,
@@ -177,7 +173,7 @@ class RehireEmployeeServiceTest {
         WorkingTime newWorkingTime = activeWorkingTime(2, LocalDate.of(2026, 4, 15), new BigDecimal("80"));
 
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(employee("TERMINATED")));
+                .thenReturn(Optional.of(employee()));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(closedPresence), List.of(newPresence));
         when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
@@ -193,7 +189,6 @@ class RehireEmployeeServiceTest {
         when(createContractUseCase.create(any(CreateContractCommand.class))).thenReturn(newContract);
         when(createWorkCenterUseCase.create(any(CreateWorkCenterCommand.class))).thenReturn(newWorkCenter);
         when(createWorkingTimeUseCase.create(any(CreateWorkingTimeCommand.class))).thenReturn(newWorkingTime);
-        when(employeeRepository.save(any(Employee.class))).thenReturn(employee("ACTIVE"));
 
         RehireEmployeeResult result = service.rehire(command);
 
@@ -290,7 +285,7 @@ class RehireEmployeeServiceTest {
         Presence newPresence = activePresence(LocalDate.of(2026, 4, 15));
 
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(employee("TERMINATED")));
+                .thenReturn(Optional.of(employee()));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(closedPresence), List.of(newPresence));
         when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
@@ -307,7 +302,6 @@ class RehireEmployeeServiceTest {
                 .thenThrow(new InvalidWorkingTimePercentageException("workingTimePercentage must be greater than 0 and less than or equal to 100"));
 
         assertThrows(RehireEmployeeBusinessValidationException.class, () -> service.rehire(validCommand()));
-        verify(employeeRepository, never()).save(any(Employee.class));
     }
 
     /**
@@ -325,7 +319,7 @@ class RehireEmployeeServiceTest {
         Presence newPresence = activePresence(LocalDate.of(2026, 4, 15));
 
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(employee("TERMINATED")));
+                .thenReturn(Optional.of(employee()));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(closedPresence), List.of(newPresence));
         when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
@@ -345,7 +339,6 @@ class RehireEmployeeServiceTest {
                         new WorkingTimePeriod(LocalDate.of(2026, 4, 15), null)));
 
         assertThrows(RehireEmployeeBusinessValidationException.class, () -> service.rehire(validCommand()));
-        verify(employeeRepository, never()).save(any(Employee.class));
     }
 
     @Test
@@ -360,7 +353,7 @@ class RehireEmployeeServiceTest {
     @Test
     void mapsInvalidEmployeeTypeToLifecycleException() {
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(employee("TERMINATED")));
+                .thenReturn(Optional.of(employee()));
         when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
                 .thenReturn(Optional.of("ES01"));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
@@ -382,7 +375,7 @@ class RehireEmployeeServiceTest {
     @Test
     void failsFastWhenWorkCenterDoesNotBelongToCompany() {
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(employee("TERMINATED")));
+                .thenReturn(Optional.of(employee()));
         when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
                 .thenReturn(Optional.of("OTHER"));
 
@@ -391,32 +384,11 @@ class RehireEmployeeServiceTest {
     }
 
     @Test
-    void failsIfActivePresenceAlreadyExists() {
-        when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
-                .thenReturn(Optional.of("ES01"));
-        when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(employee("TERMINATED")));
-        when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(List.of(activePresence(LocalDate.of(2026, 4, 15))));
-        when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
-                .thenReturn(List.of(activeContract(LocalDate.of(2026, 4, 15))));
-        when(listEmployeeLaborClassificationsUseCase.listByEmployeeBusinessKey(any(ListEmployeeLaborClassificationsCommand.class)))
-                .thenReturn(List.of(activeLabor(LocalDate.of(2026, 4, 15))));
-        when(listEmployeeWorkCentersUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(List.of(activeWorkCenter(LocalDate.of(2026, 4, 15))));
-        when(listEmployeeWorkingTimesUseCase.listByEmployeeBusinessKey(any(ListEmployeeWorkingTimesCommand.class)))
-                .thenReturn(List.of(activeWorkingTime(2, LocalDate.of(2026, 4, 15), new BigDecimal("80"))));
-
-        assertThrows(RehireEmployeeConflictException.class, () -> service.rehire(validCommand()));
-        verify(createPresenceUseCase, never()).create(any(CreatePresenceCommand.class));
-    }
-
-    @Test
     void failsIfNoPreviousClosedPresenceExists() {
         when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
                 .thenReturn(Optional.of("ES01"));
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(employee("TERMINATED")));
+                .thenReturn(Optional.of(employee()));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of());
         when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
@@ -436,7 +408,7 @@ class RehireEmployeeServiceTest {
                 .thenReturn(Optional.of("ES01"));
         // Same-day terminate + rehire must be rejected
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(employee("TERMINATED")));
+                .thenReturn(Optional.of(employee()));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(closedPresence(LocalDate.of(2026, 4, 15))));
         when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
@@ -464,7 +436,7 @@ class RehireEmployeeServiceTest {
                 .thenReturn(Optional.of("ES01"));
 
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(employee("TERMINATED")));
+                .thenReturn(Optional.of(employee()));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(closedPresence(LocalDate.of(2026, 3, 31))));
         when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
@@ -485,7 +457,7 @@ class RehireEmployeeServiceTest {
                 .thenReturn(Optional.of("ES01"));
 
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(employee("ACTIVE")));
+                .thenReturn(Optional.of(employee()));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(activePresence));
         when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
@@ -505,7 +477,6 @@ class RehireEmployeeServiceTest {
         assertNotNull(result.newWorkingTime());
         assertEquals(0, new BigDecimal("80").compareTo(result.newWorkingTime().workingTimePercentage()));
         verify(createPresenceUseCase, never()).create(any(CreatePresenceCommand.class));
-        verify(employeeRepository, never()).save(any(Employee.class));
     }
 
     @Test
@@ -513,7 +484,7 @@ class RehireEmployeeServiceTest {
         when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
                 .thenReturn(Optional.of("ES01"));
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(employee("ACTIVE")));
+                .thenReturn(Optional.of(employee()));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(activePresence(LocalDate.of(2026, 4, 15))));
         when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
@@ -562,7 +533,7 @@ class RehireEmployeeServiceTest {
         );
 
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(employee("TERMINATED")));
+                .thenReturn(Optional.of(employee()));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(firstCycleClosed, secondCycleClosed), List.of(thirdCycleActive));
         when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
@@ -595,7 +566,6 @@ class RehireEmployeeServiceTest {
         ));
         when(createWorkingTimeUseCase.create(any(CreateWorkingTimeCommand.class)))
                 .thenReturn(activeWorkingTime(3, LocalDate.of(2026, 6, 1), new BigDecimal("80")));
-        when(employeeRepository.save(any(Employee.class))).thenReturn(employee("ACTIVE"));
 
         RehireEmployeeResult result = service.rehire(command);
 
@@ -630,7 +600,7 @@ class RehireEmployeeServiceTest {
         );
 
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(employee("TERMINATED")));
+                .thenReturn(Optional.of(employee()));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(olderClosed, latestClosed));
         when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
@@ -673,7 +643,7 @@ class RehireEmployeeServiceTest {
         );
 
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(employee("TERMINATED")));
+                .thenReturn(Optional.of(employee()));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(closedPresence), List.of(newPresence));
         when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
@@ -689,7 +659,6 @@ class RehireEmployeeServiceTest {
         when(createCostCenterDistributionUseCase.create(any(CreateCostCenterDistributionCommand.class))).thenReturn(costCenterWindow);
         when(createWorkingTimeUseCase.create(any(CreateWorkingTimeCommand.class)))
                 .thenReturn(activeWorkingTime(2, LocalDate.of(2026, 4, 15), new BigDecimal("80")));
-        when(employeeRepository.save(any(Employee.class))).thenReturn(employee("ACTIVE"));
 
         RehireEmployeeResult result = service.rehire(command);
 
@@ -725,7 +694,7 @@ class RehireEmployeeServiceTest {
         Presence closedPresence = closedPresence(LocalDate.of(2026, 3, 31));
 
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(employee("TERMINATED")));
+                .thenReturn(Optional.of(employee()));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(closedPresence));
         when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
@@ -745,14 +714,14 @@ class RehireEmployeeServiceTest {
     }
 
     @Test
-    void activatesEmployeeUsingDomainBehaviorRatherThanManualReconstruction() {
+    void answersWithTheStatusReadFromThePresencesAndWritesNoStatus() {
         Presence closedPresence = closedPresence(LocalDate.of(2026, 3, 31));
         Presence newPresence = activePresence(LocalDate.of(2026, 4, 15));
         when(workCenterCompanyLookupPort.findCompanyCode("ESP", "MADRID_01", LocalDate.of(2026, 4, 15)))
                 .thenReturn(Optional.of("ES01"));
 
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(employee("TERMINATED")));
+                .thenReturn(Optional.of(employee()));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(closedPresence), List.of(newPresence));
         when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
@@ -765,16 +734,13 @@ class RehireEmployeeServiceTest {
         when(createLaborClassificationUseCase.create(any(CreateLaborClassificationCommand.class))).thenReturn(activeLabor(LocalDate.of(2026, 4, 15)));
         when(createContractUseCase.create(any(CreateContractCommand.class))).thenReturn(activeContract(LocalDate.of(2026, 4, 15)));
         when(createWorkCenterUseCase.create(any(CreateWorkCenterCommand.class))).thenReturn(activeWorkCenter(LocalDate.of(2026, 4, 15)));
-        when(employeeRepository.save(any(Employee.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         RehireEmployeeResult result = service.rehire(validCommand());
 
-        ArgumentCaptor<Employee> employeeCaptor = ArgumentCaptor.forClass(Employee.class);
-        verify(employeeRepository).save(employeeCaptor.capture());
-        assertEquals("ACTIVE", employeeCaptor.getValue().getStatus());
-        assertEquals(Long.valueOf(100L), employeeCaptor.getValue().getId());
-        assertEquals("ESP", employeeCaptor.getValue().getRuleSystemCode());
+        // No hay estado que grabar (b4rrhh/backend#148): sale de las presencias, y la nueva empieza
+        // el 15/04, antes de hoy.
         assertEquals("ACTIVE", result.status());
+        assertEquals("ESP", result.ruleSystemCode());
     }
 
     @Test
@@ -796,7 +762,7 @@ class RehireEmployeeServiceTest {
         Presence closedPresence = closedPresence(LocalDate.of(2026, 3, 31));
 
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(employee("TERMINATED")));
+                .thenReturn(Optional.of(employee()));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(closedPresence));
         when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
@@ -829,7 +795,7 @@ class RehireEmployeeServiceTest {
         Presence closedPresence = closedPresence(LocalDate.of(2026, 3, 31));
 
         when(getEmployeeByBusinessKeyUseCase.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
-                .thenReturn(Optional.of(employee("TERMINATED")));
+                .thenReturn(Optional.of(employee()));
         when(listEmployeePresencesUseCase.listByEmployeeBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(List.of(closedPresence));
         when(listEmployeeContractsUseCase.listByEmployeeBusinessKey(any(ListEmployeeContractsCommand.class)))
@@ -869,7 +835,7 @@ class RehireEmployeeServiceTest {
                 return new RehireEmployeeCommand.RehireEmployeeWorkingTimeCommand(percentage);
         }
 
-    private Employee employee(String status) {
+    private Employee employee() {
         return new Employee(
                 100L,
                 "ESP",
@@ -879,7 +845,6 @@ class RehireEmployeeServiceTest {
                 "Lopez",
                 null,
                 "Ani",
-                status,
                 LocalDateTime.now(),
                 LocalDateTime.now(),
                 null

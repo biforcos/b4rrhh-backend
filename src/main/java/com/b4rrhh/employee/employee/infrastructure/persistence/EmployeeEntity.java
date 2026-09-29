@@ -32,9 +32,6 @@ public class EmployeeEntity {
     @Column(name = "preferred_name")
     private String preferredName;
 
-    @Column(name = "status", nullable = false)
-    private String status;
-
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -122,14 +119,6 @@ public class EmployeeEntity {
 
     public void setPreferredName(String preferredName) {
         this.preferredName = preferredName;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
     }
 
     public LocalDateTime getCreatedAt() {

@@ -8,7 +8,7 @@ class EmployeePhotoTest {
 
     private Employee employeeWithNoPhoto() {
         return new Employee(1L, "ESP", "EMP", "00001",
-                "Juan", "García", null, null, "ACTIVE",
+                "Juan", "García", null, null,
                 null, LocalDateTime.now(), null);
     }
 

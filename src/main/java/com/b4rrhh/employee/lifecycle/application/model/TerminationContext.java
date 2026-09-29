@@ -9,7 +9,6 @@ import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
 import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Objects;
 
 public class TerminationContext {
@@ -95,23 +94,6 @@ public class TerminationContext {
         if (closedPresence == null) {
             throw new TerminateEmployeeConflictException("No active presence found for employee");
         }
-    }
-
-    public Employee terminatedEmployee() {
-        return new Employee(
-                employee.getId(),
-                employee.getRuleSystemCode(),
-                employee.getEmployeeTypeCode(),
-                employee.getEmployeeNumber(),
-                employee.getFirstName(),
-                employee.getLastName1(),
-                employee.getLastName2(),
-                employee.getPreferredName(),
-                "TERMINATED",
-                employee.getCreatedAt(),
-                LocalDateTime.now(),
-                employee.getPhotoUrl()
-        );
     }
 
     public TerminateEmployeeResult toResult(String status) {

@@ -45,7 +45,6 @@ class GetEmployeeByBusinessKeyServiceTest {
                 "Perez",
                 null,
                 null,
-                "ACTIVE",
                 LocalDateTime.now(),
                 LocalDateTime.now(),
                 null

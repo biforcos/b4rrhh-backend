@@ -74,9 +74,13 @@ public class TerminationPreConditionValidator {
                 .orElseThrow(() -> new TerminateEmployeeEmployeeNotFoundException(
                         ruleSystemCode, employeeTypeCode, employeeNumber));
 
-        if (employee.isTerminated()) {
+        // Ya cesado es no tener presencia abierta, y no una columna que lo diga (b4rrhh/backend#148).
+        // Sin ninguna presencia no hay cese que repetir: sigue y lo rechaza la poscondicion.
+        List<Presence> presences = listPresences
+                .listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber);
+        if (!presences.isEmpty() && presences.stream().noneMatch(Presence::isActive)) {
             return buildIdempotentContext(ruleSystemCode, employeeTypeCode, employeeNumber,
-                    terminationDate, exitReasonCode, employee);
+                    terminationDate, exitReasonCode, employee, presences);
         }
 
         return new TerminationContext(ruleSystemCode, employeeTypeCode, employeeNumber,
@@ -89,10 +93,9 @@ public class TerminationPreConditionValidator {
             String employeeNumber,
             LocalDate terminationDate,
             String exitReasonCode,
-            Employee employee) {
+            Employee employee,
+            List<Presence> presences) {
 
-        List<Presence> presences = listPresences
-                .listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber);
         Presence closedPresence = presences.stream()
                 .filter(p -> terminationDate.equals(p.getEndDate())
                         && exitReasonCode.equals(p.getExitReasonCode()))

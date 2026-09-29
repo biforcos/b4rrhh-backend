@@ -58,7 +58,6 @@ public class EmployeePersistenceAdapter implements EmployeeRepository {
                 entity.getLastName1(),
                 entity.getLastName2(),
                 entity.getPreferredName(),
-                entity.getStatus(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt(),
                 entity.getPhotoUrl()
@@ -75,7 +74,6 @@ public class EmployeePersistenceAdapter implements EmployeeRepository {
         entity.setLastName1(employee.getLastName1());
         entity.setLastName2(employee.getLastName2());
         entity.setPreferredName(employee.getPreferredName());
-        entity.setStatus(employee.getStatus());
         entity.setCreatedAt(employee.getCreatedAt());
         entity.setUpdatedAt(employee.getUpdatedAt());
         entity.setPhotoUrl(employee.getPhotoUrl());

@@ -101,7 +101,7 @@ class TerminationPreConditionValidatorTest {
 
     @Test
     void returnsActiveContextWhenEmployeeIsActive() {
-        Employee active = activeEmployee();
+        Employee active = employee();
         when(getEmployeeByBusinessKey.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(active));
 
@@ -116,7 +116,7 @@ class TerminationPreConditionValidatorTest {
 
     @Test
     void normalizesInputsToUpperCase() {
-        Employee active = activeEmployee();
+        Employee active = employee();
         when(getEmployeeByBusinessKey.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(active));
 
@@ -131,7 +131,7 @@ class TerminationPreConditionValidatorTest {
 
     @Test
     void returnsIdempotentContextWhenEmployeeAlreadyTerminated() {
-        Employee terminated = terminatedEmployee();
+        Employee terminated = employee();
         when(getEmployeeByBusinessKey.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(terminated));
 
@@ -167,7 +167,7 @@ class TerminationPreConditionValidatorTest {
 
     @Test
     void idempotentContextFiltersRecordsByTerminationDate() {
-        Employee terminated = terminatedEmployee();
+        Employee terminated = employee();
         when(getEmployeeByBusinessKey.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(terminated));
 
@@ -188,7 +188,7 @@ class TerminationPreConditionValidatorTest {
 
     @Test
     void idempotentContextExcludesPresenceWithWrongExitReasonCode() {
-        Employee terminated = terminatedEmployee();
+        Employee terminated = employee();
         when(getEmployeeByBusinessKey.getByBusinessKey("ESP", "INTERNAL", "EMP001"))
                 .thenReturn(Optional.of(terminated));
 
@@ -215,16 +215,11 @@ class TerminationPreConditionValidatorTest {
         return new TerminateEmployeeCommand(rs, et, en, TERMINATION_DATE, "VOL");
     }
 
-    private Employee activeEmployee() {
+    /** El empleado ya no lleva estado: si esta cesado lo dicen sus presencias (b4rrhh/backend#148). */
+    private Employee employee() {
         return new Employee(1L, "ESP", "INTERNAL", "EMP001",
                 "Ana", "Lopez", null, null,
-                "ACTIVE", NOW, NOW, null);
-    }
-
-    private Employee terminatedEmployee() {
-        return new Employee(1L, "ESP", "INTERNAL", "EMP001",
-                "Ana", "Lopez", null, null,
-                "TERMINATED", NOW, NOW, null);
+                NOW, NOW, null);
     }
 
     private Presence closedPresence(int number, LocalDate endDate, String exitReason) {

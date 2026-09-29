@@ -124,13 +124,12 @@ class PayrollLaunchPresenceLookupAdapterIntegrationTest {
         }
 
         jdbcTemplate.update(
-                "insert into employee.employee (rule_system_code, employee_type_code, employee_number, first_name, last_name_1, status) values (?, ?, ?, ?, ?, ?)",
+                "insert into employee.employee (rule_system_code, employee_type_code, employee_number, first_name, last_name_1) values (?, ?, ?, ?, ?)",
                 "ESP",
                 "INTERNAL",
                 employeeNumber,
                 "Name",
-                "Surname",
-                "ACTIVE"
+                "Surname"
         );
 
         return jdbcTemplate.queryForObject("select max(id) from employee.employee", Long.class);

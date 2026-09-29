@@ -35,7 +35,7 @@ class CloseOpenAbsenceAtTerminationServiceTest {
 
     private Employee employee() {
         return new Employee(1L, "ESP", "INTERNAL", "EMP001",
-            "Ana", "Lopez", null, null, "ACTIVE",
+            "Ana", "Lopez", null, null,
             LocalDateTime.now(), LocalDateTime.now(), null);
     }
 

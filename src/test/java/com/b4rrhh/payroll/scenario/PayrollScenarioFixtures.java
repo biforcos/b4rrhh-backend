@@ -177,9 +177,9 @@ public class PayrollScenarioFixtures {
     public long insertEmployee(String ruleSystemCode, String employeeTypeCode, String employeeNumber) {
         jdbc.update(
                 "insert into employee.employee" +
-                " (rule_system_code, employee_type_code, employee_number, first_name, last_name_1, status, created_at, updated_at)" +
-                " values (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                ruleSystemCode, employeeTypeCode, employeeNumber, "Test", "Employee", "ACTIVE");
+                " (rule_system_code, employee_type_code, employee_number, first_name, last_name_1, created_at, updated_at)" +
+                " values (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                ruleSystemCode, employeeTypeCode, employeeNumber, "Test", "Employee");
         return jdbc.queryForObject(
                 "select id from employee.employee where rule_system_code = ? and employee_type_code = ? and employee_number = ?",
                 Long.class, ruleSystemCode, employeeTypeCode, employeeNumber);

@@ -74,7 +74,6 @@ class EmployeeBusinessKeyControllerHttpTest {
                         "Garcia",
                         "Perez",
                         "Ali",
-                        "ACTIVE",
                         LocalDateTime.now(),
                         LocalDateTime.now(),
                         null

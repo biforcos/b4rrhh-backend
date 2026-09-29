@@ -81,17 +81,15 @@ class CreateWorkingTimeRealAgreementFlywayIntegrationTest {
                     employee_number,
                     first_name,
                     last_name_1,
-                    status,
                     created_at,
                     updated_at
-                ) values (?, ?, ?, ?, ?, ?, current_timestamp, current_timestamp)
+                ) values (?, ?, ?, ?, ?, current_timestamp, current_timestamp)
                 """,
                 RULE_SYSTEM_CODE,
                 EMPLOYEE_TYPE_CODE,
                 employeeNumber,
                 "Real",
-                "Agreement",
-                "ACTIVE"
+                "Agreement"
         );
 
         return jdbcTemplate.queryForObject(

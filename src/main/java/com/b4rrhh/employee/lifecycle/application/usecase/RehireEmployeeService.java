@@ -24,7 +24,6 @@ import com.b4rrhh.employee.employee.domain.exception.EmployeeTypeInvalidExceptio
 import com.b4rrhh.employee.employee.domain.model.Employee;
 import com.b4rrhh.employee.presence.domain.model.EmployeeStanding;
 import com.b4rrhh.employee.presence.domain.model.PresencePeriod;
-import com.b4rrhh.employee.employee.domain.port.EmployeeRepository;
 import com.b4rrhh.employee.labor_classification.application.command.CreateLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.command.ListEmployeeLaborClassificationsCommand;
 import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationUseCase;
@@ -91,7 +90,6 @@ import java.util.stream.Collectors;
 public class RehireEmployeeService implements RehireEmployeeUseCase {
 
     private final GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase;
-    private final EmployeeRepository employeeRepository;
     private final ListEmployeePresencesUseCase listEmployeePresencesUseCase;
     private final ListEmployeeContractsUseCase listEmployeeContractsUseCase;
     private final ListEmployeeLaborClassificationsUseCase listEmployeeLaborClassificationsUseCase;
@@ -110,7 +108,6 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
 
     public RehireEmployeeService(
             GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase,
-            EmployeeRepository employeeRepository,
             ListEmployeePresencesUseCase listEmployeePresencesUseCase,
             ListEmployeeContractsUseCase listEmployeeContractsUseCase,
             ListEmployeeLaborClassificationsUseCase listEmployeeLaborClassificationsUseCase,
@@ -128,7 +125,6 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
             RehireIdentifierGuard rehireIdentifierGuard
     ) {
         this.getEmployeeByBusinessKeyUseCase = getEmployeeByBusinessKeyUseCase;
-        this.employeeRepository = employeeRepository;
         this.listEmployeePresencesUseCase = listEmployeePresencesUseCase;
         this.listEmployeeContractsUseCase = listEmployeeContractsUseCase;
         this.listEmployeeLaborClassificationsUseCase = listEmployeeLaborClassificationsUseCase;
@@ -215,12 +211,6 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                     workCenterHistory,
                     workingTimeHistory,
                     workingTime.workingTimePercentage()
-            );
-        }
-
-        if (!employee.isTerminated()) {
-            throw new RehireEmployeeConflictException(
-                    "Employee has no active presence but status is not TERMINATED"
             );
         }
 
@@ -371,8 +361,6 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
             throw new RehireEmployeeConflictException(ex.getMessage(), ex);
         }
 
-        Employee activeEmployee = employeeRepository.save(employee.activate());
-
         long activePresenceCountAfterRehire = listEmployeePresencesUseCase
                 .listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber)
                 .stream()
@@ -386,11 +374,11 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
         }
 
         return new RehireEmployeeResult(
-                activeEmployee.getRuleSystemCode(),
-                activeEmployee.getEmployeeTypeCode(),
-                activeEmployee.getEmployeeNumber(),
+                employee.getRuleSystemCode(),
+                employee.getEmployeeTypeCode(),
+                employee.getEmployeeNumber(),
                 rehireDate,
-                statusToday(activeEmployee),
+                statusToday(employee),
                 createdPresence.getPresenceNumber(),
                 createdPresence.getCompanyCode(),
                 createdPresence.getEntryReasonCode(),
@@ -437,10 +425,6 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                 List<WorkingTime> workingTimeHistory,
                 java.math.BigDecimal workingTimePercentage
     ) {
-        if (!employee.isActive()) {
-            throw new RehireEmployeeConflictException("Active presence exists but employee status is not ACTIVE");
-        }
-
         Presence activePresence = requireExactlyOneActive("presence", activePresences, presence -> true);
         if (!rehireDate.equals(activePresence.getStartDate())) {
             throw new RehireEmployeeConflictException("Existing active presence startDate is not equivalent to rehireDate");

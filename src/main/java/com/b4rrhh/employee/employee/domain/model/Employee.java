@@ -2,6 +2,11 @@ package com.b4rrhh.employee.employee.domain.model;
 
 import java.time.LocalDateTime;
 
+/**
+ * La identidad del empleado. No lleva estado: si esta de alta o de baja se lee de sus presencias
+ * en la fecha que se pregunte (b4rrhh/backend#148), y un estado guardado mentia entre el dia que
+ * se grababa el cese y el dia que se cumplia.
+ */
 public class Employee {
 
     private final Long id;
@@ -12,7 +17,6 @@ public class Employee {
     private final String lastName1;
     private final String lastName2;
     private final String preferredName;
-    private final String status;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
     private final String photoUrl;
@@ -26,7 +30,6 @@ public class Employee {
             String lastName1,
             String lastName2,
             String preferredName,
-            String status,
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
             String photoUrl
@@ -39,7 +42,6 @@ public class Employee {
         this.lastName1 = lastName1;
         this.lastName2 = lastName2;
         this.preferredName = preferredName;
-        this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.photoUrl = photoUrl;
@@ -53,22 +55,13 @@ public class Employee {
     public String getLastName1() { return lastName1; }
     public String getLastName2() { return lastName2; }
     public String getPreferredName() { return preferredName; }
-    public String getStatus() { return status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public String getPhotoUrl() { return photoUrl; }
 
-    public boolean isActive() {
-        return EmployeeStatus.ACTIVE.matches(status);
-    }
-
-    public boolean isTerminated() {
-        return EmployeeStatus.TERMINATED.matches(status);
-    }
-
     public Employee withPhotoUrl(String photoUrl) {
         return new Employee(id, ruleSystemCode, employeeTypeCode, employeeNumber,
-                firstName, lastName1, lastName2, preferredName, status,
+                firstName, lastName1, lastName2, preferredName,
                 createdAt, updatedAt, photoUrl);
     }
 
@@ -76,16 +69,10 @@ public class Employee {
         return withPhotoUrl(null);
     }
 
-    public Employee activate() {
-        return new Employee(id, ruleSystemCode, employeeTypeCode, employeeNumber,
-                firstName, lastName1, lastName2, preferredName,
-                EmployeeStatus.ACTIVE.name(), createdAt, LocalDateTime.now(), photoUrl);
-    }
-
     public Employee updateIdentityFields(
             String firstName, String lastName1, String lastName2, String preferredName) {
         return new Employee(id, ruleSystemCode, employeeTypeCode, employeeNumber,
-                firstName, lastName1, lastName2, preferredName, status,
+                firstName, lastName1, lastName2, preferredName,
                 createdAt, LocalDateTime.now(), photoUrl);
     }
 }

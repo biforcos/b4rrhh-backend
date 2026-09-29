@@ -39,7 +39,7 @@ class EmployeeCoreParticipantTest {
     void createsEmployeeFromContextAndStoresResult() {
         HireContext ctx = validContext();
         Employee employee = new Employee(
-                100L, "ESP", "INTERNAL", "EMP000001", "Ana", "Lopez", null, "Ani", "ACTIVE",
+                100L, "ESP", "INTERNAL", "EMP000001", "Ana", "Lopez", null, "Ani",
                 LocalDateTime.now(), LocalDateTime.now(), null
         );
         when(createEmployeeUseCase.create(any(CreateEmployeeCommand.class))).thenReturn(employee);

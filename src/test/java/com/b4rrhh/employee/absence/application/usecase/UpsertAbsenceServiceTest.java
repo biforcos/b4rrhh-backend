@@ -59,19 +59,12 @@ class UpsertAbsenceServiceTest {
                 "Sick", null, true, LocalDate.of(2000, 1, 1), null, NOW, NOW);
     }
 
-    private Employee activeEmployee() {
+    private Employee employee() {
         // Employee(id, ruleSystemCode, employeeTypeCode, employeeNumber,
         //          firstName, lastName1, lastName2, preferredName,
-        //          status, createdAt, updatedAt, photoUrl)
+        //          createdAt, updatedAt, photoUrl)
         return new Employee(42L, RULE_SYSTEM, EMP_TYPE, EMP_NUMBER,
-                "John", "Doe", null, null,
-                "ACTIVE", NOW, NOW, null);
-    }
-
-    private Employee inactiveEmployee() {
-        return new Employee(42L, RULE_SYSTEM, EMP_TYPE, EMP_NUMBER,
-                "John", "Doe", null, null,
-                "TERMINATED", NOW, NOW, null);
+                "John", "Doe", null, null, NOW, NOW, null);
     }
 
     /** A presence that covers all of May 2026 (open-ended). */
@@ -115,11 +108,15 @@ class UpsertAbsenceServiceTest {
     }
 
     @Test
-    void throwsWhenEmployeeNotActive() {
+    void throwsWhenTheEmployeeIsTerminatedOnThoseDates() {
         when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM, "EMPLOYEE_ABSENCE_TYPE", ABSENCE_TYPE))
                 .thenReturn(Optional.of(activeRuleEntity()));
         when(getEmployee.getByBusinessKey(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER))
-                .thenReturn(Optional.of(inactiveEmployee()));
+                .thenReturn(Optional.of(employee()));
+        // Cesado el 13/05: el estado ya no es una columna, lo dicen las presencias (b4rrhh/backend#148).
+        when(listPresences.listByEmployeeBusinessKey(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER))
+                .thenReturn(List.of(new Presence(1L, 42L, 1, "B4", "HIRE", "RESIGNATION",
+                        MAY_1, LocalDate.of(2026, 5, 13), NOW, NOW)));
 
         UpsertAbsenceCommand cmd = commandFor(MAY_14, MAY_18);
 
@@ -132,7 +129,7 @@ class UpsertAbsenceServiceTest {
         when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM, "EMPLOYEE_ABSENCE_TYPE", ABSENCE_TYPE))
                 .thenReturn(Optional.of(activeRuleEntity()));
         when(getEmployee.getByBusinessKey(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER))
-                .thenReturn(Optional.of(activeEmployee()));
+                .thenReturn(Optional.of(employee()));
         // Presence covers only May 1–13, not May 14
         Presence oldPresence = new Presence(1L, 42L, 1, "B4", "HIRE", "RESIGNATION",
                 MAY_1, LocalDate.of(2026, 5, 13), NOW, NOW);
@@ -149,7 +146,7 @@ class UpsertAbsenceServiceTest {
         when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM, "EMPLOYEE_ABSENCE_TYPE", ABSENCE_TYPE))
                 .thenReturn(Optional.of(activeRuleEntity()));
         when(getEmployee.getByBusinessKey(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER))
-                .thenReturn(Optional.of(activeEmployee()));
+                .thenReturn(Optional.of(employee()));
         // Presence covers May 1–15; endDate May 18 is outside
         Presence shortPresence = new Presence(1L, 42L, 1, "B4", "HIRE", null,
                 MAY_1, LocalDate.of(2026, 5, 15), NOW, NOW);
@@ -166,7 +163,7 @@ class UpsertAbsenceServiceTest {
         when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM, "EMPLOYEE_ABSENCE_TYPE", ABSENCE_TYPE))
                 .thenReturn(Optional.of(activeRuleEntity()));
         when(getEmployee.getByBusinessKey(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER))
-                .thenReturn(Optional.of(activeEmployee()));
+                .thenReturn(Optional.of(employee()));
         when(listPresences.listByEmployeeBusinessKey(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER))
                 .thenReturn(List.of(mayPresence()));
 
@@ -182,7 +179,7 @@ class UpsertAbsenceServiceTest {
         when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM, "EMPLOYEE_ABSENCE_TYPE", ABSENCE_TYPE))
                 .thenReturn(Optional.of(activeRuleEntity()));
         when(getEmployee.getByBusinessKey(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER))
-                .thenReturn(Optional.of(activeEmployee()));
+                .thenReturn(Optional.of(employee()));
         when(listPresences.listByEmployeeBusinessKey(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER))
                 .thenReturn(List.of(mayPresence()));
 
@@ -197,7 +194,7 @@ class UpsertAbsenceServiceTest {
         when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM, "EMPLOYEE_ABSENCE_TYPE", ABSENCE_TYPE))
                 .thenReturn(Optional.of(activeRuleEntity()));
         when(getEmployee.getByBusinessKey(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER))
-                .thenReturn(Optional.of(activeEmployee()));
+                .thenReturn(Optional.of(employee()));
         when(listPresences.listByEmployeeBusinessKey(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER))
                 .thenReturn(List.of(mayPresence()));
         // No existing key match → new absence path
@@ -216,7 +213,7 @@ class UpsertAbsenceServiceTest {
         when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM, "EMPLOYEE_ABSENCE_TYPE", ABSENCE_TYPE))
                 .thenReturn(Optional.of(activeRuleEntity()));
         when(getEmployee.getByBusinessKey(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER))
-                .thenReturn(Optional.of(activeEmployee()));
+                .thenReturn(Optional.of(employee()));
         when(listPresences.listByEmployeeBusinessKey(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER))
                 .thenReturn(List.of(mayPresence()));
         when(absenceRepository.findByKey(42L, ABSENCE_TYPE, MAY_14, 480))
@@ -240,7 +237,7 @@ class UpsertAbsenceServiceTest {
         when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM, "EMPLOYEE_ABSENCE_TYPE", ABSENCE_TYPE))
                 .thenReturn(Optional.of(activeRuleEntity()));
         when(getEmployee.getByBusinessKey(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER))
-                .thenReturn(Optional.of(activeEmployee()));
+                .thenReturn(Optional.of(employee()));
         when(listPresences.listByEmployeeBusinessKey(RULE_SYSTEM, EMP_TYPE, EMP_NUMBER))
                 .thenReturn(List.of(mayPresence()));
 

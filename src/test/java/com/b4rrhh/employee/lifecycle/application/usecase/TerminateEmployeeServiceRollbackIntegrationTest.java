@@ -71,22 +71,30 @@ class TerminateEmployeeServiceRollbackIntegrationTest {
     @BeforeEach
     void setUpDatos() {
         jdbcTemplate.update(
-                "insert into employee.employee (rule_system_code, employee_type_code, employee_number, first_name, last_name_1, status, created_at, updated_at) values (?, ?, ?, ?, ?, ?, current_timestamp, current_timestamp)",
-                "ESP", "INTERNAL", "EMP001", "Ana", "Lopez", "ACTIVE");
+                "insert into employee.employee (rule_system_code, employee_type_code, employee_number, first_name, last_name_1, created_at, updated_at) values (?, ?, ?, ?, ?, current_timestamp, current_timestamp)",
+                "ESP", "INTERNAL", "EMP001", "Ana", "Lopez");
+        jdbcTemplate.update(
+                "insert into employee.presence (employee_id, presence_number, company_code, entry_reason_code, start_date, created_at, updated_at)"
+                        + " select id, 1, 'ES01', 'HIRE', date '2026-01-01', current_timestamp, current_timestamp from employee.employee"
+                        + " where rule_system_code = 'ESP' and employee_type_code = 'INTERNAL' and employee_number = 'EMP001'");
     }
 
     @Test
-    void rollsBackWhenParticipantThrowsBeforeEmployeeStatusSave() {
+    void rollsBackThePresenceCloseWhenALaterParticipantThrows() {
         TerminateEmployeeCommand command = new TerminateEmployeeCommand(
                 "ESP", "INTERNAL", "EMP001", LocalDate.of(2026, 3, 31), "VOL");
 
         assertThrows(TerminateEmployeeConflictException.class, () -> service.terminate(command));
 
-        String persistedStatus = jdbcTemplate.queryForObject(
-                "select status from employee.employee where rule_system_code = ? and employee_type_code = ? and employee_number = ?",
-                String.class, "ESP", "INTERNAL", "EMP001");
+        // El cese ya no graba un estado en el empleado (b4rrhh/backend#148). La presencia se cierra
+        // la primera, de verdad, y el participante que revienta despues tiene que deshacerlo.
+        Long openPresences = jdbcTemplate.queryForObject(
+                "select count(*) from employee.presence p join employee.employee e on e.id = p.employee_id"
+                        + " where e.rule_system_code = ? and e.employee_type_code = ? and e.employee_number = ?"
+                        + " and p.end_date is null",
+                Long.class, "ESP", "INTERNAL", "EMP001");
 
-        assertEquals("ACTIVE", persistedStatus);
+        assertEquals(1L, openPresences);
     }
 
     @TestConfiguration
@@ -187,14 +195,24 @@ class TerminateEmployeeServiceRollbackIntegrationTest {
 
         @Bean
         PresenceTerminationParticipant presenceTerminationParticipant(
-                ListEmployeePresencesUseCase listPresences) {
+                ListEmployeePresencesUseCase listPresences, JdbcTemplate jdbcTemplate) {
             return new PresenceTerminationParticipant(
                     listPresences,
-                    command -> new Presence(
+                    command -> closePresence(jdbcTemplate, command.endDate(), command.exitReasonCode(), new Presence(
                             10L, 100L, command.presenceNumber(), "COMP", "HIRE",
                             command.exitReasonCode(),
                             LocalDate.of(2026, 1, 1), command.endDate(),
-                            LocalDateTime.now(), LocalDateTime.now()));
+                            LocalDateTime.now(), LocalDateTime.now())));
+        }
+
+        /** Cierra la presencia de verdad: es la escritura que el rollback tiene que deshacer. */
+        private static Presence closePresence(JdbcTemplate jdbcTemplate, LocalDate endDate, String exitReasonCode, Presence closed) {
+            jdbcTemplate.update(
+                    "update employee.presence set end_date = ?, exit_reason_code = ? where employee_id ="
+                            + " (select id from employee.employee where rule_system_code = 'ESP'"
+                            + " and employee_type_code = 'INTERNAL' and employee_number = 'EMP001')",
+                    endDate, exitReasonCode);
+            return closed;
         }
 
         @Bean

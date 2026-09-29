@@ -35,8 +35,7 @@ class SpringDataEmployeeRepositoryIntegrationTest {
                 "NOMBREX",
                 "APELLIDOY",
                 "APELLIDOZ",
-                "PREFW",
-                "ACTIVE"
+                "PREFW"
         );
 
         insertWorkCenter(employeeId, 1, "MADRID_HQ", LocalDate.now().minusDays(30), null);
@@ -48,8 +47,7 @@ class SpringDataEmployeeRepositoryIntegrationTest {
                 "OTRO",
                 "EMPLEADO",
                 null,
-                null,
-                "INACTIVE"
+                null
         );
 
         assertSingleMatchForQ("NUM123", "NUM123");
@@ -71,8 +69,7 @@ class SpringDataEmployeeRepositoryIntegrationTest {
                 "LIDIA",
                 "MORALES",
                 null,
-                null,
-                "ACTIVE"
+                null
         );
 
         insertPresence(employeeId, 1, LocalDate.now().minusDays(40), null);
@@ -99,7 +96,7 @@ class SpringDataEmployeeRepositoryIntegrationTest {
     @Test
     void totalCountsEveryMatchAndNotJustThePage() {
         for (int i = 1; i <= 45; i++) {
-            insertEmployee("ESP", "INTERNAL", String.format("EMP%03d", i), "NOMBRE", "APELLIDO", null, null, "ACTIVE");
+            insertEmployee("ESP", "INTERNAL", String.format("EMP%03d", i), "NOMBRE", "APELLIDO", null, null);
         }
 
         Page<EmployeeDirectoryProjection> nobody = repository.findDirectoryByFilters(
@@ -126,11 +123,11 @@ class SpringDataEmployeeRepositoryIntegrationTest {
     void totalCarriesTheSameFiltersAsThePage() {
         // El estado sale de las presencias, no de la columna (b4rrhh/backend#148): EMP002 cesó hace
         // diez días y hoy está de baja.
-        insertPresence(insertEmployee("ESP", "INTERNAL", "EMP001", "LIDIA", "MORALES", null, null, "ACTIVE"),
+        insertPresence(insertEmployee("ESP", "INTERNAL", "EMP001", "LIDIA", "MORALES", null, null),
                 1, LocalDate.now().minusDays(40), null);
-        insertPresence(insertEmployee("ESP", "INTERNAL", "EMP002", "LIDIA", "GARCIA", null, null, "INACTIVE"),
+        insertPresence(insertEmployee("ESP", "INTERNAL", "EMP002", "LIDIA", "GARCIA", null, null),
                 1, LocalDate.now().minusDays(40), LocalDate.now().minusDays(10));
-        insertPresence(insertEmployee("ESP", "INTERNAL", "EMP003", "MARTA", "MORALES", null, null, "ACTIVE"),
+        insertPresence(insertEmployee("ESP", "INTERNAL", "EMP003", "MARTA", "MORALES", null, null),
                 1, LocalDate.now().minusDays(40), null);
 
         Page<EmployeeDirectoryProjection> result = repository.findDirectoryByFilters(
@@ -164,8 +161,7 @@ class SpringDataEmployeeRepositoryIntegrationTest {
             String firstName,
             String lastName1,
             String lastName2,
-            String preferredName,
-            String status
+            String preferredName
     ) {
         jdbcTemplate.update(
                 """
@@ -177,10 +173,9 @@ class SpringDataEmployeeRepositoryIntegrationTest {
                             last_name_1,
                             last_name_2,
                             preferred_name,
-                            status,
                             created_at,
                             updated_at
-                        ) values (?, ?, ?, ?, ?, ?, ?, ?, current_timestamp, current_timestamp)
+                        ) values (?, ?, ?, ?, ?, ?, ?, current_timestamp, current_timestamp)
                         """,
                 ruleSystemCode,
                 employeeTypeCode,
@@ -188,8 +183,7 @@ class SpringDataEmployeeRepositoryIntegrationTest {
                 firstName,
                 lastName1,
                 lastName2,
-                preferredName,
-                status
+                preferredName
         );
 
         return jdbcTemplate.queryForObject(

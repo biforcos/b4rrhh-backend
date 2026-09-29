@@ -1,0 +1,21 @@
+-- =========================================================
+-- V163__the_employee_status_is_read_from_the_presences_and_not_stored.sql
+-- El estado del empleado deja de ser una columna (backend#148)
+-- =========================================================
+--
+-- employee.status se escribia en el momento de registrar el cese, no cuando
+-- llegaba su fecha. Con un cese grabado el 28 para el 30, la cabecera decia
+-- «Baja» el 29: un estado guardado que depende de la fecha miente entre el dia
+-- que se graba y el dia que se cumple.
+--
+-- Desde esta version el estado se lee de las presencias en la fecha que se
+-- pregunta (EmployeeStanding, en la vertical presence): alta si una presencia
+-- cubre la fecha —el dia del cese todavia lo es—, baja desde el dia siguiente al
+-- ultimo cese, sin alta antes de la primera. Ni la ficha, ni el directorio, ni
+-- los flujos de alta, cese y readmision leen ya la columna, y nada la escribe.
+--
+-- Se borra en vez de dejarla muerta: una columna que nadie mantiene seguiria
+-- diciendo «TERMINATED» o «ACTIVE» a quien la consulte a mano, y es justo la
+-- mentira que se quita.
+
+alter table employee.employee drop column status;
