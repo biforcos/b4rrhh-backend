@@ -72,8 +72,14 @@ class NoOutputReadsAnythingButDefinitiveTest {
      * esta escrito en la consulta, en {@code SpringDataPayrollRepository}, que es donde el ADR-069 §2
      * dice que tiene que estar; este test no lo ve porque mira el fichero que llama y no el que
      * consulta. Quien vigila esa lectura es el {@code OnlyOnePortReadsAPayrollOfAnotherPeriodTest}.
+     *
+     * <p>{@code year} es el año de un empleado para la tira de la ficha ({@code backend#151}):
+     * <b>una pantalla, no una salida</b>. Lee los recibos de cada mes en todos sus estados porque
+     * lo que pinta es justo eso —abierto si alguno no está cerrado, cerrado si todos son
+     * {@code DEFINITIVE}—, y no se entrega ni se imprime nada de ahí. Lee por el repositorio del
+     * vertical raíz, sin consulta propia sobre la tabla.
      */
-    private static final List<String> NO_SON_SALIDAS = List.of("basesalary", "retro");
+    private static final List<String> NO_SON_SALIDAS = List.of("basesalary", "retro", "year");
 
     /** Carpetas de capa del vertical raiz, que no son verticales. */
     private static final List<String> CAPAS = List.of("application", "domain", "infrastructure");
