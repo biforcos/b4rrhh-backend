@@ -40,7 +40,7 @@ public class ExtraPaymentRegimeExceptionHandler {
 
         return notFound(
                 "EXTRA_PAYMENT_REGIME_NOT_FOUND",
-                "No se ha encontrado el empleado solicitado para el regimen de pagas extras.",
+                ex instanceof ExtraPaymentRegimeEmployeeNotFoundException ? ex.getMessage() : "No se ha encontrado el empleado solicitado para el regimen de pagas extras.",
                 null
         );
     }

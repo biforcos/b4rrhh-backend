@@ -64,10 +64,15 @@ public class UpsertAbsenceService implements UpsertAbsenceUseCase {
                 .orElseThrow(() -> new AbsenceCatalogValueInvalidException("absenceTypeCode", absenceTypeCode));
 
         // 2. Validate employee exists and is ACTIVE
+        // No existir y estar de baja son dos cosas: la primera es un 404 como en toda la ficha y la
+        // segunda un 422, porque la petición está bien y no se puede hacer (b4rrhh/backend#144).
         Employee employee = getEmployee.getByBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber)
-                .filter(Employee::isActive)
                 .orElseThrow(() -> new AbsenceEmployeeNotFoundException(
-                        "Employee not found or not active: " + ruleSystemCode + "/" + employeeTypeCode + "/" + employeeNumber));
+                        "No existe el empleado " + ruleSystemCode + "/" + employeeTypeCode + "/" + employeeNumber + "."));
+        if (!employee.isActive()) {
+            throw new AbsenceOutsidePresencePeriodException(
+                    employeeNumber + " está de baja: una ausencia necesita una presencia en la que caer.");
+        }
 
         Long employeeId = employee.getId();
 

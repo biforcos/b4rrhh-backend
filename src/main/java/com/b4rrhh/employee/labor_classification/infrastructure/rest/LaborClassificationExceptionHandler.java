@@ -43,7 +43,7 @@ public class LaborClassificationExceptionHandler {
 
         return notFound(
                 "LABOR_CLASSIFICATION_NOT_FOUND",
-                "No se ha encontrado el empleado solicitado para clasificación laboral.",
+                ex instanceof LaborClassificationEmployeeNotFoundException ? ex.getMessage() : "No se ha encontrado el empleado solicitado para clasificación laboral.",
                 null
         );
     }

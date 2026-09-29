@@ -123,7 +123,8 @@ class UpsertAbsenceServiceTest {
 
         UpsertAbsenceCommand cmd = commandFor(MAY_14, MAY_18);
 
-        assertThrows(AbsenceEmployeeNotFoundException.class, () -> service.upsert(cmd));
+        // De baja no es «no existe» (b4rrhh/backend#144): es un 422, no un 404.
+        assertThrows(AbsenceOutsidePresencePeriodException.class, () -> service.upsert(cmd));
     }
 
     @Test

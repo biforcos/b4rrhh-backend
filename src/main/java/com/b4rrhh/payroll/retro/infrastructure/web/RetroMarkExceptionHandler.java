@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll.retro.infrastructure.web;
 
+import com.b4rrhh.payroll.retro.domain.exception.RetroMarkEmployeeNotFoundException;
 import com.b4rrhh.payroll.retro.domain.exception.RetroMarkNotActiveException;
 import com.b4rrhh.payroll.retro.domain.exception.RetroMarkNotFoundException;
 import com.b4rrhh.payroll.retro.infrastructure.web.dto.RetroMarkErrorResponse;
@@ -15,6 +16,12 @@ public class RetroMarkExceptionHandler {
     public ResponseEntity<RetroMarkErrorResponse> handleNotFound(RetroMarkNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new RetroMarkErrorResponse("RETRO_MARK_NOT_FOUND", ex.getMessage()));
+    }
+
+    @ExceptionHandler(RetroMarkEmployeeNotFoundException.class)
+    public ResponseEntity<RetroMarkErrorResponse> handleEmployeeNotFound(RetroMarkEmployeeNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new RetroMarkErrorResponse("RETRO_MARK_EMPLOYEE_NOT_FOUND", ex.getMessage()));
     }
 
     @ExceptionHandler(RetroMarkNotActiveException.class)

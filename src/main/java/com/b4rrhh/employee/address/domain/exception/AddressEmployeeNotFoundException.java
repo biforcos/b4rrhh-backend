@@ -7,11 +7,6 @@ public class AddressEmployeeNotFoundException extends RuntimeException {
             String employeeTypeCode,
             String employeeNumber
     ) {
-        super("Employee not found with business key ruleSystemCode="
-                + ruleSystemCode
-                + ", employeeTypeCode="
-                + employeeTypeCode
-                + ", employeeNumber="
-                + employeeNumber);
+        super("No existe el empleado " + ruleSystemCode + "/" + employeeTypeCode + "/" + employeeNumber + ".");
     }
 }

@@ -41,7 +41,7 @@ public class WorkingTimeExceptionHandler {
 
         return notFound(
                 "WORKING_TIME_NOT_FOUND",
-                "No se ha encontrado el empleado solicitado para jornada.",
+                ex instanceof WorkingTimeEmployeeNotFoundException ? ex.getMessage() : "No se ha encontrado el empleado solicitado para jornada.",
                 null
         );
     }

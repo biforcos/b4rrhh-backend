@@ -80,7 +80,7 @@ class JourneyControllerHttpTest {
 
         mockMvc.perform(get("/employees/ESP/INTERNAL/EMP001/journey"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message", containsString("Employee not found")));
+                .andExpect(jsonPath("$.message", containsString("No existe el empleado")));
     }
 
     @Test

@@ -29,7 +29,6 @@ public class AbsenceExceptionHandler {
 
     @ExceptionHandler({
             AbsenceCatalogValueInvalidException.class,
-            AbsenceEmployeeNotFoundException.class,
             AbsenceOutsidePresencePeriodException.class,
             InvalidAbsenceDateRangeException.class
     })
@@ -37,6 +36,14 @@ public class AbsenceExceptionHandler {
         String code = errorCode(ex);
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(new AbsenceErrorResponse(code, ex.getMessage()));
+    }
+
+    // Un empleado que no existe es un 404, como en el resto de la ficha; era un 422 y la
+    // pantalla lo trataba aparte sólo por eso (b4rrhh/backend#144).
+    @ExceptionHandler(AbsenceEmployeeNotFoundException.class)
+    public ResponseEntity<AbsenceErrorResponse> handleEmployeeNotFound(AbsenceEmployeeNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new AbsenceErrorResponse("ABSENCE_EMPLOYEE_NOT_FOUND", ex.getMessage()));
     }
 
     @ExceptionHandler(AbsenceOverlapException.class)
@@ -47,7 +54,6 @@ public class AbsenceExceptionHandler {
 
     private String errorCode(RuntimeException ex) {
         if (ex instanceof AbsenceCatalogValueInvalidException) return "ABSENCE_CATALOG_VALUE_INVALID";
-        if (ex instanceof AbsenceEmployeeNotFoundException)    return "ABSENCE_EMPLOYEE_NOT_FOUND";
         if (ex instanceof AbsenceOutsidePresencePeriodException) return "ABSENCE_OUTSIDE_PRESENCE_PERIOD";
         if (ex instanceof InvalidAbsenceDateRangeException)   return "INVALID_ABSENCE_DATE_RANGE";
         return "UNPROCESSABLE";

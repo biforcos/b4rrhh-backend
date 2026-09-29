@@ -26,8 +26,8 @@ public class ListEmployeeAbsencesService implements ListEmployeeAbsencesUseCase 
                 command.ruleSystemCode(), command.employeeTypeCode(), command.employeeNumber())
             .map(e -> e.getId())
             .orElseThrow(() -> new AbsenceEmployeeNotFoundException(
-                "Employee not found: " + command.ruleSystemCode() + "/" +
-                command.employeeTypeCode() + "/" + command.employeeNumber()));
+                "No existe el empleado " + command.ruleSystemCode() + "/" +
+                command.employeeTypeCode() + "/" + command.employeeNumber() + "."));
         return absenceRepository.findByEmployeeIdOrderByStartDateDescStartTimeDesc(employeeId);
     }
 }

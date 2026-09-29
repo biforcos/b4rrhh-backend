@@ -43,7 +43,7 @@ public class WorkCenterExceptionHandler {
 
         return notFound(
                 "WORK_CENTER_NOT_FOUND",
-                "No se ha encontrado el empleado o el sistema de reglas solicitado.",
+                ex instanceof WorkCenterEmployeeNotFoundException ? ex.getMessage() : "No se ha encontrado el empleado o el sistema de reglas solicitado.",
                 null
         );
     }

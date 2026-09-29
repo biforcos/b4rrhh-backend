@@ -6541,7 +6541,9 @@ paths:
                 items:
                   $ref: '#/components/schemas/AbsenceResponse'
         '404':
-          description: Employee not found
+          description: >-
+            The employee does not exist (`ABSENCE_EMPLOYEE_NOT_FOUND`); it was a 422 until
+            b4rrhh/backend#144. An employee without absences answers 200 with an empty list.
 
   /employees/{ruleSystemCode}/{employeeTypeCode}/{employeeNumber}/absences/{absenceTypeCode}/{startDate}:
     put:
@@ -7175,6 +7177,10 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/RetroMarkResponse'
+        '404':
+          description: >-
+            The employee does not exist (`RETRO_MARK_EMPLOYEE_NOT_FOUND`). An employee without
+            marks answers 200 with an empty list: the two are no longer the same (b4rrhh/backend#144).
 
   /payroll/retro-marks/{id}/discard:
     post:

@@ -7,11 +7,6 @@ public class ExtraPaymentRegimeEmployeeNotFoundException extends RuntimeExceptio
             String employeeTypeCode,
             String employeeNumber
     ) {
-        super("Employee not found for ruleSystemCode="
-                + ruleSystemCode
-                + ", employeeTypeCode="
-                + employeeTypeCode
-                + ", employeeNumber="
-                + employeeNumber);
+        super("No existe el empleado " + ruleSystemCode + "/" + employeeTypeCode + "/" + employeeNumber + ".");
     }
 }

@@ -3,6 +3,8 @@ package com.b4rrhh.payroll.retro.application.usecase;
 import java.util.Set;
 import com.b4rrhh.payroll.retro.domain.model.RetroMarkStatus;
 import com.b4rrhh.payroll.retro.application.port.CeasedPresenceWithoutReceiptsLookupPort;
+import com.b4rrhh.payroll.retro.application.port.RetroMarkEmployeeLookupPort;
+import com.b4rrhh.payroll.retro.domain.exception.RetroMarkEmployeeNotFoundException;
 import com.b4rrhh.payroll.retro.domain.model.RetroMark;
 import com.b4rrhh.payroll.retro.domain.port.RetroMarkRepository;
 import org.springframework.stereotype.Service;
@@ -21,13 +23,16 @@ public class ListEmployeeRetroMarksService implements ListEmployeeRetroMarksUseC
 
     private final RetroMarkRepository marks;
     private final CeasedPresenceWithoutReceiptsLookupPort ceasedPresences;
+    private final RetroMarkEmployeeLookupPort employees;
 
     public ListEmployeeRetroMarksService(
             RetroMarkRepository marks,
-            CeasedPresenceWithoutReceiptsLookupPort ceasedPresences
+            CeasedPresenceWithoutReceiptsLookupPort ceasedPresences,
+            RetroMarkEmployeeLookupPort employees
     ) {
         this.marks = marks;
         this.ceasedPresences = ceasedPresences;
+        this.employees = employees;
     }
 
     @Override
@@ -49,6 +54,10 @@ public class ListEmployeeRetroMarksService implements ListEmployeeRetroMarksUseC
         String rs = command.ruleSystemCode().trim().toUpperCase();
         String tipo = command.employeeTypeCode().trim().toUpperCase();
         String numero = command.employeeNumber().trim();
+        // «No tiene marcas» y «no existe» no son lo mismo, y la ficha los decía igual (b4rrhh/backend#144).
+        if (!employees.exists(rs, tipo, numero)) {
+            throw new RetroMarkEmployeeNotFoundException(rs, tipo, numero);
+        }
         Set<Integer> sinRecibos = ceasedPresences.findPresenceNumbers(rs, tipo, numero);
         return marks.findByEmployee(rs, tipo, numero).stream()
                 .map(m -> new ListedRetroMark(m,

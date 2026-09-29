@@ -7,11 +7,6 @@ public class JourneyEmployeeNotFoundException extends RuntimeException {
             String employeeTypeCode,
             String employeeNumber
     ) {
-        super("Employee not found for journey by business key: ruleSystemCode="
-                + ruleSystemCode
-                + ", employeeTypeCode="
-                + employeeTypeCode
-                + ", employeeNumber="
-                + employeeNumber);
+        super("No existe el empleado " + ruleSystemCode + "/" + employeeTypeCode + "/" + employeeNumber + ".");
     }
 }
