@@ -1,8 +1,8 @@
 package com.b4rrhh.employee.photo.infrastructure.web;
 
-import com.b4rrhh.employee.employee.application.DisplayNameComputationService;
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
 import com.b4rrhh.employee.employee.domain.model.Employee;
+import com.b4rrhh.employee.employee.infrastructure.web.EmployeeResponseAssembler;
 import com.b4rrhh.employee.employee.infrastructure.web.dto.EmployeeResponse;
 import com.b4rrhh.employee.photo.application.usecase.ConfirmEmployeePhotoCommand;
 import com.b4rrhh.employee.photo.application.usecase.ConfirmEmployeePhotoUseCase;
@@ -31,19 +31,19 @@ public class EmployeePhotoController {
     private final ConfirmEmployeePhotoUseCase confirmEmployeePhotoUseCase;
     private final DeleteEmployeePhotoUseCase deleteEmployeePhotoUseCase;
     private final GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase;
-    private final DisplayNameComputationService displayNameComputationService;
+    private final EmployeeResponseAssembler employeeResponseAssembler;
 
     public EmployeePhotoController(
             GeneratePhotoUploadUrlUseCase generatePhotoUploadUrlUseCase,
             ConfirmEmployeePhotoUseCase confirmEmployeePhotoUseCase,
             DeleteEmployeePhotoUseCase deleteEmployeePhotoUseCase,
             GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase,
-            DisplayNameComputationService displayNameComputationService) {
+            EmployeeResponseAssembler employeeResponseAssembler) {
         this.generatePhotoUploadUrlUseCase = generatePhotoUploadUrlUseCase;
         this.confirmEmployeePhotoUseCase = confirmEmployeePhotoUseCase;
         this.deleteEmployeePhotoUseCase = deleteEmployeePhotoUseCase;
         this.getEmployeeByBusinessKeyUseCase = getEmployeeByBusinessKeyUseCase;
-        this.displayNameComputationService = displayNameComputationService;
+        this.employeeResponseAssembler = employeeResponseAssembler;
     }
 
     @PostMapping("/upload-url")
@@ -76,7 +76,7 @@ public class EmployeePhotoController {
                 .getByBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber)
                 .orElseThrow();
 
-        return ResponseEntity.ok(toResponse(employee));
+        return ResponseEntity.ok(employeeResponseAssembler.toResponse(employee));
     }
 
     @DeleteMapping
@@ -90,27 +90,5 @@ public class EmployeePhotoController {
                 new DeleteEmployeePhotoCommand(ruleSystemCode, employeeTypeCode, employeeNumber));
 
         return ResponseEntity.noContent().build();
-    }
-
-    private EmployeeResponse toResponse(Employee employee) {
-        String displayName = displayNameComputationService.compute(
-                employee.getRuleSystemCode(),
-                employee.getFirstName(),
-                employee.getLastName1(),
-                employee.getLastName2(),
-                employee.getPreferredName()
-        );
-        return new EmployeeResponse(
-                employee.getRuleSystemCode(),
-                employee.getEmployeeTypeCode(),
-                employee.getEmployeeNumber(),
-                employee.getFirstName(),
-                employee.getLastName1(),
-                employee.getLastName2(),
-                employee.getPreferredName(),
-                displayName,
-                employee.getStatus(),
-                employee.getPhotoUrl()
-        );
     }
 }

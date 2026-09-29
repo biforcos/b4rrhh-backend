@@ -5,6 +5,8 @@ import com.b4rrhh.employee.contract.application.usecase.ListEmployeeContractsUse
 import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
 import com.b4rrhh.employee.employee.domain.model.Employee;
+import com.b4rrhh.employee.presence.domain.model.EmployeeStanding;
+import com.b4rrhh.employee.presence.domain.model.PresencePeriod;
 import com.b4rrhh.employee.labor_classification.application.command.ListEmployeeLaborClassificationsCommand;
 import com.b4rrhh.employee.labor_classification.application.usecase.ListEmployeeLaborClassificationsUseCase;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
@@ -48,6 +50,13 @@ public class TerminationPreConditionValidator {
         this.listLaborClassifications = listLaborClassifications;
         this.listWorkCenters = listWorkCenters;
         this.listWorkingTimes = listWorkingTimes;
+    }
+
+    private static String statusToday(List<Presence> presences) {
+        return EmployeeStanding.on(LocalDate.now(), presences.stream()
+                        .map(p -> new PresencePeriod(p.getStartDate(), p.getEndDate()))
+                        .toList())
+                .status().name();
     }
 
     public TerminationContext validateAndLookup(TerminateEmployeeCommand command) {
@@ -118,7 +127,7 @@ public class TerminationPreConditionValidator {
 
         TerminateEmployeeResult idempotentResult = new TerminateEmployeeResult(
                 ruleSystemCode, employeeTypeCode, employeeNumber,
-                terminationDate, exitReasonCode, "TERMINATED",
+                terminationDate, exitReasonCode, statusToday(presences),
                 closedPresence != null ? closedPresence.getPresenceNumber() : null,
                 closedPresence != null ? closedPresence.getCompanyCode() : null,
                 closedPresence != null ? closedPresence.getEntryReasonCode() : null,

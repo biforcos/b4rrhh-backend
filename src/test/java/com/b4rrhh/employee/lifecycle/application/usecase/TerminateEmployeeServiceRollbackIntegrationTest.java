@@ -19,6 +19,8 @@ import com.b4rrhh.employee.lifecycle.application.port.TerminationParticipant;
 import com.b4rrhh.employee.lifecycle.application.service.TerminationPreConditionValidator;
 import com.b4rrhh.employee.lifecycle.domain.exception.TerminateEmployeeConflictException;
 import com.b4rrhh.employee.presence.application.usecase.ListEmployeePresencesUseCase;
+import com.b4rrhh.employee.presence.application.usecase.GetEmployeeStandingUseCase;
+import com.b4rrhh.employee.presence.domain.model.EmployeeStanding;
 import com.b4rrhh.employee.presence.domain.model.Presence;
 import com.b4rrhh.employee.workcenter.application.usecase.ListEmployeeWorkCentersUseCase;
 import com.b4rrhh.employee.working_time.application.usecase.ListEmployeeWorkingTimesUseCase;
@@ -123,6 +125,11 @@ class TerminateEmployeeServiceRollbackIntegrationTest {
         @Bean
         ListEmployeeWorkingTimesUseCase listEmployeeWorkingTimesUseCase() {
             return command -> List.of();
+        }
+
+        @Bean
+        GetEmployeeStandingUseCase getEmployeeStandingUseCase() {
+            return (employeeId, date) -> EmployeeStanding.on(LocalDate.of(2026, 1, 1), List.of());
         }
 
         @Bean

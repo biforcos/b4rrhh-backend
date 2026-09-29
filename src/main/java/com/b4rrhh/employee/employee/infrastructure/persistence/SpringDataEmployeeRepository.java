@@ -47,6 +47,8 @@ public interface SpringDataEmployeeRepository extends JpaRepository<EmployeeEnti
         @Param("employeeNumber") String employeeNumber
     );
 
+    // El estado no es una columna: se lee de las presencias en :today, igual que la ficha, y el
+    // filtro por estado compara contra esa misma expresion (b4rrhh/backend#148).
     @Query(value = """
             select new com.b4rrhh.employee.employee.infrastructure.persistence.EmployeeDirectoryProjection(
                 e.ruleSystemCode,
@@ -56,7 +58,20 @@ public interface SpringDataEmployeeRepository extends JpaRepository<EmployeeEnti
                 e.lastName1,
                 e.lastName2,
                 e.preferredName,
-                e.status,
+                case
+                    when exists (
+                        select 1 from PresenceEntity p
+                        where p.employeeId = e.id
+                          and p.startDate <= :today
+                          and (p.endDate is null or p.endDate >= :today)
+                    ) then 'ACTIVE'
+                    when exists (
+                        select 1 from PresenceEntity p
+                        where p.employeeId = e.id
+                          and p.endDate < :today
+                    ) then 'TERMINATED'
+                    else 'NOT_HIRED'
+                end,
                 (
                     select w.workCenterCode
                     from WorkCenterEntity w
@@ -75,7 +90,22 @@ public interface SpringDataEmployeeRepository extends JpaRepository<EmployeeEnti
             from EmployeeEntity e
             where (:ruleSystemCode is null or e.ruleSystemCode = :ruleSystemCode)
               and (:employeeTypeCode is null or e.employeeTypeCode = :employeeTypeCode)
-              and (:status is null or e.status = :status)
+              and (:status is null or (
+                  case
+                      when exists (
+                          select 1 from PresenceEntity p
+                          where p.employeeId = e.id
+                            and p.startDate <= :today
+                            and (p.endDate is null or p.endDate >= :today)
+                      ) then 'ACTIVE'
+                      when exists (
+                          select 1 from PresenceEntity p
+                          where p.employeeId = e.id
+                            and p.endDate < :today
+                      ) then 'TERMINATED'
+                      else 'NOT_HIRED'
+                  end
+              ) = :status)
               and (
                                         :q is null
                                         or upper(e.employeeNumber) like concat('%', cast(:q as string), '%')
@@ -101,7 +131,22 @@ public interface SpringDataEmployeeRepository extends JpaRepository<EmployeeEnti
             from EmployeeEntity e
             where (:ruleSystemCode is null or e.ruleSystemCode = :ruleSystemCode)
               and (:employeeTypeCode is null or e.employeeTypeCode = :employeeTypeCode)
-              and (:status is null or e.status = :status)
+              and (:status is null or (
+                  case
+                      when exists (
+                          select 1 from PresenceEntity p
+                          where p.employeeId = e.id
+                            and p.startDate <= :today
+                            and (p.endDate is null or p.endDate >= :today)
+                      ) then 'ACTIVE'
+                      when exists (
+                          select 1 from PresenceEntity p
+                          where p.employeeId = e.id
+                            and p.endDate < :today
+                      ) then 'TERMINATED'
+                      else 'NOT_HIRED'
+                  end
+              ) = :status)
               and (
                     :q is null
                     or upper(e.employeeNumber) like concat('%', cast(:q as string), '%')

@@ -75,6 +75,7 @@ class SpringDataEmployeeRepositoryIntegrationTest {
                 "ACTIVE"
         );
 
+        insertPresence(employeeId, 1, LocalDate.now().minusDays(40), null);
         insertWorkCenter(employeeId, 1, "OLD_CENTER", LocalDate.now().minusDays(40), LocalDate.now().minusDays(10));
         insertWorkCenter(employeeId, 2, "MADRID_HQ", LocalDate.now().minusDays(5), null);
 
@@ -123,9 +124,14 @@ class SpringDataEmployeeRepositoryIntegrationTest {
 
     @Test
     void totalCarriesTheSameFiltersAsThePage() {
-        insertEmployee("ESP", "INTERNAL", "EMP001", "LIDIA", "MORALES", null, null, "ACTIVE");
-        insertEmployee("ESP", "INTERNAL", "EMP002", "LIDIA", "GARCIA", null, null, "INACTIVE");
-        insertEmployee("ESP", "INTERNAL", "EMP003", "MARTA", "MORALES", null, null, "ACTIVE");
+        // El estado sale de las presencias, no de la columna (b4rrhh/backend#148): EMP002 cesó hace
+        // diez días y hoy está de baja.
+        insertPresence(insertEmployee("ESP", "INTERNAL", "EMP001", "LIDIA", "MORALES", null, null, "ACTIVE"),
+                1, LocalDate.now().minusDays(40), null);
+        insertPresence(insertEmployee("ESP", "INTERNAL", "EMP002", "LIDIA", "GARCIA", null, null, "INACTIVE"),
+                1, LocalDate.now().minusDays(40), LocalDate.now().minusDays(10));
+        insertPresence(insertEmployee("ESP", "INTERNAL", "EMP003", "MARTA", "MORALES", null, null, "ACTIVE"),
+                1, LocalDate.now().minusDays(40), null);
 
         Page<EmployeeDirectoryProjection> result = repository.findDirectoryByFilters(
                 "LIDIA", null, null, "ACTIVE", LocalDate.now(), PageRequest.of(0, 1)
@@ -192,6 +198,29 @@ class SpringDataEmployeeRepositoryIntegrationTest {
                 ruleSystemCode,
                 employeeTypeCode,
                 employeeNumber
+        );
+    }
+
+    private void insertPresence(Long employeeId, int presenceNumber, LocalDate startDate, LocalDate endDate) {
+        jdbcTemplate.update(
+                """
+                        insert into employee.presence (
+                            employee_id,
+                            presence_number,
+                            company_code,
+                            entry_reason_code,
+                            exit_reason_code,
+                            start_date,
+                            end_date,
+                            created_at,
+                            updated_at
+                        ) values (?, ?, 'ES01', 'HIRE', ?, ?, ?, current_timestamp, current_timestamp)
+                        """,
+                employeeId,
+                presenceNumber,
+                endDate == null ? null : "TERMINATION",
+                startDate,
+                endDate
         );
     }
 

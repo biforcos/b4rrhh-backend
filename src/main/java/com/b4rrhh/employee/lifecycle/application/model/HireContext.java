@@ -3,6 +3,8 @@ package com.b4rrhh.employee.lifecycle.application.model;
 import com.b4rrhh.employee.contract.domain.model.Contract;
 import com.b4rrhh.employee.cost_center.domain.model.CostCenterDistributionWindow;
 import com.b4rrhh.employee.employee.domain.model.Employee;
+import com.b4rrhh.employee.presence.domain.model.EmployeeStanding;
+import com.b4rrhh.employee.presence.domain.model.PresencePeriod;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.presence.domain.model.Presence;
@@ -10,6 +12,7 @@ import com.b4rrhh.employee.working_time.domain.model.WorkingTime;
 import com.b4rrhh.employee.workcenter.domain.model.WorkCenter;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Objects;
 
 public class HireContext {
@@ -139,7 +142,7 @@ public class HireContext {
                         employee.getLastName2(),
                         employee.getPreferredName(),
                         formatDisplayName(employee),
-                        employee.getStatus(),
+                        statusToday(),
                         hireDate
                 ),
                 new HireEmployeeResult.PresenceSummary(
@@ -182,6 +185,13 @@ public class HireContext {
                         workingTimeResult.getEndDate()
                 )
         );
+    }
+
+    /** El alta crea la primera presencia, y el estado de hoy sale de ella: con fecha futura, aún no es alta (b4rrhh/backend#148). */
+    private String statusToday() {
+        return EmployeeStanding.on(LocalDate.now(),
+                        List.of(new PresencePeriod(presence.getStartDate(), presence.getEndDate())))
+                .status().name();
     }
 
     // Note: this bypasses DisplayNameComputationService (per-rule-system format). Known limitation

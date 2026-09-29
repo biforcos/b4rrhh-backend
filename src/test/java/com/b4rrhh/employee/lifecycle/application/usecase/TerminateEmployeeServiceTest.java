@@ -1,6 +1,7 @@
 package com.b4rrhh.employee.lifecycle.application.usecase;
 
 import com.b4rrhh.employee.employee.domain.model.Employee;
+import com.b4rrhh.employee.presence.domain.model.EmployeeStanding;
 import com.b4rrhh.employee.employee.domain.port.EmployeeRepository;
 import com.b4rrhh.employee.lifecycle.application.command.TerminateEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.TerminateEmployeeResult;
@@ -32,7 +33,7 @@ class TerminateEmployeeServiceTest {
 
     @Test
     void callsValidatorThenRunsParticipantsInOrder() {
-        TerminationContext ctx = mock(TerminationContext.class);
+        TerminationContext ctx = context();
         when(validator.validateAndLookup(any())).thenReturn(ctx);
         when(ctx.isAlreadyTerminated()).thenReturn(false);
         when(ctx.terminatedEmployee()).thenReturn(mock(Employee.class));
@@ -49,7 +50,7 @@ class TerminateEmployeeServiceTest {
 
     @Test
     void returnsIdempotentResultWhenAlreadyTerminated() {
-        TerminationContext ctx = mock(TerminationContext.class);
+        TerminationContext ctx = context();
         when(validator.validateAndLookup(any())).thenReturn(ctx);
         when(ctx.isAlreadyTerminated()).thenReturn(true);
         when(ctx.reconstructIdempotentResult()).thenReturn(null);
@@ -62,7 +63,7 @@ class TerminateEmployeeServiceTest {
 
     @Test
     void runsPostConditionCheckAfterParticipants() {
-        TerminationContext ctx = mock(TerminationContext.class);
+        TerminationContext ctx = context();
         when(validator.validateAndLookup(any())).thenReturn(ctx);
         when(ctx.isAlreadyTerminated()).thenReturn(false);
         when(ctx.terminatedEmployee()).thenReturn(mock(Employee.class));
@@ -77,7 +78,7 @@ class TerminateEmployeeServiceTest {
 
     @Test
     void savesTerminatedEmployeeAfterParticipants() {
-        TerminationContext ctx = mock(TerminationContext.class);
+        TerminationContext ctx = context();
         Employee terminatedEmployee = mock(Employee.class);
         when(validator.validateAndLookup(any())).thenReturn(ctx);
         when(ctx.isAlreadyTerminated()).thenReturn(false);
@@ -92,12 +93,12 @@ class TerminateEmployeeServiceTest {
 
     @Test
     void returnsResultFromContext() {
-        TerminationContext ctx = mock(TerminationContext.class);
+        TerminationContext ctx = context();
         TerminateEmployeeResult sentinel = sentinelResult();
         when(validator.validateAndLookup(any())).thenReturn(ctx);
         when(ctx.isAlreadyTerminated()).thenReturn(false);
         when(ctx.terminatedEmployee()).thenReturn(mock(Employee.class));
-        when(ctx.toResult()).thenReturn(sentinel);
+        when(ctx.toResult(any())).thenReturn(sentinel);
 
         TerminateEmployeeResult actual = service(List.of()).terminate(command());
 
@@ -106,8 +107,16 @@ class TerminateEmployeeServiceTest {
 
     // --- helpers ---
 
+    /** El servicio pide el estado de hoy con el id del empleado del contexto (b4rrhh/backend#148). */
+    private TerminationContext context() {
+        TerminationContext ctx = mock(TerminationContext.class);
+        lenient().when(ctx.employee()).thenReturn(mock(Employee.class));
+        return ctx;
+    }
+
     private TerminateEmployeeService service(List<TerminationParticipant> participants) {
-        return new TerminateEmployeeService(validator, participants, employeeRepository);
+        return new TerminateEmployeeService(validator, participants, employeeRepository,
+                (employeeId, date) -> EmployeeStanding.on(LocalDate.of(2026, 3, 1), List.of()));
     }
 
     private TerminateEmployeeCommand command() {

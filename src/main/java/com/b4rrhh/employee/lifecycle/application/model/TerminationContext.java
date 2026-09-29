@@ -114,7 +114,7 @@ public class TerminationContext {
         );
     }
 
-    public TerminateEmployeeResult toResult() {
+    public TerminateEmployeeResult toResult(String status) {
         Objects.requireNonNull(closedPresence, "closedPresence must be set before calling toResult()");
         return new TerminateEmployeeResult(
                 ruleSystemCode,
@@ -122,7 +122,7 @@ public class TerminationContext {
                 employeeNumber,
                 terminationDate,
                 exitReasonCode,
-                "TERMINATED",
+                status,
                 closedPresence.getPresenceNumber(),
                 closedPresence.getCompanyCode(),
                 closedPresence.getEntryReasonCode(),

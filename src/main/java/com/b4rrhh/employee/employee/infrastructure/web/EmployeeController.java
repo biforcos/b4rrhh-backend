@@ -1,6 +1,5 @@
 package com.b4rrhh.employee.employee.infrastructure.web;
 
-import com.b4rrhh.employee.employee.application.DisplayNameComputationService;
 import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeCommand;
 import com.b4rrhh.employee.employee.application.usecase.CreateEmployeeUseCase;
 import com.b4rrhh.employee.employee.application.usecase.ListEmployeesQuery;
@@ -28,16 +27,16 @@ public class EmployeeController {
 
     private final CreateEmployeeUseCase createEmployeeUseCase;
     private final ListEmployeesUseCase listEmployeesUseCase;
-    private final DisplayNameComputationService displayNameComputationService;
+    private final EmployeeResponseAssembler employeeResponseAssembler;
 
     public EmployeeController(
             CreateEmployeeUseCase createEmployeeUseCase,
             ListEmployeesUseCase listEmployeesUseCase,
-            DisplayNameComputationService displayNameComputationService
+            EmployeeResponseAssembler employeeResponseAssembler
     ) {
         this.createEmployeeUseCase = createEmployeeUseCase;
         this.listEmployeesUseCase = listEmployeesUseCase;
-        this.displayNameComputationService = displayNameComputationService;
+        this.employeeResponseAssembler = employeeResponseAssembler;
     }
 
     @GetMapping
@@ -75,29 +74,7 @@ public class EmployeeController {
                 )
         );
 
-        return ResponseEntity.status(201).body(toResponse(createdEmployee));
-    }
-
-    private EmployeeResponse toResponse(Employee employee) {
-        String displayName = displayNameComputationService.compute(
-                employee.getRuleSystemCode(),
-                employee.getFirstName(),
-                employee.getLastName1(),
-                employee.getLastName2(),
-                employee.getPreferredName()
-        );
-        return new EmployeeResponse(
-                employee.getRuleSystemCode(),
-                employee.getEmployeeTypeCode(),
-                employee.getEmployeeNumber(),
-                employee.getFirstName(),
-                employee.getLastName1(),
-                employee.getLastName2(),
-                employee.getPreferredName(),
-                displayName,
-                employee.getStatus(),
-                employee.getPhotoUrl()
-        );
+        return ResponseEntity.status(201).body(employeeResponseAssembler.toResponse(createdEmployee));
     }
 
     private EmployeeDirectoryItemResponse toDirectoryResponse(EmployeeDirectoryItem employee) {

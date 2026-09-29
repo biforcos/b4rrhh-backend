@@ -22,7 +22,8 @@ import com.b4rrhh.employee.employee.application.service.EmployeeTypeCatalogValid
 import com.b4rrhh.employee.employee.application.usecase.GetEmployeeByBusinessKeyUseCase;
 import com.b4rrhh.employee.employee.domain.exception.EmployeeTypeInvalidException;
 import com.b4rrhh.employee.employee.domain.model.Employee;
-import com.b4rrhh.employee.employee.domain.model.EmployeeStatus;
+import com.b4rrhh.employee.presence.domain.model.EmployeeStanding;
+import com.b4rrhh.employee.presence.domain.model.PresencePeriod;
 import com.b4rrhh.employee.employee.domain.port.EmployeeRepository;
 import com.b4rrhh.employee.labor_classification.application.command.CreateLaborClassificationCommand;
 import com.b4rrhh.employee.labor_classification.application.command.ListEmployeeLaborClassificationsCommand;
@@ -389,7 +390,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                 activeEmployee.getEmployeeTypeCode(),
                 activeEmployee.getEmployeeNumber(),
                 rehireDate,
-                activeEmployee.getStatus(),
+                statusToday(activeEmployee),
                 createdPresence.getPresenceNumber(),
                 createdPresence.getCompanyCode(),
                 createdPresence.getEntryReasonCode(),
@@ -407,6 +408,16 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                 toWorkingTimeSummary(createdWorkingTime),
                 true
         );
+    }
+
+    /** El estado de hoy, leído de las presencias: una readmisión a futuro deja al empleado de baja hasta su fecha (b4rrhh/backend#148). */
+    private String statusToday(Employee employee) {
+        List<PresencePeriod> periods = listEmployeePresencesUseCase
+                .listByEmployeeBusinessKey(employee.getRuleSystemCode(), employee.getEmployeeTypeCode(), employee.getEmployeeNumber())
+                .stream()
+                .map(presence -> new PresencePeriod(presence.getStartDate(), presence.getEndDate()))
+                .toList();
+        return EmployeeStanding.on(LocalDate.now(), periods).status().name();
     }
 
     private RehireEmployeeResult resolveIdempotentOrConflict(
@@ -497,7 +508,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
                 employee.getEmployeeTypeCode(),
                 employee.getEmployeeNumber(),
                 rehireDate,
-                EmployeeStatus.ACTIVE.name(),
+                statusToday(employee),
                 activePresence.getPresenceNumber(),
                 activePresence.getCompanyCode(),
                 activePresence.getEntryReasonCode(),

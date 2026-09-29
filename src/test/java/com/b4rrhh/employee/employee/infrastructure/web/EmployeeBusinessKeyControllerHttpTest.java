@@ -8,6 +8,7 @@ import com.b4rrhh.employee.employee.application.usecase.UpdateEmployeeCommand;
 import com.b4rrhh.employee.employee.application.usecase.UpdateEmployeeUseCase;
 import com.b4rrhh.employee.employee.domain.exception.EmployeeNotFoundException;
 import com.b4rrhh.employee.employee.domain.model.Employee;
+import com.b4rrhh.employee.presence.domain.model.EmployeeStanding;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -40,8 +42,9 @@ class EmployeeBusinessKeyControllerHttpTest {
     @Mock
     private UpdateEmployeeUseCase updateEmployeeUseCase;
 
-    private final DisplayNameComputationService displayNameComputationService =
-            new DisplayNameComputationService(ruleSystemCode -> java.util.Optional.empty());
+    private final EmployeeResponseAssembler employeeResponseAssembler = new EmployeeResponseAssembler(
+            new DisplayNameComputationService(ruleSystemCode -> java.util.Optional.empty()),
+            (employeeId, date) -> EmployeeStanding.on(LocalDate.of(2026, 1, 1), java.util.List.of()));
 
     private MockMvc mockMvc;
 
@@ -51,7 +54,7 @@ class EmployeeBusinessKeyControllerHttpTest {
                 getEmployeeByBusinessKeyUseCase,
                 deleteEmployeeByBusinessKeyUseCase,
                 updateEmployeeUseCase,
-                displayNameComputationService
+                employeeResponseAssembler
         );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)

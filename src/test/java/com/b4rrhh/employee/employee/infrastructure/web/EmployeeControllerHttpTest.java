@@ -6,6 +6,7 @@ import com.b4rrhh.employee.employee.application.usecase.ListEmployeesQuery;
 import com.b4rrhh.employee.employee.application.usecase.ListEmployeesUseCase;
 import com.b4rrhh.employee.employee.domain.model.EmployeeDirectoryItem;
 import com.b4rrhh.employee.employee.domain.model.EmployeeDirectoryPage;
+import com.b4rrhh.employee.presence.domain.model.EmployeeStanding;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,9 +38,10 @@ class EmployeeControllerHttpTest {
 
     @BeforeEach
     void setUp() {
-        DisplayNameComputationService displayNameComputationService =
-                new DisplayNameComputationService(ruleSystemCode -> java.util.Optional.empty());
-        EmployeeController controller = new EmployeeController(createEmployeeUseCase, listEmployeesUseCase, displayNameComputationService);
+        EmployeeResponseAssembler employeeResponseAssembler = new EmployeeResponseAssembler(
+                new DisplayNameComputationService(ruleSystemCode -> java.util.Optional.empty()),
+                (employeeId, date) -> EmployeeStanding.on(java.time.LocalDate.of(2026, 1, 1), List.of()));
+        EmployeeController controller = new EmployeeController(createEmployeeUseCase, listEmployeesUseCase, employeeResponseAssembler);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new EmployeeExceptionHandler())
                 .build();
