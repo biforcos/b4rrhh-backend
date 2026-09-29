@@ -68,7 +68,7 @@ class BulkInvalidatePayrollServiceTest {
         ArgumentCaptor<Payroll> captor = ArgumentCaptor.forClass(Payroll.class);
         verify(payrollRepository).save(captor.capture());
         assertEquals(PayrollStatus.NOT_VALID, captor.getValue().getStatus());
-        assertEquals("BULK_RESET", captor.getValue().getStatusReasonCode());
+        assertEquals("BULK_INVALIDATION", captor.getValue().getStatusReasonCode());
     }
 
     // --- B: EMPLOYEE_LIST, multiple payrolls invalidated, totalCandidates reflects expanded units ---
@@ -238,7 +238,7 @@ class BulkInvalidatePayrollServiceTest {
     // --- helpers ---
 
     private BulkInvalidatePayrollCommand command(PayrollLaunchTargetSelection targetSelection) {
-        return new BulkInvalidatePayrollCommand("ESP", "202501", "NORMAL", "BULK_RESET", targetSelection);
+        return new BulkInvalidatePayrollCommand("ESP", "202501", "NORMAL", targetSelection);
     }
 
     private PayrollLaunchTargetSelection singleEmployeeSelection(String employeeTypeCode, String employeeNumber) {

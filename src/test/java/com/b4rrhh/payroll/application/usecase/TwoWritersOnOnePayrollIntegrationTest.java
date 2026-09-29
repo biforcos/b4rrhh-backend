@@ -585,6 +585,6 @@ class TwoWritersOnOnePayrollIntegrationTest {
 
     private void invalidate(String employee) {
         invalidatePayrollUseCase.invalidate(new InvalidatePayrollCommand(
-                RULE_SYSTEM, EMPLOYEE_TYPE, employee, PERIOD, PAYROLL_TYPE, 1, "TEST"));
+                RULE_SYSTEM, EMPLOYEE_TYPE, employee, PERIOD, PAYROLL_TYPE, 1));
     }
 }

@@ -4,7 +4,6 @@ public record BulkInvalidatePayrollCommand(
         String ruleSystemCode,
         String payrollPeriodCode,
         String payrollTypeCode,
-        String statusReasonCode,
         PayrollLaunchTargetSelection targetSelection
 ) {
 }

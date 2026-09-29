@@ -6,7 +6,6 @@ public record InvalidatePayrollCommand(
         String employeeNumber,
         String payrollPeriodCode,
         String payrollTypeCode,
-        Integer presenceNumber,
-        String statusReasonCode
+        Integer presenceNumber
 ) {
 }

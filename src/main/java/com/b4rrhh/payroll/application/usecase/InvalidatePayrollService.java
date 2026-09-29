@@ -10,6 +10,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class InvalidatePayrollService implements InvalidatePayrollUseCase {
 
+    // Como en BulkInvalidatePayrollService: el camino, no un texto libre (backend#150).
+    static final String STATUS_REASON_CODE = "MANUAL_INVALIDATION";
+
     private final PayrollRepository payrollRepository;
 
     public InvalidatePayrollService(PayrollRepository payrollRepository) {
@@ -43,7 +46,7 @@ public class InvalidatePayrollService implements InvalidatePayrollUseCase {
                         presenceNumber
                 ));
 
-        Payroll invalidated = existing.invalidate(command.statusReasonCode());
+        Payroll invalidated = existing.invalidate(STATUS_REASON_CODE);
         return payrollRepository.save(invalidated);
     }
 

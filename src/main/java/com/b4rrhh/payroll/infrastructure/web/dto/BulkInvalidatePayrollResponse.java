@@ -9,7 +9,6 @@ public record BulkInvalidatePayrollResponse(
         int totalInvalidated,
         int totalSkippedAlreadyNotValid,
         int totalSkippedProtected,
-        int totalSkippedNotFound,
-        String statusReasonCode
+        int totalSkippedNotFound
 ) {
 }

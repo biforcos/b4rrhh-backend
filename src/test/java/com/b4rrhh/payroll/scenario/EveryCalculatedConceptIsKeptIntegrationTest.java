@@ -377,7 +377,7 @@ class EveryCalculatedConceptIsKeptIntegrationTest {
 
         // Un recibo CALCULATED no se recalcula: primero se invalida, que es el camino de verdad.
         assertEquals(1, invalidate.invalidateBulk(new BulkInvalidatePayrollCommand(
-                RULE_SYSTEM, PERIOD, PAYROLL_TYPE, "TEST",
+                RULE_SYSTEM, PERIOD, PAYROLL_TYPE,
                 new PayrollLaunchTargetSelection(
                         PayrollLaunchTargetSelectionType.SINGLE_EMPLOYEE,
                         new PayrollLaunchEmployeeTarget(EMPLOYEE_TYPE, emp),

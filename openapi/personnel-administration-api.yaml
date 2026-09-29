@@ -5175,6 +5175,10 @@ paths:
     post:
       tags: [Payroll]
       operationId: invalidatePayroll
+      description: >-
+        Invalidates one payroll. There is no reason to give (b4rrhh/backend#150): the free text
+        that used to be asked for was stored and never read. The payroll keeps
+        `MANUAL_INVALIDATION` as its statusReasonCode, which says which path invalidated it.
       parameters:
         - name: ruleSystemCode
           in: path
@@ -5200,12 +5204,6 @@ paths:
           in: path
           required: true
           schema: { type: integer }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/InvalidatePayrollRequest"
       responses:
         "200":
           description: Payroll invalidated
@@ -5428,7 +5426,9 @@ paths:
         units. Protected payrolls (EXPLICIT_VALIDATED or DEFINITIVE) are skipped and counted
         separately. Already NOT_VALID payrolls are also skipped without error. targetSelection
         semantics mirror those of the payroll launch endpoint. totalCandidates represents expanded
-        presence-based units, not the raw number of target employees.
+        presence-based units, not the raw number of target employees. There is no reason to give
+        (b4rrhh/backend#150): every invalidated payroll keeps `BULK_INVALIDATION` as its
+        statusReasonCode.
       tags:
         - Payroll
       requestBody:
@@ -7944,8 +7944,8 @@ components:
         Request for the bulk close workflow. targetSelection semantics mirror those of the payroll
         launch endpoint. For ALL_EMPLOYEES_WITH_PRESENCE_IN_PERIOD, both employee and employees
         must be null. There is no statusReasonCode: closing does not give a reason, it keeps the
-        one the payroll already had. Invalidation does ask for one, because invalidating is a
-        decision about something that was fine.
+        one the payroll already had. Invalidation does not ask for one either (b4rrhh/backend#150):
+        it records which path invalidated the payroll, never a free text.
       required:
         - ruleSystemCode
         - payrollPeriodCode
@@ -8037,7 +8037,6 @@ components:
         - ruleSystemCode
         - payrollPeriodCode
         - payrollTypeCode
-        - statusReasonCode
         - targetSelection
       properties:
         ruleSystemCode:
@@ -8049,10 +8048,6 @@ components:
         payrollTypeCode:
           type: string
           enum: [NORMAL, EXTRA]
-        statusReasonCode:
-          description: >-
-            Reason code applied to all invalidated payrolls.
-          type: string
         targetSelection:
           $ref: "#/components/schemas/PayrollLaunchTargetSelectionRequest"
 
@@ -8072,7 +8067,6 @@ components:
         - totalSkippedAlreadyNotValid
         - totalSkippedProtected
         - totalSkippedNotFound
-        - statusReasonCode
       properties:
         ruleSystemCode:
           type: string
@@ -8111,10 +8105,6 @@ components:
             Candidate units for which no payroll row was found in persistence.
           type: integer
           format: int32
-        statusReasonCode:
-          description: >-
-            Status reason code applied to all invalidated payrolls.
-          type: string
 
     HireEmployeeRequest:
       type: object
@@ -12381,13 +12371,6 @@ components:
         annualHours:
           type: string
         agreementCategoryCode:
-          type: string
-    InvalidatePayrollRequest:
-      type: object
-      required:
-        - statusReasonCode
-      properties:
-        statusReasonCode:
           type: string
     PayrollCalculationStepResponse:
       type: object

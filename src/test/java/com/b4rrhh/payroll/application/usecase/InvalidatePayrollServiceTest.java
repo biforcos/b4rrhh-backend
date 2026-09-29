@@ -52,13 +52,12 @@ class InvalidatePayrollServiceTest {
                 "EMP001",
                 "202501",
                 "NORMAL",
-                1,
-                "USER_INVALIDATED"
+                1
         ));
 
         assertEquals(7L, invalidated.getId());
         assertEquals(PayrollStatus.NOT_VALID, invalidated.getStatus());
-        assertEquals("USER_INVALIDATED", invalidated.getStatusReasonCode());
+        assertEquals("MANUAL_INVALIDATION", invalidated.getStatusReasonCode());
         verify(payrollRepository).save(any(Payroll.class));
         verify(payrollRepository, never()).deleteById(any());
         verify(payrollRepository, never()).flush();
@@ -75,8 +74,7 @@ class InvalidatePayrollServiceTest {
                 "EMP001",
                 "202501",
                 "NORMAL",
-                1,
-                "USER_INVALIDATED"
+                1
         )));
     }
 
@@ -91,8 +89,7 @@ class InvalidatePayrollServiceTest {
                 "EMP001",
                 "202501",
                 "NORMAL",
-                1,
-                "USER_INVALIDATED"
+                1
         )));
     }
 

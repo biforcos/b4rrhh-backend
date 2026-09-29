@@ -128,7 +128,7 @@ class BulkCloseAndBulkInvalidateKnowEachOtherIntegrationTest {
         // --- Criterio 4: el invalidador masivo del mismo periodo ---
         BulkInvalidatePayrollResult invalidacion = bulkInvalidatePayrollUseCase.invalidateBulk(
                 new BulkInvalidatePayrollCommand(
-                        ruleSystem, PERIOD, PAYROLL_TYPE, "BULK_RESET", todoElPeriodo()));
+                        ruleSystem, PERIOD, PAYROLL_TYPE, todoElPeriodo()));
 
         assertEquals(4, invalidacion.totalCandidates());
         assertEquals(0, invalidacion.totalInvalidated(), "no queda nada invalidable");
@@ -192,7 +192,7 @@ class BulkCloseAndBulkInvalidateKnowEachOtherIntegrationTest {
 
     private void invalidate(String employee) {
         invalidatePayrollUseCase.invalidate(new InvalidatePayrollCommand(
-                ruleSystem, EMPLOYEE_TYPE, employee, PERIOD, PAYROLL_TYPE, 1, "TEST"));
+                ruleSystem, EMPLOYEE_TYPE, employee, PERIOD, PAYROLL_TYPE, 1));
     }
 
     private void finalizeOne(String employee) {

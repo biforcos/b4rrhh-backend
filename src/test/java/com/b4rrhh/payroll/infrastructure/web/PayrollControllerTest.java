@@ -24,7 +24,6 @@ import com.b4rrhh.payroll.infrastructure.web.assembler.PayrollResponseAssembler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.b4rrhh.payroll.infrastructure.web.dto.BulkInvalidatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.BulkInvalidatePayrollResponse;
-import com.b4rrhh.payroll.infrastructure.web.dto.InvalidatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollCalculationStepResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -143,7 +142,7 @@ class PayrollControllerTest {
     @Test
     void invalidatesPayrollByBusinessKey() {
         when(invalidatePayrollUseCase.invalidate(any(InvalidatePayrollCommand.class)))
-                .thenReturn(payroll(PayrollStatus.NOT_VALID, "USER_INVALIDATED"));
+                .thenReturn(payroll(PayrollStatus.NOT_VALID, "MANUAL_INVALIDATION"));
 
         ResponseEntity<PayrollResponse> response = controller.invalidate(
                 "ESP",
@@ -151,8 +150,7 @@ class PayrollControllerTest {
                 "EMP001",
                 "202501",
                 "NORMAL",
-                1,
-                new InvalidatePayrollRequest("USER_INVALIDATED")
+                1
         );
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -187,7 +185,7 @@ class PayrollControllerTest {
     @Test
     void bulkInvalidatesPayrolls() {
         BulkInvalidatePayrollResult result = new BulkInvalidatePayrollResult(
-                "ESP", "202501", "NORMAL", 3, 3, 2, 1, 0, 0, "BULK_RESET"
+                "ESP", "202501", "NORMAL", 3, 3, 2, 1, 0, 0
         );
         when(bulkInvalidatePayrollUseCase.invalidateBulk(any())).thenReturn(result);
 
@@ -196,7 +194,6 @@ class PayrollControllerTest {
                         "ESP",
                         "202501",
                         "NORMAL",
-                        "BULK_RESET",
                         new com.b4rrhh.payroll.infrastructure.web.dto.PayrollLaunchTargetSelectionRequest(
                                 com.b4rrhh.payroll.application.usecase.PayrollLaunchTargetSelectionType.SINGLE_EMPLOYEE,
                                 new com.b4rrhh.payroll.infrastructure.web.dto.PayrollLaunchEmployeeTargetRequest("INTERNAL", "EMP001"),
@@ -212,7 +209,6 @@ class PayrollControllerTest {
         assertEquals(2, response.getBody().totalInvalidated());
         assertEquals(1, response.getBody().totalSkippedAlreadyNotValid());
         assertEquals(0, response.getBody().totalSkippedProtected());
-        assertEquals("BULK_RESET", response.getBody().statusReasonCode());
         verify(bulkInvalidatePayrollUseCase).invalidateBulk(any());
     }
 

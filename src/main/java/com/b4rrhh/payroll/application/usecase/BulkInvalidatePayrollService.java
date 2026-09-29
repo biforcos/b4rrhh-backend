@@ -13,6 +13,10 @@ import java.util.Optional;
 @Service
 public class BulkInvalidatePayrollService implements BulkInvalidatePayrollUseCase {
 
+    // El motivo no se pide (backend#150): el texto libre que se escribia moria en la columna sin
+    // que nada lo leyera. Lo que la columna puede contar con verdad es que camino invalido.
+    static final String STATUS_REASON_CODE = "BULK_INVALIDATION";
+
     private final PayrollRepository payrollRepository;
     private final PayrollBulkTargetExpander targetExpander;
 
@@ -30,7 +34,6 @@ public class BulkInvalidatePayrollService implements BulkInvalidatePayrollUseCas
         String ruleSystemCode = PayrollFieldNormalizer.code(command.ruleSystemCode(), "ruleSystemCode", 5);
         String payrollPeriodCode = PayrollFieldNormalizer.code(command.payrollPeriodCode(), "payrollPeriodCode", 30);
         String payrollTypeCode = PayrollFieldNormalizer.code(command.payrollTypeCode(), "payrollTypeCode", 30);
-        String statusReasonCode = PayrollFieldNormalizer.code(command.statusReasonCode(), "statusReasonCode", 50);
         PayrollLaunchTargetSelection targetSelection = targetExpander.normalize(command.targetSelection());
         LocalDate[] periodBounds = PayrollFieldNormalizer.periodBounds(payrollPeriodCode);
 
@@ -64,7 +67,7 @@ public class BulkInvalidatePayrollService implements BulkInvalidatePayrollUseCas
             Payroll existing = found.get();
 
             if (existing.getStatus() == PayrollStatus.CALCULATED) {
-                Payroll invalidated = existing.invalidate(statusReasonCode);
+                Payroll invalidated = existing.invalidate(STATUS_REASON_CODE);
                 payrollRepository.save(invalidated);
                 totalInvalidated++;
             } else if (existing.getStatus() == PayrollStatus.NOT_VALID) {
@@ -87,8 +90,7 @@ public class BulkInvalidatePayrollService implements BulkInvalidatePayrollUseCas
                 totalInvalidated,
                 totalSkippedAlreadyNotValid,
                 totalSkippedProtected,
-                totalSkippedNotFound,
-                statusReasonCode
+                totalSkippedNotFound
         );
     }
 }

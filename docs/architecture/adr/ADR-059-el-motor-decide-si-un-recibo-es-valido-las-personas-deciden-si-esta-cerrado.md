@@ -162,6 +162,20 @@ invalida a mano declara por qué—, y **el motor no lo escribe**. En cuanto el 
 decir, hace falta la vertical. Media implementación dentro del `varchar` es lo que impediría hacer la
 buena después.
 
+### Nota (backend#150): la persona ya no declara por qué
+
+Lo de arriba suponía que quien invalida a mano escribiría un motivo que alguien leería. Nadie lo
+leyó: ni una pantalla, ni un recibo, ni una exportación. El texto libre de la caja moría en la
+columna, y la segunda revisión a distancia lo vio (*«¿para qué vale el motivo?»*).
+
+Decidido con Juan el 29/09: **invalidar no pide motivo**. La columna se queda —es historia y no
+molesta— y la escribe el servicio con **el camino** que invalidó: `MANUAL_INVALIDATION` desde un
+recibo, `BULK_INVALIDATION` desde el período. Es lo único que puede contar con verdad. Se valoró
+un historial de estados con quién y cuándo, y se descartó por sobreauditar.
+
+La frontera con el motor no cambia: el motor sigue sin escribir aquí, y el día que tenga algo que
+decir hace falta la vertical de hallazgos, no un código más en este `varchar`.
+
 ## Consecuencias
 
 - **Los cuatro estados, sus servicios y sus endpoints se quedan**, aunque hoy ninguna pantalla los

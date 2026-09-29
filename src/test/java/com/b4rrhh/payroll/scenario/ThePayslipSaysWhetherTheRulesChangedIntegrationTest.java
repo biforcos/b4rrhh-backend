@@ -174,7 +174,7 @@ class ThePayslipSaysWhetherTheRulesChangedIntegrationTest {
 
     private void recalculate(String employeeNumber) {
         invalidateUseCase.invalidate(new InvalidatePayrollCommand(
-                RULE_SYSTEM, EMPLOYEE_TYPE, employeeNumber, PERIOD, PAYROLL_TYPE, 1, "RULES_CHANGED"));
+                RULE_SYSTEM, EMPLOYEE_TYPE, employeeNumber, PERIOD, PAYROLL_TYPE, 1));
         recalculateUseCase.recalculate(new RecalculatePayrollCommand(
                 RULE_SYSTEM, EMPLOYEE_TYPE, employeeNumber, PERIOD, PAYROLL_TYPE, 1, null));
         entityManager.flush();

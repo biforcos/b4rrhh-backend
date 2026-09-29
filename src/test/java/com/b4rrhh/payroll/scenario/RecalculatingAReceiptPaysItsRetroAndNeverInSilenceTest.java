@@ -192,7 +192,7 @@ class RecalculatingAReceiptPaysItsRetroAndNeverInSilenceTest {
 
     private Payroll invalidarYRecalcular(String emp, String periodo) {
         invalidar.invalidate(new InvalidatePayrollCommand(
-                RULE_SYSTEM, EMPLOYEE_TYPE, emp, periodo, PAYROLL_TYPE, 1, "RECALCULO"));
+                RULE_SYSTEM, EMPLOYEE_TYPE, emp, periodo, PAYROLL_TYPE, 1));
         entityManager.flush();
         entityManager.clear();
         Payroll recalculado = recalcular.recalculate(new RecalculatePayrollCommand(

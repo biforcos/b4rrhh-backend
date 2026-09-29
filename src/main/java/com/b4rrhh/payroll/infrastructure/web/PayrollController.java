@@ -24,7 +24,6 @@ import com.b4rrhh.payroll.infrastructure.web.dto.BulkFinalizePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.BulkFinalizePayrollResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.BulkInvalidatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.BulkInvalidatePayrollResponse;
-import com.b4rrhh.payroll.infrastructure.web.dto.InvalidatePayrollRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollCalculationStepResponse;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollLaunchEmployeeTargetRequest;
 import com.b4rrhh.payroll.infrastructure.web.dto.PayrollLaunchTargetSelectionRequest;
@@ -173,8 +172,7 @@ public class PayrollController {
             @PathVariable String employeeNumber,
             @PathVariable String payrollPeriodCode,
             @PathVariable String payrollTypeCode,
-            @PathVariable Integer presenceNumber,
-            @RequestBody InvalidatePayrollRequest request
+            @PathVariable Integer presenceNumber
     ) {
         Payroll payroll = invalidatePayrollUseCase.invalidate(new InvalidatePayrollCommand(
                 ruleSystemCode,
@@ -182,8 +180,7 @@ public class PayrollController {
                 employeeNumber,
                 payrollPeriodCode,
                 payrollTypeCode,
-                presenceNumber,
-                request.statusReasonCode()
+                presenceNumber
         ));
 
         return ResponseEntity.ok(toResponse(payroll));
@@ -240,7 +237,6 @@ public class PayrollController {
                         request.ruleSystemCode(),
                         request.payrollPeriodCode(),
                         request.payrollTypeCode(),
-                        request.statusReasonCode(),
                         toTargetSelection(request.targetSelection())
                 )
         );
@@ -254,8 +250,7 @@ public class PayrollController {
                 result.totalInvalidated(),
                 result.totalSkippedAlreadyNotValid(),
                 result.totalSkippedProtected(),
-                result.totalSkippedNotFound(),
-                result.statusReasonCode()
+                result.totalSkippedNotFound()
         ));
     }
 

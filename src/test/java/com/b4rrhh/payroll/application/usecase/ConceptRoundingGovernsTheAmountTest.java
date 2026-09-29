@@ -281,7 +281,7 @@ class ConceptRoundingGovernsTheAmountTest {
 
     private void recalculate(String employee) {
         invalidatePayrollUseCase.invalidate(new InvalidatePayrollCommand(
-                RULE_SYSTEM, EMPLOYEE_TYPE, employee, PERIOD, PAYROLL_TYPE, 1, "TEST"));
+                RULE_SYSTEM, EMPLOYEE_TYPE, employee, PERIOD, PAYROLL_TYPE, 1));
         recalculatePayrollUseCase.recalculate(new RecalculatePayrollCommand(
                 RULE_SYSTEM, EMPLOYEE_TYPE, employee, PERIOD, PAYROLL_TYPE, 1, "test"));
     }
