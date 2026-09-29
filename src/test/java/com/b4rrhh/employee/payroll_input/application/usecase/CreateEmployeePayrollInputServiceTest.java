@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.payroll_input.application.usecase;
 
+import com.b4rrhh.employee.payroll_input.application.service.EmployeePayrollInputGuard;
 import com.b4rrhh.employee.payroll_input.domain.exception.EmployeePayrollInputAlreadyExistsException;
 import com.b4rrhh.employee.payroll_input.domain.model.EmployeePayrollInput;
 import com.b4rrhh.employee.payroll_input.domain.port.EmployeePayrollInputRepository;
@@ -36,11 +37,15 @@ class CreateEmployeePayrollInputServiceTest {
     @Mock
     private DatedWriteNoticePort datedWrites;
 
+    /** El guardián del b4rrhh/backend#142 lo prueba su extremo a extremo; aquí no dice que no. */
+    @Mock
+    private EmployeePayrollInputGuard guard;
+
     private CreateEmployeePayrollInputService service;
 
     @BeforeEach
     void setUp() {
-        service = new CreateEmployeePayrollInputService(repository, datedWrites);
+        service = new CreateEmployeePayrollInputService(repository, datedWrites, guard);
     }
 
     @Test

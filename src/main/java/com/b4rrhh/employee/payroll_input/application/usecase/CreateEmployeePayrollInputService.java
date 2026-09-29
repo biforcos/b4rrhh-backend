@@ -6,6 +6,7 @@ import com.b4rrhh.employee.payroll_input.domain.port.EmployeePayrollInputReposit
 import com.b4rrhh.employee.shared.application.port.DatedWrite;
 import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
 import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
+import com.b4rrhh.employee.payroll_input.application.service.EmployeePayrollInputGuard;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,13 +17,16 @@ public class CreateEmployeePayrollInputService implements CreateEmployeePayrollI
 
     private final EmployeePayrollInputRepository repository;
     private final DatedWriteNoticePort datedWrites;
+    private final EmployeePayrollInputGuard guard;
 
     public CreateEmployeePayrollInputService(
             EmployeePayrollInputRepository repository,
-            DatedWriteNoticePort datedWrites
+            DatedWriteNoticePort datedWrites,
+            EmployeePayrollInputGuard guard
     ) {
         this.repository = repository;
         this.datedWrites = datedWrites;
+        this.guard = guard;
     }
 
     @Override
@@ -33,12 +37,15 @@ public class CreateEmployeePayrollInputService implements CreateEmployeePayrollI
         String en  = command.employeeNumber().trim();
         String cc  = command.conceptCode().trim().toUpperCase();
 
+        // El dominio valida la forma (periodo, cantidad) antes de preguntar nada fuera.
+        EmployeePayrollInput input = EmployeePayrollInput.create(rsc, etc, en, cc,
+                command.period(), command.quantity());
+        // Sólo donde un recibo pueda pagarla (b4rrhh/backend#142).
+        guard.check(rsc, etc, en, cc, command.period());
+
         if (repository.existsByBusinessKey(rsc, etc, en, cc, command.period())) {
             throw new EmployeePayrollInputAlreadyExistsException(cc, command.period());
         }
-
-        EmployeePayrollInput input = EmployeePayrollInput.create(rsc, etc, en, cc,
-                command.period(), command.quantity());
         EmployeePayrollInput guardado = repository.save(input);
 
         // La entrada de nomina no lleva fecha: lleva el periodo, asi que no se le inventa una. Y su

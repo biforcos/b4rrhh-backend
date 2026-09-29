@@ -6,6 +6,7 @@ import com.b4rrhh.employee.payroll_input.domain.port.EmployeePayrollInputReposit
 import com.b4rrhh.employee.shared.application.port.DatedWrite;
 import com.b4rrhh.employee.shared.application.port.DatedWriteNoticePort;
 import com.b4rrhh.employee.shared.application.port.DatedWriteSources;
+import com.b4rrhh.employee.payroll_input.application.service.EmployeePayrollInputGuard;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,13 +17,16 @@ public class UpdateEmployeePayrollInputService implements UpdateEmployeePayrollI
 
     private final EmployeePayrollInputRepository repository;
     private final DatedWriteNoticePort datedWrites;
+    private final EmployeePayrollInputGuard guard;
 
     public UpdateEmployeePayrollInputService(
             EmployeePayrollInputRepository repository,
-            DatedWriteNoticePort datedWrites
+            DatedWriteNoticePort datedWrites,
+            EmployeePayrollInputGuard guard
     ) {
         this.repository = repository;
         this.datedWrites = datedWrites;
+        this.guard = guard;
     }
 
     @Override
@@ -33,9 +37,12 @@ public class UpdateEmployeePayrollInputService implements UpdateEmployeePayrollI
         String en  = command.employeeNumber().trim();
         String cc  = command.conceptCode().trim().toUpperCase();
 
+        guard.requireEmployee(rsc, etc, en);
         EmployeePayrollInput input = repository
                 .findByBusinessKey(rsc, etc, en, cc, command.period())
                 .orElseThrow(() -> new EmployeePayrollInputNotFoundException(cc, command.period()));
+        // Corregir es escribir: la misma comprobación que al crear (b4rrhh/backend#142).
+        guard.check(rsc, etc, en, cc, command.period());
 
         input.updateQuantity(command.quantity());
         EmployeePayrollInput guardado = repository.save(input);

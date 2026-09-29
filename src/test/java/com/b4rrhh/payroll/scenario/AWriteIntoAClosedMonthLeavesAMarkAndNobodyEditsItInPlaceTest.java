@@ -98,7 +98,7 @@ class AWriteIntoAClosedMonthLeavesAMarkAndNobodyEditsItInPlaceTest {
         reciboCerrado(emp, AGOSTO);
 
         createInput.create(new CreateEmployeePayrollInputCommand(
-                RULE_SYSTEM, EMPLOYEE_TYPE, emp, "HE_QTY", 202608, new BigDecimal("10")));
+                RULE_SYSTEM, EMPLOYEE_TYPE, emp, "H01", 202608, new BigDecimal("10")));
 
         List<RetroMark> tras = marcas(emp);
         assertEquals(1, tras.size(), "agosto tiene recibo entregado: la escritura deja una marca");
@@ -107,7 +107,7 @@ class AWriteIntoAClosedMonthLeavesAMarkAndNobodyEditsItInPlaceTest {
         assertEquals(RetroMarkStatus.ACTIVE, m.getStatus(), "nace pendiente o no nace");
         assertEquals("PAYROLL_INPUT", m.getSource().verticalCode());
         assertEquals("employee.employee_payroll_input", m.getSource().table());
-        assertEquals("HE_QTY/202608", m.getSource().rowKey(),
+        assertEquals("H01/202608", m.getSource().rowKey(),
                 "la entrada de nomina no tiene id surrogado: se identifica por concepto y periodo");
         assertNull(m.getSource().rowId(), "y por eso no hay id");
         assertEquals(1, (int) (Integer) m.getPresenceNumber(),
@@ -115,7 +115,7 @@ class AWriteIntoAClosedMonthLeavesAMarkAndNobodyEditsItInPlaceTest {
 
         // Y ahora el mismo empleado, el mismo concepto, un mes SIN recibo entregado.
         createInput.create(new CreateEmployeePayrollInputCommand(
-                RULE_SYSTEM, EMPLOYEE_TYPE, emp, "HE_QTY", 202609, new BigDecimal("10")));
+                RULE_SYSTEM, EMPLOYEE_TYPE, emp, "H01", 202609, new BigDecimal("10")));
 
         assertEquals(1, marcas(emp).size(),
                 "septiembre no tiene recibo entregado, asi que no es pasado y no deja marca:"
@@ -137,7 +137,7 @@ class AWriteIntoAClosedMonthLeavesAMarkAndNobodyEditsItInPlaceTest {
                 PAYROLL_TYPE, 1, "CALCULATED", "B_CC", new BigDecimal("3000.00"));
 
         createInput.create(new CreateEmployeePayrollInputCommand(
-                RULE_SYSTEM, EMPLOYEE_TYPE, emp, "HE_QTY", 202608, new BigDecimal("10")));
+                RULE_SYSTEM, EMPLOYEE_TYPE, emp, "H01", 202608, new BigDecimal("10")));
 
         assertTrue(marcas(emp).isEmpty(),
                 "agosto existe pero todavia puede cambiar, asi que no se le ha contado a nadie y no"
@@ -159,7 +159,7 @@ class AWriteIntoAClosedMonthLeavesAMarkAndNobodyEditsItInPlaceTest {
         reciboCerrado(emp, AGOSTO);
 
         createInput.create(new CreateEmployeePayrollInputCommand(
-                RULE_SYSTEM, EMPLOYEE_TYPE, emp, "HE_QTY", 202608, new BigDecimal("10")));
+                RULE_SYSTEM, EMPLOYEE_TYPE, emp, "H01", 202608, new BigDecimal("10")));
         upsertAbsence.upsert(new UpsertAbsenceCommand(
                 RULE_SYSTEM, EMPLOYEE_TYPE, emp, "IT_COMMON", JULIO_10, 0, JULIO_12, null, null));
 
@@ -218,7 +218,7 @@ class AWriteIntoAClosedMonthLeavesAMarkAndNobodyEditsItInPlaceTest {
         altaBasica(emp);
         reciboCerrado(emp, AGOSTO);
         createInput.create(new CreateEmployeePayrollInputCommand(
-                RULE_SYSTEM, EMPLOYEE_TYPE, emp, "HE_QTY", 202608, new BigDecimal("10")));
+                RULE_SYSTEM, EMPLOYEE_TYPE, emp, "H01", 202608, new BigDecimal("10")));
 
         Long id = marcas(emp).get(0).getId();
 
@@ -256,7 +256,7 @@ class AWriteIntoAClosedMonthLeavesAMarkAndNobodyEditsItInPlaceTest {
         altaBasica(emp);
         reciboCerrado(emp, AGOSTO);
         createInput.create(new CreateEmployeePayrollInputCommand(
-                RULE_SYSTEM, EMPLOYEE_TYPE, emp, "HE_QTY", 202608, new BigDecimal("10")));
+                RULE_SYSTEM, EMPLOYEE_TYPE, emp, "H01", 202608, new BigDecimal("10")));
         Long id = marcas(emp).get(0).getId();
 
         assertThrows(IllegalArgumentException.class,

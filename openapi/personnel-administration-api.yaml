@@ -6073,9 +6073,23 @@ paths:
         "400":
           description: Invalid request
         "404":
-          description: Employee not found
+          description: Employee not found (`PAYROLL_INPUT_EMPLOYEE_NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeePayrollInputErrorResponse"
         "409":
           description: Payroll input already exists for this concept and period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeePayrollInputErrorResponse"
+        "422":
+          description: >-
+            The input could never be paid (b4rrhh/backend#142): the concept does not exist or
+            is not an input (`PAYROLL_INPUT_CONCEPT_INVALID`), or the period has not a single
+            day of presence (`PAYROLL_INPUT_OUTSIDE_PRESENCE`, naming the presences). A period
+            covered in part is accepted: the engine prorates by days.
           content:
             application/json:
               schema:
@@ -6172,6 +6186,16 @@ paths:
                 $ref: "#/components/schemas/EmployeePayrollInputResponse"
         "400":
           description: Invalid request
+        "422":
+          description: >-
+            The input could never be paid (b4rrhh/backend#142): the concept does not exist or
+            is not an input (`PAYROLL_INPUT_CONCEPT_INVALID`), or the period has not a single
+            day of presence (`PAYROLL_INPUT_OUTSIDE_PRESENCE`, naming the presences). A period
+            covered in part is accepted: the engine prorates by days.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeePayrollInputErrorResponse"
         "404":
           description: Payroll input not found
           content:

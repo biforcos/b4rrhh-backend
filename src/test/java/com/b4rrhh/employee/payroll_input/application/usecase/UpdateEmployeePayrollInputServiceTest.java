@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.payroll_input.application.usecase;
 
+import com.b4rrhh.employee.payroll_input.application.service.EmployeePayrollInputGuard;
 import com.b4rrhh.employee.payroll_input.domain.exception.EmployeePayrollInputNotFoundException;
 import com.b4rrhh.employee.payroll_input.domain.model.EmployeePayrollInput;
 import com.b4rrhh.employee.payroll_input.domain.port.EmployeePayrollInputRepository;
@@ -35,11 +36,15 @@ class UpdateEmployeePayrollInputServiceTest {
     @Mock
     private DatedWriteNoticePort datedWrites;
 
+    /** El guardián del b4rrhh/backend#142 lo prueba su extremo a extremo; aquí no dice que no. */
+    @Mock
+    private EmployeePayrollInputGuard guard;
+
     private UpdateEmployeePayrollInputService service;
 
     @BeforeEach
     void setUp() {
-        service = new UpdateEmployeePayrollInputService(repository, datedWrites);
+        service = new UpdateEmployeePayrollInputService(repository, datedWrites, guard);
     }
 
     @Test
