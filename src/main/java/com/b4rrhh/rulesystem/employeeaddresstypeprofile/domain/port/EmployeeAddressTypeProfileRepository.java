@@ -2,6 +2,7 @@ package com.b4rrhh.rulesystem.employeeaddresstypeprofile.domain.port;
 
 import com.b4rrhh.rulesystem.employeeaddresstypeprofile.domain.model.EmployeeAddressTypeCoverage;
 
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -13,4 +14,7 @@ import java.util.Optional;
 public interface EmployeeAddressTypeProfileRepository {
 
     Optional<EmployeeAddressTypeCoverage> findCoverageByAddressType(String ruleSystemCode, String addressTypeCode);
+
+    /** La cobertura de cada tipo del sistema de reglas, por código de tipo (b4rrhh/backend#145). */
+    Map<String, EmployeeAddressTypeCoverage> findAllCoverages(String ruleSystemCode);
 }

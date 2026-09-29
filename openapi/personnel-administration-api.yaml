@@ -3985,6 +3985,33 @@ paths:
               schema:
                 $ref: "#/components/schemas/CompanyProfileErrorResponse"
 
+  /address-types/{ruleSystemCode}/profiles:
+    get:
+      tags:
+        - Catalogs
+      summary: Coverage of every employee address type of a rule system
+      description: >-
+        Whether an employee has to have an address of each type while present (`MANDATORY`) or
+        may have none (`OPTIONAL`), as the catalog declares it (V117, b4rrhh/backend#145). It is
+        the rule the address series applies: closing the mandatory one while the presence goes on
+        is refused with 409 `ADDRESS_COVERAGE_GAP`, closing an optional one is accepted. With it a
+        client can offer «close» only where it would be accepted.
+      operationId: listEmployeeAddressTypeProfiles
+      parameters:
+        - name: ruleSystemCode
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "ESP"
+      responses:
+        "200":
+          description: The coverage of each address type, ordered by code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeAddressTypeProfilesResponse"
+
   /agreement-categories/{ruleSystemCode}/{categoryCode}/profile:
     get:
       tags:
@@ -11486,6 +11513,28 @@ components:
           enum: [MENSUAL, DIARIO]
           description: "Tipo de base de cotización: mensual (grupos 1-7) o diaria (grupos 8-11)"
           example: "MENSUAL"
+    EmployeeAddressTypeProfilesResponse:
+      type: object
+      required:
+        - ruleSystemCode
+        - items
+      properties:
+        ruleSystemCode:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            required:
+              - addressTypeCode
+              - coverage
+            properties:
+              addressTypeCode:
+                type: string
+              coverage:
+                type: string
+                enum: [MANDATORY, OPTIONAL]
+
     AgreementCategoryProfileResponse:
       type: object
       required:

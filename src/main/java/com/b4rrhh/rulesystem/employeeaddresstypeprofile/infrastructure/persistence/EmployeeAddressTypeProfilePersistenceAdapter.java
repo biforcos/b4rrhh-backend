@@ -4,6 +4,8 @@ import com.b4rrhh.rulesystem.employeeaddresstypeprofile.domain.model.EmployeeAdd
 import com.b4rrhh.rulesystem.employeeaddresstypeprofile.domain.port.EmployeeAddressTypeProfileRepository;
 import org.springframework.stereotype.Component;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @Component
@@ -22,5 +24,14 @@ public class EmployeeAddressTypeProfilePersistenceAdapter implements EmployeeAdd
         return springDataRepository
                 .findCoverageByAddressType(ruleSystemCode, addressTypeCode)
                 .map(EmployeeAddressTypeCoverage::valueOf);
+    }
+
+    @Override
+    public Map<String, EmployeeAddressTypeCoverage> findAllCoverages(String ruleSystemCode) {
+        Map<String, EmployeeAddressTypeCoverage> coverages = new LinkedHashMap<>();
+        for (Object[] row : springDataRepository.findAllCoverages(ruleSystemCode)) {
+            coverages.put((String) row[0], EmployeeAddressTypeCoverage.valueOf((String) row[1]));
+        }
+        return coverages;
     }
 }
