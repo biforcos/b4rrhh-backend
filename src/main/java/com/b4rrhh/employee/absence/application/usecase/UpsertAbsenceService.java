@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,6 +27,7 @@ import java.util.Optional;
 public class UpsertAbsenceService implements UpsertAbsenceUseCase {
 
     private static final String TABLA = "employee.employee_absence";
+    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final RuleEntityRepository ruleEntityRepository;
     private final GetEmployeeByBusinessKeyUseCase getEmployee;
@@ -76,17 +78,12 @@ public class UpsertAbsenceService implements UpsertAbsenceUseCase {
 
         Long employeeId = employee.getId();
 
-        // 3. Validate startDate (and endDate if set) are covered by a presence period
+        // 3. La ausencia cae entera dentro de UNA presencia (b4rrhh/backend#147). Comprobar el inicio
+        // y el fin cada uno contra cualquiera dejaba pasar la que salta el hueco entre un cese y una
+        // readmision: empieza en la primera y acaba en la segunda. Eso son dos ausencias o un error
+        // de fechas, y en los dos casos se dice.
         List<Presence> presences = listPresences.listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber);
-
-        if (!isCoveredByAnyPresence(presences, startDate)) {
-            throw new AbsenceOutsidePresencePeriodException(
-                    "startDate " + startDate + " is not covered by any presence period");
-        }
-        if (endDate != null && !isCoveredByAnyPresence(presences, endDate)) {
-            throw new AbsenceOutsidePresencePeriodException(
-                    "endDate " + endDate + " is not covered by any presence period");
-        }
+        requireWithinOnePresence(presences, employeeNumber, startDate, endDate);
 
         // 4. Validate date range
         if (endDate != null) {
@@ -136,13 +133,24 @@ public class UpsertAbsenceService implements UpsertAbsenceUseCase {
         return guardada;
     }
 
-    private boolean isCoveredByAnyPresence(List<Presence> presences, LocalDate date) {
-        for (Presence p : presences) {
-            if (!p.getStartDate().isAfter(date) &&
-                (p.getEndDate() == null || !p.getEndDate().isBefore(date))) {
-                return true;
-            }
+    private static void requireWithinOnePresence(
+            List<Presence> presences, String employeeNumber, LocalDate startDate, LocalDate endDate) {
+        Presence presence = presences.stream()
+                .filter(p -> !p.getStartDate().isAfter(startDate)
+                        && (p.getEndDate() == null || !p.getEndDate().isBefore(startDate)))
+                .findFirst()
+                .orElseThrow(() -> new AbsenceOutsidePresencePeriodException(
+                        "La ausencia empieza el " + DAY.format(startDate) + " y " + employeeNumber
+                                + " no tiene presencia ese día."));
+        LocalDate presenceEnd = presence.getEndDate();
+        if (presenceEnd == null) return;
+        if (endDate == null || endDate.isAfter(presenceEnd)) {
+            String until = endDate == null ? "no tiene fin" : "acaba el " + DAY.format(endDate);
+            throw new AbsenceOutsidePresencePeriodException(
+                    "La ausencia empieza en la presencia " + presence.getPresenceNumber()
+                            + " (del " + DAY.format(presence.getStartDate()) + " al " + DAY.format(presenceEnd)
+                            + ") y " + until + ": tiene que acabar como tarde el " + DAY.format(presenceEnd)
+                            + ". Una ausencia cae entera dentro de una presencia; si sigue en la siguiente, son dos.");
         }
-        return false;
     }
 }
