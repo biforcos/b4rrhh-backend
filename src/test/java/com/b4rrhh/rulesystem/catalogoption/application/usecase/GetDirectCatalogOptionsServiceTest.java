@@ -39,6 +39,7 @@ class GetDirectCatalogOptionsServiceTest {
         when(directCatalogOptionRepository.findDirectOptions(
                 eq("ES_DEFAULT"),
                 eq("WORK_CENTER"),
+                eq(null),
                 eq(null)
         )).thenReturn(List.of(
                 new DirectCatalogOption("MAIN_OFFICE", "Oficina central", true, LocalDate.of(2020, 1, 1), null),
@@ -65,7 +66,8 @@ class GetDirectCatalogOptionsServiceTest {
         when(directCatalogOptionRepository.findDirectOptions(
                 eq("ES_DEFAULT"),
                 eq("WORK_CENTER"),
-                eq("%office%")
+                eq("%office%"),
+                eq(null)
         )).thenReturn(List.of());
 
         service.get(new GetDirectCatalogOptionsQuery("ES_DEFAULT", "WORK_CENTER", null, "  office  "));
@@ -73,8 +75,24 @@ class GetDirectCatalogOptionsServiceTest {
         verify(directCatalogOptionRepository).findDirectOptions(
                 "ES_DEFAULT",
                 "WORK_CENTER",
-                "%office%"
+                "%office%",
+                null
         );
+    }
+
+    // b4rrhh/backend#143: el idioma de la peticion llega al puerto, que es quien traduce.
+    @Test
+    void theLanguageOfTheQueryReachesThePort() {
+        when(directCatalogOptionRepository.findDirectOptions(
+                eq("ESP"),
+                eq("EMPLOYEE_PRESENCE_ENTRY_REASON"),
+                eq(null),
+                eq("es-ES")
+        )).thenReturn(List.of());
+
+        service.get(new GetDirectCatalogOptionsQuery("ESP", "EMPLOYEE_PRESENCE_ENTRY_REASON", null, null, "es-ES"));
+
+        verify(directCatalogOptionRepository).findDirectOptions("ESP", "EMPLOYEE_PRESENCE_ENTRY_REASON", null, "es-ES");
     }
 
     @Test
@@ -82,6 +100,7 @@ class GetDirectCatalogOptionsServiceTest {
         when(directCatalogOptionRepository.findDirectOptions(
                 eq("ES_DEFAULT"),
                 eq("WORK_CENTER"),
+                eq(null),
                 eq(null)
         )).thenReturn(List.of());
 
@@ -102,6 +121,7 @@ class GetDirectCatalogOptionsServiceTest {
         when(directCatalogOptionRepository.findDirectOptions(
                 eq("ES_DEFAULT"),
                 eq("WORK_CENTER"),
+                eq(null),
                 eq(null)
         )).thenReturn(List.of(
                 new DirectCatalogOption("OLD_OFFICE", "Oficina antigua", true,

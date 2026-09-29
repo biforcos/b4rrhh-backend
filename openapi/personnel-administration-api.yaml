@@ -4556,7 +4556,10 @@ paths:
         - request `referenceDate` when provided
         - current date when omitted
         The `active` flag for each item is resolved against this effective date.
+        `name` comes in the language of `Accept-Language` when the option is translated,
+        and in the base literal otherwise (b4rrhh/backend#143).
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: query
           name: ruleSystemCode
           required: true

@@ -35,7 +35,8 @@ public class GetDirectCatalogOptionsService implements GetDirectCatalogOptionsUs
                 .findDirectOptions(
                         normalizedRuleSystemCode,
                         normalizedRuleEntityTypeCode,
-                        normalizedQLike
+                        normalizedQLike,
+                        query.languageCode()
                 )
                 .stream()
                 .map(option -> option.withActive(option.isEffectiveOn(effectiveReferenceDate)))

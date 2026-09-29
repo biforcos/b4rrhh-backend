@@ -6,6 +6,7 @@ import com.b4rrhh.rulesystem.catalogoption.application.usecase.GetDirectCatalogO
 import com.b4rrhh.rulesystem.catalogoption.domain.model.DirectCatalogOption;
 import com.b4rrhh.rulesystem.catalogoption.infrastructure.web.dto.DirectCatalogOptionResponse;
 import com.b4rrhh.rulesystem.catalogoption.infrastructure.web.dto.DirectCatalogOptionsResponse;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,10 +31,11 @@ public class DirectCatalogOptionController {
             @RequestParam String ruleSystemCode,
             @RequestParam String ruleEntityTypeCode,
             @RequestParam(required = false) LocalDate referenceDate,
-            @RequestParam(required = false) String q
+            @RequestParam(required = false) String q,
+            ResponseLanguage language
     ) {
         DirectCatalogOptionsResult result = getDirectCatalogOptionsUseCase.get(
-                new GetDirectCatalogOptionsQuery(ruleSystemCode, ruleEntityTypeCode, referenceDate, q)
+                new GetDirectCatalogOptionsQuery(ruleSystemCode, ruleEntityTypeCode, referenceDate, q, language.code())
         );
 
         List<DirectCatalogOptionResponse> items = result.items()

@@ -6,6 +6,7 @@ import com.b4rrhh.rulesystem.catalogoption.application.query.GetDirectCatalogOpt
 import com.b4rrhh.rulesystem.catalogoption.application.usecase.DirectCatalogOptionsResult;
 import com.b4rrhh.rulesystem.catalogoption.application.usecase.GetDirectCatalogOptionsUseCase;
 import com.b4rrhh.rulesystem.catalogoption.domain.model.DirectCatalogOption;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguageArgumentResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,6 +44,7 @@ class DirectCatalogOptionControllerHttpTest {
         DirectCatalogOptionController controller = new DirectCatalogOptionController(getDirectCatalogOptionsUseCase);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new DirectCatalogOptionExceptionHandler())
+                .setCustomArgumentResolvers(new ResponseLanguageArgumentResolver())
                 .build();
     }
 
