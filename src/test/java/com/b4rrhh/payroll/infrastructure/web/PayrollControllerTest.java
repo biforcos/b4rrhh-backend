@@ -39,6 +39,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.Optional;
 
 import com.b4rrhh.payroll.application.usecase.RecalculatePayrollCommand;
@@ -217,7 +218,7 @@ class PayrollControllerTest {
     void searchesPayrollsByFiltersAndSaysHowManyThereAre() {
         Payroll payroll = payroll(PayrollStatus.CALCULATED, null);
         when(searchPayrollsUseCase.search(any(SearchPayrollsQuery.class)))
-                .thenReturn(new PayrollSearchPage(List.of(payroll), 0, 50, 7908));
+                .thenReturn(new PayrollSearchPage(List.of(payroll), 0, 50, 7908, Set.of(PayrollSearchPage.Month.of(payroll))));
 
         ResponseEntity<PayrollSearchPageResponse> response =
                 controller.search(null, "202604", "MAS000001", "CALCULATED", null, null);
@@ -238,6 +239,7 @@ class PayrollControllerTest {
         PayrollSummaryResponse first = response.getBody().items().getFirst();
         assertEquals("CALCULATED", first.status());
         assertEquals("EMP001", first.employeeNumber());
+        assertEquals(true, first.sharesPeriodWithAnotherPresence());
     }
 
     @Test

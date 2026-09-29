@@ -314,7 +314,9 @@ public class PayrollController {
         PayrollSearchPage result = searchPayrollsUseCase.search(new SearchPayrollsQuery(
                 ruleSystemCode, payrollPeriodCode, employeeNumber, parsedStatus, resolvedPage, resolvedSize));
         return ResponseEntity.ok(new PayrollSearchPageResponse(
-                result.items().stream().map(payrollResponseAssembler::toSummaryResponse).toList(),
+                result.items().stream()
+                        .map(p -> payrollResponseAssembler.toSummaryResponse(p, result.sharesItsMonth(p)))
+                        .toList(),
                 result.page(),
                 result.size(),
                 result.total()));

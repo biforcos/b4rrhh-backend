@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
@@ -36,7 +37,7 @@ class SearchPayrollsServiceTest {
     void returnsTheRepositoryPageWithItsTotal() {
         Payroll payroll = minimalPayroll("MAS000001", "202604", PayrollStatus.CALCULATED);
         when(payrollRepository.findPageByFilters(eq(null), eq("202604"), eq(null), eq(null), eq(0), eq(50)))
-                .thenReturn(new PayrollSearchPage(List.of(payroll), 0, 50, 7908));
+                .thenReturn(new PayrollSearchPage(List.of(payroll), 0, 50, 7908, Set.of()));
 
         PayrollSearchPage result = service.search(new SearchPayrollsQuery(null, "202604", null, null, 0, 50));
 
@@ -48,7 +49,7 @@ class SearchPayrollsServiceTest {
     @Test
     void passesAllFiltersAndThePageToRepository() {
         when(payrollRepository.findPageByFilters("MAS", "202604", "MAS000001", PayrollStatus.CALCULATED, 3, 20))
-                .thenReturn(new PayrollSearchPage(List.of(), 3, 20, 0));
+                .thenReturn(new PayrollSearchPage(List.of(), 3, 20, 0, Set.of()));
 
         service.search(new SearchPayrollsQuery("MAS", "202604", "MAS000001", PayrollStatus.CALCULATED, 3, 20));
 

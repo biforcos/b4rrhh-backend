@@ -11,5 +11,6 @@ public record PayrollSummaryResponse(
         String payrollTypeCode,
         Integer presenceNumber,
         String status,
-        Instant calculatedAt
+        Instant calculatedAt,
+        boolean sharesPeriodWithAnotherPresence
 ) {}

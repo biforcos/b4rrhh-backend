@@ -15,6 +15,8 @@ import org.springframework.stereotype.Component;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 public class PayrollPersistenceAdapter implements PayrollRepository {
@@ -56,11 +58,26 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
             int size) {
         Page<PayrollEntity> result = springDataPayrollRepository
                 .findPageByFilters(ruleSystemCode, payrollPeriodCode, employeeNumber, status, PageRequest.of(page, size));
-        return new PayrollSearchPage(
-                result.getContent().stream().map(this::toDomain).toList(),
-                page,
-                size,
-                result.getTotalElements());
+        List<Payroll> items = result.getContent().stream().map(this::toDomain).toList();
+        return new PayrollSearchPage(items, page, size, result.getTotalElements(), sharedMonths(items));
+    }
+
+    /** Una consulta por página, y ninguna si la página viene vacía (`b4rrhh/frontend#104`). */
+    private Set<PayrollSearchPage.Month> sharedMonths(List<Payroll> items) {
+        if (items.isEmpty()) {
+            return Set.of();
+        }
+        Set<PayrollSearchPage.Month> onThePage = items.stream()
+                .map(PayrollSearchPage.Month::of)
+                .collect(Collectors.toSet());
+        return springDataPayrollRepository.findMonthsWithMoreThanOnePresence(
+                        items.stream().map(Payroll::getEmployeeNumber).collect(Collectors.toSet()),
+                        items.stream().map(Payroll::getPayrollPeriodCode).collect(Collectors.toSet()))
+                .stream()
+                .map(row -> new PayrollSearchPage.Month(
+                        (String) row[0], (String) row[1], (String) row[2], (String) row[3], (String) row[4]))
+                .filter(onThePage::contains)
+                .collect(Collectors.toSet());
     }
 
     @Override

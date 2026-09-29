@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -65,7 +67,13 @@ public class InMemoryPayrollRepository implements PayrollRepository {
                 .filter(p -> status == null || Objects.equals(p.getStatus(), status))
                 .toList();
         List<Payroll> slice = all.stream().skip((long) page * size).limit(size).toList();
-        return new PayrollSearchPage(slice, page, size, all.size());
+        Map<PayrollSearchPage.Month, Long> presencesPerMonth = storage.values().stream()
+                .collect(Collectors.groupingBy(PayrollSearchPage.Month::of, Collectors.counting()));
+        Set<PayrollSearchPage.Month> shared = slice.stream()
+                .map(PayrollSearchPage.Month::of)
+                .filter(month -> presencesPerMonth.get(month) > 1)
+                .collect(Collectors.toSet());
+        return new PayrollSearchPage(slice, page, size, all.size(), shared);
     }
 
     @Override

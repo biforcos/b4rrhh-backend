@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -51,6 +52,24 @@ public interface SpringDataPayrollRepository extends JpaRepository<PayrollEntity
             @Param("employeeNumber") String employeeNumber,
             @Param("status") PayrollStatus status,
             Pageable pageable
+    );
+
+    /**
+     * De estos empleados y períodos, los meses con recibo en más de una presencia
+     * ({@code b4rrhh/frontend#104}): cada fila es regla, tipo de empleado, empleado, período y tipo.
+     *
+     * <p>Sin filtro de estado a propósito: la hermana existe aunque la búsqueda la deje fuera. El
+     * producto de empleados por períodos devuelve de más cuando la página mezcla meses; quien llama
+     * se queda con los meses que de verdad están en la página.
+     */
+    @Query("select p.ruleSystemCode, p.employeeTypeCode, p.employeeNumber, p.payrollPeriodCode, p.payrollTypeCode"
+            + " from PayrollEntity p"
+            + " where p.employeeNumber in :employeeNumbers and p.payrollPeriodCode in :payrollPeriodCodes"
+            + " group by p.ruleSystemCode, p.employeeTypeCode, p.employeeNumber, p.payrollPeriodCode, p.payrollTypeCode"
+            + " having count(p) > 1")
+    List<Object[]> findMonthsWithMoreThanOnePresence(
+            @Param("employeeNumbers") Collection<String> employeeNumbers,
+            @Param("payrollPeriodCodes") Collection<String> payrollPeriodCodes
     );
 
     /**
