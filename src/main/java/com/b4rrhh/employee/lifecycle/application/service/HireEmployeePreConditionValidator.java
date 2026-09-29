@@ -6,6 +6,7 @@ import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.HireContext;
 import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeDefaultValues;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
+import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeEntryReasonNotHiringException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeRequestInvalidException;
 import com.b4rrhh.employee.workcenter.domain.service.WorkCenterCompanyValidator;
 import org.springframework.stereotype.Component;
@@ -38,7 +39,7 @@ public class HireEmployeePreConditionValidator {
         String preferredName = normalizeOptionalText(command.preferredName());
         LocalDate hireDate = requireDate(command.hireDate());
 
-        String entryReasonCode = requireCode("entryReasonCode", command.entryReasonCode());
+        String entryReasonCode = resolveEntryReasonCode(command.entryReasonCode());
         String companyCode = requireCode("companyCode", command.companyCode());
         String workCenterCode = requireCode("workCenterCode", command.workCenterCode());
 
@@ -58,6 +59,19 @@ public class HireEmployeePreConditionValidator {
         return new HireContext(ruleSystemCode, employeeTypeCode, firstName, lastName1, lastName2, preferredName,
                 hireDate, companyCode, entryReasonCode, workCenterCode,
                 contract, laborClassification, command.costCenterDistribution(), workingTime);
+    }
+
+    // Un alta es una contratacion por construccion (b4rrhh/backend#143): sin motivo entra como
+    // HIRING, con HIRING tambien, y con cualquier otro se rechaza nombrando el camino bueno.
+    private String resolveEntryReasonCode(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return HireEmployeeDefaultValues.HIRING_ENTRY_REASON_CODE;
+        }
+        String code = value.trim().toUpperCase();
+        if (!HireEmployeeDefaultValues.HIRING_ENTRY_REASON_CODE.equals(code)) {
+            throw new HireEmployeeEntryReasonNotHiringException(code);
+        }
+        return code;
     }
 
     private String requireCode(String field, String value) {

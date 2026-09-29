@@ -5,6 +5,7 @@ import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeBusinessValida
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeConflictException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeDependentRelationInvalidException;
+import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeEntryReasonNotHiringException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeRequestInvalidException;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.HireEmployeeErrorResponse;
 import com.b4rrhh.employee.employee.domain.exception.EmployeeRuleSystemNotFoundException;
@@ -62,6 +63,12 @@ public class HireEmployeeExceptionHandler {
     public ResponseEntity<HireEmployeeErrorResponse> handleInvalidDependentRelation(HireEmployeeDependentRelationInvalidException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(new HireEmployeeErrorResponse("INVALID_DEPENDENT_RELATION", ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(HireEmployeeEntryReasonNotHiringException.class)
+    public ResponseEntity<HireEmployeeErrorResponse> handleEntryReasonNotHiring(HireEmployeeEntryReasonNotHiringException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(new HireEmployeeErrorResponse("HIRE_ENTRY_REASON_NOT_HIRING", ex.getMessage(), null));
     }
 
     @ExceptionHandler(HireEmployeeBusinessValidationException.class)

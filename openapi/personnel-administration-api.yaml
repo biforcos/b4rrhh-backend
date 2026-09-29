@@ -7992,7 +7992,6 @@ components:
         - firstName
         - lastName1
         - hireDate
-        - entryReasonCode
         - companyCode
         - workCenterCode
         - contract
@@ -8026,6 +8025,10 @@ components:
         entryReasonCode:
           type: string
           maxLength: 30
+          description: >-
+            Optional. A hire is always a `HIRING` (b4rrhh/backend#143): when omitted it enters as
+            `HIRING`, and any other code is rejected with 422 `HIRE_ENTRY_REASON_NOT_HIRING`. A
+            former employee comes back through the rehire; `TRANSFER_IN` has no flow yet.
         companyCode:
           type: string
           maxLength: 30

@@ -50,7 +50,7 @@ class HireEmployeePreConditionValidatorTest {
         assertThat(ctx.lastName2()).isNull();
         assertThat(ctx.preferredName()).isEqualTo("Ani");
         assertThat(ctx.companyCode()).isEqualTo("COMP");
-        assertThat(ctx.entryReasonCode()).isEqualTo("HIRE");
+        assertThat(ctx.entryReasonCode()).isEqualTo("HIRING");
         assertThat(ctx.workCenterCode()).isEqualTo("WC1");
         assertThat(ctx.hireDate()).isEqualTo(LocalDate.of(2026, 3, 23));
         assertThat(ctx.contract().contractTypeCode()).isEqualTo("CON");
@@ -63,7 +63,7 @@ class HireEmployeePreConditionValidatorTest {
     void normalizesCodeFieldsToUpperCase() {
         HireEmployeeCommand command = new HireEmployeeCommand(
                 "esp", "internal", "Ana", "Lopez", null, null,
-                LocalDate.of(2026, 3, 23), "hire", "comp", "wc1",
+                LocalDate.of(2026, 3, 23), "hiring", "comp", "wc1",
                 new HireEmployeeCommand.HireEmployeeContractCommand("con", "sub"),
                 new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("agr", "cat"),
                 null,
@@ -84,7 +84,7 @@ class HireEmployeePreConditionValidatorTest {
     void defaultsEmployeeTypeCodeWhenBlank() {
         HireEmployeeCommand command = new HireEmployeeCommand(
                 "ESP", null, "Ana", "Lopez", null, null,
-                LocalDate.of(2026, 3, 23), "HIRE", "COMP", "WC1",
+                LocalDate.of(2026, 3, 23), "HIRING", "COMP", "WC1",
                 new HireEmployeeCommand.HireEmployeeContractCommand("CON", "SUB"),
                 new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("AGR", "CAT"),
                 null,
@@ -106,7 +106,7 @@ class HireEmployeePreConditionValidatorTest {
     void throwsWhenRuleSystemCodeIsBlank() {
         HireEmployeeCommand command = new HireEmployeeCommand(
                 "  ", "INTERNAL", "Ana", "Lopez", null, null,
-                LocalDate.of(2026, 3, 23), "HIRE", "COMP", "WC1",
+                LocalDate.of(2026, 3, 23), "HIRING", "COMP", "WC1",
                 new HireEmployeeCommand.HireEmployeeContractCommand("CON", "SUB"),
                 new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("AGR", "CAT"),
                 null,
@@ -122,7 +122,7 @@ class HireEmployeePreConditionValidatorTest {
     void throwsWhenContractIsNull() {
         HireEmployeeCommand command = new HireEmployeeCommand(
                 "ESP", "INTERNAL", "Ana", "Lopez", null, null,
-                LocalDate.of(2026, 3, 23), "HIRE", "COMP", "WC1",
+                LocalDate.of(2026, 3, 23), "HIRING", "COMP", "WC1",
                 null,
                 new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("AGR", "CAT"),
                 null,
@@ -167,7 +167,7 @@ class HireEmployeePreConditionValidatorTest {
     private HireEmployeeCommand validCommand() {
         return new HireEmployeeCommand(
                 "ESP", "INTERNAL", "Ana", "Lopez", null, "Ani",
-                LocalDate.of(2026, 3, 23), "HIRE", "COMP", "WC1",
+                LocalDate.of(2026, 3, 23), "HIRING", "COMP", "WC1",
                 new HireEmployeeCommand.HireEmployeeContractCommand("CON", "SUB"),
                 new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("AGR", "CAT"),
                 null,
