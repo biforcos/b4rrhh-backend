@@ -29,6 +29,7 @@ public class HireContext {
     private final HireEmployeeCommand.HireEmployeeLaborClassificationCommand laborClassification;
     private final HireEmployeeCommand.HireEmployeeCostCenterDistributionCommand costCenterDistribution;
     private final HireEmployeeCommand.HireEmployeeWorkingTimeCommand workingTime;
+    private final HireEmployeeCommand.HireEmployeeIdentifierCommand identifier;
 
     // Set after nextEmployeeNumberPort.consumeNext()
     private String employeeNumber;
@@ -50,6 +51,20 @@ public class HireContext {
             HireEmployeeCommand.HireEmployeeLaborClassificationCommand laborClassification,
             HireEmployeeCommand.HireEmployeeCostCenterDistributionCommand costCenterDistribution,
             HireEmployeeCommand.HireEmployeeWorkingTimeCommand workingTime) {
+        this(ruleSystemCode, employeeTypeCode, firstName, lastName1, lastName2, preferredName,
+                hireDate, companyCode, entryReasonCode, workCenterCode,
+                contract, laborClassification, costCenterDistribution, workingTime, null);
+    }
+
+    public HireContext(
+            String ruleSystemCode, String employeeTypeCode,
+            String firstName, String lastName1, String lastName2, String preferredName,
+            LocalDate hireDate, String companyCode, String entryReasonCode, String workCenterCode,
+            HireEmployeeCommand.HireEmployeeContractCommand contract,
+            HireEmployeeCommand.HireEmployeeLaborClassificationCommand laborClassification,
+            HireEmployeeCommand.HireEmployeeCostCenterDistributionCommand costCenterDistribution,
+            HireEmployeeCommand.HireEmployeeWorkingTimeCommand workingTime,
+            HireEmployeeCommand.HireEmployeeIdentifierCommand identifier) {
         this.ruleSystemCode = ruleSystemCode;
         this.employeeTypeCode = employeeTypeCode;
         this.firstName = firstName;
@@ -64,6 +79,7 @@ public class HireContext {
         this.laborClassification = laborClassification;
         this.costCenterDistribution = costCenterDistribution;
         this.workingTime = workingTime;
+        this.identifier = identifier;
     }
 
     // Accessors for normalized inputs
@@ -81,6 +97,7 @@ public class HireContext {
     public HireEmployeeCommand.HireEmployeeLaborClassificationCommand laborClassification() { return laborClassification; }
     public HireEmployeeCommand.HireEmployeeCostCenterDistributionCommand costCenterDistribution() { return costCenterDistribution; }
     public HireEmployeeCommand.HireEmployeeWorkingTimeCommand workingTime() { return workingTime; }
+    public HireEmployeeCommand.HireEmployeeIdentifierCommand identifier() { return identifier; }
 
     public String employeeNumber() { return employeeNumber; }
     public void setEmployeeNumber(String employeeNumber) {

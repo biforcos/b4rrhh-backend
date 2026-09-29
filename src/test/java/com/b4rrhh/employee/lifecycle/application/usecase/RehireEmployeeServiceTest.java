@@ -22,6 +22,7 @@ import com.b4rrhh.employee.labor_classification.application.command.ListEmployee
 import com.b4rrhh.employee.labor_classification.application.usecase.CreateLaborClassificationUseCase;
 import com.b4rrhh.employee.labor_classification.application.usecase.ListEmployeeLaborClassificationsUseCase;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
+import com.b4rrhh.employee.lifecycle.application.service.RehireIdentifierGuard;
 import com.b4rrhh.employee.lifecycle.application.command.RehireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.RehireEmployeeResult;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeBusinessValidationException;
@@ -111,6 +112,8 @@ class RehireEmployeeServiceTest {
         private WorkCenterCompanyLookupPort workCenterCompanyLookupPort;
     @Mock
     private RuleEntityRepository employeeTypeRuleEntityRepository;
+    @Mock
+    private RehireIdentifierGuard rehireIdentifierGuard;
 
         private WorkCenterCompanyValidator workCenterCompanyValidator;
     private EmployeeTypeCatalogValidator employeeTypeCatalogValidator;
@@ -146,7 +149,8 @@ class RehireEmployeeServiceTest {
                                 createWorkingTimeUseCase,
                                 createExtraPaymentRegimeUseCase,
                                 workCenterCompanyValidator,
-                employeeTypeCatalogValidator
+                employeeTypeCatalogValidator,
+                rehireIdentifierGuard
         );
 
                 lenient().when(listEmployeeWorkingTimesUseCase.listByEmployeeBusinessKey(any(ListEmployeeWorkingTimesCommand.class)))

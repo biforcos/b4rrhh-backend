@@ -2,6 +2,7 @@ package com.b4rrhh.employee.cost_center.infrastructure.web;
 
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.usecase.HireEmployeeUseCase;
+import com.b4rrhh.support.DatosDePrueba;
 import com.b4rrhh.support.TestWebSobreEsquemaReal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,7 +83,8 @@ class CostCenterLanguageEndToEndTest {
                 new HireEmployeeCommand.HireEmployeeCostCenterDistributionCommand(List.of(
                         new HireEmployeeCommand.HireEmployeeCostCenterItemCommand("CC_ADMIN", 100.0)
                 )),
-                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("100"))
+                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("100")),
+                new HireEmployeeCommand.HireEmployeeIdentifierCommand("NATIONAL_ID", DatosDePrueba.dni(), "ESP")
         )).employee().employeeNumber();
     }
 }

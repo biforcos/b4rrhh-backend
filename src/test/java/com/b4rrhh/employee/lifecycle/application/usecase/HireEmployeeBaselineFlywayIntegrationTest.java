@@ -3,6 +3,7 @@ package com.b4rrhh.employee.lifecycle.application.usecase;
 import com.b4rrhh.B4rrhhBackendApplication;
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeResult;
+import com.b4rrhh.support.DatosDePrueba;
 import com.b4rrhh.support.EsquemaRealInitializer;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -60,7 +61,8 @@ class HireEmployeeBaselineFlywayIntegrationTest {
                 scenario.agreementCategoryCode()
             ),
             null,
-            new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(scenario.workingTimePercentage())
+            new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(scenario.workingTimePercentage()),
+            new HireEmployeeCommand.HireEmployeeIdentifierCommand("NATIONAL_ID", DatosDePrueba.dni(), "ESP")
         ));
 
         String generatedNumber = result.employee().employeeNumber();

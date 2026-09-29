@@ -2,6 +2,7 @@ package com.b4rrhh.employee.lifecycle.application.service;
 
 import com.b4rrhh.employee.employee.application.service.EmployeeTypeCatalogValidator;
 import com.b4rrhh.employee.employee.domain.exception.EmployeeTypeInvalidException;
+import com.b4rrhh.employee.lifecycle.application.port.IdentifierOwnerLookupPort;
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.HireContext;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
@@ -31,12 +32,15 @@ class HireEmployeePreConditionValidatorTest {
     private WorkCenterCompanyValidator workCenterCompanyValidator;
     @Mock
     private EmployeeTypeCatalogValidator employeeTypeCatalogValidator;
+    @Mock
+    private IdentifierOwnerLookupPort identifierOwnerLookupPort;
 
     private HireEmployeePreConditionValidator validator;
 
     @BeforeEach
     void setUp() {
-        validator = new HireEmployeePreConditionValidator(workCenterCompanyValidator, employeeTypeCatalogValidator);
+        validator = new HireEmployeePreConditionValidator(
+                workCenterCompanyValidator, employeeTypeCatalogValidator, identifierOwnerLookupPort);
     }
 
     @Test
@@ -67,7 +71,8 @@ class HireEmployeePreConditionValidatorTest {
                 new HireEmployeeCommand.HireEmployeeContractCommand("con", "sub"),
                 new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("agr", "cat"),
                 null,
-                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("75"))
+                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("75")),
+                new HireEmployeeCommand.HireEmployeeIdentifierCommand("NATIONAL_ID", "12345678Z", "ESP")
         );
 
         HireContext ctx = validator.validateAndNormalize(command);
@@ -88,7 +93,8 @@ class HireEmployeePreConditionValidatorTest {
                 new HireEmployeeCommand.HireEmployeeContractCommand("CON", "SUB"),
                 new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("AGR", "CAT"),
                 null,
-                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("75"))
+                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("75")),
+                new HireEmployeeCommand.HireEmployeeIdentifierCommand("NATIONAL_ID", "12345678Z", "ESP")
         );
 
         HireContext ctx = validator.validateAndNormalize(command);
@@ -110,7 +116,8 @@ class HireEmployeePreConditionValidatorTest {
                 new HireEmployeeCommand.HireEmployeeContractCommand("CON", "SUB"),
                 new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("AGR", "CAT"),
                 null,
-                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("75"))
+                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("75")),
+                new HireEmployeeCommand.HireEmployeeIdentifierCommand("NATIONAL_ID", "12345678Z", "ESP")
         );
 
         assertThatThrownBy(() -> validator.validateAndNormalize(command))
@@ -126,7 +133,8 @@ class HireEmployeePreConditionValidatorTest {
                 null,
                 new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("AGR", "CAT"),
                 null,
-                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("75"))
+                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("75")),
+                new HireEmployeeCommand.HireEmployeeIdentifierCommand("NATIONAL_ID", "12345678Z", "ESP")
         );
 
         assertThatThrownBy(() -> validator.validateAndNormalize(command))
@@ -171,7 +179,8 @@ class HireEmployeePreConditionValidatorTest {
                 new HireEmployeeCommand.HireEmployeeContractCommand("CON", "SUB"),
                 new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("AGR", "CAT"),
                 null,
-                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("75"))
+                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("75")),
+                new HireEmployeeCommand.HireEmployeeIdentifierCommand("NATIONAL_ID", "12345678Z", "ESP")
         );
     }
 }

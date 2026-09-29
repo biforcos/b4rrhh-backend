@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.lifecycle.infrastructure.rest;
 
+import com.b4rrhh.support.DatosDePrueba;
 import com.b4rrhh.support.TestWebSobreEsquemaReal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -91,7 +92,7 @@ class AHireIsAlwaysAHiringEndToEndTest {
 
     private static String hireBody(String entryReasonCode) {
         String reason = entryReasonCode == null ? "" : "\"entryReasonCode\": \"" + entryReasonCode + "\",";
-        return """
+        return DatosDePrueba.conDni("""
                 {
                   "ruleSystemCode": "ESP",
                   "employeeTypeCode": "INTERNAL",
@@ -106,6 +107,6 @@ class AHireIsAlwaysAHiringEndToEndTest {
                   "laborClassification": { "agreementCode": "99002405011982", "agreementCategoryCode": "99002405-G3" },
                   "workingTime": { "workingTimePercentage": 100 }
                 }
-                """.formatted(reason);
+                """.formatted(reason));
     }
 }

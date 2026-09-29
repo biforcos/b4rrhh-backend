@@ -7,6 +7,7 @@ import com.b4rrhh.employee.extra_payment_regime.domain.model.ExtraPaymentRegime;
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeResult;
 import com.b4rrhh.employee.lifecycle.application.usecase.HireEmployeeUseCase;
+import com.b4rrhh.support.DatosDePrueba;
 import com.b4rrhh.support.EsquemaRealInitializer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -160,7 +161,8 @@ class TheHiringCopiesTheAgreementExtraPaymentRegimeTest {
                 new HireEmployeeCommand.HireEmployeeLaborClassificationCommand(
                         agreementCode, agreementCategoryCode),
                 null,
-                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("100.00"))
+                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("100.00")),
+                new HireEmployeeCommand.HireEmployeeIdentifierCommand("NATIONAL_ID", DatosDePrueba.dni(), "ESP")
         ));
 
         return result.employee().employeeNumber();

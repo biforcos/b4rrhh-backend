@@ -36,6 +36,7 @@ import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassifica
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationOutsidePresencePeriodException;
 import com.b4rrhh.employee.labor_classification.domain.exception.LaborClassificationOverlapException;
 import com.b4rrhh.employee.labor_classification.domain.model.LaborClassification;
+import com.b4rrhh.employee.lifecycle.application.service.RehireIdentifierGuard;
 import com.b4rrhh.employee.lifecycle.application.command.RehireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.model.RehireEmployeeResult;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeBusinessValidationException;
@@ -104,6 +105,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
     private final CreateExtraPaymentRegimeUseCase createExtraPaymentRegimeUseCase;
     private final WorkCenterCompanyValidator workCenterCompanyValidator;
     private final EmployeeTypeCatalogValidator employeeTypeCatalogValidator;
+    private final RehireIdentifierGuard rehireIdentifierGuard;
 
     public RehireEmployeeService(
             GetEmployeeByBusinessKeyUseCase getEmployeeByBusinessKeyUseCase,
@@ -121,7 +123,8 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
             CreateWorkingTimeUseCase createWorkingTimeUseCase,
             CreateExtraPaymentRegimeUseCase createExtraPaymentRegimeUseCase,
             WorkCenterCompanyValidator workCenterCompanyValidator,
-            EmployeeTypeCatalogValidator employeeTypeCatalogValidator
+            EmployeeTypeCatalogValidator employeeTypeCatalogValidator,
+            RehireIdentifierGuard rehireIdentifierGuard
     ) {
         this.getEmployeeByBusinessKeyUseCase = getEmployeeByBusinessKeyUseCase;
         this.employeeRepository = employeeRepository;
@@ -139,6 +142,7 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
         this.createExtraPaymentRegimeUseCase = createExtraPaymentRegimeUseCase;
         this.workCenterCompanyValidator = workCenterCompanyValidator;
         this.employeeTypeCatalogValidator = employeeTypeCatalogValidator;
+        this.rehireIdentifierGuard = rehireIdentifierGuard;
     }
 
     @Override
@@ -175,6 +179,8 @@ public class RehireEmployeeService implements RehireEmployeeUseCase {
             companyCode,
             rehireDate
         );
+
+        rehireIdentifierGuard.checkAndKeep(ruleSystemCode, employeeTypeCode, employeeNumber, command.identifier());
 
         List<Presence> presenceHistory = listEmployeePresencesUseCase
                 .listByEmployeeBusinessKey(ruleSystemCode, employeeTypeCode, employeeNumber);

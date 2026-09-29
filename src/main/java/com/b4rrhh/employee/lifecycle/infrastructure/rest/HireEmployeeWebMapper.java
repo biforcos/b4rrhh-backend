@@ -44,7 +44,13 @@ public class HireEmployeeWebMapper {
                                 ))
                                 .collect(Collectors.toList())
                 ) : null,
-                toWorkingTimeCommand(request.workingTime())
+                toWorkingTimeCommand(request.workingTime()),
+                request.identifier() != null ? new HireEmployeeCommand.HireEmployeeIdentifierCommand(
+                        request.identifier().identifierTypeCode(),
+                        request.identifier().identifierValue(),
+                        request.identifier().issuingCountryCode(),
+                        request.identifier().expirationDate()
+                ) : null
         );
     }
 

@@ -17,8 +17,16 @@ public record HireEmployeeRequest(
         HireEmployeeCostCenterDistributionRequest costCenterDistribution,
         HireContractRequest contract,
         HireLaborClassificationRequest laborClassification,
-        HireEmployeeWorkingTimeRequest workingTime
+        HireEmployeeWorkingTimeRequest workingTime,
+        HireIdentifierRequest identifier
 ) {
+    public record HireIdentifierRequest(
+            String identifierTypeCode,
+            String identifierValue,
+            String issuingCountryCode,
+            LocalDate expirationDate
+    ) {}
+
     public record HireEmployeeCostCenterDistributionRequest(
             List<HireEmployeeCostCenterItemRequest> items
     ) {}

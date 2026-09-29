@@ -62,7 +62,13 @@ public class RehireEmployeeWebMapper {
                                         .collect(Collectors.toList())
                           )
                                                 : null,
-                                toWorkingTimeCommand(request.workingTime())
+                                toWorkingTimeCommand(request.workingTime()),
+                request.identifier() != null
+                        ? new RehireEmployeeCommand.RehireEmployeeIdentifierCommand(
+                                request.identifier().identifierTypeCode(),
+                                request.identifier().identifierValue(),
+                                request.identifier().issuingCountryCode())
+                        : null
         );
     }
 

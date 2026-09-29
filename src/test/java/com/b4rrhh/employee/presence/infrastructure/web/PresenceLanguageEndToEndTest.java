@@ -2,6 +2,7 @@ package com.b4rrhh.employee.presence.infrastructure.web;
 
 import com.b4rrhh.employee.lifecycle.application.command.HireEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.usecase.HireEmployeeUseCase;
+import com.b4rrhh.support.DatosDePrueba;
 import com.b4rrhh.support.TestWebSobreEsquemaReal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,7 +70,8 @@ class PresenceLanguageEndToEndTest {
                 new HireEmployeeCommand.HireEmployeeContractCommand("100", "01"),
                 new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("99002405011982", "99002405-G3"),
                 null,
-                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("100"))
+                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("100")),
+                new HireEmployeeCommand.HireEmployeeIdentifierCommand("NATIONAL_ID", DatosDePrueba.dni(), "ESP")
         )).employee().employeeNumber();
     }
 }

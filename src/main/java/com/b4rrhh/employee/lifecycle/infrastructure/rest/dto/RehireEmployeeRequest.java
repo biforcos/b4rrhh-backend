@@ -12,8 +12,15 @@ public record RehireEmployeeRequest(
         RehireContractRequest contract,
         RehireWorkCenterRequest workCenter,
         RehireCostCenterDistributionRequest costCenterDistribution,
-        RehireEmployeeWorkingTimeRequest workingTime
+        RehireEmployeeWorkingTimeRequest workingTime,
+        RehireIdentifierRequest identifier
 ) {
+    public record RehireIdentifierRequest(
+            String identifierTypeCode,
+            String identifierValue,
+            String issuingCountryCode
+    ) {}
+
     public record RehireCostCenterDistributionRequest(
             List<RehireCostCenterItemRequest> items
     ) {}

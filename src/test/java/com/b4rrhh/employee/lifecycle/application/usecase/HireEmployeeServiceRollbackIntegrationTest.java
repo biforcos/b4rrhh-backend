@@ -85,7 +85,8 @@ class HireEmployeeServiceRollbackIntegrationTest {
                 new HireEmployeeCommand.HireEmployeeContractCommand("CON", "SUB"),
                 new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("AGR", "CAT"),
                 null,
-                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("75"))
+                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("75")),
+                new HireEmployeeCommand.HireEmployeeIdentifierCommand("NATIONAL_ID", "12345678Z", "ESP")
         );
 
         assertThrows(HireEmployeeCatalogValueInvalidException.class, () -> service.hire(command));
@@ -116,7 +117,8 @@ class HireEmployeeServiceRollbackIntegrationTest {
                 new HireEmployeeCommand.HireEmployeeContractCommand("CON", "SUB"),
                 new HireEmployeeCommand.HireEmployeeLaborClassificationCommand("AGR", "CAT"),
                 null,
-                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("150"))
+                new HireEmployeeCommand.HireEmployeeWorkingTimeCommand(new BigDecimal("150")),
+                new HireEmployeeCommand.HireEmployeeIdentifierCommand("NATIONAL_ID", "12345678Z", "ESP")
         );
 
         assertThrows(HireEmployeeBusinessValidationException.class, () -> service.hire(command));
@@ -180,7 +182,9 @@ class HireEmployeeServiceRollbackIntegrationTest {
         HireEmployeePreConditionValidator hireEmployeePreConditionValidator(
                 WorkCenterCompanyValidator workCenterCompanyValidator,
                 EmployeeTypeCatalogValidator employeeTypeCatalogValidator) {
-            return new HireEmployeePreConditionValidator(workCenterCompanyValidator, employeeTypeCatalogValidator);
+            // Nadie tiene el documento: lo que se prueba aqui es la vuelta atras, no el duplicado.
+            return new HireEmployeePreConditionValidator(workCenterCompanyValidator, employeeTypeCatalogValidator,
+                    (ruleSystemCode, identifierTypeCode, identifierValue) -> java.util.Optional.empty());
         }
 
         @Bean

@@ -2,6 +2,7 @@ package com.b4rrhh.employee.lifecycle.infrastructure.rest;
 
 import com.b4rrhh.employee.lifecycle.application.command.TerminateEmployeeCommand;
 import com.b4rrhh.employee.lifecycle.application.usecase.TerminateEmployeeUseCase;
+import com.b4rrhh.support.DatosDePrueba;
 import com.b4rrhh.support.TestWebSobreEsquemaReal;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -136,7 +137,7 @@ class HireAndRehireNeverServeACodeAsANameEndToEndTest {
     }
 
     private String hireBody(LocalDate hireDate) {
-        return """
+        return DatosDePrueba.conDni("""
                 {
                   "ruleSystemCode": "ESP",
                   "employeeTypeCode": "INTERNAL",
@@ -151,7 +152,7 @@ class HireAndRehireNeverServeACodeAsANameEndToEndTest {
                   "laborClassification": { "agreementCode": "99002405011982", "agreementCategoryCode": "99002405-G3" },
                   "workingTime": { "workingTimePercentage": 100 }
                 }
-                """.formatted(hireDate, WORK_CENTER_CODE, COST_CENTER_CODE);
+                """.formatted(hireDate, WORK_CENTER_CODE, COST_CENTER_CODE));
     }
 
     private String rehireBody(LocalDate rehireDate) {

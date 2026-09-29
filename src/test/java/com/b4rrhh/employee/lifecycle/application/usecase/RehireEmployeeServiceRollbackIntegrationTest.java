@@ -178,6 +178,12 @@ class RehireEmployeeServiceRollbackIntegrationTest {
             };
         }
 
+        // La readmision de este test no trae documento: el guardian no llega a mirar nada.
+        @Bean
+        com.b4rrhh.employee.lifecycle.application.service.RehireIdentifierGuard rehireIdentifierGuard() {
+            return new com.b4rrhh.employee.lifecycle.application.service.RehireIdentifierGuard(null, null, null);
+        }
+
         @Bean
         EmployeeTypeCatalogValidator employeeTypeCatalogValidator(RuleEntityRepository ruleEntityRepository) {
             return new EmployeeTypeCatalogValidator(ruleEntityRepository);

@@ -9,6 +9,7 @@ import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeConflictExce
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeDependentRelationInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeDistributionInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeEmployeeNotFoundException;
+import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeIdentifierOfAnotherEmployeeException;
 import com.b4rrhh.employee.lifecycle.domain.exception.RehireEmployeeRequestInvalidException;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.RehireEmployeeErrorResponse;
 import com.b4rrhh.employee.presence.domain.exception.PresenceEmployeeNotFoundException;
@@ -60,6 +61,12 @@ public class RehireEmployeeExceptionHandler {
     public ResponseEntity<RehireEmployeeErrorResponse> handleBusinessValidation(RehireEmployeeBusinessValidationException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(new RehireEmployeeErrorResponse("REHIRE_BUSINESS_VALIDATION", ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(RehireEmployeeIdentifierOfAnotherEmployeeException.class)
+    public ResponseEntity<RehireEmployeeErrorResponse> handleIdentifierOfAnotherEmployee(RehireEmployeeIdentifierOfAnotherEmployeeException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new RehireEmployeeErrorResponse("REHIRE_IDENTIFIER_OF_ANOTHER_EMPLOYEE", ex.getMessage(), null));
     }
 
     @ExceptionHandler(RehireEmployeeConflictException.class)

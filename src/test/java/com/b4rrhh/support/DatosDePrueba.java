@@ -24,6 +24,27 @@ public final class DatosDePrueba {
     private DatosDePrueba() {
     }
 
+    private static final AtomicInteger SECUENCIA_DNI = new AtomicInteger(90_000_000);
+
+    /**
+     * Un DNI valido y distinto en cada llamada (b4rrhh/backend#141): el alta lo exige y se
+     * niega si ya es de otro empleado, asi que dos altas de un mismo test no pueden compartirlo.
+     * Empieza en 90.000.000 para no pisar los de la semilla del loader, que cuentan desde 1.
+     */
+    public static String dni() {
+        int numero = SECUENCIA_DNI.incrementAndGet();
+        return String.format("%08d", numero) + "TRWAGMYFPDXBNJZSQVHLCKE".charAt(numero % 23);
+    }
+
+    /** El cuerpo JSON de un alta con un DNI nuevo dentro, para los tests que no van de eso. */
+    public static String conDni(String cuerpoDelAlta) {
+        int llave = cuerpoDelAlta.indexOf('{');
+        return cuerpoDelAlta.substring(0, llave + 1)
+                + " \"identifier\": { \"identifierTypeCode\": \"NATIONAL_ID\", \"identifierValue\": \""
+                + dni() + "\", \"issuingCountryCode\": \"ESP\" },"
+                + cuerpoDelAlta.substring(llave + 1);
+    }
+
     /** Un empleado cualquiera, con numero unico. */
     public static Long empleado(JdbcTemplate jdbcTemplate) {
         return empleado(jdbcTemplate, "T" + String.format("%08d", SECUENCIA.incrementAndGet()));

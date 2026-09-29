@@ -6,6 +6,8 @@ import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueIn
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeConflictException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeDependentRelationInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeEntryReasonNotHiringException;
+import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeIdentifierAlreadyExistsException;
+import com.b4rrhh.employee.lifecycle.application.model.IdentifierOwner;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeRequestInvalidException;
 import com.b4rrhh.employee.lifecycle.infrastructure.rest.dto.HireEmployeeErrorResponse;
 import com.b4rrhh.employee.employee.domain.exception.EmployeeRuleSystemNotFoundException;
@@ -25,6 +27,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @RestControllerAdvice(assignableTypes = HireEmployeeController.class)
 public class HireEmployeeExceptionHandler {
@@ -63,6 +68,20 @@ public class HireEmployeeExceptionHandler {
     public ResponseEntity<HireEmployeeErrorResponse> handleInvalidDependentRelation(HireEmployeeDependentRelationInvalidException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(new HireEmployeeErrorResponse("INVALID_DEPENDENT_RELATION", ex.getMessage(), null));
+    }
+
+    // Con el dueno en details para que la pantalla lo enlace y, si esta cesado, ofrezca la
+    // readmision (b4rrhh/backend#141 y b4rrhh/frontend#95).
+    @ExceptionHandler(HireEmployeeIdentifierAlreadyExistsException.class)
+    public ResponseEntity<HireEmployeeErrorResponse> handleIdentifierAlreadyExists(HireEmployeeIdentifierAlreadyExistsException ex) {
+        IdentifierOwner owner = ex.owner();
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("employeeTypeCode", owner.employeeTypeCode());
+        details.put("employeeNumber", owner.employeeNumber());
+        details.put("active", owner.active());
+        details.put("ceasedOn", owner.ceasedOn() != null ? owner.ceasedOn().toString() : null);
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new HireEmployeeErrorResponse("HIRE_IDENTIFIER_ALREADY_EXISTS", ex.getMessage(), details));
     }
 
     @ExceptionHandler(HireEmployeeEntryReasonNotHiringException.class)

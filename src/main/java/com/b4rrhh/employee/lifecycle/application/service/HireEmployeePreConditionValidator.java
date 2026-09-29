@@ -7,6 +7,8 @@ import com.b4rrhh.employee.lifecycle.application.model.HireContext;
 import com.b4rrhh.employee.lifecycle.application.model.HireEmployeeDefaultValues;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeEntryReasonNotHiringException;
+import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeIdentifierAlreadyExistsException;
+import com.b4rrhh.employee.lifecycle.application.port.IdentifierOwnerLookupPort;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeRequestInvalidException;
 import com.b4rrhh.employee.workcenter.domain.service.WorkCenterCompanyValidator;
 import org.springframework.stereotype.Component;
@@ -18,12 +20,15 @@ public class HireEmployeePreConditionValidator {
 
     private final WorkCenterCompanyValidator workCenterCompanyValidator;
     private final EmployeeTypeCatalogValidator employeeTypeCatalogValidator;
+    private final IdentifierOwnerLookupPort identifierOwnerLookupPort;
 
     public HireEmployeePreConditionValidator(
             WorkCenterCompanyValidator workCenterCompanyValidator,
-            EmployeeTypeCatalogValidator employeeTypeCatalogValidator) {
+            EmployeeTypeCatalogValidator employeeTypeCatalogValidator,
+            IdentifierOwnerLookupPort identifierOwnerLookupPort) {
         this.workCenterCompanyValidator = workCenterCompanyValidator;
         this.employeeTypeCatalogValidator = employeeTypeCatalogValidator;
+        this.identifierOwnerLookupPort = identifierOwnerLookupPort;
     }
 
     public HireContext validateAndNormalize(HireEmployeeCommand command) {
@@ -47,6 +52,7 @@ public class HireEmployeePreConditionValidator {
         HireEmployeeCommand.HireEmployeeLaborClassificationCommand laborClassification =
                 requireLaborClassification(command.laborClassification());
         HireEmployeeCommand.HireEmployeeWorkingTimeCommand workingTime = requireWorkingTime(command.workingTime());
+        HireEmployeeCommand.HireEmployeeIdentifierCommand identifier = requireIdentifier(command.identifier());
 
         workCenterCompanyValidator.validateBelongsToCompany(ruleSystemCode, workCenterCode, companyCode, hireDate);
 
@@ -56,9 +62,33 @@ public class HireEmployeePreConditionValidator {
             throw new HireEmployeeCatalogValueInvalidException(ex.getMessage(), ex);
         }
 
+        // Antes de gastar un numero de empleado: la misma persona no se da de alta dos veces
+        // (b4rrhh/backend#141).
+        identifierOwnerLookupPort
+                .findOwner(ruleSystemCode, identifier.identifierTypeCode(), identifier.identifierValue())
+                .ifPresent(owner -> {
+                    throw new HireEmployeeIdentifierAlreadyExistsException(
+                            owner, identifier.identifierTypeCode(), identifier.identifierValue());
+                });
+
         return new HireContext(ruleSystemCode, employeeTypeCode, firstName, lastName1, lastName2, preferredName,
                 hireDate, companyCode, entryReasonCode, workCenterCode,
-                contract, laborClassification, command.costCenterDistribution(), workingTime);
+                contract, laborClassification, command.costCenterDistribution(), workingTime, identifier);
+    }
+
+    private HireEmployeeCommand.HireEmployeeIdentifierCommand requireIdentifier(
+            HireEmployeeCommand.HireEmployeeIdentifierCommand identifier) {
+        if (identifier == null) {
+            throw new HireEmployeeRequestInvalidException("identifier is required");
+        }
+        String countryCode = identifier.issuingCountryCode() == null || identifier.issuingCountryCode().trim().isEmpty()
+                ? null : identifier.issuingCountryCode().trim().toUpperCase();
+        return new HireEmployeeCommand.HireEmployeeIdentifierCommand(
+                requireCode("identifier.identifierTypeCode", identifier.identifierTypeCode()),
+                requireText("identifier.identifierValue", identifier.identifierValue()).toUpperCase(),
+                countryCode,
+                identifier.expirationDate()
+        );
     }
 
     // Un alta es una contratacion por construccion (b4rrhh/backend#143): sin motivo entra como
