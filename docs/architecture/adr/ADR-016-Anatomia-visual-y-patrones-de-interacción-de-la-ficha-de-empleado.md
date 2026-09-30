@@ -251,3 +251,10 @@ no parece CRUD
 expresa claramente el dominio
 escala sin romperse
 puede evolucionar hacia producto completo de RRHH
+
+### Nota (b4rrhh/frontend#117, 30/09/2026): la fase 1 nombra piezas que ya no existen
+
+Este ADR se anota y no se reescribe: es historia. Las dos piezas de la **fase 1** del plan,
+**`employee-page-header`** y **`employee-section-shell`**, se retiraron en el commit `d5f3948`
+del frontend, porque nadie las montaba. La estructura de la ficha la rige el **ADR-051**: los
+contenedores viven en `shared/ui` y los decide el modo de mantenimiento de la sección.

@@ -58,3 +58,17 @@ Componente base que define:
 2. Aplicar a contacts
 3. Reutilizar en identifiers
 4. Extender a temporales
+
+### Nota (b4rrhh/frontend#117, 30/09/2026): las piezas de §5 y §6 que ya no existen
+
+Este ADR se anota y no se reescribe: es historia. Lo que nombra y ya no está en el árbol:
+
+- **`employee-section-shell`** y el componente **`editable-slot-section`** (§6) se retiraron en el
+  commit `d5f3948` del frontend, porque nadie los montaba. De `editable-slot-section` queda
+  `editable-slot-section.model.ts` (`SlotDraft`, `SlotKeyOption`), que sí usan las secciones.
+- **`SectionCapabilities`** (§5) se retiró en el commit `bd4bcf3` del frontend
+  (b4rrhh/frontend#121), porque nadie lo importaba.
+- **`temporal-section`** (§6) y **`SectionUiState`** (§5) siguen vivos.
+
+La estructura de la ficha no la rige ya el shell de §3: los contenedores viven en `shared/ui` y
+los decide el modo de mantenimiento de la sección. Eso es el **ADR-051**.
