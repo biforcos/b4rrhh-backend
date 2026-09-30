@@ -11,7 +11,9 @@ import com.b4rrhh.rulesystem.application.usecase.GetRuleEntityByBusinessKeyUseCa
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.infrastructure.web.dto.CloseRuleEntityRequest;
 import com.b4rrhh.rulesystem.infrastructure.web.dto.CorrectRuleEntityRequest;
+import com.b4rrhh.rulesystem.infrastructure.web.assembler.RuleEntityResponseAssembler;
 import com.b4rrhh.rulesystem.infrastructure.web.dto.RuleEntityResponse;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,17 +34,20 @@ public class RuleEntityBusinessKeyController {
     private final CorrectRuleEntityUseCase correctRuleEntityUseCase;
     private final CloseRuleEntityUseCase closeRuleEntityUseCase;
     private final DeleteRuleEntityUseCase deleteRuleEntityUseCase;
+    private final RuleEntityResponseAssembler assembler;
 
     public RuleEntityBusinessKeyController(
         GetRuleEntityByBusinessKeyUseCase getRuleEntityByBusinessKeyUseCase,
         CorrectRuleEntityUseCase correctRuleEntityUseCase,
         CloseRuleEntityUseCase closeRuleEntityUseCase,
-        DeleteRuleEntityUseCase deleteRuleEntityUseCase
+        DeleteRuleEntityUseCase deleteRuleEntityUseCase,
+        RuleEntityResponseAssembler assembler
     ) {
     this.getRuleEntityByBusinessKeyUseCase = getRuleEntityByBusinessKeyUseCase;
     this.correctRuleEntityUseCase = correctRuleEntityUseCase;
     this.closeRuleEntityUseCase = closeRuleEntityUseCase;
         this.deleteRuleEntityUseCase = deleteRuleEntityUseCase;
+        this.assembler = assembler;
     }
 
     @GetMapping
@@ -50,13 +55,14 @@ public class RuleEntityBusinessKeyController {
         @PathVariable String ruleSystemCode,
         @PathVariable String ruleEntityTypeCode,
         @PathVariable String code,
-        @PathVariable LocalDate startDate
+        @PathVariable LocalDate startDate,
+        ResponseLanguage language
     ) {
     RuleEntity ruleEntity = getRuleEntityByBusinessKeyUseCase.get(
         new GetRuleEntityByBusinessKeyQuery(ruleSystemCode, ruleEntityTypeCode, code, startDate)
     );
 
-    return ResponseEntity.ok(toResponse(ruleEntity));
+    return ResponseEntity.ok(assembler.toResponse(ruleEntity, language));
     }
 
     @PutMapping
@@ -65,7 +71,8 @@ public class RuleEntityBusinessKeyController {
         @PathVariable String ruleEntityTypeCode,
         @PathVariable String code,
         @PathVariable LocalDate startDate,
-        @RequestBody CorrectRuleEntityRequest request
+        @RequestBody CorrectRuleEntityRequest request,
+        ResponseLanguage language
     ) {
     RuleEntity corrected = correctRuleEntityUseCase.correct(
         new CorrectRuleEntityCommand(
@@ -79,7 +86,7 @@ public class RuleEntityBusinessKeyController {
         )
     );
 
-    return ResponseEntity.ok(toResponse(corrected));
+    return ResponseEntity.ok(assembler.toResponse(corrected, language));
     }
 
     @PostMapping("/close")
@@ -88,7 +95,8 @@ public class RuleEntityBusinessKeyController {
         @PathVariable String ruleEntityTypeCode,
         @PathVariable String code,
         @PathVariable LocalDate startDate,
-        @RequestBody CloseRuleEntityRequest request
+        @RequestBody CloseRuleEntityRequest request,
+        ResponseLanguage language
     ) {
     RuleEntity closed = closeRuleEntityUseCase.close(
         new CloseRuleEntityCommand(
@@ -100,7 +108,7 @@ public class RuleEntityBusinessKeyController {
         )
     );
 
-    return ResponseEntity.ok(toResponse(closed));
+    return ResponseEntity.ok(assembler.toResponse(closed, language));
     }
 
     @DeleteMapping
@@ -115,18 +123,5 @@ public class RuleEntityBusinessKeyController {
         );
 
         return ResponseEntity.noContent().build();
-    }
-
-    private RuleEntityResponse toResponse(RuleEntity ruleEntity) {
-        return new RuleEntityResponse(
-                ruleEntity.getRuleSystemCode(),
-                ruleEntity.getRuleEntityTypeCode(),
-                ruleEntity.getCode(),
-                ruleEntity.getName(),
-                ruleEntity.getDescription(),
-                ruleEntity.isActive(),
-                ruleEntity.getStartDate(),
-                ruleEntity.getEndDate()
-        );
     }
 }

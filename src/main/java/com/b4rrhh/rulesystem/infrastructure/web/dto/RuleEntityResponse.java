@@ -7,6 +7,7 @@ public record RuleEntityResponse(
         String ruleEntityTypeCode,
         String code,
         String name,
+        String label,
         String description,
         boolean active,
         LocalDate startDate,

@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.translation.application.service;
 
+import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.model.RuleEntityType;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import com.b4rrhh.rulesystem.translation.domain.model.LanguageCode;
@@ -41,6 +42,32 @@ public class RuleEntityLabelResolver {
         this.ruleEntityRepository = ruleEntityRepository;
         this.ruleEntityTranslationRepository = ruleEntityTranslationRepository;
         this.ruleEntityTypeTranslationRepository = ruleEntityTypeTranslationRepository;
+    }
+
+    /**
+     * El literal de cada entidad en el idioma pedido, por id, o su literal base si no está
+     * traducida (backend#152). Es {@link #resolveName} para una lista que ya se tiene en la
+     * mano —la de mantenimiento de Catálogos—: una sola consulta, no una por fila. Una
+     * entidad sin literal no sale en el mapa, igual que {@code resolveName} da vacío.
+     */
+    public Map<Long, String> resolveLabels(Collection<RuleEntity> entities, String languageCode) {
+        Map<Long, String> translated = LanguageCode.canonical(languageCode)
+                .map(language -> ruleEntityTranslationRepository.findByRuleEntityIdsAndLanguageCode(
+                        entities.stream().map(RuleEntity::getId).toList(), language))
+                .orElseGet(List::of)
+                .stream()
+                .filter(translation -> nonBlank(translation.name()).isPresent())
+                .collect(Collectors.toMap(
+                        RuleEntityTranslation::ruleEntityId,
+                        translation -> translation.name().trim()));
+
+        Map<Long, String> labels = new LinkedHashMap<>();
+        for (RuleEntity entity : entities) {
+            Optional.ofNullable(translated.get(entity.getId()))
+                    .or(() -> nonBlank(entity.getName()))
+                    .ifPresent(label -> labels.put(entity.getId(), label));
+        }
+        return labels;
     }
 
     /**

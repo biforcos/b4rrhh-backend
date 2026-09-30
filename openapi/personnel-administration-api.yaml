@@ -3446,6 +3446,8 @@ paths:
       summary: Create rule entity
       tags:
         - Rule Entities
+      parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
       requestBody:
         required: true
         content:
@@ -3480,6 +3482,7 @@ paths:
         - `ruleSystemCode + ruleEntityTypeCode`
         - `ruleSystemCode + ruleEntityTypeCode + code`
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: query
           name: ruleSystemCode
           required: false
@@ -3528,6 +3531,7 @@ paths:
         - Rule Entities
       description: Returns the exact occurrence identified by ruleSystemCode, ruleEntityTypeCode, code and startDate.
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -3571,6 +3575,7 @@ paths:
         Identity fields (ruleSystemCode, ruleEntityTypeCode, code, startDate) are immutable.
         This operation does not create a new occurrence.
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -3665,6 +3670,7 @@ paths:
         Explicit domain action to close an existing occurrence by setting endDate.
         Identity fields remain immutable.
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleSystemCode
           required: true
@@ -12293,6 +12299,7 @@ components:
         - ruleEntityTypeCode
         - code
         - name
+        - label
         - active
         - startDate
       properties:
@@ -12304,6 +12311,15 @@ components:
           type: string
         name:
           type: string
+          description: >-
+            The stored literal, the one that is edited (ADR-052 §1). Never translated: a
+            maintenance screen shows it next to the label (backend#152).
+        label:
+          type: string
+          description: >-
+            The literal in the language of Accept-Language, resolved like every other catalog
+            label (ADR-052 §3), or the stored name when there is no translation for it, the
+            type is not translatable or no language is asked for.
         description:
           type: string
           nullable: true

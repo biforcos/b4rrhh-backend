@@ -15,6 +15,9 @@ import com.b4rrhh.rulesystem.domain.exception.RuleEntityInvalidDateRangeExceptio
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityNotFoundException;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityOverlapException;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
+import com.b4rrhh.rulesystem.infrastructure.web.assembler.RuleEntityResponseAssembler;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguageArgumentResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -52,6 +55,8 @@ class RuleEntityBusinessKeyControllerHttpTest {
         private CloseRuleEntityUseCase closeRuleEntityUseCase;
     @Mock
     private DeleteRuleEntityUseCase deleteRuleEntityUseCase;
+    @Mock
+    private RuleEntityLabelResolver ruleEntityLabelResolver;
 
     private MockMvc mockMvc;
 
@@ -61,9 +66,11 @@ class RuleEntityBusinessKeyControllerHttpTest {
                 getRuleEntityByBusinessKeyUseCase,
                 correctRuleEntityUseCase,
                 closeRuleEntityUseCase,
-                deleteRuleEntityUseCase
+                deleteRuleEntityUseCase,
+                new RuleEntityResponseAssembler(ruleEntityLabelResolver)
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setCustomArgumentResolvers(new ResponseLanguageArgumentResolver())
                 .setControllerAdvice(new RuleEntityExceptionHandler())
                 .build();
     }

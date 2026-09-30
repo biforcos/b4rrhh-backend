@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
@@ -136,6 +137,27 @@ class RuleEntityLabelResolverTest {
         assertThat(resolver.resolveName("ESP", TYPE, null, null)).isEmpty();
         assertThat(resolver.resolveName(null, TYPE, "HIRING", null)).isEmpty();
         assertThat(resolver.resolveName("ESP", TYPE, "  ", null)).isEmpty();
+    }
+
+    // backend#152: la lista de Catálogos resuelve todas sus filas con una sola consulta, y
+    // la que no tiene traducción cae a su literal base, como resolveName.
+    @Test
+    void resolvesTheLabelOfEveryEntityInOneLookupAndFallsBackToItsBaseLiteral() {
+        RuleEntity retirement = ruleEntity(8L, "Retirement");
+        when(translationRepository.findByRuleEntityIdsAndLanguageCode(List.of(7L, 8L), "es-ES"))
+                .thenReturn(List.of(new RuleEntityTranslation(7L, "es-ES", "Contratación", null)));
+
+        Map<Long, String> labels = resolver.resolveLabels(List.of(hiring(), retirement), "es_es");
+
+        assertThat(labels).containsExactlyInAnyOrderEntriesOf(Map.of(7L, "Contratación", 8L, "Retirement"));
+        verify(translationRepository, never()).findByRuleEntityIdAndLanguageCode(anyLong(), anyString());
+    }
+
+    @Test
+    void entityLabelsAreTheBaseLiteralsWithoutLookingUpTranslationsWhenNoLanguageIsGiven() {
+        assertThat(resolver.resolveLabels(List.of(hiring()), null))
+                .containsExactlyEntriesOf(Map.of(7L, "Hiring"));
+        verify(translationRepository, never()).findByRuleEntityIdsAndLanguageCode(any(), anyString());
     }
 
     // backend#152: el nombre de un tipo se traduce como el de una entidad, y una lista de

@@ -6,7 +6,9 @@ import com.b4rrhh.rulesystem.application.usecase.ListRuleEntitiesQuery;
 import com.b4rrhh.rulesystem.application.usecase.ListRuleEntitiesUseCase;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.infrastructure.web.dto.CreateRuleEntityRequest;
+import com.b4rrhh.rulesystem.infrastructure.web.assembler.RuleEntityResponseAssembler;
 import com.b4rrhh.rulesystem.infrastructure.web.dto.RuleEntityResponse;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,17 +27,23 @@ public class RuleEntityController {
 
     private final CreateRuleEntityUseCase createRuleEntityUseCase;
     private final ListRuleEntitiesUseCase listRuleEntitiesUseCase;
+    private final RuleEntityResponseAssembler assembler;
 
     public RuleEntityController(
             CreateRuleEntityUseCase createRuleEntityUseCase,
-                        ListRuleEntitiesUseCase listRuleEntitiesUseCase
+            ListRuleEntitiesUseCase listRuleEntitiesUseCase,
+            RuleEntityResponseAssembler assembler
     ) {
         this.createRuleEntityUseCase = createRuleEntityUseCase;
         this.listRuleEntitiesUseCase = listRuleEntitiesUseCase;
+        this.assembler = assembler;
     }
 
     @PostMapping
-    public ResponseEntity<RuleEntityResponse> create(@RequestBody CreateRuleEntityRequest request) {
+    public ResponseEntity<RuleEntityResponse> create(
+            @RequestBody CreateRuleEntityRequest request,
+            ResponseLanguage language
+    ) {
         RuleEntity created = createRuleEntityUseCase.create(
                 new CreateRuleEntityCommand(
                         request.ruleSystemCode(),
@@ -48,7 +56,7 @@ public class RuleEntityController {
                 )
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(created));
+        return ResponseEntity.status(HttpStatus.CREATED).body(assembler.toResponse(created, language));
     }
 
     @GetMapping
@@ -57,27 +65,12 @@ public class RuleEntityController {
             @RequestParam(required = false) String ruleEntityTypeCode,
             @RequestParam(required = false) String code,
             @RequestParam(required = false) Boolean active,
-            @RequestParam(required = false) LocalDate referenceDate
+            @RequestParam(required = false) LocalDate referenceDate,
+            ResponseLanguage language
     ) {
-        List<RuleEntityResponse> response = listRuleEntitiesUseCase
-                .list(new ListRuleEntitiesQuery(ruleSystemCode, ruleEntityTypeCode, code, active, referenceDate))
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        List<RuleEntity> entities = listRuleEntitiesUseCase
+                .list(new ListRuleEntitiesQuery(ruleSystemCode, ruleEntityTypeCode, code, active, referenceDate));
 
-        return ResponseEntity.ok(response);
-    }
-
-    private RuleEntityResponse toResponse(RuleEntity ruleEntity) {
-        return new RuleEntityResponse(
-                ruleEntity.getRuleSystemCode(),
-                ruleEntity.getRuleEntityTypeCode(),
-                ruleEntity.getCode(),
-                ruleEntity.getName(),
-                ruleEntity.getDescription(),
-                ruleEntity.isActive(),
-                ruleEntity.getStartDate(),
-                ruleEntity.getEndDate()
-        );
+        return ResponseEntity.ok(assembler.toResponseList(entities, language));
     }
 }
