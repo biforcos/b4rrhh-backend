@@ -1,9 +1,14 @@
 package com.b4rrhh.rulesystem.translation.application.service;
 
+import com.b4rrhh.rulesystem.domain.model.LiteralClass;
+import com.b4rrhh.rulesystem.domain.model.MaintenanceMode;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
+import com.b4rrhh.rulesystem.domain.model.RuleEntityType;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import com.b4rrhh.rulesystem.translation.domain.model.RuleEntityTranslation;
+import com.b4rrhh.rulesystem.translation.domain.model.RuleEntityTypeTranslation;
 import com.b4rrhh.rulesystem.translation.domain.port.RuleEntityTranslationRepository;
+import com.b4rrhh.rulesystem.translation.domain.port.RuleEntityTypeTranslationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,6 +17,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,12 +40,14 @@ class RuleEntityLabelResolverTest {
     private RuleEntityRepository ruleEntityRepository;
     @Mock
     private RuleEntityTranslationRepository translationRepository;
+    @Mock
+    private RuleEntityTypeTranslationRepository typeTranslationRepository;
 
     private RuleEntityLabelResolver resolver;
 
     @BeforeEach
     void setUp() {
-        resolver = new RuleEntityLabelResolver(ruleEntityRepository, translationRepository);
+        resolver = new RuleEntityLabelResolver(ruleEntityRepository, translationRepository, typeTranslationRepository);
     }
 
     @Test
@@ -127,6 +136,45 @@ class RuleEntityLabelResolverTest {
         assertThat(resolver.resolveName("ESP", TYPE, null, null)).isEmpty();
         assertThat(resolver.resolveName(null, TYPE, "HIRING", null)).isEmpty();
         assertThat(resolver.resolveName("ESP", TYPE, "  ", null)).isEmpty();
+    }
+
+    // backend#152: el nombre de un tipo se traduce como el de una entidad, y una lista de
+    // tipos se resuelve con una sola consulta, no una por tipo.
+    @Test
+    void resolvesTheLabelOfEveryTypeAndFallsBackToItsStoredName() {
+        when(typeTranslationRepository.findByLanguageCode("es-ES"))
+                .thenReturn(List.of(new RuleEntityTypeTranslation("CONTACT_TYPE", "es-ES", "Tipo de contacto")));
+
+        Map<String, String> labels = resolver.resolveTypeLabels(
+                List.of(type("CONTACT_TYPE", "Contact Type"), type("COUNTRY", "Country")), "es_es");
+
+        assertThat(labels).containsExactlyInAnyOrderEntriesOf(Map.of(
+                "CONTACT_TYPE", "Tipo de contacto",
+                "COUNTRY", "Country"));
+    }
+
+    @Test
+    void typeLabelsAreTheStoredNamesWithoutLookingUpTranslationsWhenNoLanguageIsGiven() {
+        Map<String, String> labels = resolver.resolveTypeLabels(
+                List.of(type("CONTACT_TYPE", "Contact Type")), null);
+
+        assertThat(labels).containsExactlyEntriesOf(Map.of("CONTACT_TYPE", "Contact Type"));
+        verify(typeTranslationRepository, never()).findByLanguageCode(anyString());
+    }
+
+    @Test
+    void aBlankTypeTranslationFallsBackToTheStoredName() {
+        when(typeTranslationRepository.findByLanguageCode("es-ES"))
+                .thenReturn(List.of(new RuleEntityTypeTranslation("CONTACT_TYPE", "es-ES", "  ")));
+
+        assertThat(resolver.resolveTypeLabels(List.of(type("CONTACT_TYPE", "Contact Type")), "es-ES"))
+                .containsExactlyEntriesOf(Map.of("CONTACT_TYPE", "Contact Type"));
+    }
+
+    private static RuleEntityType type(String code, String name) {
+        return new RuleEntityType(
+                1L, code, name, LiteralClass.DOMAIN_VOCABULARY, MaintenanceMode.MAINTAINED,
+                "ORGANIZATION", true, LocalDateTime.now(), LocalDateTime.now());
     }
 
     private static RuleEntity hiring() {

@@ -1,13 +1,21 @@
 package com.b4rrhh.rulesystem.translation.application.service;
 
+import com.b4rrhh.rulesystem.domain.model.RuleEntityType;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import com.b4rrhh.rulesystem.translation.domain.model.LanguageCode;
 import com.b4rrhh.rulesystem.translation.domain.model.RuleEntityTranslation;
+import com.b4rrhh.rulesystem.translation.domain.model.RuleEntityTypeTranslation;
 import com.b4rrhh.rulesystem.translation.domain.port.RuleEntityTranslationRepository;
+import com.b4rrhh.rulesystem.translation.domain.port.RuleEntityTypeTranslationRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * El único sitio donde un código de catálogo se convierte en literal (ADR-052 §3).
@@ -23,13 +31,37 @@ public class RuleEntityLabelResolver {
 
     private final RuleEntityRepository ruleEntityRepository;
     private final RuleEntityTranslationRepository ruleEntityTranslationRepository;
+    private final RuleEntityTypeTranslationRepository ruleEntityTypeTranslationRepository;
 
     public RuleEntityLabelResolver(
             RuleEntityRepository ruleEntityRepository,
-            RuleEntityTranslationRepository ruleEntityTranslationRepository
+            RuleEntityTranslationRepository ruleEntityTranslationRepository,
+            RuleEntityTypeTranslationRepository ruleEntityTypeTranslationRepository
     ) {
         this.ruleEntityRepository = ruleEntityRepository;
         this.ruleEntityTranslationRepository = ruleEntityTranslationRepository;
+        this.ruleEntityTypeTranslationRepository = ruleEntityTypeTranslationRepository;
+    }
+
+    /**
+     * El nombre de cada tipo en el idioma pedido, por código, o su nombre almacenado si no
+     * está traducido (backend#152). Una sola consulta para toda la lista.
+     */
+    public Map<String, String> resolveTypeLabels(Collection<RuleEntityType> types, String languageCode) {
+        Map<String, String> translated = LanguageCode.canonical(languageCode)
+                .map(ruleEntityTypeTranslationRepository::findByLanguageCode)
+                .orElseGet(List::of)
+                .stream()
+                .filter(translation -> nonBlank(translation.name()).isPresent())
+                .collect(Collectors.toMap(
+                        RuleEntityTypeTranslation::ruleEntityTypeCode,
+                        translation -> translation.name().trim()));
+
+        Map<String, String> labels = new LinkedHashMap<>();
+        for (RuleEntityType type : types) {
+            labels.put(type.getCode(), translated.getOrDefault(type.getCode(), type.getName()));
+        }
+        return labels;
     }
 
     /**

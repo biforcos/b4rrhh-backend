@@ -5,6 +5,7 @@ import java.util.List;
 public record RuleEntityTypeResponse(
         String code,
         String name,
+        String label,
         boolean active,
         String literalClass,
         String maintenanceMode,

@@ -6,6 +6,8 @@ import com.b4rrhh.rulesystem.domain.model.RuleEntityTypeGroup;
 import com.b4rrhh.rulesystem.infrastructure.web.dto.RuleEntityTypeExtensionResponse;
 import com.b4rrhh.rulesystem.infrastructure.web.dto.RuleEntityTypeGroupResponse;
 import com.b4rrhh.rulesystem.infrastructure.web.dto.RuleEntityTypeResponse;
+import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -20,22 +22,40 @@ import java.util.stream.Collectors;
  * declaradas (ADR-053 §7, frontend#33), de las que el menú deriva quién tiene pantalla
  * propia y quién vive en Catálogos.
  *
- * Aquí no pasa nada por {@code RuleEntityLabelResolver} porque no hay literal de catálogo
- * que resolver: el nombre de un tipo no es una {@code rule_entity} y hoy no se traduce
- * (ADR-054 §1). El día que se traduzca, será en este ensamblador donde entre el resolutor
- * con el idioma de {@code Accept-Language}; ningún caso de uso sabrá de idiomas (ADR-052 §4).
+ * El nombre del tipo sale dos veces (backend#152): {@code name}, el almacenado, que es el
+ * que se edita, y {@code label}, el del idioma de {@code Accept-Language}, que resuelve
+ * {@code RuleEntityLabelResolver} desde la tabla gemela de traducciones de los tipos. Aquí
+ * entra el idioma y de aquí no baja: ningún caso de uso sabe de idiomas (ADR-052 §4).
  */
 @Component
 public class RuleEntityTypeResponseAssembler {
 
+    private final RuleEntityLabelResolver labelResolver;
+
+    public RuleEntityTypeResponseAssembler(RuleEntityLabelResolver labelResolver) {
+        this.labelResolver = labelResolver;
+    }
+
     public RuleEntityTypeResponse toResponse(
             RuleEntityType type,
             RuleEntityTypeGroup group,
-            List<RuleEntityExtension> extensions
+            List<RuleEntityExtension> extensions,
+            ResponseLanguage language
+    ) {
+        return toResponse(type, group, extensions,
+                labelResolver.resolveTypeLabels(List.of(type), language.code()).get(type.getCode()));
+    }
+
+    private RuleEntityTypeResponse toResponse(
+            RuleEntityType type,
+            RuleEntityTypeGroup group,
+            List<RuleEntityExtension> extensions,
+            String label
     ) {
         return new RuleEntityTypeResponse(
                 type.getCode(),
                 type.getName(),
+                label,
                 type.isActive(),
                 type.getLiteralClass().name(),
                 type.getMaintenanceMode().name(),
@@ -48,8 +68,10 @@ public class RuleEntityTypeResponseAssembler {
     public List<RuleEntityTypeResponse> toResponseList(
             List<RuleEntityType> types,
             List<RuleEntityTypeGroup> groups,
-            List<RuleEntityExtension> extensions
+            List<RuleEntityExtension> extensions,
+            ResponseLanguage language
     ) {
+        Map<String, String> labels = labelResolver.resolveTypeLabels(types, language.code());
         Map<String, RuleEntityTypeGroup> groupsByCode = groups.stream()
                 .collect(Collectors.toMap(RuleEntityTypeGroup::code, Function.identity()));
         Map<String, List<RuleEntityExtension>> extensionsByType = extensions.stream()
@@ -62,7 +84,8 @@ public class RuleEntityTypeResponseAssembler {
                 .map(type -> toResponse(
                         type,
                         groupsByCode.get(type.getGroupCode()),
-                        extensionsByType.getOrDefault(type.getCode(), List.of())))
+                        extensionsByType.getOrDefault(type.getCode(), List.of()),
+                        labels.get(type.getCode())))
                 .toList();
     }
 

@@ -37,6 +37,24 @@ dolor: el código se queda mal para siempre porque ya no molesta a nadie.
 Si algún día hay que traducir el nombre de un tipo, va donde van los literales de las entidades
 —`rule_entity_translation`, ADR-052— y no a una segunda columna en el mismo idioma.
 
+### Nota (backend#152, 30/09/2026): el nombre de un tipo ya se traduce, en la gemela
+
+Lo de §1 decía que, si algún día había que traducir el nombre de un tipo, iría a
+`rule_entity_translation`. Ese día llegó con backend#152 —Catálogos enseñaba «Contact Type» con
+el resto de la pantalla en castellano—, y la decisión del issue fue la de §1 en lo que importa:
+**traducción aparte, no una segunda columna en el mismo idioma**. Lo que no pudo ser es la misma
+tabla, porque `rule_entity_translation` cuelga de `rule_entity.id` y un tipo no es una
+`rule_entity`.
+
+Por eso va en su gemela, `rulesystem.rule_entity_type_translation` (V164), con el mismo formato de
+idioma y colgando del **código** del tipo: el tipo es global, así que no hay reglamentación que
+separar, que es lo que en ADR-052 §1 obligó a colgar del id. Retirar un tipo sigue siendo un
+`delete` en una migración: sus traducciones se van en cascada.
+
+El nombre almacenado sigue siendo `rule_entity_type.name`, el que se edita, y la respuesta lleva
+los dos: `name` y `label`. `GRUPO_COTIZACION`, sembrado en castellano en su propia columna, fue
+la excepción y no el modelo.
+
 ### 2. Tres ejes, y ninguno se deriva de los otros
 
 La tentación era una sola columna con dos valores, «catálogo» y «entidad». No sale, y hay dos pruebas

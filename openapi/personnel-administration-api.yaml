@@ -3349,6 +3349,8 @@ paths:
       summary: Create rule entity type
       tags:
         - Rule Entity Types
+      parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
       requestBody:
         required: true
         content:
@@ -3367,6 +3369,8 @@ paths:
       summary: List rule entity types
       tags:
         - Rule Entity Types
+      parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
       responses:
         "200":
           description: Rule entity types list
@@ -3384,6 +3388,7 @@ paths:
       tags:
         - Rule Entity Types
       parameters:
+        - $ref: "#/components/parameters/AcceptLanguage"
         - in: path
           name: ruleEntityTypeCode
           required: true
@@ -12188,6 +12193,7 @@ components:
       required:
         - code
         - name
+        - label
         - active
         - literalClass
         - maintenanceMode
@@ -12198,6 +12204,12 @@ components:
           type: string
         name:
           type: string
+          description: The stored name of the type, the one that is edited. Never translated.
+        label:
+          type: string
+          description: >-
+            The name of the type in the language of Accept-Language (ADR-052, backend#152), or
+            the stored name when there is no translation for it or no language is asked for.
         active:
           type: boolean
         literalClass:

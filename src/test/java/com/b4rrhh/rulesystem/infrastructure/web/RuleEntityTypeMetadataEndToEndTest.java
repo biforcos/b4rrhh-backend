@@ -63,4 +63,29 @@ class RuleEntityTypeMetadataEndToEndTest {
                 // y COST_CENTER, la pregunta que abrió frontend#33: el modelo no le declara nada
                 .andExpect(jsonPath("$[?(@.code == 'COST_CENTER')].extensions[*]").isEmpty());
     }
+
+    /**
+     * backend#152: el nombre de un tipo viaja dos veces. {@code name} es el almacenado, el que
+     * se edita, y no cambia con el idioma; {@code label} es el de {@code Accept-Language}, y
+     * sin idioma es el almacenado. Lo afirmado es la semilla de la V164.
+     */
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void theTypeNameTravelsStoredAndInTheRequestedLanguage() throws Exception {
+        mockMvc.perform(get("/rule-entity-types").header("Accept-Language", "es-ES"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.code == 'CONTACT_TYPE')].name").value("Contact Type"))
+                .andExpect(jsonPath("$[?(@.code == 'CONTACT_TYPE')].label").value("Tipo de contacto"))
+                .andExpect(jsonPath("$[?(@.code == 'EMPLOYEE_PRESENCE_EXIT_REASON')].label").value("Motivo de baja"))
+                .andExpect(jsonPath("$[?(@.code == 'PAYROLL_RUN_MESSAGE')].label").value("Mensaje del cálculo de nómina"));
+
+        mockMvc.perform(get("/rule-entity-types/CONTACT_TYPE").header("Accept-Language", "es-ES"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Contact Type"))
+                .andExpect(jsonPath("$.label").value("Tipo de contacto"));
+
+        mockMvc.perform(get("/rule-entity-types"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.code == 'CONTACT_TYPE')].label").value("Contact Type"));
+    }
 }

@@ -123,6 +123,7 @@ import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelReso
 import com.b4rrhh.rulesystem.translation.application.usecase.GetRuleEntityTranslationCoverageService;
 import com.b4rrhh.rulesystem.translation.infrastructure.persistence.RuleEntityTranslationCoverageReadAdapter;
 import com.b4rrhh.rulesystem.translation.infrastructure.persistence.RuleEntityTranslationPersistenceAdapter;
+import com.b4rrhh.rulesystem.translation.infrastructure.persistence.RuleEntityTypeTranslationPersistenceAdapter;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
@@ -284,6 +285,7 @@ import java.lang.annotation.Target;
         // rulesystem: traducciones de rule_entity (ADR-052)
         RuleEntityPersistenceAdapter.class,
         RuleEntityTranslationPersistenceAdapter.class,
+        RuleEntityTypeTranslationPersistenceAdapter.class,
         RuleEntityLabelResolver.class,
         RuleEntityTranslationCoverageReadAdapter.class,
         GetRuleEntityTranslationCoverageService.class,

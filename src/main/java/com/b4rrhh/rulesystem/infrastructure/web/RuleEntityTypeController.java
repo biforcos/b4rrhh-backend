@@ -14,6 +14,7 @@ import com.b4rrhh.rulesystem.domain.model.RuleEntityTypeGroup;
 import com.b4rrhh.rulesystem.infrastructure.web.assembler.RuleEntityTypeResponseAssembler;
 import com.b4rrhh.rulesystem.infrastructure.web.dto.CreateRuleEntityTypeRequest;
 import com.b4rrhh.rulesystem.infrastructure.web.dto.RuleEntityTypeResponse;
+import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -53,7 +54,10 @@ public class RuleEntityTypeController {
     }
 
     @PostMapping
-    public ResponseEntity<RuleEntityTypeResponse> create(@RequestBody CreateRuleEntityTypeRequest request) {
+    public ResponseEntity<RuleEntityTypeResponse> create(
+            @RequestBody CreateRuleEntityTypeRequest request,
+            ResponseLanguage language
+    ) {
         RuleEntityType created = createRuleEntityTypeUseCase.create(
                 new CreateRuleEntityTypeCommand(
                         request.code(),
@@ -64,22 +68,26 @@ public class RuleEntityTypeController {
                 )
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(created));
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(created, language));
     }
 
     @GetMapping("/{ruleEntityTypeCode}")
-    public ResponseEntity<RuleEntityTypeResponse> getByCode(@PathVariable String ruleEntityTypeCode) {
+    public ResponseEntity<RuleEntityTypeResponse> getByCode(
+            @PathVariable String ruleEntityTypeCode,
+            ResponseLanguage language
+    ) {
         return getRuleEntityTypeByCodeUseCase.getByCode(ruleEntityTypeCode)
-                .map(ruleEntityType -> ResponseEntity.ok(toResponse(ruleEntityType)))
+                .map(ruleEntityType -> ResponseEntity.ok(toResponse(ruleEntityType, language)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping
-    public ResponseEntity<List<RuleEntityTypeResponse>> list() {
+    public ResponseEntity<List<RuleEntityTypeResponse>> list(ResponseLanguage language) {
         List<RuleEntityTypeResponse> response = assembler.toResponseList(
                 listRuleEntityTypesUseCase.listAll(),
                 listRuleEntityTypeGroupsUseCase.listAll(),
-                listRuleEntityExtensionsUseCase.listAll()
+                listRuleEntityExtensionsUseCase.listAll(),
+                language
         );
 
         return ResponseEntity.ok(response);
@@ -90,7 +98,7 @@ public class RuleEntityTypeController {
         return value == null || value.isBlank() ? null : Enum.valueOf(type, value.trim().toUpperCase());
     }
 
-    private RuleEntityTypeResponse toResponse(RuleEntityType ruleEntityType) {
+    private RuleEntityTypeResponse toResponse(RuleEntityType ruleEntityType, ResponseLanguage language) {
         RuleEntityTypeGroup group = listRuleEntityTypeGroupsUseCase.listAll().stream()
                 .filter(candidate -> candidate.code().equals(ruleEntityType.getGroupCode()))
                 .findFirst()
@@ -101,6 +109,6 @@ public class RuleEntityTypeController {
                 .filter(extension -> extension.ruleEntityTypeCode().equals(ruleEntityType.getCode()))
                 .toList();
 
-        return assembler.toResponse(ruleEntityType, group, extensions);
+        return assembler.toResponse(ruleEntityType, group, extensions, language);
     }
 }
