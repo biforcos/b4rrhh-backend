@@ -27,7 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * una cobertura cambiada en COM aparece en las tres a la vez.
  *
  * La sonda provoca los dos fallos dentro de la transaccion del test, que se deshace sola: es
- * la disciplina de {@code RuleEntityTypeClassificationGuardTest} (ADR-054 §7). Una guardia que
+ * la disciplina de {@code ATypeDeclaresItsFourDecisionsTest} (ADR-054 §7). Una guardia que
  * nunca se ha visto en rojo no se sabe si mira algo.
  */
 @TestSobreEsquemaReal
