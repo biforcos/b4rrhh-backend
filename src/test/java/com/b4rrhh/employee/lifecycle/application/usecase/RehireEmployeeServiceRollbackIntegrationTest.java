@@ -170,6 +170,11 @@ class RehireEmployeeServiceRollbackIntegrationTest {
                 }
 
                 @Override
+                public List<RuleEntity> findActiveOptions(String ruleSystemCode, String ruleEntityTypeCode, String qLike, LocalDate referenceDate) {
+                    return List.of();
+                }
+
+                @Override
                 public void deleteByBusinessKeyAndStartDate(String ruleSystemCode, String ruleEntityTypeCode, String code, LocalDate startDate) {
                 }
 

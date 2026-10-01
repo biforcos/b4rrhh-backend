@@ -10,6 +10,8 @@ public class RuleEntity {
 
     private final Long id;
     private final String ruleSystemCode;
+    private final String layerCode;
+    private final Integer level;
     private final String ruleEntityTypeCode;
     private final String code;
     private String name;
@@ -20,6 +22,10 @@ public class RuleEntity {
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
 
+    /**
+     * Una entidad que todavía no sabe de qué capa viene: la que se va a crear, o la que un test
+     * monta a mano. La capa la pone el puerto al resolverla (ADR-077 §4).
+     */
     public RuleEntity(
             Long id,
             String ruleSystemCode,
@@ -33,8 +39,34 @@ public class RuleEntity {
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
+        this(id, ruleSystemCode, null, null, ruleEntityTypeCode, code, name, description, active,
+                startDate, endDate, createdAt, updatedAt);
+    }
+
+    /**
+     * Una entidad resuelta: {@code ruleSystemCode} es la reglamentación desde la que se pidió y
+     * {@code layerCode}/{@code level}, de dónde viene (backend#157). Una entidad de {@code INT}
+     * pedida desde ESP y desde FRA es la misma fila con dos {@code ruleSystemCode}.
+     */
+    public RuleEntity(
+            Long id,
+            String ruleSystemCode,
+            String layerCode,
+            Integer level,
+            String ruleEntityTypeCode,
+            String code,
+            String name,
+            String description,
+            boolean active,
+            LocalDate startDate,
+            LocalDate endDate,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
+    ) {
         this.id = id;
         this.ruleSystemCode = ruleSystemCode;
+        this.layerCode = layerCode;
+        this.level = level;
         this.ruleEntityTypeCode = ruleEntityTypeCode;
         this.code = code;
         this.name = name;
@@ -48,6 +80,8 @@ public class RuleEntity {
 
     public Long getId() { return id; }
     public String getRuleSystemCode() { return ruleSystemCode; }
+    public String getLayerCode() { return layerCode; }
+    public Integer getLevel() { return level; }
     public String getRuleEntityTypeCode() { return ruleEntityTypeCode; }
     public String getCode() { return code; }
     public String getName() { return name; }

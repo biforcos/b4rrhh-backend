@@ -1,5 +1,8 @@
-package com.b4rrhh.rulesystem.workcenter.infrastructure.persistence;
+package com.b4rrhh.rulesystem.catalogoption.infrastructure.persistence;
 
+import com.b4rrhh.rulesystem.catalogoption.domain.model.WorkCenterByCompanyOption;
+import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
+import com.b4rrhh.rulesystem.workcenter.infrastructure.persistence.SpringDataWorkCenterProfileRepository;
 import com.b4rrhh.support.DatosDePrueba;
 import com.b4rrhh.support.TestSobreEsquemaReal;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,10 +18,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @TestSobreEsquemaReal
 // Aqui el DDL a mano era ademas enganoso: creaba rule_entity sin la clave
 // ajena de work_center_profile y daba por hecho que los ids serian 1, 2 y 3.
-class SpringDataWorkCenterProfileRepositoryIntegrationTest {
+// Era el test de la consulta nativa de SpringDataWorkCenterProfileRepository; desde backend#157 los
+// centros los resuelve el puerto de entidades y el perfil sólo dice de qué empresa son.
+class WorkCenterByCompanyCatalogReadAdapterIntegrationTest {
 
     @Autowired
-    private SpringDataWorkCenterProfileRepository repository;
+    private RuleEntityRepository ruleEntityRepository;
+
+    @Autowired
+    private SpringDataWorkCenterProfileRepository profileRepository;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -50,8 +58,8 @@ class SpringDataWorkCenterProfileRepositoryIntegrationTest {
 
     @Test
     void findsApplicableWorkCentersForCompanyAndReferenceDate() {
-        List<SpringDataWorkCenterProfileRepository.WorkCenterCatalogOptionRow> rows =
-                repository.findWorkCentersByRuleSystemCodeAndCompanyCode(
+        List<WorkCenterByCompanyOption> rows =
+                new WorkCenterByCompanyCatalogReadAdapter(ruleEntityRepository, profileRepository).findByCompany(
                         "ESP",
                         "COMP",
                         LocalDate.of(2026, 4, 15),
@@ -59,7 +67,7 @@ class SpringDataWorkCenterProfileRepositoryIntegrationTest {
                 );
 
         assertEquals(1, rows.size());
-        assertEquals("MADRID_01", rows.get(0).getCode());
-        assertEquals("Madrid 01", rows.get(0).getName());
+        assertEquals("MADRID_01", rows.get(0).code());
+        assertEquals("Madrid 01", rows.get(0).name());
     }
 }

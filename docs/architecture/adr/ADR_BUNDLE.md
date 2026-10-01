@@ -18048,6 +18048,12 @@ Lo que cambió al pasar del borrador al esquema:
 - **El tipo declara su nivel sin default en la base**, como `literal_class`. El que se crea por la API nace en el nivel 3 hasta que `backend#158` reclasifique.
 - **El oráculo** es `docs/consultas/huella-de-las-once-tablas.sql`: un md5 por tabla de negocio, sin ids ni marcas de tiempo.
 
+## Al hacerlo (`backend#157`)
+
+- **El puerto es `RuleEntityRepository`**, el que ya existía, no uno nuevo: lo consumían treinta sitios y lo que estaba mal era su adaptador, que comparaba la capa con la reglamentación. Ahora resuelve en dos pasos —capa que la reglamentación monta en el nivel del tipo, entidad en esa capa— y devuelve, además de la reglamentación desde la que se pidió, `layerCode` y `level`. Sin reglamentación, cada entidad sale una vez por cada reglamentación que monta su capa.
+- **Doce lectores pasaban por su cuenta** (desplegables, centros por empresa, categorías de convenio, subtipos de contrato, perfiles, el lanzamiento de nómina, la guardia de huérfanos); el inventario está en el primer comentario del issue. Ahora piden las entidades al puerto y sólo leen sus tablas propias. **El orden se sigue haciendo en la base**: la intercalación `en_US` no ordena los `_` como Java, y el loader elige por posición.
+- **El candado** es `NobodyReadsRuleEntityOutsideItsPortTest`: nadie fuera del adaptador nombra la tabla, y nadie iguala una capa con una reglamentación. La única excepción es el informe de cobertura de traducciones, que cuenta filas y no resuelve; por eso sus filas dicen su capa y no una reglamentación.
+
 <!-- END FILE: ADR-077-las-reglamentaciones-son-puzles-de-capas-por-nivel.md -->
 
 

@@ -1,37 +1,15 @@
 package com.b4rrhh.rulesystem.employeeaddresstypeprofile.infrastructure.persistence;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 public interface SpringDataEmployeeAddressTypeProfileRepository
         extends JpaRepository<EmployeeAddressTypeProfileEntity, Long> {
 
-    /** The coverage of an address type, found through the root it hangs from (ADR-053 §1). */
-    @Query("""
-            select p.coverage
-            from EmployeeAddressTypeProfileEntity p, RuleEntityEntity re
-            where re.id = p.addressTypeRuleEntityId
-              and re.ruleSystemCode = :ruleSystemCode
-              and re.ruleEntityTypeCode = 'EMPLOYEE_ADDRESS_TYPE'
-              and re.code = :addressTypeCode
-            """)
-    Optional<String> findCoverageByAddressType(
-            @Param("ruleSystemCode") String ruleSystemCode,
-            @Param("addressTypeCode") String addressTypeCode
-    );
+    Optional<EmployeeAddressTypeProfileEntity> findByAddressTypeRuleEntityId(Long addressTypeRuleEntityId);
 
-    /** La cobertura de todos los tipos del sistema de reglas (b4rrhh/backend#145). */
-    @Query("""
-            select re.code, p.coverage
-            from EmployeeAddressTypeProfileEntity p, RuleEntityEntity re
-            where re.id = p.addressTypeRuleEntityId
-              and re.ruleSystemCode = :ruleSystemCode
-              and re.ruleEntityTypeCode = 'EMPLOYEE_ADDRESS_TYPE'
-            order by re.code
-            """)
-    List<Object[]> findAllCoverages(@Param("ruleSystemCode") String ruleSystemCode);
+    List<EmployeeAddressTypeProfileEntity> findByAddressTypeRuleEntityIdIn(Collection<Long> addressTypeRuleEntityIds);
 }

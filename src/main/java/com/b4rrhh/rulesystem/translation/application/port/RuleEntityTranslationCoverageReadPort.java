@@ -12,9 +12,10 @@ public interface RuleEntityTranslationCoverageReadPort {
     /** Cuántas filas de {@code rule_entity} hay por tipo. */
     Map<String, Long> countRuleEntitiesByType();
 
-    /** Las filas de {@code rule_entity} sin traducción en ese idioma, ordenadas por tipo, reglamentación y código. */
+    /** Las filas de {@code rule_entity} sin traducción en ese idioma, ordenadas por tipo, capa y código. */
     List<UntranslatedRuleEntity> findUntranslated(String languageCode);
 
-    record UntranslatedRuleEntity(String ruleEntityTypeCode, String ruleSystemCode, String code, String name) {
+    /** Una fila, no una resolución: de la capa en la que vive, aunque la monten varias reglamentaciones (backend#157). */
+    record UntranslatedRuleEntity(String ruleEntityTypeCode, String layerCode, int level, String code, String name) {
     }
 }

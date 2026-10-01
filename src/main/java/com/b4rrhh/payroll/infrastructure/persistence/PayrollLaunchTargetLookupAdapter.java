@@ -1,38 +1,41 @@
 package com.b4rrhh.payroll.infrastructure.persistence;
 
 import com.b4rrhh.payroll.application.port.PayrollLaunchTargetLookupPort;
+import com.b4rrhh.rulesystem.domain.model.RuleEntity;
+import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Los tipos de empleado del catalogo y la existencia de un empleado, para el lanzamiento
- * ({@code frontend#88}). Lee de las tablas de los otros contextos por consulta nativa, como
- * {@link PayrollLaunchPresenceLookupAdapter}.
+ * ({@code frontend#88}). La existencia del empleado la lee de su tabla por consulta nativa, como
+ * {@link PayrollLaunchPresenceLookupAdapter}; los tipos, del puerto que resuelve el catálogo por
+ * el nivel del tipo (backend#157).
  */
 @Component
 public class PayrollLaunchTargetLookupAdapter implements PayrollLaunchTargetLookupPort {
 
-    private final EntityManager entityManager;
+    private static final String EMPLOYEE_TYPE = "EMPLOYEE_TYPE";
 
-    public PayrollLaunchTargetLookupAdapter(EntityManager entityManager) {
+    private final EntityManager entityManager;
+    private final RuleEntityRepository ruleEntityRepository;
+
+    public PayrollLaunchTargetLookupAdapter(EntityManager entityManager, RuleEntityRepository ruleEntityRepository) {
         this.entityManager = entityManager;
+        this.ruleEntityRepository = ruleEntityRepository;
     }
 
     @Override
     public List<String> findEmployeeTypeCodes(String ruleSystemCode) {
-        List<?> rows = entityManager.createNativeQuery("""
-            select distinct upper(trim(e.code))
-              from rulesystem.rule_entity e
-             where upper(trim(e.layer_code)) = :ruleSystemCode
-               and e.rule_entity_type_code = 'EMPLOYEE_TYPE'
-               and e.active
-             order by 1
-            """)
-                .setParameter("ruleSystemCode", ruleSystemCode)
-                .getResultList();
-        return rows.stream().map(String::valueOf).toList();
+        // Ordenados por código en la base, que es el orden del puerto.
+        return ruleEntityRepository.findByFilters(ruleSystemCode, EMPLOYEE_TYPE, null, true, null).stream()
+                .map(RuleEntity::getCode)
+                .map(code -> code.trim().toUpperCase(Locale.ROOT))
+                .distinct()
+                .toList();
     }
 
     @Override

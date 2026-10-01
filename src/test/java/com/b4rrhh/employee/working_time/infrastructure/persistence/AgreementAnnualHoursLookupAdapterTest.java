@@ -73,7 +73,7 @@ class AgreementAnnualHoursLookupAdapterTest {
 
     private RuleEntityEntity agreementEntity(String code, String name) {
         RuleEntityEntity entity = new RuleEntityEntity();
-        entity.setRuleSystemCode(RULE_SYSTEM_CODE);
+        entity.setLayerCode(RULE_SYSTEM_CODE);
         entity.setRuleEntityTypeCode("AGREEMENT");
         entity.setCode(code);
         entity.setName(name);

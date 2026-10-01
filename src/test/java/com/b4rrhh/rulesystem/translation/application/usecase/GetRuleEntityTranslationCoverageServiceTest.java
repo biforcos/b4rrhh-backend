@@ -28,8 +28,8 @@ class GetRuleEntityTranslationCoverageServiceTest {
                 "EMPLOYEE_ADDRESS_TYPE", 2L
         ));
         when(coverageReadPort.findUntranslated("es-ES")).thenReturn(List.of(
-                new UntranslatedRuleEntity("EMPLOYEE_PRESENCE_ENTRY_REASON", "FRA", "HIRING", "Hiring"),
-                new UntranslatedRuleEntity("EMPLOYEE_PRESENCE_ENTRY_REASON", "PRT", "HIRING", "Hiring")
+                new UntranslatedRuleEntity("EMPLOYEE_PRESENCE_ENTRY_REASON", "FRA", 3, "HIRING", "Hiring"),
+                new UntranslatedRuleEntity("EMPLOYEE_PRESENCE_ENTRY_REASON", "PRT", 3, "HIRING", "Hiring")
         ));
 
         RuleEntityTranslationCoverage coverage =
@@ -49,7 +49,7 @@ class GetRuleEntityTranslationCoverageServiceTest {
     void everyTypeAppearsEvenWhenNothingIsTranslated() {
         when(coverageReadPort.countRuleEntitiesByType()).thenReturn(Map.of("CONTACT_TYPE", 1L));
         when(coverageReadPort.findUntranslated("fr-FR")).thenReturn(List.of(
-                new UntranslatedRuleEntity("CONTACT_TYPE", "ESP", "EMAIL", "Email")
+                new UntranslatedRuleEntity("CONTACT_TYPE", "ESP", 3, "EMAIL", "Email")
         ));
 
         RuleEntityTranslationCoverage coverage =

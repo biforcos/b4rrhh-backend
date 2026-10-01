@@ -20,8 +20,10 @@ public class RuleEntityEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // La capa, no la reglamentacion (ADR-077, V166). Con otro nombre, una consulta que
+    // comparase con una reglamentacion compilaria; asi no (backend#157).
     @Column(name = "layer_code", nullable = false, length = 20)
-    private String ruleSystemCode;
+    private String layerCode;
 
     @Column(name = "rule_entity_type_code", nullable = false, length = 30)
     private String ruleEntityTypeCode;
@@ -71,8 +73,8 @@ public class RuleEntityEntity {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    public String getRuleSystemCode() { return ruleSystemCode; }
-    public void setRuleSystemCode(String ruleSystemCode) { this.ruleSystemCode = ruleSystemCode; }
+    public String getLayerCode() { return layerCode; }
+    public void setLayerCode(String layerCode) { this.layerCode = layerCode; }
 
     public String getRuleEntityTypeCode() { return ruleEntityTypeCode; }
     public void setRuleEntityTypeCode(String ruleEntityTypeCode) { this.ruleEntityTypeCode = ruleEntityTypeCode; }

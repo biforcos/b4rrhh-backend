@@ -4,7 +4,7 @@ import com.b4rrhh.rulesystem.catalogoption.application.query.GetDirectCatalogOpt
 import com.b4rrhh.rulesystem.catalogoption.application.usecase.GetDirectCatalogOptionsService;
 import com.b4rrhh.rulesystem.catalogoption.application.usecase.GetDirectCatalogOptionsUseCase;
 import com.b4rrhh.rulesystem.catalogoption.domain.model.DirectCatalogOption;
-import com.b4rrhh.rulesystem.infrastructure.persistence.SpringDataRuleEntityRepository;
+import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import com.b4rrhh.rulesystem.translation.infrastructure.persistence.SpringDataRuleEntityTranslationRepository;
 import com.b4rrhh.support.DatosDePrueba;
 import com.b4rrhh.support.TestSobreEsquemaReal;
@@ -47,7 +47,7 @@ class DirectCatalogOptionsMarkedByDateIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Autowired
-    private SpringDataRuleEntityRepository springDataRuleEntityRepository;
+    private RuleEntityRepository ruleEntityRepository;
 
     @Autowired
     private SpringDataRuleEntityTranslationRepository springDataRuleEntityTranslationRepository;
@@ -57,7 +57,7 @@ class DirectCatalogOptionsMarkedByDateIntegrationTest {
     @BeforeEach
     void setUp() {
         useCase = new GetDirectCatalogOptionsService(new RuleEntityDirectCatalogOptionReadAdapter(
-                springDataRuleEntityRepository, springDataRuleEntityTranslationRepository));
+                ruleEntityRepository, springDataRuleEntityTranslationRepository));
         DatosDePrueba.ruleEntity(jdbcTemplate, TYPE, "TST_CLOSED", "Closed in 2020",
                 LocalDate.of(1900, 1, 1), LocalDate.of(2020, 12, 31));
         DatosDePrueba.ruleEntity(jdbcTemplate, TYPE, "TST_FUTURE", "Starts in 2030",

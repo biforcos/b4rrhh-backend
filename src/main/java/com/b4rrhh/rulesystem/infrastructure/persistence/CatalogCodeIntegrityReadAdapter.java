@@ -6,8 +6,8 @@ import com.b4rrhh.employee.shared.infrastructure.persistence.EmployeeOwnedRuleEn
 import com.b4rrhh.rulesystem.application.port.CatalogCodeIntegrityReadPort;
 import com.b4rrhh.rulesystem.application.port.CatalogColumnIntegrity;
 import com.b4rrhh.rulesystem.application.port.RuleEntityUsageParticipant;
+import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -18,8 +18,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Cruza cada columna de catálogo declarada contra {@code rulesystem.rule_entity} (backend#43,
- * backend#44).
+ * Cruza cada columna de catálogo declarada contra el catálogo (backend#43, backend#44), a través del
+ * puerto que resuelve por el nivel del tipo (backend#157): agrupa en la tabla del vertical y pregunta
+ * al puerto por cada par {@code (reglamentación, código)} distinto, que son pocos aunque las filas
+ * sean miles.
  *
  * <p>Tabla, columna y tipo vienen del participante —constantes del vertical—, igual que en
  * {@code countReferences}; el único parámetro de la petición es el tipo de catálogo. Nada de lo
@@ -40,13 +42,16 @@ public class CatalogCodeIntegrityReadAdapter implements CatalogCodeIntegrityRead
 
     private final JdbcTemplate jdbcTemplate;
     private final List<RuleEntityUsageParticipant> participants;
+    private final RuleEntityRepository ruleEntityRepository;
 
     public CatalogCodeIntegrityReadAdapter(
             JdbcTemplate jdbcTemplate,
-            List<RuleEntityUsageParticipant> participants
+            List<RuleEntityUsageParticipant> participants,
+            RuleEntityRepository ruleEntityRepository
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.participants = participants;
+        this.ruleEntityRepository = ruleEntityRepository;
     }
 
     @Override
@@ -67,23 +72,23 @@ public class CatalogCodeIntegrityReadAdapter implements CatalogCodeIntegrityRead
                 : "";
         String from = " from employee." + usage.table() + " owned" + join
                 + " where owned." + usage.column() + " is not null";
-        String missing = " and not exists (select 1 from rulesystem.rule_entity re"
-                + "                        where re.layer_code = " + ruleSystemCode
-                + "                          and re.rule_entity_type_code = ?"
-                + "                          and re.code = owned." + usage.column() + ")";
 
         Long rows = jdbcTemplate.queryForObject("select count(*)" + from, Long.class);
 
-        Map<String, Long> orphanCodes = new LinkedHashMap<>();
-        jdbcTemplate.query(
+        List<UsedCode> usedCodes = jdbcTemplate.query(
                 "select " + ruleSystemCode + " as rule_system_code, owned." + usage.column() + " as code,"
                         + "       count(*) as n"
-                        + from + missing
+                        + from
                         + " group by 1, 2 order by 3 desc, 1, 2",
-                (RowCallbackHandler) row -> orphanCodes.put(
-                        row.getString("rule_system_code") + "/" + row.getString("code"),
-                        row.getLong("n")),
-                usage.ruleEntityTypeCode());
+                (row, rowNumber) -> new UsedCode(
+                        row.getString("rule_system_code"), row.getString("code"), row.getLong("n")));
+
+        Map<String, Long> orphanCodes = new LinkedHashMap<>();
+        for (UsedCode used : usedCodes) {
+            if (ruleEntityRepository.findByBusinessKey(used.ruleSystemCode(), usage.ruleEntityTypeCode(), used.code()).isEmpty()) {
+                orphanCodes.put(used.ruleSystemCode() + "/" + used.code(), used.rows());
+            }
+        }
 
         return new CatalogColumnIntegrity(
                 usage.qualifiedColumn(),
@@ -91,6 +96,9 @@ public class CatalogCodeIntegrityReadAdapter implements CatalogCodeIntegrityRead
                 rows == null ? 0 : rows,
                 orphanCodes.values().stream().mapToLong(Long::longValue).sum(),
                 orphanCodes);
+    }
+
+    private record UsedCode(String ruleSystemCode, String code, long rows) {
     }
 
     private Set<CatalogColumnUsage> declaredUsages() {

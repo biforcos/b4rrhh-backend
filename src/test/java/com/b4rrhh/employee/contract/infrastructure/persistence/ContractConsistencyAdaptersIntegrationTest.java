@@ -3,6 +3,7 @@ package com.b4rrhh.employee.contract.infrastructure.persistence;
 import com.b4rrhh.support.DatosDePrueba;
 import com.b4rrhh.support.TestSobreEsquemaReal;
 import jakarta.persistence.EntityManager;
+import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,13 +29,16 @@ class ContractConsistencyAdaptersIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private RuleEntityRepository ruleEntityRepository;
+
     private ContractPresenceConsistencyAdapter presenceConsistencyAdapter;
     private ContractSubtypeRelationLookupAdapter relationLookupAdapter;
 
     @BeforeEach
     void setUp() {
         presenceConsistencyAdapter = new ContractPresenceConsistencyAdapter(entityManager);
-        relationLookupAdapter = new ContractSubtypeRelationLookupAdapter(entityManager);
+        relationLookupAdapter = new ContractSubtypeRelationLookupAdapter(entityManager, ruleEntityRepository);
     }
 
     @Test

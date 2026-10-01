@@ -1,6 +1,8 @@
 package com.b4rrhh.rulesystem.infrastructure.persistence;
 
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,7 +21,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,18 +34,29 @@ class RuleEntityPersistenceAdapterTest {
     @Mock
     private SpringDataRuleEntityRepository springDataRuleEntityRepository;
 
+    @Mock
+    private EntityManager entityManager;
+
+    @Mock
+    private Query layerQuery;
+
     private RuleEntityPersistenceAdapter adapter;
 
     @BeforeEach
     void setUp() {
-        adapter = new RuleEntityPersistenceAdapter(springDataRuleEntityRepository);
+        // ESP monta su capa nacional, ESP, en el nivel de todos los tipos de este test: el 3. Que
+        // resuelva por nivel y no por nombre lo prueba TheRuleEntityPortResolvesByTheLevelOfTheTypeTest.
+        lenient().when(entityManager.createNativeQuery(anyString())).thenReturn(layerQuery);
+        lenient().when(layerQuery.setParameter(anyString(), any())).thenReturn(layerQuery);
+        lenient().when(layerQuery.getResultList()).thenReturn(List.<Object>of((Object) new Object[] {"ESP", (short) 3}));
+        adapter = new RuleEntityPersistenceAdapter(springDataRuleEntityRepository, entityManager);
     }
 
         @Test
         void findByFiltersUsesSpecificationAndStableSortWithoutReferenceDate() {
                 RuleEntityEntity entity = new RuleEntityEntity();
                 entity.setId(10L);
-                entity.setRuleSystemCode("ESP");
+                entity.setLayerCode("ESP");
                 entity.setRuleEntityTypeCode("COMPANY");
                 entity.setCode("ACME");
                 entity.setName("Acme");
@@ -56,7 +71,7 @@ class RuleEntityPersistenceAdapterTest {
                 List<RuleEntity> result = adapter.findByFilters("ESP", "COMPANY", null, true, null);
 
                 assertEquals(1, result.size());
-                verify(springDataRuleEntityRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(Sort.by("ruleSystemCode", "ruleEntityTypeCode", "code")));
+                verify(springDataRuleEntityRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(Sort.by("ruleEntityTypeCode", "code")));
         }
 
         @Test
@@ -67,7 +82,7 @@ class RuleEntityPersistenceAdapterTest {
                 List<RuleEntity> result = adapter.findByFilters("ESP", "COMPANY", null, true, LocalDate.of(2026, 4, 6));
 
                 assertEquals(0, result.size());
-                verify(springDataRuleEntityRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(Sort.by("ruleSystemCode", "ruleEntityTypeCode", "code")));
+                verify(springDataRuleEntityRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(Sort.by("ruleEntityTypeCode", "code")));
         }
 
     @Test
@@ -98,13 +113,13 @@ class RuleEntityPersistenceAdapterTest {
         RuleEntity saved = adapter.save(newRuleEntity);
 
         verify(springDataRuleEntityRepository, never())
-                .findByRuleSystemCodeAndRuleEntityTypeCodeAndCodeAndStartDate(any(), any(), any(), any());
+                .findByLayerCodeAndRuleEntityTypeCodeAndCodeAndStartDate(any(), any(), any(), any());
 
         ArgumentCaptor<RuleEntityEntity> entityCaptor = ArgumentCaptor.forClass(RuleEntityEntity.class);
         verify(springDataRuleEntityRepository).save(entityCaptor.capture());
 
         RuleEntityEntity persisted = entityCaptor.getValue();
-        assertEquals("ESP", persisted.getRuleSystemCode());
+        assertEquals("ESP", persisted.getLayerCode());
         assertEquals("WORK_CENTER", persisted.getRuleEntityTypeCode());
         assertEquals("MADRID", persisted.getCode());
         assertEquals(LocalDate.of(2026, 1, 1), persisted.getStartDate());
@@ -141,7 +156,7 @@ class RuleEntityPersistenceAdapterTest {
 
         RuleEntityEntity existing = new RuleEntityEntity();
         existing.setId(10L);
-        existing.setRuleSystemCode("ESP");
+        existing.setLayerCode("ESP");
         existing.setRuleEntityTypeCode("WORK_CENTER");
         existing.setCode("MADRID");
         existing.setStartDate(LocalDate.of(2026, 1, 1));
@@ -152,7 +167,7 @@ class RuleEntityPersistenceAdapterTest {
         existing.setCreatedAt(createdAt);
         existing.setUpdatedAt(updatedAt);
 
-        when(springDataRuleEntityRepository.findByRuleSystemCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
+        when(springDataRuleEntityRepository.findByLayerCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
                 "ESP",
                 "WORK_CENTER",
                 "MADRID",
@@ -200,7 +215,7 @@ class RuleEntityPersistenceAdapterTest {
 
         RuleEntityEntity existing = new RuleEntityEntity();
         existing.setId(10L);
-        existing.setRuleSystemCode("ESP");
+        existing.setLayerCode("ESP");
         existing.setRuleEntityTypeCode("WORK_CENTER");
         existing.setCode("MADRID");
         existing.setStartDate(LocalDate.of(2026, 1, 1));
@@ -211,7 +226,7 @@ class RuleEntityPersistenceAdapterTest {
         existing.setCreatedAt(createdAt);
         existing.setUpdatedAt(LocalDateTime.of(2026, 1, 20, 15, 30, 0));
 
-        when(springDataRuleEntityRepository.findByRuleSystemCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
+        when(springDataRuleEntityRepository.findByLayerCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
                 "ESP",
                 "WORK_CENTER",
                 "MADRID",
@@ -250,7 +265,7 @@ class RuleEntityPersistenceAdapterTest {
                 null
         );
 
-        when(springDataRuleEntityRepository.findByRuleSystemCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
+        when(springDataRuleEntityRepository.findByLayerCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
                 "ESP",
                 "WORK_CENTER",
                 "MADRID",
@@ -336,7 +351,7 @@ class RuleEntityPersistenceAdapterTest {
     void applicableLookupReturnsSingleApplicableOccurrence() {
         RuleEntityEntity applicable = new RuleEntityEntity();
         applicable.setId(50L);
-        applicable.setRuleSystemCode("ESP");
+        applicable.setLayerCode("ESP");
         applicable.setRuleEntityTypeCode("COMPANY");
         applicable.setCode("ACME");
         applicable.setName("Acme");
@@ -369,7 +384,7 @@ class RuleEntityPersistenceAdapterTest {
     void applicableLookupFailsWhenMoreThanOneOccurrenceIsApplicable() {
         RuleEntityEntity first = new RuleEntityEntity();
         first.setId(50L);
-        first.setRuleSystemCode("ESP");
+        first.setLayerCode("ESP");
         first.setRuleEntityTypeCode("COMPANY");
         first.setCode("ACME");
         first.setName("Acme 1");
@@ -380,7 +395,7 @@ class RuleEntityPersistenceAdapterTest {
 
         RuleEntityEntity second = new RuleEntityEntity();
         second.setId(51L);
-        second.setRuleSystemCode("ESP");
+        second.setLayerCode("ESP");
         second.setRuleEntityTypeCode("COMPANY");
         second.setCode("ACME");
         second.setName("Acme 2");

@@ -9,6 +9,11 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * La tabla, por capa. Sólo la usa {@link RuleEntityPersistenceAdapter}, que es quien sabe qué capa
+ * monta cada reglamentación en el nivel de cada tipo (ADR-077, backend#157); el candado
+ * {@code NobodyReadsRuleEntityOutsideItsPortTest} lo vigila.
+ */
 public interface SpringDataRuleEntityRepository extends JpaRepository<RuleEntityEntity, Long>, JpaSpecificationExecutor<RuleEntityEntity> {
 
     LocalDate MAX_DATE = LocalDate.of(9999, 12, 31);
@@ -29,7 +34,7 @@ public interface SpringDataRuleEntityRepository extends JpaRepository<RuleEntity
     @Query("""
         select re
         from RuleEntityEntity re
-        where re.ruleSystemCode = :ruleSystemCode
+        where re.layerCode = :layerCode
           and re.ruleEntityTypeCode = :ruleEntityTypeCode
           and re.active = true
           and (
@@ -40,15 +45,39 @@ public interface SpringDataRuleEntityRepository extends JpaRepository<RuleEntity
         order by lower(coalesce(re.name, '')), re.code
         """)
     List<RuleEntityEntity> findDirectCatalogOptions(
-            @Param("ruleSystemCode") String ruleSystemCode,
+            @Param("layerCode") String layerCode,
             @Param("ruleEntityTypeCode") String ruleEntityTypeCode,
             @Param("qLike") String qLike
+    );
+
+    /** {@link #findDirectCatalogOptions}, y además vigentes en la fecha: los centros de una empresa. */
+    @Query("""
+        select re
+        from RuleEntityEntity re
+        where re.layerCode = :layerCode
+          and re.ruleEntityTypeCode = :ruleEntityTypeCode
+          and re.active = true
+          and re.startDate <= :referenceDate
+          and :referenceDate <= coalesce(re.endDate, :maxDate)
+          and (
+              :qLike is null
+              or lower(re.code) like :qLike
+              or lower(re.name) like :qLike
+          )
+        order by lower(coalesce(re.name, '')), re.code
+        """)
+    List<RuleEntityEntity> findDirectCatalogOptionsOnDate(
+            @Param("layerCode") String layerCode,
+            @Param("ruleEntityTypeCode") String ruleEntityTypeCode,
+            @Param("qLike") String qLike,
+            @Param("referenceDate") LocalDate referenceDate,
+            @Param("maxDate") LocalDate maxDate
     );
 
         @Query("""
       select re
       from RuleEntityEntity re
-      where re.ruleSystemCode = :ruleSystemCode
+      where re.layerCode = :layerCode
         and re.ruleEntityTypeCode = :ruleEntityTypeCode
         and re.code = :code
         and re.startDate <= :referenceDate
@@ -56,21 +85,21 @@ public interface SpringDataRuleEntityRepository extends JpaRepository<RuleEntity
       order by re.startDate desc, re.id desc
       """)
         List<RuleEntityEntity> findApplicableByBusinessKey(
-          @Param("ruleSystemCode") String ruleSystemCode,
+          @Param("layerCode") String layerCode,
           @Param("ruleEntityTypeCode") String ruleEntityTypeCode,
           @Param("code") String code,
           @Param("referenceDate") LocalDate referenceDate,
           @Param("maxDate") LocalDate maxDate
         );
 
-    Optional<RuleEntityEntity> findByRuleSystemCodeAndRuleEntityTypeCodeAndCode(
-            String ruleSystemCode,
+    Optional<RuleEntityEntity> findByLayerCodeAndRuleEntityTypeCodeAndCode(
+            String layerCode,
             String ruleEntityTypeCode,
             String code
     );
 
-    Optional<RuleEntityEntity> findByRuleSystemCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
-            String ruleSystemCode,
+    Optional<RuleEntityEntity> findByLayerCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
+            String layerCode,
             String ruleEntityTypeCode,
             String code,
             LocalDate startDate
@@ -79,7 +108,7 @@ public interface SpringDataRuleEntityRepository extends JpaRepository<RuleEntity
     @Query("""
         select (count(re) > 0)
         from RuleEntityEntity re
-        where re.ruleSystemCode = :ruleSystemCode
+        where re.layerCode = :layerCode
           and re.ruleEntityTypeCode = :ruleEntityTypeCode
           and re.code = :code
           and re.startDate <> :excludedStartDate
@@ -87,7 +116,7 @@ public interface SpringDataRuleEntityRepository extends JpaRepository<RuleEntity
           and :projectedStartDate <= coalesce(re.endDate, :maxDate)
         """)
     boolean existsOverlapExcludingStartDate(
-            @Param("ruleSystemCode") String ruleSystemCode,
+            @Param("layerCode") String layerCode,
             @Param("ruleEntityTypeCode") String ruleEntityTypeCode,
             @Param("code") String code,
             @Param("projectedStartDate") LocalDate projectedStartDate,
@@ -96,8 +125,8 @@ public interface SpringDataRuleEntityRepository extends JpaRepository<RuleEntity
             @Param("maxDate") LocalDate maxDate
     );
 
-    long deleteByRuleSystemCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
-            String ruleSystemCode,
+    long deleteByLayerCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
+            String layerCode,
             String ruleEntityTypeCode,
             String code,
             LocalDate startDate

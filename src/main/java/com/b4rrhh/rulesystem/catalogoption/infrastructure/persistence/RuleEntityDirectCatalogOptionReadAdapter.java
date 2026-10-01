@@ -2,8 +2,8 @@ package com.b4rrhh.rulesystem.catalogoption.infrastructure.persistence;
 
 import com.b4rrhh.rulesystem.catalogoption.domain.model.DirectCatalogOption;
 import com.b4rrhh.rulesystem.catalogoption.domain.port.DirectCatalogOptionRepository;
-import com.b4rrhh.rulesystem.infrastructure.persistence.RuleEntityEntity;
-import com.b4rrhh.rulesystem.infrastructure.persistence.SpringDataRuleEntityRepository;
+import com.b4rrhh.rulesystem.domain.model.RuleEntity;
+import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import com.b4rrhh.rulesystem.translation.domain.model.LanguageCode;
 import com.b4rrhh.rulesystem.translation.infrastructure.persistence.RuleEntityTranslationEntity;
 import com.b4rrhh.rulesystem.translation.infrastructure.persistence.SpringDataRuleEntityTranslationRepository;
@@ -17,14 +17,14 @@ import java.util.stream.Collectors;
 @Component
 public class RuleEntityDirectCatalogOptionReadAdapter implements DirectCatalogOptionRepository {
 
-    private final SpringDataRuleEntityRepository springDataRuleEntityRepository;
+    private final RuleEntityRepository ruleEntityRepository;
     private final SpringDataRuleEntityTranslationRepository springDataRuleEntityTranslationRepository;
 
     public RuleEntityDirectCatalogOptionReadAdapter(
-            SpringDataRuleEntityRepository springDataRuleEntityRepository,
+            RuleEntityRepository ruleEntityRepository,
             SpringDataRuleEntityTranslationRepository springDataRuleEntityTranslationRepository
     ) {
-        this.springDataRuleEntityRepository = springDataRuleEntityRepository;
+        this.ruleEntityRepository = ruleEntityRepository;
         this.springDataRuleEntityTranslationRepository = springDataRuleEntityTranslationRepository;
     }
 
@@ -35,8 +35,8 @@ public class RuleEntityDirectCatalogOptionReadAdapter implements DirectCatalogOp
             String qLike,
             String languageCode
     ) {
-        List<RuleEntityEntity> entities = springDataRuleEntityRepository
-                .findDirectCatalogOptions(ruleSystemCode, ruleEntityTypeCode, qLike);
+        List<RuleEntity> entities = ruleEntityRepository
+                .findActiveOptions(ruleSystemCode, ruleEntityTypeCode, qLike, null);
         Map<Long, String> translatedNames = translatedNames(entities, languageCode);
 
         return entities.stream()
@@ -45,13 +45,13 @@ public class RuleEntityDirectCatalogOptionReadAdapter implements DirectCatalogOp
     }
 
     // Una consulta por lote, no una por opcion: es lo que alimenta todos los desplegables.
-    private Map<Long, String> translatedNames(List<RuleEntityEntity> entities, String languageCode) {
+    private Map<Long, String> translatedNames(List<RuleEntity> entities, String languageCode) {
         Optional<String> language = LanguageCode.canonical(languageCode);
         if (language.isEmpty() || entities.isEmpty()) {
             return Map.of();
         }
 
-        List<Long> ids = entities.stream().map(RuleEntityEntity::getId).toList();
+        List<Long> ids = entities.stream().map(RuleEntity::getId).toList();
         return springDataRuleEntityTranslationRepository
                 .findByRuleEntityIdInAndLanguageCode(ids, language.get())
                 .stream()
@@ -59,7 +59,7 @@ public class RuleEntityDirectCatalogOptionReadAdapter implements DirectCatalogOp
                 .collect(Collectors.toMap(RuleEntityTranslationEntity::getRuleEntityId, RuleEntityTranslationEntity::getName));
     }
 
-    private DirectCatalogOption toDomain(RuleEntityEntity entity, String translatedName) {
+    private DirectCatalogOption toDomain(RuleEntity entity, String translatedName) {
         return new DirectCatalogOption(
                 entity.getCode(),
                 translatedName != null ? translatedName : entity.getName(),

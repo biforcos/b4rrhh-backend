@@ -3,6 +3,8 @@ package com.b4rrhh.rulesystem.agreementcategoryprofile.infrastructure.persistenc
 import com.b4rrhh.rulesystem.agreementcategoryprofile.domain.model.AgreementCategoryProfile;
 import com.b4rrhh.rulesystem.agreementcategoryprofile.domain.model.TipoNomina;
 import com.b4rrhh.rulesystem.agreementcategoryprofile.domain.port.AgreementCategoryProfileRepository;
+import com.b4rrhh.rulesystem.domain.model.RuleEntity;
+import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;
@@ -10,11 +12,16 @@ import java.util.Optional;
 @Component
 public class AgreementCategoryProfilePersistenceAdapter implements AgreementCategoryProfileRepository {
 
+    private static final String AGREEMENT_CATEGORY = "AGREEMENT_CATEGORY";
+
+    private final RuleEntityRepository ruleEntityRepository;
     private final SpringDataAgreementCategoryProfileRepository springDataRepository;
 
     public AgreementCategoryProfilePersistenceAdapter(
+            RuleEntityRepository ruleEntityRepository,
             SpringDataAgreementCategoryProfileRepository springDataRepository
     ) {
+        this.ruleEntityRepository = ruleEntityRepository;
         this.springDataRepository = springDataRepository;
     }
 
@@ -26,7 +33,11 @@ public class AgreementCategoryProfilePersistenceAdapter implements AgreementCate
 
     @Override
     public Optional<String> findGrupoCotizacionCodeByCategoryCode(String ruleSystemCode, String categoryCode) {
-        return springDataRepository.findGrupoCotizacionCodeByCategoryCode(ruleSystemCode, categoryCode);
+        // La categoría la resuelve el puerto, por el nivel de su tipo (backend#157).
+        return ruleEntityRepository.findByBusinessKey(ruleSystemCode, AGREEMENT_CATEGORY, categoryCode)
+                .map(RuleEntity::getId)
+                .flatMap(springDataRepository::findByAgreementCategoryRuleEntityId)
+                .map(AgreementCategoryProfileEntity::getGrupoCotizacionCode);
     }
 
     @Override

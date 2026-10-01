@@ -3,6 +3,7 @@ package com.b4rrhh.employee.labor_classification.infrastructure.persistence;
 import com.b4rrhh.support.DatosDePrueba;
 import com.b4rrhh.support.TestSobreEsquemaReal;
 import jakarta.persistence.EntityManager;
+import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,13 +29,16 @@ class LaborClassificationConsistencyAdaptersIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private RuleEntityRepository ruleEntityRepository;
+
     private LaborClassificationPresenceConsistencyAdapter presenceConsistencyAdapter;
     private AgreementCategoryRelationLookupAdapter relationLookupAdapter;
 
     @BeforeEach
     void setUp() {
         presenceConsistencyAdapter = new LaborClassificationPresenceConsistencyAdapter(entityManager);
-        relationLookupAdapter = new AgreementCategoryRelationLookupAdapter(entityManager);
+        relationLookupAdapter = new AgreementCategoryRelationLookupAdapter(entityManager, ruleEntityRepository);
     }
 
     @Test
