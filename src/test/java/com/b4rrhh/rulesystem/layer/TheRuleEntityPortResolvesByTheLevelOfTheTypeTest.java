@@ -19,10 +19,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>Hoy todo es de nivel 3 y la capa nacional se llama como su reglamentación, así que un puerto
  * que comparase capa con reglamentación daría verde con los datos de la semilla. El segundo caso
- * es el que lo distingue: sube {@code COUNTRY} al nivel 2 dentro del test, con sus países en
- * {@code INT}, y el puerto tiene que encontrarlos desde cualquier reglamentación. Antes de mirar
+ * es el que lo distingue: sube un tipo al nivel 2 dentro del test, con sus entidades en
+ * {@code INT}, y el puerto tiene que encontrarlas desde cualquier reglamentación. Antes de mirar
  * el puerto, el esquema confirma que ese estado es válido ({@code set constraints all immediate}):
  * el test no se inventa un mundo que la base no admitiría.</p>
+ *
+ * <p>Cuando se escribió, el tipo que subía era {@code COUNTRY}; el backend#158 lo subió de verdad
+ * (V168), y con él {@code CONTACT_TYPE}. Los casos usan ahora tipos que se quedan en el nivel 3:
+ * los motivos de baja y los grupos de cotización. Lo que comprueba el test no ha cambiado.</p>
  */
 @TestSobreEsquemaReal
 class TheRuleEntityPortResolvesByTheLevelOfTheTypeTest {
@@ -35,56 +39,59 @@ class TheRuleEntityPortResolvesByTheLevelOfTheTypeTest {
 
     @Test
     void aTypeOfLevelThreeResolvesInTheNationalLayerOfTheRuleSystem() {
-        RuleEntity spain = ruleEntityRepository.findByBusinessKey("ESP", "COUNTRY", "ESP").orElseThrow();
+        RuleEntity termination = ruleEntityRepository
+                .findByBusinessKey("ESP", "EMPLOYEE_PRESENCE_EXIT_REASON", "TERMINATION").orElseThrow();
 
-        assertThat(spain.getRuleSystemCode()).isEqualTo("ESP");
-        assertThat(spain.getLayerCode()).isEqualTo("ESP");
-        assertThat(spain.getLevel()).isEqualTo(3);
+        assertThat(termination.getRuleSystemCode()).isEqualTo("ESP");
+        assertThat(termination.getLayerCode()).isEqualTo("ESP");
+        assertThat(termination.getLevel()).isEqualTo(3);
     }
 
     @Test
     void aTypeRaisedToLevelTwoResolvesInIntFromEveryRuleSystem() {
-        raiseCountryToInt();
+        raiseExitReasonToInt();
 
         for (String ruleSystemCode : List.of("ESP", "FRA", "PRT")) {
-            RuleEntity spain = ruleEntityRepository.findByBusinessKey(ruleSystemCode, "COUNTRY", "ESP")
-                    .orElseThrow(() -> new AssertionError("COUNTRY/ESP no resuelve desde " + ruleSystemCode));
+            RuleEntity termination = ruleEntityRepository
+                    .findByBusinessKey(ruleSystemCode, "EMPLOYEE_PRESENCE_EXIT_REASON", "TERMINATION")
+                    .orElseThrow(() -> new AssertionError("TERMINATION no resuelve desde " + ruleSystemCode));
 
-            assertThat(spain.getRuleSystemCode()).isEqualTo(ruleSystemCode);
-            assertThat(spain.getLayerCode()).isEqualTo("INT");
-            assertThat(spain.getLevel()).isEqualTo(2);
+            assertThat(termination.getRuleSystemCode()).isEqualTo(ruleSystemCode);
+            assertThat(termination.getLayerCode()).isEqualTo("INT");
+            assertThat(termination.getLevel()).isEqualTo(2);
             assertThat(ruleEntityRepository.findApplicableByBusinessKey(
-                    ruleSystemCode, "COUNTRY", "ESP", LocalDate.of(2026, 1, 1)))
-                    .map(RuleEntity::getId).contains(spain.getId());
+                    ruleSystemCode, "EMPLOYEE_PRESENCE_EXIT_REASON", "TERMINATION", LocalDate.of(2026, 1, 1)))
+                    .map(RuleEntity::getId).contains(termination.getId());
         }
 
-        List<RuleEntity> countriesSeenFromFrance = ruleEntityRepository.findByFilters("FRA", "COUNTRY", null, null, null);
-        assertThat(countriesSeenFromFrance).hasSize(10)
-                .allSatisfy(country -> {
-                    assertThat(country.getLayerCode()).isEqualTo("INT");
-                    assertThat(country.getRuleSystemCode()).isEqualTo("FRA");
+        List<RuleEntity> reasonsSeenFromFrance =
+                ruleEntityRepository.findByFilters("FRA", "EMPLOYEE_PRESENCE_EXIT_REASON", null, null, null);
+        assertThat(reasonsSeenFromFrance).hasSize(3)
+                .allSatisfy(reason -> {
+                    assertThat(reason.getLayerCode()).isEqualTo("INT");
+                    assertThat(reason.getRuleSystemCode()).isEqualTo("FRA");
                 });
     }
 
     @Test
-    void anotherTypeOfLevelThreeStillResolvesInItsNationalLayerWhenCountryMoves() {
-        raiseCountryToInt();
+    void anotherTypeOfLevelThreeStillResolvesInItsNationalLayerWhenOneMoves() {
+        raiseExitReasonToInt();
 
-        assertThat(ruleEntityRepository.findByFilters("FRA", "CONTACT_TYPE", null, null, null))
+        assertThat(ruleEntityRepository.findByFilters("FRA", "GRUPO_COTIZACION", null, null, null))
                 .isNotEmpty()
                 .allSatisfy(type -> assertThat(type.getLayerCode()).isEqualTo("FRA"));
     }
 
-    /** Lo que hará el backend#158 con {@code COUNTRY}, en pequeño: un tipo, sus diez países, sin traducir. */
-    private void raiseCountryToInt() {
-        jdbcTemplate.update("update rulesystem.rule_entity_type set level = 2 where code = 'COUNTRY'");
+    /** Una subida en pequeño, a mano: un tipo, sus tres motivos, sin traducir. */
+    private void raiseExitReasonToInt() {
+        jdbcTemplate.update("update rulesystem.rule_entity_type set level = 2 where code = 'EMPLOYEE_PRESENCE_EXIT_REASON'");
         jdbcTemplate.update("""
                 delete from rulesystem.rule_entity
-                 where rule_entity_type_code = 'COUNTRY' and layer_code in ('FRA', 'PRT')
+                 where rule_entity_type_code = 'EMPLOYEE_PRESENCE_EXIT_REASON' and layer_code in ('FRA', 'PRT')
                 """);
         jdbcTemplate.update("""
                 update rulesystem.rule_entity set layer_code = 'INT'
-                 where rule_entity_type_code = 'COUNTRY' and layer_code = 'ESP'
+                 where rule_entity_type_code = 'EMPLOYEE_PRESENCE_EXIT_REASON' and layer_code = 'ESP'
                 """);
         jdbcTemplate.execute("set constraints all immediate");
     }

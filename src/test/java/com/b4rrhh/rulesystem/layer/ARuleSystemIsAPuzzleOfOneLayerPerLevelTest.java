@@ -84,19 +84,21 @@ class ARuleSystemIsAPuzzleOfOneLayerPerLevelTest {
                 .isPositive();
     }
 
-    // Lo que dice el paso 1: todo en el nivel 3, y lo de los niveles 1, 2, 4 y 5 vacío. El paso 3
-    // (backend#158) es el que cambia esto, y tiene que cambiar este test con él.
+    // El paso 1 decia «todo en el nivel 3». El paso 3 (backend#158) sube los tipos que son iguales
+    // en cualquier pais a COM e INT —cuales, lo dice EachRaisedTypeResolvesTheSameFromEveryRuleSystemTest—,
+    // y las capas de nomina, 4 y 5, siguen vacias hasta que el motor se mude (backend#159), que es
+    // quien tiene que cambiar este test.
     @Test
-    void inThisStepEveryTypeIsNationalAndOnlyTheNationalLayersHoldEntities() {
+    void untilTheEngineMovesOnlyTheLevelsUpToTheNationalOneHoldEntities() {
         assertThat(jdbcTemplate.queryForList(
                 "select distinct level from rulesystem.rule_entity_type", Integer.class))
-                .containsExactly(3);
+                .isSubsetOf(1, 2, 3);
         assertThat(jdbcTemplate.queryForList("""
                 select distinct l.level
                   from rulesystem.rule_entity re
                   join rulesystem.layer l on l.code = re.layer_code
                 """, Integer.class))
-                .containsExactly(3);
+                .isSubsetOf(1, 2, 3);
     }
 
     @Test
@@ -113,11 +115,11 @@ class ARuleSystemIsAPuzzleOfOneLayerPerLevelTest {
 
     @Test
     void aTypeCannotChangeLevelLeavingItsEntitiesBehind() {
-        jdbcTemplate.update("update rulesystem.rule_entity_type set level = 2 where code = 'COUNTRY'");
+        jdbcTemplate.update("update rulesystem.rule_entity_type set level = 2 where code = 'CONTRACT'");
 
         assertThatThrownBy(() -> jdbcTemplate.execute("set constraints all immediate"))
                 .isInstanceOf(DataIntegrityViolationException.class)
-                .hasMessageContaining("COUNTRY");
+                .hasMessageContaining("CONTRACT");
     }
 
     @Test

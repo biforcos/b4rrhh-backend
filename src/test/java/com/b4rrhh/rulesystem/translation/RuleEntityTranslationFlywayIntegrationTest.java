@@ -46,9 +46,12 @@ class RuleEntityTranslationFlywayIntegrationTest {
 
     @Test
     void forALanguageWithoutTranslationsEveryCodeResolvesToItsBaseLiteral() {
+        // Cada entidad, vista desde cada reglamentación que monta su capa: desde backend#158 un
+        // país vive en INT, que no es una reglamentación, y se resuelve desde ESP, FRA y PRT.
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
-                select layer_code as rule_system_code, rule_entity_type_code, code, name
-                  from rulesystem.rule_entity
+                select rsl.rule_system_code, re.rule_entity_type_code, re.code, re.name
+                  from rulesystem.rule_entity re
+                  join rulesystem.rule_system_layer rsl on rsl.layer_code = re.layer_code
                 """);
         assertThat(rows).isNotEmpty();
 
