@@ -27,8 +27,10 @@ public class SsDesempleoModalidadJdbcAdapter implements SsDesempleoModalidadRepo
         List<String> filas = jdbc.query(
                 """
                 SELECT modality
-                  FROM payroll_engine.ss_desempleo_modalidad_contrato
-                 WHERE rule_system_code = ?
+                  FROM payroll_engine.ss_desempleo_modalidad_contrato t
+                  JOIN rulesystem.rule_system_layer rsl
+                    ON rsl.layer_code = t.layer_code AND rsl.level = t.layer_level
+                 WHERE rsl.rule_system_code = ?
                    AND contract_code = ?
                    AND valid_from <= ?
                    AND (valid_to IS NULL OR valid_to >= ?)

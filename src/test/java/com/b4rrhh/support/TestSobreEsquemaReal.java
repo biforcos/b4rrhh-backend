@@ -1,5 +1,10 @@
 package com.b4rrhh.support;
 
+import com.b4rrhh.payroll_engine.execution.infrastructure.persistence.ItPrestacionTramoJdbcAdapter;
+import com.b4rrhh.payroll_engine.execution.infrastructure.persistence.SsCotizacionTiposJdbcAdapter;
+import com.b4rrhh.payroll_engine.execution.infrastructure.persistence.SsCotizacionTopesJdbcAdapter;
+import com.b4rrhh.payroll_engine.execution.infrastructure.persistence.SsDesempleoModalidadJdbcAdapter;
+import com.b4rrhh.payroll_engine.execution.infrastructure.persistence.SsTarifaPrimasAtJdbcAdapter;
 import com.b4rrhh.employee.absence.infrastructure.persistence.AbsenceRuleEntityUsageParticipant;
 import com.b4rrhh.employee.address.application.service.AddressCatalogValidator;
 import com.b4rrhh.employee.address.application.service.AddressTimelineService;
@@ -282,6 +287,12 @@ import java.lang.annotation.Target;
         PayrollConceptOperandPersistenceAdapter.class,
         ConceptAssignmentPersistenceAdapter.class,
         PayrollTableRowManagementAdapter.class,
+        // payroll_engine: la ley de nomina, que vive en la capa 4 (backend#159)
+        SsCotizacionTiposJdbcAdapter.class,
+        SsCotizacionTopesJdbcAdapter.class,
+        SsTarifaPrimasAtJdbcAdapter.class,
+        SsDesempleoModalidadJdbcAdapter.class,
+        ItPrestacionTramoJdbcAdapter.class,
         // rulesystem: traducciones de rule_entity (ADR-052)
         RuleEntityPersistenceAdapter.class,
         RuleEntityTranslationPersistenceAdapter.class,

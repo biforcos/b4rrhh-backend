@@ -31,8 +31,10 @@ public class SsCotizacionTiposJdbcAdapter implements SsCotizacionTiposRepository
         List<BigDecimal> results = jdbc.query(
                 """
                 SELECT rate
-                  FROM payroll_engine.ss_cotizacion_tipos
-                 WHERE rule_system_code = ?
+                  FROM payroll_engine.ss_cotizacion_tipos t
+                  JOIN rulesystem.rule_system_layer rsl
+                    ON rsl.layer_code = t.layer_code AND rsl.level = t.layer_level
+                 WHERE rsl.rule_system_code = ?
                    AND contingency_code = ?
                    AND valid_from      <= ?
                    AND (valid_to IS NULL OR valid_to >= ?)

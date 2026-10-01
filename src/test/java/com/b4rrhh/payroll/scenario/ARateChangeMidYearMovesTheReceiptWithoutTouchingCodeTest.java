@@ -118,7 +118,7 @@ class ARateChangeMidYearMovesTheReceiptWithoutTouchingCodeTest {
     void aMissingVigenciaIsNotZeroAndIsNotTheLastKnownRate() {
         String emp = hireForTheWholeYear();
         jdbc.update("update payroll_engine.ss_cotizacion_tipos set valid_to = ?"
-                + " where rule_system_code = ? and contingency_code = 'CC_TRAB'", JUNE_30, RULE_SYSTEM);
+                + " where layer_code = (select layer_code from rulesystem.rule_system_layer where rule_system_code = ? and level = 4) and contingency_code = 'CC_TRAB'", JUNE_30, RULE_SYSTEM);
 
         launchFor(emp, "202508");
         vaciarLaSesion();
@@ -141,20 +141,23 @@ class ARateChangeMidYearMovesTheReceiptWithoutTouchingCodeTest {
      */
     private void restoreTheSeededRate() {
         jdbc.update("delete from payroll_engine.ss_cotizacion_tipos"
-                        + " where rule_system_code = ? and contingency_code = 'CC_TRAB' and valid_from = ?",
+                        + " where layer_code = (select layer_code from rulesystem.rule_system_layer where rule_system_code = ? and level = 4)"
+                        + "   and contingency_code = 'CC_TRAB' and valid_from = ?",
                 RULE_SYSTEM, JULY_1);
         jdbc.update("update payroll_engine.ss_cotizacion_tipos set valid_to = ?"
-                        + " where rule_system_code = ? and contingency_code = 'CC_TRAB' and valid_from = ?",
+                        + " where layer_code = (select layer_code from rulesystem.rule_system_layer where rule_system_code = ? and level = 4)"
+                        + "   and contingency_code = 'CC_TRAB' and valid_from = ?",
                 DECEMBER_31, RULE_SYSTEM, JANUARY_1);
     }
 
     private void declareASecondVigencia() {
         jdbc.update("update payroll_engine.ss_cotizacion_tipos set valid_to = ?"
-                        + " where rule_system_code = ? and contingency_code = 'CC_TRAB' and valid_from = ?",
+                        + " where layer_code = (select layer_code from rulesystem.rule_system_layer where rule_system_code = ? and level = 4)"
+                        + "   and contingency_code = 'CC_TRAB' and valid_from = ?",
                 JUNE_30, RULE_SYSTEM, JANUARY_1);
         jdbc.update("insert into payroll_engine.ss_cotizacion_tipos"
-                + " (rule_system_code, contingency_code, rate, valid_from, valid_to)"
-                + " values (?, 'CC_TRAB', ?, ?, ?)",
+                + " (layer_code, contingency_code, rate, valid_from, valid_to)"
+                + " values ((select layer_code from rulesystem.rule_system_layer where rule_system_code = ? and level = 4), 'CC_TRAB', ?, ?, ?)",
                 RULE_SYSTEM, SECOND_HALF_RATE, JULY_1, DECEMBER_31);
     }
 

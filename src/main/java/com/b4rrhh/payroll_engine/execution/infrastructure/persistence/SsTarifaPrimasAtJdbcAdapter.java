@@ -33,8 +33,10 @@ public class SsTarifaPrimasAtJdbcAdapter implements SsTarifaPrimasAtRepository {
         List<SsTarifaPrimaAt> results = jdbc.query(
                 """
                 SELECT cnae_code, activity_name, tipo_it, tipo_ims
-                  FROM payroll_engine.ss_tarifa_primas_at
-                 WHERE rule_system_code = ?
+                  FROM payroll_engine.ss_tarifa_primas_at t
+                  JOIN rulesystem.rule_system_layer rsl
+                    ON rsl.layer_code = t.layer_code AND rsl.level = t.layer_level
+                 WHERE rsl.rule_system_code = ?
                    AND ? LIKE cnae_code || '%'
                    AND valid_from <= ?
                    AND (valid_to IS NULL OR valid_to >= ?)

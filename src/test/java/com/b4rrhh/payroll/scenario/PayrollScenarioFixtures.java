@@ -522,8 +522,8 @@ public class PayrollScenarioFixtures {
 
         jdbc.update(
                 "insert into payroll_engine.ss_cotizacion_topes" +
-                " (rule_system_code, grupo_code, period_type, base_min, base_max, valid_from, valid_to)" +
-                " values (?, ?, ?, ?, ?, DATE '2025-01-01', null)",
+                " (layer_code, grupo_code, period_type, base_min, base_max, valid_from, valid_to)" +
+                " values ((select layer_code from rulesystem.rule_system_layer where rule_system_code = ? and level = 4), ?, ?, ?, ?, DATE '2025-01-01', null)",
                 ruleSystemCode, "05", "MENSUAL", baseMin, baseMax);
     }
 
@@ -555,8 +555,8 @@ public class PayrollScenarioFixtures {
                                   BigDecimal tipoIt, BigDecimal tipoIms) {
         jdbc.update(
                 "insert into payroll_engine.ss_tarifa_primas_at" +
-                " (rule_system_code, cnae_code, activity_name, tipo_it, tipo_ims, valid_from, valid_to)" +
-                " values (?, ?, ?, ?, ?, DATE '2025-01-01', null)",
+                " (layer_code, cnae_code, activity_name, tipo_it, tipo_ims, valid_from, valid_to)" +
+                " values ((select layer_code from rulesystem.rule_system_layer where rule_system_code = ? and level = 4), ?, ?, ?, ?, DATE '2025-01-01', null)",
                 ruleSystemCode, cnaeCode, "Actividad de laboratorio " + cnaeCode, tipoIt, tipoIms);
     }
 
@@ -648,8 +648,8 @@ public class PayrollScenarioFixtures {
         };
         for (String[] t : tipos) {
             jdbc.update("insert into payroll_engine.ss_cotizacion_tipos"
-                    + " (rule_system_code, contingency_code, rate, valid_from, valid_to)"
-                    + " values (?, ?, ?, DATE '2000-01-01', null)",
+                    + " (layer_code, contingency_code, rate, valid_from, valid_to)"
+                    + " values ((select layer_code from rulesystem.rule_system_layer where rule_system_code = ? and level = 4), ?, ?, DATE '2000-01-01', null)",
                     ruleSystemCode, t[0], new BigDecimal(t[1]));
         }
         seedDesempleoModalidades(ruleSystemCode);
@@ -673,9 +673,9 @@ public class PayrollScenarioFixtures {
         };
         for (String[] c : contratos) {
             jdbc.update("insert into payroll_engine.ss_desempleo_modalidad_contrato"
-                    + " (rule_system_code, contract_code, modality, valid_from, valid_to)"
-                    + " values (?, ?, ?, DATE '2000-01-01', null)"
-                    + " on conflict (rule_system_code, contract_code, valid_from) do nothing",
+                    + " (layer_code, contract_code, modality, valid_from, valid_to)"
+                    + " values ((select layer_code from rulesystem.rule_system_layer where rule_system_code = ? and level = 4), ?, ?, DATE '2000-01-01', null)"
+                    + " on conflict (layer_code, contract_code, valid_from) do nothing",
                     ruleSystemCode, c[0], c[1]);
         }
     }

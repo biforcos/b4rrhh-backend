@@ -222,7 +222,7 @@ class TheAtEpRateComesFromTheCompanyActivityTest {
         for (String cnae : new String[] {"473", "4781", "4782", "4783"}) {
             Integer filas = jdbc.queryForObject(
                     "select count(*) from payroll_engine.ss_tarifa_primas_at"
-                            + " where rule_system_code = ? and cnae_code = ?",
+                            + " where layer_code = (select layer_code from rulesystem.rule_system_layer where rule_system_code = ? and level = 4) and cnae_code = ?",
                     Integer.class, RULE_SYSTEM, cnae);
             assertEquals(2, filas,
                     () -> "la excepcion " + cnae + " que la fila del 47 nombra tiene que tener su"

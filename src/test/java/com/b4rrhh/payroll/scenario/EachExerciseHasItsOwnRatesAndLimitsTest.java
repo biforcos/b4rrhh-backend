@@ -143,14 +143,14 @@ class EachExerciseHasItsOwnRatesAndLimitsTest {
     void theVigenciasTileTheYearsWithoutGapsOrOverlaps() {
         assertSinHuecosNiSolapes(
                 "select contingency_code as clave, valid_from, valid_to"
-                        + " from payroll_engine.ss_cotizacion_tipos where rule_system_code = ?"
+                        + " from payroll_engine.ss_cotizacion_tipos where layer_code = (select layer_code from rulesystem.rule_system_layer where rule_system_code = ? and level = 4)"
                         + " order by clave, valid_from",
                 "ss_cotizacion_tipos");
 
         assertSinHuecosNiSolapes(
                 "select grupo_code || '/' || period_type || '/' || contingency_code as clave,"
                         + "       valid_from, valid_to"
-                        + " from payroll_engine.ss_cotizacion_topes where rule_system_code = ?"
+                        + " from payroll_engine.ss_cotizacion_topes where layer_code = (select layer_code from rulesystem.rule_system_layer where rule_system_code = ? and level = 4)"
                         + " order by clave, valid_from",
                 "ss_cotizacion_topes");
     }

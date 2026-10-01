@@ -9,6 +9,11 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Lee {@code payroll_engine.ss_cotizacion_topes} de la capa de ley (nivel 4) que monta la
+ * reglamentación: los topes son de {@code NOM_ESP}, no de ESP, y los lee igual cualquier
+ * reglamentación que monte esa capa (backend#159, ADR-077).
+ */
 @Repository
 public class SsCotizacionTopesJdbcAdapter implements SsCotizacionTopesRepository {
 
@@ -25,8 +30,10 @@ public class SsCotizacionTopesJdbcAdapter implements SsCotizacionTopesRepository
         List<SsCotizacionTope> results = jdbc.query(
                 """
                 SELECT base_min, base_max
-                  FROM payroll_engine.ss_cotizacion_topes
-                 WHERE rule_system_code = ?
+                  FROM payroll_engine.ss_cotizacion_topes t
+                  JOIN rulesystem.rule_system_layer rsl
+                    ON rsl.layer_code = t.layer_code AND rsl.level = t.layer_level
+                 WHERE rsl.rule_system_code = ?
                    AND grupo_code       = ?
                    AND period_type      = ?
                    AND contingency_code = ?

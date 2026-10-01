@@ -28,8 +28,10 @@ public class ItPrestacionTramoJdbcAdapter implements ItPrestacionTramoRepository
         List<ItPrestacionTramo> filas = jdbc.query(
                 """
                 SELECT day_from, day_to, percentage
-                  FROM payroll_engine.it_prestacion_tramo
-                 WHERE rule_system_code = ?
+                  FROM payroll_engine.it_prestacion_tramo t
+                  JOIN rulesystem.rule_system_layer rsl
+                    ON rsl.layer_code = t.layer_code AND rsl.level = t.layer_level
+                 WHERE rsl.rule_system_code = ?
                    AND absence_type_code = ?
                    AND tramo_code = ?
                    AND effective_from <= ?
