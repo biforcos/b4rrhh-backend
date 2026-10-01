@@ -8,8 +8,8 @@
 --
 -- Fuente: iso-codes 4.18.0 (Debian, https://salsa.debian.org/iso-codes-team/iso-codes),
 -- data/iso_3166-1.json para el codigo alfa-3 y el nombre, e iso_3166-1/es.po para el castellano.
--- Licencia LGPL-2.1-or-later; los datos se reproducen tal cual, sin retocar ninguna traduccion
--- (tambien la tilde de «Costa de Marfíl», que es de la fuente). El nombre de la fila es el de
+-- Licencia LGPL-2.1-or-later; los datos se reproducen tal cual salvo una errata de la fuente: el
+-- es.po trae «Costa de Marfíl», con tilde, y aqui va «Costa de Marfil». El nombre de la fila es el de
 -- iso-codes en ingles y el castellano va en rule_entity_translation (es-ES), como estaban los
 -- diez: los diez coinciden letra a letra con la fuente en los dos idiomas, y por eso no se tocan.
 --
@@ -66,7 +66,7 @@ insert into iso_3166_1 (code, name, name_es) values
     ('CHE', 'Switzerland', 'Suiza'),
     ('CHL', 'Chile', 'Chile'),
     ('CHN', 'China', 'China'),
-    ('CIV', 'Côte d''Ivoire', 'Costa de Marfíl'),
+    ('CIV', 'Côte d''Ivoire', 'Costa de Marfil'),
     ('CMR', 'Cameroon', 'Camerún'),
     ('COD', 'Congo, The Democratic Republic of the', 'Congo, República Democrática del'),
     ('COG', 'Congo', 'Congo'),
