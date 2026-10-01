@@ -1,5 +1,5 @@
 -- =========================================================
--- La huella de las once tablas de negocio (backend#156, camino 5 de workspace#20)
+-- La huella de las tablas de negocio (backend#156, camino 5 de workspace#20)
 -- =========================================================
 --
 --   Un md5 por tabla. Dos bases con la misma huella tienen los mismos empleados,
@@ -7,13 +7,18 @@
 --
 -- Es el oraculo del camino 5 (ADR-077): cada paso termina recalculando la semilla
 -- entera con el backend nuevo y comparando esta huella con la de la semilla de
--- referencia. «Cero recibos se mueven» es que las once salen iguales.
+-- referencia. «Cero recibos se mueven» es que las catorce salen iguales.
+--
+-- Eran once. backend#159 anadio direccion, documentos y contactos: son lo que leen
+-- los catalogos que el backend#158 subio a COM e INT (paises, tipos de documento,
+-- de contacto y de direccion), y la huella no los miraba. Por eso el fichero se
+-- llamaba huella-de-las-once-tablas.sql.
 --
 -- ---------------------------------------------------------
 -- Como se usa
 -- ---------------------------------------------------------
 --   docker exec -i b4rrhh-postgres psql -U b4rrhh -d b4rrhh_semilla -At \
---       < docs/consultas/huella-de-las-once-tablas.sql
+--       < docs/consultas/huella-de-las-tablas-de-negocio.sql
 --
 -- Y lo mismo contra la otra base; un diff de las dos salidas vacio es el criterio.
 --
@@ -46,6 +51,18 @@ filas(tabla, fila) as (
            first_name, last_name_1, coalesce(last_name_2, '∅'), coalesce(preferred_name, '∅'),
            coalesce(photo_url, '∅'))
       from employee.employee
+    union all
+    select 'employee.address', concat_ws('|', emp.k, address_number, address_type_code, street, city,
+           country_code, coalesce(postal_code, '∅'), coalesce(region_code, '∅'),
+           start_date, coalesce(end_date::text, '∅'))
+      from employee.address x join emp on emp.id = x.employee_id
+    union all
+    select 'employee.identifier', concat_ws('|', emp.k, identifier_type_code, identifier_value,
+           coalesce(issuing_country_code, '∅'), coalesce(expiration_date::text, '∅'), is_primary)
+      from employee.identifier x join emp on emp.id = x.employee_id
+    union all
+    select 'employee.contact', concat_ws('|', emp.k, contact_type_code, contact_value)
+      from employee.contact x join emp on emp.id = x.employee_id
     union all
     select 'employee.presence', concat_ws('|', emp.k, presence_number, company_code, entry_reason_code,
            coalesce(exit_reason_code, '∅'), start_date, coalesce(end_date::text, '∅'))
