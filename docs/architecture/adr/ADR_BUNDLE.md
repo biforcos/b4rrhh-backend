@@ -81,6 +81,8 @@
 - [ADR-074-un-calculo-solo-lee-de-otro-periodo-lo-que-esta-cerrado.md](#file-adr-074-un-calculo-solo-lee-de-otro-periodo-lo-que-esta-cerrado-md)
 - [ADR-075-la-prestacion-es-dias-por-porcentaje-por-base-y-la-baja-sigue-cotizando.md](#file-adr-075-la-prestacion-es-dias-por-porcentaje-por-base-y-la-baja-sigue-cotizando-md)
 - [ADR-076-el-recibo-es-un-documento-y-el-calculo-vigente-es-estado.md](#file-adr-076-el-recibo-es-un-documento-y-el-calculo-vigente-es-estado-md)
+- [ADR-077-las-reglamentaciones-son-puzles-de-capas-por-nivel.md](#file-adr-077-las-reglamentaciones-son-puzles-de-capas-por-nivel-md)
+- [ADR-078-la-direccion-es-la-del-modelo-190-y-el-territorio-es-un-maestro-con-vigencia.md](#file-adr-078-la-direccion-es-la-del-modelo-190-y-el-territorio-es-un-maestro-con-vigencia-md)
 
 ---
 
@@ -17981,4 +17983,106 @@ pague»— en vez de «pendiente» (`backend#139`).
   es que no se guardan pasos, que es lo que habría hecho eso inviable.
 
 <!-- END FILE: ADR-076-el-recibo-es-un-documento-y-el-calculo-vigente-es-estado.md -->
+
+
+---
+
+# FILE: ADR-077-las-reglamentaciones-son-puzles-de-capas-por-nivel.md
+<a name="file-adr-077-las-reglamentaciones-son-puzles-de-capas-por-nivel-md"></a>
+
+<!-- BEGIN FILE: ADR-077-las-reglamentaciones-son-puzles-de-capas-por-nivel.md -->
+
+# ADR-077 — Las reglamentaciones son puzles de capas por nivel
+
+## Estado
+Propuesto (30/09/2026), pendiente de aceptar al empujar el `backend#156`.
+
+## Contexto
+
+Una reglamentación (`rule_system`) es hoy un código plano del que cuelga todo: catálogos (`rule_entity`), tablas del motor, empleados, empresas, convenios. Consecuencias medidas:
+
+- Un país es el mismo en ESP, FRA y PRT y está sembrado tres veces (V16, diez países en inglés por reglamentación). **Quince migraciones** siembran con `cross join` sobre `rule_system` lo que es igual en cualquier país (tipos de dirección, de contacto, de identificador, países…). Tres copias de una verdad divergen en cuanto alguien toca una.
+- Una organización con dos esquemas de nómina (misma ley, distintos conceptos) no tiene forma de compartir la ley y separar lo suyo: hoy sería duplicar la reglamentación entera.
+- Nada dice qué parte del grafo de cálculo es ley y qué parte es empresa.
+
+Salió al diseñar el territorio (`workspace#19`): antes de sembrar 249 países había que decidir dónde viven.
+
+## Decisión
+
+1. **Cinco niveles fijos**: 1 Común · 2 Internacional · 3 Nacional · 4 Nómina nacional (ley) · 5 Nómina de empresa (esquema).
+2. **Capa (`layer`)**: la unidad donde se definen cosas. Tiene código, nombre y **un nivel**. `COM`, `INT`, `ESP`, `NOM_ESP`, `NOM_ESP_EMP`.
+3. **Una reglamentación es un puzle de exactamente una capa por nivel** (`rule_system_layer`). `ESP = (COM, INT, ESP, NOM_ESP, NOM_ESP_EMP)`; `ESP_2 = (COM, INT, ESP, NOM_ESP, NOM_EMP2)`.
+4. **El tipo de entidad declara su nivel.** `COUNTRY` es de nivel 2 y sólo puede vivir en capas de nivel 2. Resolver `(reglamentación, tipo, código)` es: nivel del tipo → capa de esa reglamentación en ese nivel → entidad. **No se sube por ninguna cadena**; no hay sombras ni prioridades.
+5. Dos códigos iguales en capas distintas **no chocan**: ninguna reglamentación monta dos capas del mismo nivel.
+6. **El convenio no es capa.** Se elige por presencia; dos empleados de la misma empresa pueden tener convenios distintos.
+7. **La capa 4 es cerrada**: un nodo de ley no nombra un nodo de empresa. Agrega por atributo (*cotiza, tributa, se prorratea*), que es lo que ya exige ADR-070. Los conceptos de la empresa (capa 5) declaran sus atributos.
+8. Las tablas del motor que son ley (topes, tipos, tarifa AT, CNAE, IRPF) cuelgan de la capa 4, no de la reglamentación.
+9. Todo lo demás (empleados, empresas, convenios, operaciones, marcas) **sigue colgando de la reglamentación**, que es el ensamblaje.
+
+## Alternativas descartadas
+
+- **Un `global` booleano en el tipo.** Resuelve los países y nada más; no da sitio a lo nacional compartido por dos esquemas ni a la ley separada de la empresa.
+- **Un árbol de reglamentaciones con padre** (ESP → INT → COM) y resolución subiendo por la cadena. Funciona para catálogos, pero obliga a decidir si abajo se pisa lo de arriba, y `ESP_2` sería «hija de ESP» de casualidad. La composición lo hace por construcción.
+- **Mantener el `cross join` con un test de que las copias son iguales.** Es sostener con un test lo que el modelo debería impedir.
+- **El convenio como capa.** Rompe en cuanto dos empleados de la misma empresa tienen convenios distintos.
+- **Partir el grafo ahora.** No hay un caso que lo pida; se deja la puerta y el inventario (`backend#160`), no el corte.
+
+## Precedente
+
+HR Access: la reglamentación no es plana; tiene niveles (COM, INT, nacional, nómina, y de usuario en adelante) y «modelos» que se montan por nivel. Copiamos la idea de niveles y modelos (aquí, capas). **No copiamos** que un nivel inferior pueda redefinir lo del superior: aquí un tipo vive en un solo nivel.
+
+## Consecuencias
+
+- Migración en pasos, cada uno con **md5 idéntico** de las once tablas de negocio tras recalcular la semilla de nueve meses cerrados (`backend#156`–`#160`). «Cero recibos se mueven» es el criterio de todos.
+- Un solo puerto resuelve entidades, con candado (`backend#157`).
+- Catálogos enseña de qué capa viene cada entidad y sólo edita en la suya (`frontend#127`); el Ámbito ofrece reglamentaciones, nunca capas.
+- **Límite conocido**: `ESP_2` como puzle vale para catálogos y para las tablas de ley; la partición real del grafo (conceptos de empresa en la capa 5) es la puerta que no se cruza hasta que exista la segunda empresa con esquema propio o lo pida la retribución en especie (paso 6b del camino 2).
+- Lo que sea mixto entre niveles (tipos de identificador: pasaporte internacional, DNI/NIE nacional) se queda en 3 con nota hasta que se parta.
+
+<!-- END FILE: ADR-077-las-reglamentaciones-son-puzles-de-capas-por-nivel.md -->
+
+
+---
+
+# FILE: ADR-078-la-direccion-es-la-del-modelo-190-y-el-territorio-es-un-maestro-con-vigencia.md
+<a name="file-adr-078-la-direccion-es-la-del-modelo-190-y-el-territorio-es-un-maestro-con-vigencia-md"></a>
+
+<!-- BEGIN FILE: ADR-078-la-direccion-es-la-del-modelo-190-y-el-territorio-es-un-maestro-con-vigencia.md -->
+
+# ADR-078 — La dirección es la del modelo 190 y el territorio es un maestro con vigencia
+
+## Estado
+Propuesto (30/09/2026), detrás del ADR-077.
+
+## Contexto
+
+Tres tablas guardan direcciones con tres definiciones de texto libre: `employee.address` (calle, ciudad, país, CP, `region_code`), `rulesystem.company_profile` y `rulesystem.work_center_profile` (calle, ciudad, CP, país). En la semilla, «Región: ES-VC» es una comunidad y no una provincia, y «Valencia» con CP 46363 no cuadra; nadie lo sabe porque **no hay nada que pueda estar mal**. Lo dijeron los compañeros de Juan: *«no tenemos algo estándar; las provincias, las localidades, todo eso debería estar amaestrado»*.
+
+La dirección calcula: residencia fiscal (tramo autonómico de IRPF, forales, Ceuta y Melilla), provincia del centro (CCC, afiliación), y el **modelo 190** exige la dirección del perceptor estructurada.
+
+## Decisión
+
+1. **La estructura de una dirección es la del modelo 190**: tipo de vía (catálogo AEAT), nombre, número, calificador, bloque, portal, escalera, planta, puerta, localidad (texto: la pedanía), municipio (código INE), provincia (código), CP, país. No se inventa una propia.
+2. **La misma estructura, no la misma tabla.** El empleado vive en su esquema con vigencia; empresa y centro en la reglamentación. Las tres tablas tienen las mismas columnas, los mismos nombres, las mismas referencias y la misma validación; un candado compara las tres.
+3. **Dónde vive el territorio** (sobre las capas del ADR-077): países = entidades `COUNTRY` de la capa `INT` (249, castellano); comunidades, provincias y tipos de vía = entidades de la capa nacional (`REGION`, `PROVINCE`, `STREET_TYPE`, con código INE e ISO 3166-2); **municipios y CP en `geo`**, cargados del fichero del INE, con vigencia (el INE fusiona y segrega), referenciando la provincia por código. Un municipio no es una entidad de catálogo: son 8.100 que se regeneran de la fuente, no se editan.
+4. **CP**: validación dura (los dos primeros dígitos son la provincia) y municipio **sugerido** desde una fuente abierta, dicho como sugerencia.
+5. **La marca «sin normalizar»**: una dirección que no cumple se guarda igual con la marca y la ficha la enseña. Un alta no se bloquea por un pueblo que no se encuentra. Se rechaza sólo lo contradictorio (CP contra provincia) o lo vacío (sin país).
+6. **Fuentes, con licencia en la migración**: INE (municipios y códigos, anual), `iso-codes` (ISO 3166-1/2, castellano), AEAT (tipos de vía del diseño de registro del 190), GeoNames ES (CC-BY, sólo para sugerir).
+7. Fuera de ESP: país, CP y texto; el modelo de niveles es genérico y la semilla de FRA/PRT llega con INSEE y CTT cuando toque.
+
+## Alternativas descartadas
+
+- **Una estructura propia.** El 190 ya dice cómo; hacer otra es tener que mapear después.
+- **Google Places o la base de Correos.** El producto vive sin nube y sin licencias; INE + fuentes abiertas basta para lo que la nómina necesita.
+- **Callejero (CartoCiudad).** Pesa gigas y el 190 no lo pide: la vía es texto.
+- **Todo en `geo`** (también países y provincias): saca del catálogo lo que sí es catálogo (códigos con nombre, pocos, que alguien corrige a mano), y duplica lo que las capas ya resuelven.
+- **Todo en `rule_entity`** (también municipios): 8.100 filas con carga anual del INE y jerarquía no son una entidad de catálogo.
+- **Bloquear altas hasta normalizar.** Es lo que hace que la gente meta «Valencia» a todo.
+
+## Consecuencias
+
+- Camino 4 (`workspace#19`): `backend#154` (maestro), `#155` (las tres direcciones, migración con la marca y la cifra de lo que cuadra), `workforce-loader#17` (direcciones de verdad), `frontend#126` (un solo componente). Rompe la semilla: resiembra al final.
+- Deja el dato para el IRPF autonómico y forales (paso 7 del camino 2), sin hacerlo.
+
+<!-- END FILE: ADR-078-la-direccion-es-la-del-modelo-190-y-el-territorio-es-un-maestro-con-vigencia.md -->
 
