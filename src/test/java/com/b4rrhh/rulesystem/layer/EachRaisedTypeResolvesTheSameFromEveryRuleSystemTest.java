@@ -34,7 +34,8 @@ class EachRaisedTypeResolvesTheSameFromEveryRuleSystemTest {
     @ParameterizedTest(name = "{0} vive en {1}")
     @CsvSource({
             "COUNTRY, INT, 2, ESP, España",
-            "EMPLOYEE_IDENTIFIER_TYPE, INT, 2, PASSPORT, Pasaporte"
+            "EMPLOYEE_IDENTIFIER_TYPE, INT, 2, PASSPORT, Pasaporte",
+            "CONTACT_TYPE, COM, 1, EMAIL, Correo electrónico"
     })
     void theTypeResolvesToOneRowInItsLayerFromEveryRuleSystem(
             String type, String layer, int level, String code, String spanishName) {
@@ -67,7 +68,8 @@ class EachRaisedTypeResolvesTheSameFromEveryRuleSystemTest {
     @ParameterizedTest(name = "{0}: {1} filas en {2}")
     @CsvSource({
             "COUNTRY, 249, INT",
-            "EMPLOYEE_IDENTIFIER_TYPE, 4, INT"
+            "EMPLOYEE_IDENTIFIER_TYPE, 4, INT",
+            "CONTACT_TYPE, 5, COM"
     })
     void theLayerHoldsTheWholeCatalogTranslated(String type, int rows, String layer) {
         assertThat(jdbcTemplate.queryForObject("""

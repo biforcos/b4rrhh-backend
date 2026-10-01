@@ -105,12 +105,12 @@ class ARuleSystemIsAPuzzleOfOneLayerPerLevelTest {
     void anEntityCannotLiveInALayerOfAnotherLevel() {
         jdbcTemplate.update("""
                 insert into rulesystem.rule_entity (layer_code, rule_entity_type_code, code, name, start_date)
-                values ('COM', 'CONTACT_TYPE', 'ZZ_PROBE', 'Sonda', date '2020-01-01')
+                values ('COM', 'EMPLOYEE_PRESENCE_EXIT_REASON', 'ZZ_PROBE', 'Sonda', date '2020-01-01')
                 """);
 
         assertThatThrownBy(() -> jdbcTemplate.execute("set constraints all immediate"))
                 .isInstanceOf(DataIntegrityViolationException.class)
-                .hasMessageContaining("COM/CONTACT_TYPE/ZZ_PROBE");
+                .hasMessageContaining("COM/EMPLOYEE_PRESENCE_EXIT_REASON/ZZ_PROBE");
     }
 
     @Test
@@ -151,8 +151,8 @@ class ARuleSystemIsAPuzzleOfOneLayerPerLevelTest {
     void theSameCodeInTwoLayersDoesNotClash() {
         jdbcTemplate.update("""
                 insert into rulesystem.rule_entity (layer_code, rule_entity_type_code, code, name, start_date)
-                values ('ESP', 'CONTACT_TYPE', 'ZZ_PROBE', 'Sonda', date '2020-01-01'),
-                       ('FRA', 'CONTACT_TYPE', 'ZZ_PROBE', 'Sonde', date '2020-01-01')
+                values ('ESP', 'EMPLOYEE_PRESENCE_EXIT_REASON', 'ZZ_PROBE', 'Sonda', date '2020-01-01'),
+                       ('FRA', 'EMPLOYEE_PRESENCE_EXIT_REASON', 'ZZ_PROBE', 'Sonde', date '2020-01-01')
                 """);
         jdbcTemplate.execute("set constraints all immediate");
 

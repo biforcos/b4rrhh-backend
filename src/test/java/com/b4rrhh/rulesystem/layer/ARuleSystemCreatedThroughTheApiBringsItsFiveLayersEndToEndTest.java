@@ -39,8 +39,8 @@ class ARuleSystemCreatedThroughTheApiBringsItsFiveLayersEndToEndTest {
         mockMvc.perform(post("/rule-entities")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"ruleSystemCode": "AND", "ruleEntityTypeCode": "CONTACT_TYPE",
-                                 "code": "EMAIL", "name": "Correo", "startDate": "2020-01-01"}
+                                {"ruleSystemCode": "AND", "ruleEntityTypeCode": "EMPLOYEE_PRESENCE_EXIT_REASON",
+                                 "code": "TERMINATION", "name": "Baja", "startDate": "2020-01-01"}
                                 """))
                 .andExpect(status().isCreated());
 
@@ -55,7 +55,8 @@ class ARuleSystemCreatedThroughTheApiBringsItsFiveLayersEndToEndTest {
                 .isEqualTo("COM, INT, AND, NOM_AND, NOM_AND_EMP");
         assertThat(jdbcTemplate.queryForObject("""
                 select layer_code from rulesystem.rule_entity
-                 where rule_entity_type_code = 'CONTACT_TYPE' and code = 'EMAIL' and layer_code = 'AND'
+                 where rule_entity_type_code = 'EMPLOYEE_PRESENCE_EXIT_REASON' and code = 'TERMINATION'
+                   and layer_code = 'AND'
                 """, String.class))
                 .isEqualTo("AND");
     }
