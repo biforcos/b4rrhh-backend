@@ -1,7 +1,7 @@
 -- backend#158, paso 3 del camino 5 (workspace#20, ADR-077): EMPLOYEE_ADDRESS_TYPE sube a COM.
 --
 -- Domicilio, fiscal, postal y temporal son lo mismo en cualquier pais. La V11 los sembraba una vez
--- por reglamentacion con un cross join; aqui quedan una vez, en la capa comun.
+-- por reglamentacion; aqui quedan una vez, en la capa comun.
 --
 -- Este es el tipo que tiene algo colgando de su id: employee_address_type_profile, la cobertura
 -- de cada tipo (obligatorio u opcional, ADR-053 §1). Una fila por copia, doce, con

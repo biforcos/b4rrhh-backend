@@ -1,7 +1,7 @@
 -- backend#158, paso 3 del camino 5 (workspace#20, ADR-077, ADR-078 §3): COUNTRY sube a INT.
 --
--- Un pais es el mismo en ESP, FRA y PRT, y la V16 lo sembraba tres veces con un cross join sobre
--- rule_system: diez paises, nombre en ingles y traduccion al castellano (V114). Aqui las tres
+-- Un pais es el mismo en ESP, FRA y PRT, y la V16 lo sembraba tres veces, una por reglamentacion:
+-- diez paises, nombre en ingles y traduccion al castellano (V114). Aqui las tres
 -- copias se quedan en una fila en INT (rulesystem.raise_rule_entity_type, V167, que falla si no son
 -- identicas), y el catalogo pasa a ser el entero: los 249 codigos de ISO 3166-1, que es la semilla
 -- que el camino 4 (workspace#19) necesita para el pais de la direccion.
