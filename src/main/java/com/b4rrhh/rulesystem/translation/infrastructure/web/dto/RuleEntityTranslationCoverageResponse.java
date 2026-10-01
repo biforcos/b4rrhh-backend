@@ -17,7 +17,7 @@ public record RuleEntityTranslationCoverageResponse(String languageCode, List<Ty
                                 type.missing(),
                                 type.missingCodes().stream()
                                         .map(code -> new MissingCodeResponse(
-                                                code.ruleSystemCode(), code.code(), code.name()))
+                                                code.layerCode(), code.level(), code.code(), code.name()))
                                         .toList()
                         ))
                         .toList()
@@ -33,6 +33,6 @@ public record RuleEntityTranslationCoverageResponse(String languageCode, List<Ty
     ) {
     }
 
-    public record MissingCodeResponse(String ruleSystemCode, String code, String name) {
+    public record MissingCodeResponse(String layerCode, int level, String code, String name) {
     }
 }

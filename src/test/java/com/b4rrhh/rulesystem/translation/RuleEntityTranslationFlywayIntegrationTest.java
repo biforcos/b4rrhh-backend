@@ -146,8 +146,8 @@ class RuleEntityTranslationFlywayIntegrationTest {
         assertThat(entryReasonCoverage.missing()).isEqualTo(entryReasons - 2);
         assertThat(entryReasonCoverage.missingCodes())
                 .hasSize((int) (entryReasons - 2))
-                .contains(new MissingCode("PRT", "HIRING", "Hiring"))
-                .doesNotContain(new MissingCode("ESP", "HIRING", "Hiring"), new MissingCode("FRA", "HIRING", "Hiring"));
+                .contains(new MissingCode("PRT", 3, "HIRING", "Hiring"))
+                .doesNotContain(new MissingCode("ESP", 3, "HIRING", "Hiring"), new MissingCode("FRA", 3, "HIRING", "Hiring"));
 
         // Todo lo demás sigue sin traducir al francés, y el informe lo dice
         coverage.types().stream()

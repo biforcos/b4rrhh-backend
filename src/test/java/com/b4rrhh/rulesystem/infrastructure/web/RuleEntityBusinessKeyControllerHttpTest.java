@@ -83,8 +83,23 @@ class RuleEntityBusinessKeyControllerHttpTest {
         mockMvc.perform(get("/rule-entities/ESP/COMPANY/ES01/1900-01-01"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ruleSystemCode").value("ESP"))
+                .andExpect(jsonPath("$.layerCode").value("ESP"))
+                .andExpect(jsonPath("$.level").value(3))
                 .andExpect(jsonPath("$.ruleEntityTypeCode").value("COMPANY"))
                 .andExpect(jsonPath("$.code").value("ES01"));
+    }
+
+    @Test
+    void getSaysWhichLayerTheEntityComesFromWhenItIsNotTheNationalOne() throws Exception {
+        when(getRuleEntityByBusinessKeyUseCase.get(any(GetRuleEntityByBusinessKeyQuery.class)))
+                .thenReturn(new RuleEntity(7L, "FRA", "INT", 2, "COUNTRY", "ESP", "España", null, true,
+                        LocalDate.of(1900, 1, 1), null, LocalDateTime.now(), LocalDateTime.now()));
+
+        mockMvc.perform(get("/rule-entities/FRA/COUNTRY/ESP/1900-01-01"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ruleSystemCode").value("FRA"))
+                .andExpect(jsonPath("$.layerCode").value("INT"))
+                .andExpect(jsonPath("$.level").value(2));
     }
 
     @Test
@@ -273,6 +288,8 @@ class RuleEntityBusinessKeyControllerHttpTest {
                 return new RuleEntity(
                                 1L,
                                 "ESP",
+                                "ESP",
+                                3,
                                 "COMPANY",
                                 "ES01",
                                 "Company",

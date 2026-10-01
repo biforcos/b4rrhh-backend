@@ -39,8 +39,8 @@ class GetRuleEntityTranslationCoverageServiceTest {
         assertThat(coverage.types()).containsExactly(
                 new TypeCoverage("EMPLOYEE_ADDRESS_TYPE", 2, 2, 0, List.of()),
                 new TypeCoverage("EMPLOYEE_PRESENCE_ENTRY_REASON", 3, 1, 2, List.of(
-                        new MissingCode("FRA", "HIRING", "Hiring"),
-                        new MissingCode("PRT", "HIRING", "Hiring")
+                        new MissingCode("FRA", 3, "HIRING", "Hiring"),
+                        new MissingCode("PRT", 3, "HIRING", "Hiring")
                 ))
         );
     }

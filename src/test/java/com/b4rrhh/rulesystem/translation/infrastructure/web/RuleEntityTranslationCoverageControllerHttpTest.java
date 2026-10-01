@@ -41,8 +41,8 @@ class RuleEntityTranslationCoverageControllerHttpTest {
     void reportsCoverageForTheCanonicalFormOfTheLanguage() throws Exception {
         when(getCoverageUseCase.getCoverage("es-ES")).thenReturn(new RuleEntityTranslationCoverage("es-ES", List.of(
                 new TypeCoverage("EMPLOYEE_PRESENCE_ENTRY_REASON", 3, 1, 2, List.of(
-                        new MissingCode("FRA", "HIRING", "Hiring"),
-                        new MissingCode("PRT", "HIRING", "Hiring")
+                        new MissingCode("FRA", 3, "HIRING", "Hiring"),
+                        new MissingCode("PRT", 3, "HIRING", "Hiring")
                 ))
         )));
 
@@ -53,7 +53,8 @@ class RuleEntityTranslationCoverageControllerHttpTest {
                 .andExpect(jsonPath("$.types[0].total").value(3))
                 .andExpect(jsonPath("$.types[0].translated").value(1))
                 .andExpect(jsonPath("$.types[0].missing").value(2))
-                .andExpect(jsonPath("$.types[0].missingCodes[0].ruleSystemCode").value("FRA"))
+                .andExpect(jsonPath("$.types[0].missingCodes[0].layerCode").value("FRA"))
+                .andExpect(jsonPath("$.types[0].missingCodes[0].level").value(3))
                 .andExpect(jsonPath("$.types[0].missingCodes[0].code").value("HIRING"))
                 .andExpect(jsonPath("$.types[0].missingCodes[0].name").value("Hiring"));
     }

@@ -41,7 +41,7 @@ public class GetRuleEntityTranslationCoverageService implements GetRuleEntityTra
 
     private TypeCoverage typeCoverage(String typeCode, long total, List<UntranslatedRuleEntity> untranslated) {
         List<MissingCode> missingCodes = untranslated.stream()
-                .map(row -> new MissingCode(row.layerCode(), row.code(), row.name()))
+                .map(row -> new MissingCode(row.layerCode(), row.level(), row.code(), row.name()))
                 .toList();
 
         return new TypeCoverage(typeCode, total, total - missingCodes.size(), missingCodes.size(), missingCodes);

@@ -42,6 +42,8 @@ public class RuleEntityResponseAssembler {
     private static RuleEntityResponse toResponse(RuleEntity entity, String label) {
         return new RuleEntityResponse(
                 entity.getRuleSystemCode(),
+                entity.getLayerCode(),
+                entity.getLevel(),
                 entity.getRuleEntityTypeCode(),
                 entity.getCode(),
                 entity.getName(),

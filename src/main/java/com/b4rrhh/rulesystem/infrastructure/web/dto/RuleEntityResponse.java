@@ -4,6 +4,8 @@ import java.time.LocalDate;
 
 public record RuleEntityResponse(
         String ruleSystemCode,
+        String layerCode,
+        Integer level,
         String ruleEntityTypeCode,
         String code,
         String name,

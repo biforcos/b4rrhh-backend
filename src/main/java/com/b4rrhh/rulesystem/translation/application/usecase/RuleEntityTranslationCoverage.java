@@ -18,6 +18,6 @@ public record RuleEntityTranslationCoverage(String languageCode, List<TypeCovera
     ) {
     }
 
-    public record MissingCode(String ruleSystemCode, String code, String name) {
+    public record MissingCode(String layerCode, int level, String code, String name) {
     }
 }
