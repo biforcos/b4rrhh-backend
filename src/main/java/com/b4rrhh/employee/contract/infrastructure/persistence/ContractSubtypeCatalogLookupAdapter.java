@@ -32,8 +32,8 @@ public class ContractSubtypeCatalogLookupAdapter implements ContractSubtypeCatal
               and upper(trim(ctr.code)) = :contractTypeCode
               and ctr.rule_entity_type_code = 'CONTRACT'
               and sub.rule_entity_type_code = 'CONTRACT_SUBTYPE'
-              and ctr.rule_system_code = rs.code
-              and sub.rule_system_code = rs.code
+              and ctr.layer_code = rs.code
+              and sub.layer_code = rs.code
               and ctr.active = true
               and sub.active = true
               and r.is_active = true

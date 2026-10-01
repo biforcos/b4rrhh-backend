@@ -76,7 +76,7 @@ public final class DatosDePrueba {
             LocalDate endDate) {
         return jdbcTemplate.queryForObject("""
                 insert into rulesystem.rule_entity (
-                    rule_system_code, rule_entity_type_code, code, name, active, start_date, end_date
+                    layer_code, rule_entity_type_code, code, name, active, start_date, end_date
                 ) values ('ESP', ?, ?, ?, true, ?, ?)
                 returning id
                 """, Long.class, ruleEntityTypeCode, code, name, startDate, endDate);

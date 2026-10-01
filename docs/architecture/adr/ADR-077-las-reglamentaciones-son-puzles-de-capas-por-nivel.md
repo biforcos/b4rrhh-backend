@@ -44,3 +44,12 @@ HR Access: la reglamentación no es plana; tiene niveles (COM, INT, nacional, n�
 - Catálogos enseña de qué capa viene cada entidad y sólo edita en la suya (`frontend#127`); el Ámbito ofrece reglamentaciones, nunca capas.
 - **Límite conocido**: `ESP_2` como puzle vale para catálogos y para las tablas de ley; la partición real del grafo (conceptos de empresa en la capa 5) es la puerta que no se cruza hasta que exista la segunda empresa con esquema propio o lo pida la retribución en especie (paso 6b del camino 2).
 - Lo que sea mixto entre niveles (tipos de identificador: pasaporte internacional, DNI/NIE nacional) se queda en 3 con nota hasta que se parta.
+
+## Al hacerlo (`backend#156`, V166)
+
+Lo que cambió al pasar del borrador al esquema:
+
+- **Dónde vive cada invariante.** Una capa por nivel en cada reglamentación es la clave primaria de `rule_system_layer` `(rule_system_code, level)`; que la capa montada en el nivel N sea de nivel N es una FK compuesta `(layer_code, level) → layer(code, level)`. Las otras dos miran otra tabla y no caben en un `CHECK`: que la reglamentación monte **las cinco** y que **el nivel de la capa de una entidad sea el de su tipo** son triggers de restricción **diferidos**, que comprueban al confirmar. Diferidos para que una transacción pueda crear la reglamentación y después sus capas, o cambiar un tipo de nivel y mover sus entidades (`backend#158`).
+- **Crear una reglamentación por la API monta sus capas** en la misma transacción: `COM` e `INT` compartidas, y la nacional con su mismo código, `NOM_<código>` y `NOM_<código>_EMP`, propias. El código de la capa 5 por defecto es `NOM_<código>_EMP` (el cuerpo de `workspace#20` decía `NOM_EMP1`). Un código de reglamentación que choque con una capa que ya existe se rechaza.
+- **El tipo declara su nivel sin default en la base**, como `literal_class`. El que se crea por la API nace en el nivel 3 hasta que `backend#158` reclasifique.
+- **El oráculo** es `docs/consultas/huella-de-las-once-tablas.sql`: un md5 por tabla de negocio, sin ids ni marcas de tiempo.

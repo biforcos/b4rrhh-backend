@@ -24,7 +24,7 @@ public interface SpringDataWorkCenterProfileRepository extends JpaRepository<Wor
             select re.code as code, re.name as name
             from rulesystem.work_center_profile wcp
             join rulesystem.rule_entity re on re.id = wcp.work_center_rule_entity_id
-            where re.rule_system_code = :ruleSystemCode
+            where re.layer_code = :ruleSystemCode
               and re.rule_entity_type_code = 'WORK_CENTER'
               and re.active = true
               and wcp.company_code = :companyCode

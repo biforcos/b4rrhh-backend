@@ -43,7 +43,7 @@ class CostCenterLanguageEndToEndTest {
         jdbcTemplate.update("""
                 insert into rulesystem.rule_entity_translation (rule_entity_id, language_code, name)
                 select id, 'es-ES', 'Administración' from rulesystem.rule_entity
-                 where rule_system_code = 'ESP'
+                 where layer_code = 'ESP'
                    and rule_entity_type_code = 'COST_CENTER'
                    and code = 'CC_ADMIN'
                 """);

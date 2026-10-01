@@ -126,7 +126,7 @@ class EveryCatalogColumnPointsToAnExistingCodeTest {
     @Test
     void aCodeThatOnlyExistsInAnotherRuleSystemIsStillMissing() {
         jdbcTemplate.update("""
-                insert into rulesystem.rule_entity (rule_system_code, rule_entity_type_code, code, name, active, start_date)
+                insert into rulesystem.rule_entity (layer_code, rule_entity_type_code, code, name, active, start_date)
                 values ('FRA', 'CONTACT_TYPE', 'ZZ_PROBE', 'Sonde', true, date '1900-01-01')
                 """);
         Long employeeId = DatosDePrueba.empleado(jdbcTemplate);

@@ -47,7 +47,7 @@ class RuleEntityTranslationFlywayIntegrationTest {
     @Test
     void forALanguageWithoutTranslationsEveryCodeResolvesToItsBaseLiteral() {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
-                select rule_system_code, rule_entity_type_code, code, name
+                select layer_code as rule_system_code, rule_entity_type_code, code, name
                   from rulesystem.rule_entity
                 """);
         assertThat(rows).isNotEmpty();
@@ -160,7 +160,7 @@ class RuleEntityTranslationFlywayIntegrationTest {
                 insert into rulesystem.rule_entity_translation (rule_entity_id, language_code, name)
                 select id, ?, ?
                   from rulesystem.rule_entity
-                 where rule_system_code = ?
+                 where layer_code = ?
                    and rule_entity_type_code = ?
                    and code = ?
                 """, language, name, ruleSystemCode, typeCode, code);

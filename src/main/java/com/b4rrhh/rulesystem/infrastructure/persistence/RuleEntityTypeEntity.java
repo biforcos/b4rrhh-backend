@@ -47,6 +47,12 @@ public class RuleEntityTypeEntity {
     @Column(name = "api_collection_path", length = 100)
     private String apiCollectionPath;
 
+    // El nivel en el que viven las entidades del tipo (ADR-077). Hasta que el backend#158
+    // reclasifique, todo tipo es nacional, tambien el que se crea por la API; no se actualiza
+    // desde aqui porque moverlo de nivel es mover sus entidades de capa, y eso es una migracion.
+    @Column(nullable = false, updatable = false)
+    private short level = 3;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 

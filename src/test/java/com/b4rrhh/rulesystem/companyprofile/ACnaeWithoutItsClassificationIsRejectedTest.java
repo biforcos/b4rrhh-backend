@@ -46,11 +46,11 @@ class ACnaeWithoutItsClassificationIsRejectedTest {
     @Test
     void onlyTheSpanishCompaniesCarryACnae() {
         List<Map<String, Object>> empresas = jdbc.queryForList(
-                "select re.rule_system_code, re.code, cp.cnae_code, cp.cnae_classification"
+                "select re.layer_code as rule_system_code, re.code, cp.cnae_code, cp.cnae_classification"
                         + "  from rulesystem.company_profile cp"
                         + "  join rulesystem.rule_entity re on re.id = cp.company_rule_entity_id"
                         + " where re.rule_entity_type_code = 'COMPANY'"
-                        + " order by re.rule_system_code, re.code");
+                        + " order by re.layer_code, re.code");
 
         assertTrue(!empresas.isEmpty(), "la semilla tiene empresas");
 
@@ -108,7 +108,7 @@ class ACnaeWithoutItsClassificationIsRejectedTest {
         return jdbc.queryForObject(
                 "select cp.id from rulesystem.company_profile cp"
                         + "  join rulesystem.rule_entity re on re.id = cp.company_rule_entity_id"
-                        + " where re.rule_system_code = 'ESP' and re.rule_entity_type_code = 'COMPANY'"
+                        + " where re.layer_code = 'ESP' and re.rule_entity_type_code = 'COMPANY'"
                         + " order by re.code limit 1",
                 Long.class);
     }

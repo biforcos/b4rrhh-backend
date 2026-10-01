@@ -104,8 +104,8 @@ class PostRuleEntitiesNeverLeavesARootWithoutItsRequiredExtensionTest {
                 )""");
         jdbcTemplate.update("""
                 insert into rulesystem.rule_entity_type
-                    (code, name, active, literal_class, maintenance_mode, group_code, api_collection_path)
-                select 'ZZ_PROBE_TYPE', 'Probe', true, 'DOMAIN_VOCABULARY', 'MAINTAINED', group_code,
+                    (code, name, active, literal_class, maintenance_mode, group_code, level, api_collection_path)
+                select 'ZZ_PROBE_TYPE', 'Probe', true, 'DOMAIN_VOCABULARY', 'MAINTAINED', group_code, 3,
                        '/zz-probe-things'
                   from rulesystem.rule_entity_type where code = 'COST_CENTER'
                 """);

@@ -125,7 +125,7 @@ class TheHiringCopiesTheAgreementExtraPaymentRegimeTest {
                    set extra_payments_prorated = false, updated_at = now()
                   from rulesystem.rule_entity e
                  where e.id = p.agreement_rule_entity_id
-                   and e.rule_system_code = 'ESP'
+                   and e.layer_code = 'ESP'
                    and e.rule_entity_type_code = 'AGREEMENT'
                    and e.code = ?
                 """, CONVENIO_QUE_PRORRATEA);
@@ -175,7 +175,7 @@ class TheHiringCopiesTheAgreementExtraPaymentRegimeTest {
     private void sembrarConvenioQueProrratea() {
         Integer yaEsta = jdbc.queryForObject("""
                 select count(*) from rulesystem.rule_entity
-                 where rule_system_code = 'ESP' and rule_entity_type_code = 'AGREEMENT' and code = ?
+                 where layer_code = 'ESP' and rule_entity_type_code = 'AGREEMENT' and code = ?
                 """, Integer.class, CONVENIO_QUE_PRORRATEA);
         if (yaEsta != null && yaEsta > 0) {
             return;
@@ -183,7 +183,7 @@ class TheHiringCopiesTheAgreementExtraPaymentRegimeTest {
 
         jdbc.update("""
                 insert into rulesystem.rule_entity
-                    (rule_system_code, rule_entity_type_code, code, name, description, active,
+                    (layer_code, rule_entity_type_code, code, name, description, active,
                      start_date, end_date)
                 values ('ESP', 'AGREEMENT', ?, 'Convenio que prorratea', null, true,
                         DATE '2000-01-01', null)
@@ -191,7 +191,7 @@ class TheHiringCopiesTheAgreementExtraPaymentRegimeTest {
 
         jdbc.update("""
                 insert into rulesystem.rule_entity
-                    (rule_system_code, rule_entity_type_code, code, name, description, active,
+                    (layer_code, rule_entity_type_code, code, name, description, active,
                      start_date, end_date)
                 values ('ESP', 'AGREEMENT_CATEGORY', ?, 'Grupo unico', null, true,
                         DATE '2000-01-01', null)
@@ -206,8 +206,8 @@ class TheHiringCopiesTheAgreementExtraPaymentRegimeTest {
                        rulesystem.rule_entity a,
                        rulesystem.rule_entity c
                  where rs.code = 'ESP'
-                   and a.rule_system_code = 'ESP' and a.rule_entity_type_code = 'AGREEMENT' and a.code = ?
-                   and c.rule_system_code = 'ESP' and c.rule_entity_type_code = 'AGREEMENT_CATEGORY' and c.code = ?
+                   and a.layer_code = 'ESP' and a.rule_entity_type_code = 'AGREEMENT' and a.code = ?
+                   and c.layer_code = 'ESP' and c.rule_entity_type_code = 'AGREEMENT_CATEGORY' and c.code = ?
                 """, CONVENIO_QUE_PRORRATEA, CATEGORIA_QUE_PRORRATEA);
 
         jdbc.update("""
@@ -216,7 +216,7 @@ class TheHiringCopiesTheAgreementExtraPaymentRegimeTest {
                      annual_hours, extra_payments_prorated, is_active, created_at, updated_at)
                 select a.id, ?, 'Convenio que prorratea', 'PRORRATA', 1736.00, true, true, now(), now()
                   from rulesystem.rule_entity a
-                 where a.rule_system_code = 'ESP' and a.rule_entity_type_code = 'AGREEMENT' and a.code = ?
+                 where a.layer_code = 'ESP' and a.rule_entity_type_code = 'AGREEMENT' and a.code = ?
                 """, CONVENIO_QUE_PRORRATEA, CONVENIO_QUE_PRORRATEA);
     }
 }

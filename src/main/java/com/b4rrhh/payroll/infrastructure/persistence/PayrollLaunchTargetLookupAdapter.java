@@ -25,7 +25,7 @@ public class PayrollLaunchTargetLookupAdapter implements PayrollLaunchTargetLook
         List<?> rows = entityManager.createNativeQuery("""
             select distinct upper(trim(e.code))
               from rulesystem.rule_entity e
-             where upper(trim(e.rule_system_code)) = :ruleSystemCode
+             where upper(trim(e.layer_code)) = :ruleSystemCode
                and e.rule_entity_type_code = 'EMPLOYEE_TYPE'
                and e.active
              order by 1

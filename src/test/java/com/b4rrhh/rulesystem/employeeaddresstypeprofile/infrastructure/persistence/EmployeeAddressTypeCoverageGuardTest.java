@@ -30,13 +30,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EmployeeAddressTypeCoverageGuardTest {
 
     private static final String MANDATORY_PER_RULE_SYSTEM = """
-            select re.rule_system_code,
+            select re.layer_code as rule_system_code,
                    count(*) filter (where p.coverage = 'MANDATORY') as mandatory_types
               from rulesystem.rule_entity re
               left join rulesystem.employee_address_type_profile p on p.address_type_rule_entity_id = re.id
              where re.rule_entity_type_code = 'EMPLOYEE_ADDRESS_TYPE'
-             group by re.rule_system_code
-             order by re.rule_system_code
+             group by re.layer_code
+             order by re.layer_code
             """;
 
     @Autowired
@@ -68,7 +68,7 @@ class EmployeeAddressTypeCoverageGuardTest {
                    set coverage = 'MANDATORY'
                   from rulesystem.rule_entity re
                  where re.id = p.address_type_rule_entity_id
-                   and re.rule_system_code = 'ESP'
+                   and re.layer_code = 'ESP'
                    and re.rule_entity_type_code = 'EMPLOYEE_ADDRESS_TYPE'
                    and re.code = 'FISCAL'
                 """);
@@ -84,7 +84,7 @@ class EmployeeAddressTypeCoverageGuardTest {
                    set coverage = 'OPTIONAL'
                   from rulesystem.rule_entity re
                  where re.id = p.address_type_rule_entity_id
-                   and re.rule_system_code = 'ESP'
+                   and re.layer_code = 'ESP'
                    and re.rule_entity_type_code = 'EMPLOYEE_ADDRESS_TYPE'
                 """);
 

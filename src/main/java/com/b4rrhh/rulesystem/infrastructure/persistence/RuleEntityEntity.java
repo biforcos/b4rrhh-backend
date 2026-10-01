@@ -20,7 +20,7 @@ public class RuleEntityEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "rule_system_code", nullable = false, length = 5)
+    @Column(name = "layer_code", nullable = false, length = 20)
     private String ruleSystemCode;
 
     @Column(name = "rule_entity_type_code", nullable = false, length = 30)

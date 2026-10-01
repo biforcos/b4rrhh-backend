@@ -24,8 +24,8 @@ public class ContractSubtypeRelationLookupAdapter implements ContractSubtypeRela
                   and upper(trim(cat.code)) = :contractSubtypeCode
                   and agr.rule_entity_type_code = 'CONTRACT'
                   and cat.rule_entity_type_code = 'CONTRACT_SUBTYPE'
-                  and agr.rule_system_code = rs.code
-                  and cat.rule_system_code = rs.code
+                  and agr.layer_code = rs.code
+                  and cat.layer_code = rs.code
                   and agr.active = true
                   and cat.active = true
                   and r.is_active = true

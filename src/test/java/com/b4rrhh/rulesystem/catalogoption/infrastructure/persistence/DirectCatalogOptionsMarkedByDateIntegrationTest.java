@@ -104,7 +104,7 @@ class DirectCatalogOptionsMarkedByDateIntegrationTest {
                 LocalDate.of(1900, 1, 1), null);
         jdbcTemplate.update("""
                 update rulesystem.rule_entity set active = false
-                 where rule_system_code = 'ESP' and rule_entity_type_code = ? and code = 'TST_INACTIVE'
+                 where layer_code = 'ESP' and rule_entity_type_code = ? and code = 'TST_INACTIVE'
                 """, TYPE);
 
         assertThat(vigenciaPorCodigo(LocalDate.of(2026, 1, 1))).doesNotContainKey("TST_INACTIVE");

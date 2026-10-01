@@ -76,7 +76,7 @@ class TheAgreementSaysItsExtraPaymentsAndWhetherTheyAreProratedTest {
                 select p.extra_payments_prorated
                   from rulesystem.agreement_profile p
                   join rulesystem.rule_entity e on e.id = p.agreement_rule_entity_id
-                 where e.rule_system_code = 'ESP'
+                 where e.layer_code = 'ESP'
                    and e.rule_entity_type_code = 'AGREEMENT'
                    and e.code = ?
                 """, Boolean.class, CONVENIO);

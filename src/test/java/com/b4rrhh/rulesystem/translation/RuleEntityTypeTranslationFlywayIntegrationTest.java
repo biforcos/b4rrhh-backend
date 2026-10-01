@@ -57,8 +57,8 @@ class RuleEntityTypeTranslationFlywayIntegrationTest {
     @Test
     void retiringATypeTakesItsTranslationsWithIt() {
         jdbcTemplate.update("""
-                insert into rulesystem.rule_entity_type (code, name, literal_class, maintenance_mode, group_code)
-                values ('BACKEND_152_PROBE', 'Probe', 'DOMAIN_VOCABULARY', 'MAINTAINED', 'ORGANIZATION')
+                insert into rulesystem.rule_entity_type (code, name, literal_class, maintenance_mode, group_code, level)
+                values ('BACKEND_152_PROBE', 'Probe', 'DOMAIN_VOCABULARY', 'MAINTAINED', 'ORGANIZATION', 3)
                 """);
         jdbcTemplate.update("""
                 insert into rulesystem.rule_entity_type_translation (rule_entity_type_code, language_code, name)

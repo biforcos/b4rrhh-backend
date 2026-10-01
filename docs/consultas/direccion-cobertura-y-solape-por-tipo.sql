@@ -28,7 +28,8 @@
 -- ===========================================================================
 
 WITH perfil AS (
-    SELECT re.rule_system_code,
+    -- La capa nacional tiene el codigo de su reglamentacion (backend#156, ADR-077).
+    SELECT re.layer_code AS rule_system_code,
            re.code AS address_type_code,
            p.coverage
     FROM rulesystem.employee_address_type_profile p

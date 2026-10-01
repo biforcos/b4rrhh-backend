@@ -41,10 +41,27 @@ public class PayrollScenarioFixtures {
      * table row, and the agreement_category_profile.
      */
     public void seedConceptGraph(String ruleSystemCode) {
-        jdbc.update(
-                "insert into rulesystem.rule_system (code, name, country_code, active, created_at, updated_at)" +
-                " values (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                ruleSystemCode, ruleSystemCode, ruleSystemCode, true);
+        // La reglamentacion y sus cinco capas (backend#156, ADR-077) en UNA sentencia: el esquema
+        // no deja confirmar una reglamentacion sin ellas, y hay tests que corren sin transaccion,
+        // donde cada sentencia se confirma sola. Sus entidades viven en la nacional, que lleva su
+        // codigo.
+        jdbc.update("""
+                with rs as (
+                    insert into rulesystem.rule_system (code, name, country_code, active, created_at, updated_at)
+                    values (?, ?, ?, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    returning code
+                ), own as (
+                    insert into rulesystem.layer (code, name, level)
+                    select v.code, v.code, v.level
+                      from rs, lateral (values (rs.code, 3), ('NOM_' || rs.code, 4), ('NOM_' || rs.code || '_EMP', 5))
+                           as v(code, level)
+                    returning code, level
+                )
+                insert into rulesystem.rule_system_layer (rule_system_code, level, layer_code)
+                select rs.code, 1, 'COM' from rs
+                union all select rs.code, 2, 'INT' from rs
+                union all select rs.code, own.level, own.code from rs, own
+                """, ruleSystemCode, ruleSystemCode, ruleSystemCode);
 
         for (String code : new String[]{"101","D01","J01","P01","P02","B01",
                 "P_SS_CC","P_SS_DESEMPLEO","P_IRPF","700","703","800","970","980","990"}) {
@@ -155,11 +172,11 @@ public class PayrollScenarioFixtures {
 
         jdbc.update(
                 "insert into rulesystem.rule_entity" +
-                " (rule_system_code, rule_entity_type_code, code, name, active, start_date, created_at, updated_at)" +
+                " (layer_code, rule_entity_type_code, code, name, active, start_date, created_at, updated_at)" +
                 " values (?, ?, ?, ?, ?, DATE '2025-01-01', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 ruleSystemCode, "AGREEMENT_CATEGORY", CATEGORY_CODE, "G2", true);
         Long categoryId = jdbc.queryForObject(
-                "select id from rulesystem.rule_entity where rule_system_code = ? and rule_entity_type_code = ? and code = ?",
+                "select id from rulesystem.rule_entity where layer_code = ? and rule_entity_type_code = ? and code = ?",
                 Long.class, ruleSystemCode, "AGREEMENT_CATEGORY", CATEGORY_CODE);
         jdbc.update(
                 "insert into rulesystem.agreement_category_profile" +
@@ -317,11 +334,11 @@ public class PayrollScenarioFixtures {
     public void seedAgreementCategory(String ruleSystemCode, String categoryCode, BigDecimal dailyRate) {
         jdbc.update(
                 "insert into rulesystem.rule_entity" +
-                " (rule_system_code, rule_entity_type_code, code, name, active, start_date, created_at, updated_at)" +
+                " (layer_code, rule_entity_type_code, code, name, active, start_date, created_at, updated_at)" +
                 " values (?, ?, ?, ?, ?, DATE '2025-01-01', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 ruleSystemCode, "AGREEMENT_CATEGORY", categoryCode, categoryCode, true);
         Long categoryId = jdbc.queryForObject(
-                "select id from rulesystem.rule_entity where rule_system_code = ? and rule_entity_type_code = ? and code = ?",
+                "select id from rulesystem.rule_entity where layer_code = ? and rule_entity_type_code = ? and code = ?",
                 Long.class, ruleSystemCode, "AGREEMENT_CATEGORY", categoryCode);
         jdbc.update(
                 "insert into rulesystem.agreement_category_profile" +
@@ -523,7 +540,7 @@ public class PayrollScenarioFixtures {
                 "    set cnae_code = ?, cnae_classification = ?, updated_at = CURRENT_TIMESTAMP" +
                 " where company_rule_entity_id = (" +
                 "   select id from rulesystem.rule_entity" +
-                "    where rule_system_code = ? and rule_entity_type_code = 'COMPANY' and code = ?)",
+                "    where layer_code = ? and rule_entity_type_code = 'COMPANY' and code = ?)",
                 cnaeCode, cnaeCode == null ? null : "CNAE-2025", ruleSystemCode, companyCode);
     }
 

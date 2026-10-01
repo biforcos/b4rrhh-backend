@@ -27,7 +27,7 @@ class AgreementAnnualHoursLookupRealSeedFlywayIntegrationTest {
                 """
                 select count(*)
                 from rulesystem.rule_entity
-                where rule_system_code = ?
+                where layer_code = ?
                   and rule_entity_type_code = 'AGREEMENT'
                   and code = ?
                 """,
@@ -40,7 +40,7 @@ class AgreementAnnualHoursLookupRealSeedFlywayIntegrationTest {
                 select count(*)
                 from rulesystem.agreement_profile profile
                 join rulesystem.rule_entity agreement on agreement.id = profile.agreement_rule_entity_id
-                where agreement.rule_system_code = ?
+                where agreement.layer_code = ?
                   and agreement.rule_entity_type_code = 'AGREEMENT'
                   and agreement.code = ?
                 """,
@@ -53,7 +53,7 @@ class AgreementAnnualHoursLookupRealSeedFlywayIntegrationTest {
                 select profile.annual_hours
                 from rulesystem.agreement_profile profile
                 join rulesystem.rule_entity agreement on agreement.id = profile.agreement_rule_entity_id
-                where agreement.rule_system_code = ?
+                where agreement.layer_code = ?
                   and agreement.rule_entity_type_code = 'AGREEMENT'
                   and agreement.code = ?
                 """,

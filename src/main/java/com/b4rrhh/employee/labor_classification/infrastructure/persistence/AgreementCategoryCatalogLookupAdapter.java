@@ -32,8 +32,8 @@ public class AgreementCategoryCatalogLookupAdapter implements AgreementCategoryC
               and upper(trim(agr.code)) = :agreementCode
               and agr.rule_entity_type_code = 'AGREEMENT'
               and cat.rule_entity_type_code = 'AGREEMENT_CATEGORY'
-              and agr.rule_system_code = rs.code
-              and cat.rule_system_code = rs.code
+              and agr.layer_code = rs.code
+              and cat.layer_code = rs.code
               and agr.active = true
               and cat.active = true
               and r.is_active = true

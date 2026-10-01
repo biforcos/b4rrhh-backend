@@ -56,7 +56,7 @@ class UniversalCatalogLiteralsGuardTest {
         int changed = jdbcTemplate.update("""
                 update rulesystem.rule_entity
                    set name = 'Embauche'
-                 where rule_system_code = 'FRA'
+                 where layer_code = 'FRA'
                    and rule_entity_type_code = 'EMPLOYEE_PRESENCE_ENTRY_REASON'
                    and code = 'HIRING'
                 """);
@@ -95,7 +95,7 @@ class UniversalCatalogLiteralsGuardTest {
     void reportsWhereTheCodeIsAndWhereItIsMissingWhenItDisappearsFromOneRuleSystem() {
         int deleted = jdbcTemplate.update("""
                 delete from rulesystem.rule_entity
-                 where rule_system_code = 'PRT'
+                 where layer_code = 'PRT'
                    and rule_entity_type_code = 'EMPLOYEE_PRESENCE_ENTRY_REASON'
                    and code = 'HIRING'
                 """);
@@ -140,11 +140,11 @@ class UniversalCatalogLiteralsGuardTest {
                         divergence.typeCode(),
                         divergence.code(),
                         jdbcTemplate.query("""
-                                select rule_system_code, name, description
+                                select layer_code, name, description
                                   from rulesystem.rule_entity
                                  where rule_entity_type_code = ?
                                    and code = ?
-                                 order by rule_system_code
+                                 order by layer_code
                                 """,
                                 (rs, i) -> new Literal(rs.getString(1), rs.getString(2), rs.getString(3)),
                                 divergence.typeCode(), divergence.code())))
@@ -191,9 +191,9 @@ class UniversalCatalogLiteralsGuardTest {
                 select rule_entity_type_code, code
                   from rulesystem.rule_entity
                  where rule_entity_type_code in (%s)
-                   and rule_system_code in (select code from rulesystem.rule_system where active)
+                   and layer_code in (select code from rulesystem.rule_system where active)
                  group by rule_entity_type_code, code
-                having count(distinct rule_system_code) <> ?
+                having count(distinct layer_code) <> ?
                  order by rule_entity_type_code, code
                 """.formatted(placeholders),
                         (rs, i) -> new Absence(rs.getString(1), rs.getString(2), List.of(), List.of()),
@@ -201,11 +201,11 @@ class UniversalCatalogLiteralsGuardTest {
                 .stream()
                 .map(absence -> {
                     List<String> presentIn = jdbcTemplate.queryForList("""
-                            select distinct rule_system_code
+                            select distinct layer_code
                               from rulesystem.rule_entity
                              where rule_entity_type_code = ?
                                and code = ?
-                             order by rule_system_code
+                             order by layer_code
                             """, String.class, absence.typeCode(), absence.code());
                     List<String> missingIn = activeRuleSystems.stream()
                             .filter(ruleSystem -> !presentIn.contains(ruleSystem))

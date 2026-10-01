@@ -68,7 +68,7 @@ public class CatalogCodeIntegrityReadAdapter implements CatalogCodeIntegrityRead
         String from = " from employee." + usage.table() + " owned" + join
                 + " where owned." + usage.column() + " is not null";
         String missing = " and not exists (select 1 from rulesystem.rule_entity re"
-                + "                        where re.rule_system_code = " + ruleSystemCode
+                + "                        where re.layer_code = " + ruleSystemCode
                 + "                          and re.rule_entity_type_code = ?"
                 + "                          and re.code = owned." + usage.column() + ")";
 
