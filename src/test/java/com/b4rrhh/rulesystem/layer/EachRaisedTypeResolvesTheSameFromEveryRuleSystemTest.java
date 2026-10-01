@@ -2,6 +2,8 @@ package com.b4rrhh.rulesystem.layer;
 
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
+import com.b4rrhh.rulesystem.employeeaddresstypeprofile.domain.model.EmployeeAddressTypeCoverage;
+import com.b4rrhh.rulesystem.employeeaddresstypeprofile.domain.port.EmployeeAddressTypeProfileRepository;
 import com.b4rrhh.support.TestSobreEsquemaReal;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -31,11 +33,15 @@ class EachRaisedTypeResolvesTheSameFromEveryRuleSystemTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private EmployeeAddressTypeProfileRepository addressTypeProfiles;
+
     @ParameterizedTest(name = "{0} vive en {1}")
     @CsvSource({
             "COUNTRY, INT, 2, ESP, España",
             "EMPLOYEE_IDENTIFIER_TYPE, INT, 2, PASSPORT, Pasaporte",
-            "CONTACT_TYPE, COM, 1, EMAIL, Correo electrónico"
+            "CONTACT_TYPE, COM, 1, EMAIL, Correo electrónico",
+            "EMPLOYEE_ADDRESS_TYPE, COM, 1, HOME, Domicilio"
     })
     void theTypeResolvesToOneRowInItsLayerFromEveryRuleSystem(
             String type, String layer, int level, String code, String spanishName) {
@@ -69,7 +75,8 @@ class EachRaisedTypeResolvesTheSameFromEveryRuleSystemTest {
     @CsvSource({
             "COUNTRY, 249, INT",
             "EMPLOYEE_IDENTIFIER_TYPE, 4, INT",
-            "CONTACT_TYPE, 5, COM"
+            "CONTACT_TYPE, 5, COM",
+            "EMPLOYEE_ADDRESS_TYPE, 4, COM"
     })
     void theLayerHoldsTheWholeCatalogTranslated(String type, int rows, String layer) {
         assertThat(jdbcTemplate.queryForObject("""
@@ -82,5 +89,19 @@ class EachRaisedTypeResolvesTheSameFromEveryRuleSystemTest {
                                     where tr.rule_entity_id = re.id and tr.language_code = 'es-ES')
                 """, Integer.class, type, layer)).as("filas sin castellano").isZero();
         assertThat(ruleEntityRepository.findByFilters("PRT", type, null, null, null)).hasSize(rows);
+    }
+
+    // La cobertura de un tipo de dirección cuelga de su raíz (ADR-053 §1): sube con él, una fila
+    // por tipo, y se lee igual desde las tres reglamentaciones.
+    @ParameterizedTest(name = "la cobertura se lee igual desde {0}")
+    @CsvSource({"ESP", "FRA", "PRT"})
+    void theAddressTypeCoverageRaisedWithItsRoot(String ruleSystem) {
+        assertThat(addressTypeProfiles.findAllCoverages(ruleSystem)).containsExactly(
+                Map.entry("FISCAL", EmployeeAddressTypeCoverage.OPTIONAL),
+                Map.entry("HOME", EmployeeAddressTypeCoverage.MANDATORY),
+                Map.entry("MAILING", EmployeeAddressTypeCoverage.OPTIONAL),
+                Map.entry("TEMPORARY", EmployeeAddressTypeCoverage.OPTIONAL));
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from rulesystem.employee_address_type_profile", Integer.class)).isEqualTo(4);
     }
 }

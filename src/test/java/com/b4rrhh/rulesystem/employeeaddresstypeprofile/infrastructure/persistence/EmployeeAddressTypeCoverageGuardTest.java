@@ -22,6 +22,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <b>exactamente un</b> tipo de direccion obligatorio — ni cero, que dejaria al empleado sin
  * domicilio que exigir, ni dos, que exigirian dos series a la vez.
  *
+ * Desde backend#158 los tipos de direccion y su cobertura viven en la capa COM, que montan todas
+ * las reglamentaciones: la regla se cuenta por reglamentacion, a traves de las capas que monta, y
+ * una cobertura cambiada en COM aparece en las tres a la vez.
+ *
  * La sonda provoca los dos fallos dentro de la transaccion del test, que se deshace sola: es
  * la disciplina de {@code RuleEntityTypeClassificationGuardTest} (ADR-054 §7). Una guardia que
  * nunca se ha visto en rojo no se sabe si mira algo.
@@ -30,13 +34,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EmployeeAddressTypeCoverageGuardTest {
 
     private static final String MANDATORY_PER_RULE_SYSTEM = """
-            select re.layer_code as rule_system_code,
+            select rsl.rule_system_code,
                    count(*) filter (where p.coverage = 'MANDATORY') as mandatory_types
               from rulesystem.rule_entity re
+              join rulesystem.rule_system_layer rsl on rsl.layer_code = re.layer_code
               left join rulesystem.employee_address_type_profile p on p.address_type_rule_entity_id = re.id
              where re.rule_entity_type_code = 'EMPLOYEE_ADDRESS_TYPE'
-             group by re.layer_code
-             order by re.layer_code
+             group by rsl.rule_system_code
+             order by rsl.rule_system_code
             """;
 
     @Autowired
@@ -60,7 +65,7 @@ class EmployeeAddressTypeCoverageGuardTest {
                 .isEmpty();
     }
 
-    // La sonda, en rojo por exceso: un segundo tipo obligatorio en ESP aparece solo.
+    // La sonda, en rojo por exceso: un segundo tipo obligatorio aparece solo, en cada reglamentacion.
     @Test
     void aSecondMandatoryTypeShowsUpByItself() {
         jdbcTemplate.update("""
@@ -68,12 +73,13 @@ class EmployeeAddressTypeCoverageGuardTest {
                    set coverage = 'MANDATORY'
                   from rulesystem.rule_entity re
                  where re.id = p.address_type_rule_entity_id
-                   and re.layer_code = 'ESP'
+                   and re.layer_code = 'COM'
                    and re.rule_entity_type_code = 'EMPLOYEE_ADDRESS_TYPE'
                    and re.code = 'FISCAL'
                 """);
 
-        assertThat(ruleSystemsWithoutExactlyOneMandatoryType()).containsExactly(Map.entry("ESP", 2L));
+        assertThat(ruleSystemsWithoutExactlyOneMandatoryType()).containsExactly(
+                Map.entry("ESP", 2L), Map.entry("FRA", 2L), Map.entry("PRT", 2L));
     }
 
     // Y en rojo por defecto: un sistema de reglas sin ningun tipo obligatorio aparece igual.
@@ -84,11 +90,12 @@ class EmployeeAddressTypeCoverageGuardTest {
                    set coverage = 'OPTIONAL'
                   from rulesystem.rule_entity re
                  where re.id = p.address_type_rule_entity_id
-                   and re.layer_code = 'ESP'
+                   and re.layer_code = 'COM'
                    and re.rule_entity_type_code = 'EMPLOYEE_ADDRESS_TYPE'
                 """);
 
-        assertThat(ruleSystemsWithoutExactlyOneMandatoryType()).containsExactly(Map.entry("ESP", 0L));
+        assertThat(ruleSystemsWithoutExactlyOneMandatoryType()).containsExactly(
+                Map.entry("ESP", 0L), Map.entry("FRA", 0L), Map.entry("PRT", 0L));
     }
 
     // Lo que lee la vertical: el domicilio de ESP es HOME, los demas son opcionales, y un
