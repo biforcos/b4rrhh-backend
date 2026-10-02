@@ -26,7 +26,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>Cuando se escribió, el tipo que subía era {@code COUNTRY}; el backend#158 lo subió de verdad
  * (V168), y con él {@code CONTACT_TYPE}. Los casos usan ahora tipos que se quedan en el nivel 3:
- * los motivos de baja y los grupos de cotización. Lo que comprueba el test no ha cambiado.</p>
+ * los motivos de baja y los de alta. Los de alta sustituyeron a los grupos de cotización cuando el
+ * backend#163 los dejó sólo en ESP (V173): el caso necesita un tipo de nivel 3 con entidades en
+ * FRA. Lo que comprueba el test no ha cambiado.</p>
  */
 @TestSobreEsquemaReal
 class TheRuleEntityPortResolvesByTheLevelOfTheTypeTest {
@@ -77,9 +79,9 @@ class TheRuleEntityPortResolvesByTheLevelOfTheTypeTest {
     void anotherTypeOfLevelThreeStillResolvesInItsNationalLayerWhenOneMoves() {
         raiseExitReasonToInt();
 
-        assertThat(ruleEntityRepository.findByFilters("FRA", "GRUPO_COTIZACION", null, null, null))
+        assertThat(ruleEntityRepository.findByFilters("FRA", "EMPLOYEE_PRESENCE_ENTRY_REASON", null, null, null))
                 .isNotEmpty()
-                .allSatisfy(type -> assertThat(type.getLayerCode()).isEqualTo("FRA"));
+                .allSatisfy(reason -> assertThat(reason.getLayerCode()).isEqualTo("FRA"));
     }
 
     /** Una subida en pequeño, a mano: un tipo, sus tres motivos, sin traducir. */
