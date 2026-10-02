@@ -45,9 +45,11 @@ class EveryCatalogColumnIsDeclaredOrExemptedTest {
             "employee_payroll_input.concept_code",
             "es un concepto del motor de nómina (payroll_engine.payroll_concept), no una fila de rule_entity",
             "address.postal_code",
-            "es el código postal escrito por el usuario; no hay catálogo de códigos postales",
+            "es el código postal escrito por el usuario; geo.postal_code (backend#154) no es un "
+                    + "catálogo de rule_entity, y la dirección no lo usa hasta el backend#155",
             "address.region_code",
-            "es texto libre de provincia/región; no existe un tipo REGION en rule_entity_type"
+            "es texto libre de provincia/región; los tipos REGION y PROVINCE existen desde el "
+                    + "backend#154, pero la dirección no los usa hasta el backend#155"
     );
 
     @Autowired
