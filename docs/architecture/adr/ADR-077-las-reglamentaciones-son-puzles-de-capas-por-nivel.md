@@ -22,6 +22,8 @@ Salió al diseñar el territorio (`workspace#19`): antes de sembrar 249 países 
 5. Dos códigos iguales en capas distintas **no chocan**: ninguna reglamentación monta dos capas del mismo nivel.
 6. **El convenio no es capa.** Se elige por presencia; dos empleados de la misma empresa pueden tener convenios distintos.
 7. **La capa 4 es cerrada**: un nodo de ley no nombra un nodo de empresa. Agrega por atributo (*cotiza, tributa, se prorratea*), que es lo que ya exige ADR-070. Los conceptos de la empresa (capa 5) declaran sus atributos.
+
+   **Hoy no es verdad, y no puede serlo todavía: la agregación por atributo no existe.** El único modo de alimentación del motor es `FEED_BY_SOURCE`, por nombre; las 66 alimentaciones del catálogo de `ESP` lo son. Lo que este punto describe es la condición de la puerta de partir el grafo, no el estado del grafo: antes de mover un concepto de empresa a la capa 5 tiene que existir un modo de alimentación por atributo, porque sin él un nodo de ley sólo puede sumar lo de la empresa nombrándolo (`backend#160`).
 8. Las tablas del motor que son ley (topes, tipos, tarifa AT, CNAE, IRPF) cuelgan de la capa 4, no de la reglamentación.
 9. Todo lo demás (empleados, empresas, convenios, operaciones, marcas) **sigue colgando de la reglamentación**, que es el ensamblaje.
 
@@ -43,6 +45,7 @@ HR Access: la reglamentación no es plana; tiene niveles (COM, INT, nacional, n�
 - Un solo puerto resuelve entidades, con candado (`backend#157`).
 - Catálogos enseña de qué capa viene cada entidad y sólo edita en la suya (`frontend#127`); el Ámbito ofrece reglamentaciones, nunca capas.
 - **Límite conocido**: `ESP_2` como puzle vale para catálogos y para las tablas de ley; la partición real del grafo (conceptos de empresa en la capa 5) es la puerta que no se cruza hasta que exista la segunda empresa con esquema propio o lo pida la retribución en especie (paso 6b del camino 2).
+- **Lo que la puerta tiene que reescribir está contado**: once dependencias por nombre de un nodo de ley a uno de empresa (`backend#160`, primer comentario). Cuatro son del `970` (`101`, `102`, `103`, `112`); cinco, de las bases (`B03`, `B04`, `B06`, `B08` y el operando de `B02` sobre `P_PRORRATA`), y dos, de `BR_TEO` (`P01`, `P_PRORRATA_DIA`). **El `970` va primero**, porque su atributo ya existe: los seis conceptos de naturaleza `EARNING` son exactamente los seis devengos que lo alimentan, y el séptimo alimentador, `A_DEV`, es de ley. Las bases necesitan atributos nuevos (*cotiza como remuneración*, *es prorrata de pagas*, *es hora extraordinaria*), y el operando de `B02` no se resuelve agregando, sino subiendo la prorrata a la ley. `WhereTheLawNamesACompanyNodeTest` los imprime, y el candado es `ES_CANDADO = true` el día que se cruce la puerta.
 - Lo que sea mixto entre niveles (tipos de identificador: pasaporte internacional, DNI/NIE nacional) se queda en 3 con nota hasta que se parta.
 
 ## Al hacerlo (`backend#156`, V166)
