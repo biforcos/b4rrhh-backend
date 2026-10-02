@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -72,7 +73,9 @@ class ARuleSystemCreatedThroughTheApiBringsItsFiveLayersEndToEndTest {
                                 {"code": "ZZ_PROBE_TYPE", "name": "Probe", "literalClass": "DOMAIN_VOCABULARY",
                                  "maintenanceMode": "MAINTAINED", "groupCode": "ORGANIZATION"}
                                 """))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                // y lo dice la respuesta, no sólo la base (backend#164)
+                .andExpect(jsonPath("$.level").value(3));
         mockMvc.perform(post("/rule-entities")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""

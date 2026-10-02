@@ -6,6 +6,7 @@ public record RuleEntityTypeResponse(
         String code,
         String name,
         String label,
+        int level,
         boolean active,
         String literalClass,
         String maintenanceMode,

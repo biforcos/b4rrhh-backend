@@ -32,6 +32,7 @@ class GetRuleEntityTypeByCodeServiceTest {
     void returnsTypeWhenFound() {
         RuleEntityType type = new RuleEntityType(1L, "COMPANY", "Company",
                 LiteralClass.PROPER_NOUN, MaintenanceMode.MAINTAINED, "ORGANIZATION",
+                RuleEntityType.NATIONAL_LEVEL,
                 true, null, null);
         when(ruleEntityTypeRepository.findByCode("COMPANY")).thenReturn(Optional.of(type));
 

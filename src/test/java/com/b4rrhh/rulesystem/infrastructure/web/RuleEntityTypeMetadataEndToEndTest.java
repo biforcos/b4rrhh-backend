@@ -65,6 +65,25 @@ class RuleEntityTypeMetadataEndToEndTest {
     }
 
     /**
+     * backend#164: cada tipo dice su nivel, que es de donde Catálogos agrupa por nivel antes de
+     * pedir una sola entidad (b4rrhh/frontend#127). Lo afirmado es la reclasificación del
+     * backend#158: uno de cada nivel que tiene tipos.
+     */
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void eachTypeSaysItsLevel() throws Exception {
+        mockMvc.perform(get("/rule-entity-types"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.code == 'CONTACT_TYPE')].level").value(1))
+                .andExpect(jsonPath("$[?(@.code == 'COUNTRY')].level").value(2))
+                .andExpect(jsonPath("$[?(@.code == 'COMPANY')].level").value(3));
+
+        mockMvc.perform(get("/rule-entity-types/COUNTRY"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.level").value(2));
+    }
+
+    /**
      * backend#152: el nombre de un tipo viaja dos veces. {@code name} es el almacenado, el que
      * se edita, y no cambia con el idioma; {@code label} es el de {@code Accept-Language}, y
      * sin idioma es el almacenado. Lo afirmado es la semilla de la V164.

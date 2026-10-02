@@ -182,6 +182,7 @@ class CreateRuleEntityServiceTest {
     private RuleEntityType ruleEntityType() {
         return new RuleEntityType(1L, "COST_CENTER", "Cost center",
                 LiteralClass.DOMAIN_VOCABULARY, MaintenanceMode.MAINTAINED, "ORGANIZATION",
+                RuleEntityType.NATIONAL_LEVEL,
                 true, null, null);
     }
 }

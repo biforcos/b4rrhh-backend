@@ -36,6 +36,7 @@ public class CreateRuleEntityTypeService implements CreateRuleEntityTypeUseCase 
                 command.literalClass(),
                 command.maintenanceMode(),
                 command.groupCode().trim().toUpperCase(),
+                RuleEntityType.NATIONAL_LEVEL,
                 true,
                 null,
                 null

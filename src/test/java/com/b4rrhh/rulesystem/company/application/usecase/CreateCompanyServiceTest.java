@@ -74,6 +74,7 @@ class CreateCompanyServiceTest {
                 LiteralClass.PROPER_NOUN,
                 MaintenanceMode.MAINTAINED,
                 "ORGANIZATION",
+                RuleEntityType.NATIONAL_LEVEL,
                 true,
                 LocalDateTime.now(),
                 LocalDateTime.now()
@@ -130,6 +131,7 @@ class CreateCompanyServiceTest {
                 LiteralClass.PROPER_NOUN,
                 MaintenanceMode.MAINTAINED,
                 "ORGANIZATION",
+                RuleEntityType.NATIONAL_LEVEL,
                 true,
                 LocalDateTime.now(),
                 LocalDateTime.now()

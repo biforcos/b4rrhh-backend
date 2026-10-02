@@ -126,6 +126,7 @@ class CreateWorkCenterServiceTest {
     private RuleEntityType ruleEntityType(String code) {
         return new RuleEntityType(1L, code, code,
                 LiteralClass.PROPER_NOUN, MaintenanceMode.MAINTAINED, "ORGANIZATION",
+                RuleEntityType.NATIONAL_LEVEL,
                 true, LocalDateTime.now(), LocalDateTime.now());
     }
 

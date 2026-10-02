@@ -41,6 +41,7 @@ public class RuleEntityTypePersistenceAdapter implements RuleEntityTypeRepositor
                 entity.getLiteralClass(),
                 entity.getMaintenanceMode(),
                 entity.getGroupCode(),
+                entity.getLevel(),
                 entity.isActive(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
@@ -55,6 +56,7 @@ public class RuleEntityTypePersistenceAdapter implements RuleEntityTypeRepositor
         entity.setLiteralClass(ruleEntityType.getLiteralClass());
         entity.setMaintenanceMode(ruleEntityType.getMaintenanceMode());
         entity.setGroupCode(ruleEntityType.getGroupCode());
+        entity.setLevel((short) ruleEntityType.getLevel());
         entity.setActive(ruleEntityType.isActive());
         return entity;
     }

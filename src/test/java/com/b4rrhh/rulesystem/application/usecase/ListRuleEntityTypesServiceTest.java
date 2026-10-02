@@ -32,9 +32,11 @@ class ListRuleEntityTypesServiceTest {
         List<RuleEntityType> types = List.of(
                 new RuleEntityType(1L, "COMPANY", "Company",
                         LiteralClass.PROPER_NOUN, MaintenanceMode.MAINTAINED, "ORGANIZATION",
+                        RuleEntityType.NATIONAL_LEVEL,
                         true, null, null),
                 new RuleEntityType(2L, "WORK_CENTER", "Work Center",
                         LiteralClass.PROPER_NOUN, MaintenanceMode.MAINTAINED, "ORGANIZATION",
+                        RuleEntityType.NATIONAL_LEVEL,
                         true, null, null)
         );
         when(ruleEntityTypeRepository.findAll()).thenReturn(types);

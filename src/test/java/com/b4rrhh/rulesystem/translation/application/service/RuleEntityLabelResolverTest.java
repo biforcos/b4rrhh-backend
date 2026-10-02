@@ -196,7 +196,7 @@ class RuleEntityLabelResolverTest {
     private static RuleEntityType type(String code, String name) {
         return new RuleEntityType(
                 1L, code, name, LiteralClass.DOMAIN_VOCABULARY, MaintenanceMode.MAINTAINED,
-                "ORGANIZATION", true, LocalDateTime.now(), LocalDateTime.now());
+                "ORGANIZATION", RuleEntityType.NATIONAL_LEVEL, true, LocalDateTime.now(), LocalDateTime.now());
     }
 
     private static RuleEntity hiring() {

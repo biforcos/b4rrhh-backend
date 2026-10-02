@@ -56,6 +56,7 @@ public class RuleEntityTypeResponseAssembler {
                 type.getCode(),
                 type.getName(),
                 label,
+                type.getLevel(),
                 type.isActive(),
                 type.getLiteralClass().name(),
                 type.getMaintenanceMode().name(),

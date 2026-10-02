@@ -64,6 +64,7 @@ class CreateRuleEntityTypeServiceTest {
                 .thenReturn(Optional.of(new RuleEntityType(
                         1L, "COMPANY", "Company",
                         LiteralClass.PROPER_NOUN, MaintenanceMode.MAINTAINED, "ORGANIZATION",
+                        RuleEntityType.NATIONAL_LEVEL,
                         true, null, null)));
 
         assertThrows(IllegalArgumentException.class, () ->

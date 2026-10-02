@@ -47,9 +47,9 @@ public class RuleEntityTypeEntity {
     @Column(name = "api_collection_path", length = 100)
     private String apiCollectionPath;
 
-    // El nivel en el que viven las entidades del tipo (ADR-077). Hasta que el backend#158
-    // reclasifique, todo tipo es nacional, tambien el que se crea por la API; no se actualiza
-    // desde aqui porque moverlo de nivel es mover sus entidades de capa, y eso es una migracion.
+    // El nivel en el que viven las entidades del tipo (ADR-077). El que se crea por la API nace
+    // nacional (RuleEntityType.NATIONAL_LEVEL); no se actualiza desde aqui porque moverlo de nivel
+    // es mover sus entidades de capa, y eso es una migracion.
     @Column(nullable = false, updatable = false)
     private short level = 3;
 
@@ -95,6 +95,9 @@ public class RuleEntityTypeEntity {
 
     public String getGroupCode() { return groupCode; }
     public void setGroupCode(String groupCode) { this.groupCode = groupCode; }
+
+    public short getLevel() { return level; }
+    public void setLevel(short level) { this.level = level; }
 
     public String getApiCollectionPath() { return apiCollectionPath; }
     public void setApiCollectionPath(String apiCollectionPath) { this.apiCollectionPath = apiCollectionPath; }
