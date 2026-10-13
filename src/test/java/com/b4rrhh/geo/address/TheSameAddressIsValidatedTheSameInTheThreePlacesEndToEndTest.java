@@ -49,6 +49,12 @@ class TheSameAddressIsValidatedTheSameInTheThreePlacesEndToEndTest {
              "municipalityCode": "28999", "postalCode": "28013", "countryCode": "ESP"}
             """;
 
+    // Un CP de la provincia de Madrid que no existe: el que el loader inventaba.
+    private static final String A_POSTAL_CODE_THAT_DOES_NOT_EXIST = """
+            {"streetTypeCode": "CL", "streetName": "Mayor", "streetNumber": "1", "portal": "2",
+             "municipalityCode": "28079", "postalCode": "28379", "countryCode": "ESP"}
+            """;
+
     private static final String OUTSIDE_SPAIN = """
             {"streetName": "Rue de la Gare", "streetNumber": "4", "locality": "Toulouse",
              "postalCode": "31000", "countryCode": "FRA"}
@@ -69,6 +75,7 @@ class TheSameAddressIsValidatedTheSameInTheThreePlacesEndToEndTest {
         for (ResultActions created : inTheThreePlaces(VALID, "OK")) {
             created.andExpect(status().isCreated())
                     .andExpect(jsonPath("$.address.normalized").value(true))
+                    .andExpect(jsonPath("$.address.normalizationIssue").doesNotExist())
                     .andExpect(jsonPath("$.address.subdivisionCode").value("28"))
                     .andExpect(jsonPath("$.address.municipalityName").value("Madrid"))
                     .andExpect(jsonPath("$.address.streetTypeCode").value("CL"));
@@ -103,6 +110,7 @@ class TheSameAddressIsValidatedTheSameInTheThreePlacesEndToEndTest {
         for (ResultActions created : inTheThreePlaces(A_MUNICIPALITY_THAT_DOES_NOT_EXIST, "NX")) {
             created.andExpect(status().isCreated())
                     .andExpect(jsonPath("$.address.normalized").value(false))
+                    .andExpect(jsonPath("$.address.normalizationIssue").value("MUNICIPIO_DESCONOCIDO"))
                     .andExpect(jsonPath("$.address.municipalityCode").value("28999"))
                     .andExpect(jsonPath("$.address.locality").value("Villarriba"))
                     // La provincia sale del CP cuando el municipio no está.
@@ -112,6 +120,19 @@ class TheSameAddressIsValidatedTheSameInTheThreePlacesEndToEndTest {
         assertThat(jdbcTemplate.queryForObject(
                 "select count(*) from employee.address where municipality_code = '28999' and not normalized",
                 Integer.class)).isEqualTo(1);
+    }
+
+    // La regla corregida en la revisión: un CP de la provincia no basta, tiene que existir. Se guarda
+    // igual, con su motivo, y el portal entra en los tres.
+    @Test
+    @WithMockUser
+    void aPostalCodeThatIsNotInTheMasterEntersInTheThreeWithItsReason() throws Exception {
+        for (ResultActions created : inTheThreePlaces(A_POSTAL_CODE_THAT_DOES_NOT_EXIST, "CP")) {
+            created.andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.address.normalized").value(false))
+                    .andExpect(jsonPath("$.address.normalizationIssue").value("CP_DESCONOCIDO"))
+                    .andExpect(jsonPath("$.address.portal").value("2"));
+        }
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.b4rrhh.support;
 
+import com.b4rrhh.geo.territory.infrastructure.persistence.PostalCodeJdbcAdapter;
 import com.b4rrhh.geo.territory.infrastructure.persistence.MunicipalityJdbcAdapter;
 import com.b4rrhh.geo.address.application.service.PostalAddressValidator;
 import com.b4rrhh.payroll_engine.execution.infrastructure.persistence.ItPrestacionTramoJdbcAdapter;
@@ -255,6 +256,7 @@ import java.lang.annotation.Target;
         // la validacion de la direccion, la misma en los tres sitios (backend#155)
         PostalAddressValidator.class,
         MunicipalityJdbcAdapter.class,
+        PostalCodeJdbcAdapter.class,
         AddressPersistenceAdapter.class,
         AddressPresenceLookupAdapter.class,
         AddressTypeCoverageLookupAdapter.class,

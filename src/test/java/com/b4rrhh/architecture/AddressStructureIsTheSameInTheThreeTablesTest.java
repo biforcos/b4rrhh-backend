@@ -52,10 +52,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 @TestSobreEsquemaReal
 class AddressStructureIsTheSameInTheThreeTablesTest {
 
-    /** Las columnas de una dirección (V177). */
+    /** Las columnas de una dirección (V177, y la V178 añade portal y el motivo). */
     private static final List<String> COLUMNAS = List.of(
-            "street_type_code", "street_name", "street_number", "number_qualifier", "block", "stair", "floor",
-            "door", "locality", "municipality_code", "subdivision_code", "postal_code", "country_code", "normalized");
+            "street_type_code", "street_name", "street_number", "number_qualifier", "block", "portal", "stair",
+            "floor", "door", "locality", "municipality_code", "subdivision_code", "postal_code", "country_code",
+            "normalized", "normalization_issue");
 
     private static final List<String> TABLAS = List.of(
             "employee.address", "rulesystem.company_profile", "rulesystem.work_center_profile");

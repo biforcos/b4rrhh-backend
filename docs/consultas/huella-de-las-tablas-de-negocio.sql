@@ -10,7 +10,8 @@
 -- referencia. «Cero recibos se mueven» es que las catorce salen iguales.
 --
 -- Desde la V177 (backend#155) la direccion es la estructurada: tipo de via, nombre, numero...,
--- municipio, provincia, CP, pais y la marca normalized. Contra una base anterior a la V177 esta
+-- municipio, provincia, CP, pais y la marca normalized; desde la V178, tambien el portal y el
+-- motivo de la marca. Contra una base anterior a la V177 esta
 -- consulta no corre: las columnas street, city y region_code ya no existen.
 --
 -- Eran once. backend#159 anadio direccion, documentos y contactos: son lo que leen
@@ -58,10 +59,10 @@ filas(tabla, fila) as (
     union all
     select 'employee.address', concat_ws('|', emp.k, address_number, address_type_code,
            coalesce(street_type_code, '∅'), coalesce(street_name, '∅'), coalesce(street_number, '∅'),
-           coalesce(number_qualifier, '∅'), coalesce(block, '∅'), coalesce(stair, '∅'),
+           coalesce(number_qualifier, '∅'), coalesce(block, '∅'), coalesce(portal, '∅'), coalesce(stair, '∅'),
            coalesce(floor, '∅'), coalesce(door, '∅'), coalesce(locality, '∅'),
            coalesce(municipality_code, '∅'), coalesce(subdivision_code, '∅'),
-           coalesce(postal_code, '∅'), country_code, normalized,
+           coalesce(postal_code, '∅'), country_code, normalized, coalesce(normalization_issue, '∅'),
            start_date, coalesce(end_date::text, '∅'))
       from employee.address x join emp on emp.id = x.employee_id
     union all

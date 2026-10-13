@@ -13,6 +13,7 @@ public record PostalAddressRequest(
         String streetNumber,
         String numberQualifier,
         String block,
+        String portal,
         String stair,
         String floor,
         String door,
@@ -28,7 +29,7 @@ public record PostalAddressRequest(
             return null;
         }
         return new PostalAddressInput(request.streetTypeCode, request.streetName, request.streetNumber,
-                request.numberQualifier, request.block, request.stair, request.floor, request.door,
+                request.numberQualifier, request.block, request.portal, request.stair, request.floor, request.door,
                 request.locality, request.municipalityCode, request.subdivisionCode, request.postalCode,
                 request.countryCode);
     }

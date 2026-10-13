@@ -1,5 +1,7 @@
 package com.b4rrhh.geo.address.application.service;
 
+import com.b4rrhh.geo.territory.domain.port.PostalCodeRepository;
+import com.b4rrhh.geo.address.domain.model.PostalAddressIssue;
 import com.b4rrhh.geo.address.domain.exception.PostalAddressRejectedException;
 import com.b4rrhh.geo.address.domain.model.PostalAddress;
 import com.b4rrhh.geo.address.domain.model.PostalAddressInput;
@@ -20,9 +22,10 @@ import java.util.regex.Pattern;
  * <h2>Qué es estar normalizada</h2>
  *
  * <p>En España, las cuatro cosas: el municipio existe y no ha terminado en la fecha; la provincia
- * es la del municipio; el CP tiene cinco cifras y es de esa provincia; el tipo de vía está en el
- * catálogo. Fuera de España, el país y nada más: ni municipio INE, ni provincia, ni tipo de vía,
- * que son españoles. Es la misma regla que la V177 aplicó a lo que había, y
+ * es la del municipio; el CP existe en el maestro {@code geo} y es de esa provincia; el tipo de vía
+ * está en el catálogo. Lo que falla se guarda como motivo ({@link PostalAddressIssue}), el primero
+ * en ese orden. Fuera de España, el país y nada más: ni municipio INE, ni provincia, ni tipo de vía,
+ * que son españoles. Es la misma regla que la V178 aplicó a lo que había, y
  * {@code TheAddressMigrationSaysWhatItLeftOnTheSeedTest} comprueba que dicen lo mismo.</p>
  *
  * <h2>Qué se rechaza</h2>
@@ -55,10 +58,16 @@ public class PostalAddressValidator {
 
     private final RuleEntityRepository ruleEntityRepository;
     private final MunicipalityRepository municipalityRepository;
+    private final PostalCodeRepository postalCodeRepository;
 
-    public PostalAddressValidator(RuleEntityRepository ruleEntityRepository, MunicipalityRepository municipalityRepository) {
+    public PostalAddressValidator(
+            RuleEntityRepository ruleEntityRepository,
+            MunicipalityRepository municipalityRepository,
+            PostalCodeRepository postalCodeRepository
+    ) {
         this.ruleEntityRepository = ruleEntityRepository;
         this.municipalityRepository = municipalityRepository;
+        this.postalCodeRepository = postalCodeRepository;
     }
 
     /**
@@ -78,6 +87,7 @@ public class PostalAddressValidator {
         String streetNumber = text("streetNumber", input.streetNumber(), 10);
         String numberQualifier = text("numberQualifier", input.numberQualifier(), 10);
         String block = text("block", input.block(), 10);
+        String portal = text("portal", input.portal(), 10);
         String stair = text("stair", input.stair(), 10);
         String floor = text("floor", input.floor(), 10);
         String door = text("door", input.door(), 10);
@@ -88,10 +98,12 @@ public class PostalAddressValidator {
         }
         requireCountry(ruleSystemCode, countryCode, date);
 
-        boolean normalized;
+        PostalAddressIssue issue;
         String municipalityName = null;
         if (!SPAIN.equals(countryCode)) {
-            normalized = municipalityCode == null && subdivisionCode == null && streetTypeCode == null;
+            issue = municipalityCode == null && subdivisionCode == null && streetTypeCode == null
+                    ? null
+                    : PostalAddressIssue.DATOS_DE_ESPANA_FUERA_DE_ESPANA;
         } else {
             Optional<Municipality> municipality = municipalityCode == null
                     ? Optional.empty()
@@ -103,21 +115,49 @@ public class PostalAddressValidator {
             rejectAPostalCodeOfAnotherProvince(postalCode, subdivisionCode);
             municipalityName = municipality.map(Municipality::name).orElse(null);
 
-            String province = subdivisionCode;
-            normalized = municipality
-                    .filter(m -> m.endDate() == null || !m.endDate().isBefore(date))
-                    .filter(m -> m.provinceCode().equals(province))
-                    .isPresent()
-                    && isSpanishPostalCode(postalCode)
-                    && postalCode.startsWith(province)
-                    && inSpanishCatalog(PROVINCE, province)
-                    && streetTypeCode != null
-                    && inSpanishCatalog(STREET_TYPE, streetTypeCode);
+            issue = spanishIssue(municipality, subdivisionCode, postalCode, streetTypeCode, date);
         }
 
-        return new PostalAddress(streetTypeCode, streetName, streetNumber, numberQualifier, block, stair,
-                floor, door, locality, municipalityCode, subdivisionCode, postalCode, countryCode, normalized,
+        return new PostalAddress(streetTypeCode, streetName, streetNumber, numberQualifier, block, portal, stair,
+                floor, door, locality, municipalityCode, subdivisionCode, postalCode, countryCode, issue,
                 municipalityName);
+    }
+
+    /**
+     * El primer motivo por el que una dirección española no está normalizada, en el orden en que se
+     * mira, o {@code null} si lo está. El CP tiene que existir en el maestro: un CP de la provincia que
+     * no existe no es una dirección normalizada. Si existe y sugiere otro municipio, sí lo es: la
+     * sugerencia es sugerencia (ADR-078 §4).
+     */
+    private PostalAddressIssue spanishIssue(
+            Optional<Municipality> municipality,
+            String province,
+            String postalCode,
+            String streetTypeCode,
+            LocalDate date
+    ) {
+        if (municipality.isEmpty()) {
+            return PostalAddressIssue.MUNICIPIO_DESCONOCIDO;
+        }
+        if (municipality.get().endDate() != null && municipality.get().endDate().isBefore(date)) {
+            return PostalAddressIssue.MUNICIPIO_NO_VIGENTE;
+        }
+        if (!inSpanishCatalog(PROVINCE, province)) {
+            return PostalAddressIssue.PROVINCIA_DESCONOCIDA;
+        }
+        if (!municipality.get().provinceCode().equals(province)) {
+            return PostalAddressIssue.PROVINCIA_DE_OTRO_MUNICIPIO;
+        }
+        if (!isSpanishPostalCode(postalCode) || !postalCodeRepository.exists(SPAIN, postalCode)) {
+            return PostalAddressIssue.CP_DESCONOCIDO;
+        }
+        if (!postalCode.startsWith(province)) {
+            return PostalAddressIssue.CP_DE_OTRA_PROVINCIA;
+        }
+        if (streetTypeCode == null || !inSpanishCatalog(STREET_TYPE, streetTypeCode)) {
+            return PostalAddressIssue.TIPO_DE_VIA_DESCONOCIDO;
+        }
+        return null;
     }
 
     private void requireCountry(String ruleSystemCode, String countryCode, LocalDate date) {

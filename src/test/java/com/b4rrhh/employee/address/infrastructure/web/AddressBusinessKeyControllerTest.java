@@ -75,7 +75,7 @@ class AddressBusinessKeyControllerTest {
     void createsAddressUsingEmployeeBusinessKey() {
         CreateAddressRequest request = new CreateAddressRequest(
                 "HOME",
-                new PostalAddressRequest(null, "Calle Mayor 10", null, null, null, null, null, null, "Madrid", null, null, "28013", "ESP"),
+                new PostalAddressRequest(null, "Calle Mayor 10", null, null, null, null, null, null, null, "Madrid", null, null, "28013", "ESP"),
                 LocalDate.of(2026, 1, 10),
                 null
         );
@@ -126,7 +126,7 @@ class AddressBusinessKeyControllerTest {
     @Test
     void updatesAddressUsingBusinessKeyAndAddressNumber() {
         UpdateAddressRequest request = new UpdateAddressRequest(
-                new PostalAddressRequest(null, "Calle de Alcala 100", null, null, null, null, null, null, "Madrid", null, null, "28009", "ESP"),
+                new PostalAddressRequest(null, "Calle de Alcala 100", null, null, null, null, null, null, null, "Madrid", null, null, "28009", "ESP"),
                 null,
                 null
         );

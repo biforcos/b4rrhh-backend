@@ -1,5 +1,8 @@
 package com.b4rrhh.geo.address.infrastructure.persistence;
 
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
+import com.b4rrhh.geo.address.domain.model.PostalAddressIssue;
 import com.b4rrhh.geo.address.domain.model.PostalAddress;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -31,6 +34,9 @@ public class PostalAddressColumns {
     @Column(name = "block", length = 10)
     private String block;
 
+    @Column(name = "portal", length = 10)
+    private String portal;
+
     @Column(name = "stair", length = 10)
     private String stair;
 
@@ -58,6 +64,14 @@ public class PostalAddressColumns {
     @Column(name = "normalized", nullable = false)
     private boolean normalized;
 
+    /**
+     * Por qué no está normalizada; {@code null} si lo está (V178). Unas columnas recién creadas no
+     * tienen dirección, y lo dicen: la base exige que la marca y el motivo cuadren.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "normalization_issue", length = 40)
+    private PostalAddressIssue normalizationIssue = PostalAddressIssue.SIN_DIRECCION;
+
     @Formula("(select m.name from geo.municipality m where m.country_code = 'ESP' and m.code = municipality_code)")
     private String municipalityName;
 
@@ -71,6 +85,7 @@ public class PostalAddressColumns {
         columns.streetNumber = address.streetNumber();
         columns.numberQualifier = address.numberQualifier();
         columns.block = address.block();
+        columns.portal = address.portal();
         columns.stair = address.stair();
         columns.floor = address.floor();
         columns.door = address.door();
@@ -80,6 +95,7 @@ public class PostalAddressColumns {
         columns.postalCode = address.postalCode();
         columns.countryCode = address.countryCode();
         columns.normalized = address.normalized();
+        columns.normalizationIssue = address.normalizationIssue();
         columns.municipalityName = address.municipalityName();
         return columns;
     }
@@ -87,14 +103,14 @@ public class PostalAddressColumns {
     /** La dirección, o {@code null} si la fila no tiene ninguna: un perfil sin dirección (backend#155). */
     public PostalAddress toDomainOrNull() {
         boolean empty = streetTypeCode == null && streetName == null && streetNumber == null && numberQualifier == null
-                && block == null && stair == null && floor == null && door == null && locality == null
+                && block == null && portal == null && stair == null && floor == null && door == null && locality == null
                 && municipalityCode == null && subdivisionCode == null && postalCode == null && countryCode == null;
         return empty ? null : toDomain();
     }
 
     public PostalAddress toDomain() {
-        return new PostalAddress(streetTypeCode, streetName, streetNumber, numberQualifier, block, stair,
-                floor, door, locality, municipalityCode, subdivisionCode, postalCode, countryCode, normalized,
+        return new PostalAddress(streetTypeCode, streetName, streetNumber, numberQualifier, block, portal, stair,
+                floor, door, locality, municipalityCode, subdivisionCode, postalCode, countryCode, normalizationIssue,
                 municipalityName);
     }
 }

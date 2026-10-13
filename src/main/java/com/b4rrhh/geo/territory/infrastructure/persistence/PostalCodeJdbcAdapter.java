@@ -26,4 +26,12 @@ public class PostalCodeJdbcAdapter implements PostalCodeRepository {
                 .filter(Objects::nonNull)
                 .findFirst();
     }
+
+    @Override
+    public boolean exists(String countryCode, String postalCode) {
+        Integer found = jdbcTemplate.queryForObject(
+                "select count(*) from geo.postal_code where country_code = ? and code = ?",
+                Integer.class, countryCode, postalCode);
+        return found != null && found > 0;
+    }
 }

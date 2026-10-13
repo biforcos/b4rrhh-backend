@@ -10,6 +10,7 @@ public record PostalAddressInput(
         String streetNumber,
         String numberQualifier,
         String block,
+        String portal,
         String stair,
         String floor,
         String door,

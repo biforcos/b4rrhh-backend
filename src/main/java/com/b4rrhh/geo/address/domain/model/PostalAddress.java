@@ -8,8 +8,8 @@ package com.b4rrhh.geo.address.domain.model;
  * <p>Los códigos apuntan al territorio pero no son claves ajenas: {@code streetTypeCode} y
  * {@code subdivisionCode} son entidades {@code STREET_TYPE} y {@code PROVINCE} de la capa ESP,
  * {@code municipalityCode} un municipio de {@code geo}, y {@code countryCode} un {@code COUNTRY} de
- * INT. Una dirección que no cumple la validación se guarda igual, con {@code normalized} a
- * {@code false}: «sin normalizar». Un estado, no un silencio.</p>
+ * INT. Una dirección que no cumple la validación se guarda igual, con el motivo en
+ * {@code normalizationIssue}: «sin normalizar». Un estado, no un silencio.</p>
  *
  * <p>{@code municipalityName} no se escribe: es lo que dice el maestro de {@code municipalityCode}
  * al leer, y {@code null} si el código no está.</p>
@@ -20,6 +20,7 @@ public record PostalAddress(
         String streetNumber,
         String numberQualifier,
         String block,
+        String portal,
         String stair,
         String floor,
         String door,
@@ -28,9 +29,14 @@ public record PostalAddress(
         String subdivisionCode,
         String postalCode,
         String countryCode,
-        boolean normalized,
+        PostalAddressIssue normalizationIssue,
         String municipalityName
 ) {
+
+    /** Normalizada es no tener motivo para no estarlo. */
+    public boolean normalized() {
+        return normalizationIssue == null;
+    }
 
     /** La línea de la vía, para un recibo o un listado: «CL Mayor, 3, 3º D». {@code null} si no hay vía. */
     public String streetLine() {
@@ -43,6 +49,9 @@ public record PostalAddress(
         }
         if (block != null) {
             append(line, ", ", "bl. " + block);
+        }
+        if (portal != null) {
+            append(line, ", ", "portal " + portal);
         }
         if (stair != null) {
             append(line, ", ", "esc. " + stair);
