@@ -1,6 +1,7 @@
 package com.b4rrhh.rulesystem.infrastructure.web.assembler;
 
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
+import com.b4rrhh.rulesystem.infrastructure.web.dto.LayerRuleEntityResponse;
 import com.b4rrhh.rulesystem.infrastructure.web.dto.RuleEntityResponse;
 import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
 import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
@@ -36,6 +37,29 @@ public class RuleEntityResponseAssembler {
         Map<Long, String> labels = labelResolver.resolveLabels(entities, language.code());
         return entities.stream()
                 .map(entity -> toResponse(entity, labels.get(entity.getId())))
+                .toList();
+    }
+
+    public LayerRuleEntityResponse toLayerResponse(RuleEntity entity, ResponseLanguage language) {
+        return toLayerResponseList(List.of(entity), language).get(0);
+    }
+
+    /** La misma etiqueta, para la vista de una capa (frontend#131). */
+    public List<LayerRuleEntityResponse> toLayerResponseList(List<RuleEntity> entities, ResponseLanguage language) {
+        Map<Long, String> labels = labelResolver.resolveLabels(entities, language.code());
+        return entities.stream()
+                .map(entity -> new LayerRuleEntityResponse(
+                        entity.getLayerCode(),
+                        entity.getLevel(),
+                        entity.getRuleEntityTypeCode(),
+                        entity.getCode(),
+                        entity.getName(),
+                        labels.get(entity.getId()),
+                        entity.getDescription(),
+                        entity.isActive(),
+                        entity.getStartDate(),
+                        entity.getEndDate()
+                ))
                 .toList();
     }
 

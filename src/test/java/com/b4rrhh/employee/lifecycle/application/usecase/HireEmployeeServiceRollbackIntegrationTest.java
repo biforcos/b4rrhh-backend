@@ -157,6 +157,11 @@ class HireEmployeeServiceRollbackIntegrationTest {
                 @Override public boolean existsOverlapExcludingStartDate(String rs, String type, String code, LocalDate pStart, LocalDate pEnd, LocalDate excluded) { return false; }
                 @Override public List<RuleEntity> findActiveOptions(String rs, String type, String qLike, LocalDate ref) { return List.of(); }
                 @Override public void deleteByBusinessKeyAndStartDate(String rs, String type, String code, LocalDate start) {}
+                @Override public List<RuleEntity> findInLayer(String layer, String type, String code, Boolean active, LocalDate ref) { return List.of(); }
+                @Override public java.util.Optional<RuleEntity> findInLayerByBusinessKey(String layer, String type, String code) { return java.util.Optional.empty(); }
+                @Override public java.util.Optional<RuleEntity> findInLayerByBusinessKeyAndStartDate(String layer, String type, String code, LocalDate start) { return java.util.Optional.empty(); }
+                @Override public boolean existsOverlapInLayerExcludingStartDate(String layer, String type, String code, LocalDate pStart, LocalDate pEnd, LocalDate excluded) { return false; }
+                @Override public void deleteInLayerByBusinessKeyAndStartDate(String layer, String type, String code, LocalDate start) {}
                 @Override public RuleEntity save(RuleEntity e) { return e; }
             };
         }

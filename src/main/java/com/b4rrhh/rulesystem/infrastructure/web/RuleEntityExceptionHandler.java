@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.infrastructure.web;
 
+import com.b4rrhh.rulesystem.domain.exception.LayerNotFoundException;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityAlreadyClosedException;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityInUseException;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityInvalidDateRangeException;
@@ -12,11 +13,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice(assignableTypes = {RuleEntityController.class, RuleEntityBusinessKeyController.class})
+@RestControllerAdvice(assignableTypes = {
+        RuleEntityController.class,
+        RuleEntityBusinessKeyController.class,
+        LayerRuleEntityController.class,
+        LayerRuleEntityBusinessKeyController.class
+})
 public class RuleEntityExceptionHandler {
 
-    @ExceptionHandler(RuleEntityNotFoundException.class)
-    public ResponseEntity<RuleEntityErrorResponse> handleNotFound(RuleEntityNotFoundException ex) {
+    @ExceptionHandler({RuleEntityNotFoundException.class, LayerNotFoundException.class})
+    public ResponseEntity<RuleEntityErrorResponse> handleNotFound(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new RuleEntityErrorResponse(ex.getMessage()));
     }

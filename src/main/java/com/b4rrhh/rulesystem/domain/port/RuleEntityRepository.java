@@ -55,5 +55,40 @@ public interface RuleEntityRepository {
             LocalDate referenceDate
     );
     void deleteByBusinessKeyAndStartDate(String ruleSystemCode, String ruleEntityTypeCode, String code, LocalDate startDate);
+
+    /*
+     * Por capa y no por reglamentación (frontend#131): lo que se pide es la fila de la capa, sin
+     * resolver nada. Es la puerta para mantener una entidad de COM o de INT, que desde una
+     * reglamentación sólo se ve. Lo que devuelven no tiene ruleSystemCode: no se pidió desde
+     * ninguna.
+     */
+    List<RuleEntity> findInLayer(
+            String layerCode,
+            String ruleEntityTypeCode,
+            String code,
+            Boolean active,
+            LocalDate referenceDate
+    );
+    Optional<RuleEntity> findInLayerByBusinessKey(String layerCode, String ruleEntityTypeCode, String code);
+    Optional<RuleEntity> findInLayerByBusinessKeyAndStartDate(
+            String layerCode,
+            String ruleEntityTypeCode,
+            String code,
+            LocalDate startDate
+    );
+    boolean existsOverlapInLayerExcludingStartDate(
+            String layerCode,
+            String ruleEntityTypeCode,
+            String code,
+            LocalDate projectedStartDate,
+            LocalDate projectedEndDate,
+            LocalDate excludedStartDate
+    );
+    void deleteInLayerByBusinessKeyAndStartDate(String layerCode, String ruleEntityTypeCode, String code, LocalDate startDate);
+
+    /**
+     * Guarda en la capa que la reglamentación monta en el nivel del tipo; o, si la entidad no trae
+     * reglamentación, en la capa que trae ({@link #findInLayer}).
+     */
     RuleEntity save(RuleEntity ruleEntity);
 }

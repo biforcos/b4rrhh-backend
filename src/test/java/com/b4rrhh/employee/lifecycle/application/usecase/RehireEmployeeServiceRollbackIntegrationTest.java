@@ -179,6 +179,30 @@ class RehireEmployeeServiceRollbackIntegrationTest {
                 }
 
                 @Override
+                public List<RuleEntity> findInLayer(String layerCode, String ruleEntityTypeCode, String code, Boolean active, LocalDate referenceDate) {
+                    return List.of();
+                }
+
+                @Override
+                public java.util.Optional<RuleEntity> findInLayerByBusinessKey(String layerCode, String ruleEntityTypeCode, String code) {
+                    return java.util.Optional.empty();
+                }
+
+                @Override
+                public java.util.Optional<RuleEntity> findInLayerByBusinessKeyAndStartDate(String layerCode, String ruleEntityTypeCode, String code, LocalDate startDate) {
+                    return java.util.Optional.empty();
+                }
+
+                @Override
+                public boolean existsOverlapInLayerExcludingStartDate(String layerCode, String ruleEntityTypeCode, String code, LocalDate projectedStartDate, LocalDate projectedEndDate, LocalDate excludedStartDate) {
+                    return false;
+                }
+
+                @Override
+                public void deleteInLayerByBusinessKeyAndStartDate(String layerCode, String ruleEntityTypeCode, String code, LocalDate startDate) {
+                }
+
+                @Override
                 public RuleEntity save(RuleEntity ruleEntity) {
                     return ruleEntity;
                 }

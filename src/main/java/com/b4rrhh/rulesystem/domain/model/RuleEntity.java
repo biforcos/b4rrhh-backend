@@ -103,7 +103,9 @@ public class RuleEntity {
 
     public void close(LocalDate endDate) {
         if (this.endDate != null) {
-            throw new RuleEntityAlreadyClosedException(ruleSystemCode, ruleEntityTypeCode, code);
+            // Pedida desde su capa no tiene reglamentación (frontend#131): el mensaje dice la capa.
+            throw new RuleEntityAlreadyClosedException(
+                    ruleSystemCode != null ? ruleSystemCode : layerCode, ruleEntityTypeCode, code);
         }
 
         validateDateRange(startDate, endDate);

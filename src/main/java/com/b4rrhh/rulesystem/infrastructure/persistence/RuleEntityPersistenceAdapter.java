@@ -10,6 +10,7 @@ import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,13 @@ public class RuleEntityPersistenceAdapter implements RuleEntityRepository {
             select rsl.layer_code, rsl.level
               from rulesystem.rule_system_layer rsl
              where rsl.rule_system_code = :ruleSystemCode
+            """;
+
+    /** Una capa por su código, sin pasar por ninguna reglamentación (frontend#131). */
+    private static final String LAYER = """
+            select l.code, l.level
+              from rulesystem.layer l
+             where l.code = :layerCode
             """;
 
     private static final String RULE_SYSTEMS = """
@@ -82,35 +90,9 @@ public class RuleEntityPersistenceAdapter implements RuleEntityRepository {
                 continue;
             }
 
-            Specification<RuleEntityEntity> specification = (root, query, criteriaBuilder) -> {
-                List<Predicate> predicates = new ArrayList<>();
-
-                predicates.add(root.get("layerCode").in(layers.keySet()));
-
-                if (ruleEntityTypeCode != null) {
-                    predicates.add(criteriaBuilder.equal(root.get("ruleEntityTypeCode"), ruleEntityTypeCode));
-                }
-
-                if (code != null) {
-                    predicates.add(criteriaBuilder.equal(root.get("code"), code));
-                }
-
-                if (active != null) {
-                    predicates.add(criteriaBuilder.equal(root.get("active"), active));
-                }
-
-                if (referenceDate != null) {
-                    predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("startDate"), referenceDate));
-                    predicates.add(criteriaBuilder.or(
-                            criteriaBuilder.isNull(root.get("endDate")),
-                            criteriaBuilder.greaterThanOrEqualTo(root.get("endDate"), referenceDate)
-                    ));
-                }
-
-                return criteriaBuilder.and(predicates.toArray(Predicate[]::new));
-            };
-
-            springDataRuleEntityRepository.findAll(specification, Sort.by("ruleEntityTypeCode", "code"))
+            springDataRuleEntityRepository.findAll(
+                            filters(layers.keySet(), ruleEntityTypeCode, code, active, referenceDate),
+                            Sort.by("ruleEntityTypeCode", "code"))
                     .stream()
                     .map(entity -> toDomain(entity, asked, layers.get(entity.getLayerCode())))
                     .forEach(found::add);
@@ -242,16 +224,137 @@ public class RuleEntityPersistenceAdapter implements RuleEntityRepository {
     }
 
     @Override
+    public List<RuleEntity> findInLayer(
+            String layerCode,
+            String ruleEntityTypeCode,
+            String code,
+            Boolean active,
+            LocalDate referenceDate
+    ) {
+        Optional<Layer> layer = layer(layerCode);
+        if (layer.isEmpty()) {
+            return List.of();
+        }
+
+        return springDataRuleEntityRepository.findAll(
+                        filters(List.of(layerCode), ruleEntityTypeCode, code, active, referenceDate),
+                        Sort.by("ruleEntityTypeCode", "code"))
+                .stream()
+                .map(entity -> toDomain(entity, null, layer.get().level()))
+                .toList();
+    }
+
+    @Override
+    public Optional<RuleEntity> findInLayerByBusinessKey(String layerCode, String ruleEntityTypeCode, String code) {
+        return layer(layerCode)
+                .flatMap(layer -> springDataRuleEntityRepository
+                        .findByLayerCodeAndRuleEntityTypeCodeAndCode(layer.code(), ruleEntityTypeCode, code)
+                        .map(entity -> toDomain(entity, null, layer.level())));
+    }
+
+    @Override
+    public Optional<RuleEntity> findInLayerByBusinessKeyAndStartDate(
+            String layerCode,
+            String ruleEntityTypeCode,
+            String code,
+            LocalDate startDate
+    ) {
+        return layer(layerCode)
+                .flatMap(layer -> springDataRuleEntityRepository
+                        .findByLayerCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
+                                layer.code(),
+                                ruleEntityTypeCode,
+                                code,
+                                startDate
+                        )
+                        .map(entity -> toDomain(entity, null, layer.level())));
+    }
+
+    @Override
+    public boolean existsOverlapInLayerExcludingStartDate(
+            String layerCode,
+            String ruleEntityTypeCode,
+            String code,
+            LocalDate projectedStartDate,
+            LocalDate projectedEndDate,
+            LocalDate excludedStartDate
+    ) {
+        return springDataRuleEntityRepository.existsOverlapExcludingStartDate(
+                layerCode,
+                ruleEntityTypeCode,
+                code,
+                projectedStartDate,
+                projectedEndDate == null ? SpringDataRuleEntityRepository.MAX_DATE : projectedEndDate,
+                excludedStartDate,
+                SpringDataRuleEntityRepository.MAX_DATE
+        );
+    }
+
+    @Override
+    public void deleteInLayerByBusinessKeyAndStartDate(
+            String layerCode,
+            String ruleEntityTypeCode,
+            String code,
+            LocalDate startDate
+    ) {
+        springDataRuleEntityRepository.deleteByLayerCodeAndRuleEntityTypeCodeAndCodeAndStartDate(
+                layerCode,
+                ruleEntityTypeCode,
+                code,
+                startDate
+        );
+    }
+
+    @Override
     public RuleEntity save(RuleEntity ruleEntity) {
-        Layer layer = layerOf(ruleEntity.getRuleSystemCode(), ruleEntity.getRuleEntityTypeCode())
+        Layer layer = (ruleEntity.getRuleSystemCode() == null
+                ? layer(ruleEntity.getLayerCode())
+                : layerOf(ruleEntity.getRuleSystemCode(), ruleEntity.getRuleEntityTypeCode()))
                 .orElseThrow(() -> new IllegalStateException(
                         "Rule system " + ruleEntity.getRuleSystemCode()
-                                + " mounts no layer for rule entity type " + ruleEntity.getRuleEntityTypeCode()));
+                                + " mounts no layer for rule entity type " + ruleEntity.getRuleEntityTypeCode()
+                                + " (layer " + ruleEntity.getLayerCode() + ")"));
         RuleEntityEntity entity = ruleEntity.getId() == null
                 ? toNewEntity(ruleEntity, layer)
                 : toExistingEntity(ruleEntity, layer);
         RuleEntityEntity saved = springDataRuleEntityRepository.save(entity);
         return toDomain(saved, ruleEntity.getRuleSystemCode(), layer.level());
+    }
+
+    private static Specification<RuleEntityEntity> filters(
+            Collection<String> layerCodes,
+            String ruleEntityTypeCode,
+            String code,
+            Boolean active,
+            LocalDate referenceDate
+    ) {
+        return (root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            predicates.add(root.get("layerCode").in(layerCodes));
+
+            if (ruleEntityTypeCode != null) {
+                predicates.add(criteriaBuilder.equal(root.get("ruleEntityTypeCode"), ruleEntityTypeCode));
+            }
+
+            if (code != null) {
+                predicates.add(criteriaBuilder.equal(root.get("code"), code));
+            }
+
+            if (active != null) {
+                predicates.add(criteriaBuilder.equal(root.get("active"), active));
+            }
+
+            if (referenceDate != null) {
+                predicates.add(criteriaBuilder.lessThanOrEqualTo(root.get("startDate"), referenceDate));
+                predicates.add(criteriaBuilder.or(
+                        criteriaBuilder.isNull(root.get("endDate")),
+                        criteriaBuilder.greaterThanOrEqualTo(root.get("endDate"), referenceDate)
+                ));
+            }
+
+            return criteriaBuilder.and(predicates.toArray(Predicate[]::new));
+        };
     }
 
     private Optional<Layer> layerOf(String ruleSystemCode, String ruleEntityTypeCode) {
@@ -261,6 +364,16 @@ public class RuleEntityPersistenceAdapter implements RuleEntityRepository {
         List<?> rows = entityManager.createNativeQuery(LAYER_OF_TYPE)
                 .setParameter("ruleSystemCode", ruleSystemCode)
                 .setParameter("ruleEntityTypeCode", ruleEntityTypeCode)
+                .getResultList();
+        return rows.stream().findFirst().map(row -> toLayer((Object[]) row));
+    }
+
+    private Optional<Layer> layer(String layerCode) {
+        if (layerCode == null) {
+            return Optional.empty();
+        }
+        List<?> rows = entityManager.createNativeQuery(LAYER)
+                .setParameter("layerCode", layerCode)
                 .getResultList();
         return rows.stream().findFirst().map(row -> toLayer((Object[]) row));
     }
