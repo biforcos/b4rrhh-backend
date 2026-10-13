@@ -8,6 +8,11 @@ migración nueva, nunca una edición de éstos.
 Los dos se generan con `python tools/geo/datos_geo.py inicial`, desde la raíz de
 `b4rrhh_backend`.
 
+**La licencia de cada uno y su atribución están en la sección «Datos de terceros» del
+[`NOTICE.md`](../../../../../NOTICE.md#datos-de-terceros)**, y sólo allí (backend#165). Un fichero
+nuevo en esta carpeta necesita su fila en esa tabla: si no la tiene,
+`EveryThirdPartyDataFileIsAttributedInNoticeTest` falla.
+
 ## `municipios-ine-2021-2025.tsv`
 
 Los 8.132 municipios de España: código INE de cinco cifras (provincia + municipio), nombre,
@@ -16,8 +21,7 @@ provincia y desde cuándo.
 - **Fuente**: INE, «Relación de municipios y códigos por comunidades autónomas y provincias»
   a 1 de enero de 2021, 2022, 2023, 2024 y 2025
   (`https://www.ine.es/daco/daco42/codmun/diccionarioAA.xlsx`). Son las que el INE sirve en
-  fichero; las anteriores dan 404. Bajadas el 02/10/2026. Reutilización libre citando la
-  fuente (aviso legal del INE).
+  fichero; las anteriores dan 404. Bajadas el 02/10/2026.
 - **Vigencia «desde al menos»**: lo que está en la relación de 2021 entra con `2021-01-01`,
   y esa fecha significa *vigente desde al menos*, no *creado en*. Lo que aparece después,
   con el 1 de enero de la primera relación que lo trae: Usansolo (48916), `2024-01-01`.
@@ -32,7 +36,7 @@ provincia y desde cuándo.
 Los 11.150 códigos postales de GeoNames para España y, en 6.068, el municipio que sugieren.
 
 - **Fuente**: GeoNames, `https://download.geonames.org/export/zip/ES.zip`, bajado el
-  02/10/2026. **CC BY 4.0**: hay que atribuirlo a GeoNames (`https://www.geonames.org`).
+  02/10/2026.
 - **Es una sugerencia**, y la columna se llama así. La provincia de un código postal no
   sale de aquí: son sus dos primeras cifras, siempre.
 - **El municipio sale del nombre del lugar, no de la columna de municipio de GeoNames.**
