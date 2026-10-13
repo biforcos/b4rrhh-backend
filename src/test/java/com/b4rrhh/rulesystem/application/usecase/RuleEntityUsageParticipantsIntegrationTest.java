@@ -57,10 +57,10 @@ class RuleEntityUsageParticipantsIntegrationTest {
                         insert into employee.presence (employee_id, presence_number, company_code, entry_reason_code, start_date)
                         values (?, 1, 'ES01', 'HIRING', date '2026-01-01')"""),
                 Arguments.of("addresses", "EMPLOYEE_ADDRESS_TYPE", "FISCAL", """
-                        insert into employee.address (employee_id, address_number, address_type_code, street, city, country_code, start_date)
+                        insert into employee.address (employee_id, address_number, address_type_code, street_name, locality, country_code, start_date)
                         values (?, 1, 'FISCAL', 'Calle 1', 'Madrid', 'ESP', date '2026-01-01')"""),
                 Arguments.of("addresses", "COUNTRY", "ESP", """
-                        insert into employee.address (employee_id, address_number, address_type_code, street, city, country_code, start_date)
+                        insert into employee.address (employee_id, address_number, address_type_code, street_name, locality, country_code, start_date)
                         values (?, 1, 'FISCAL', 'Calle 1', 'Madrid', 'ESP', date '2026-01-01')"""),
                 Arguments.of("contacts", "CONTACT_TYPE", "COMPANY_MOBILE", """
                         insert into employee.contact (employee_id, contact_type_code, contact_value)

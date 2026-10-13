@@ -1,8 +1,8 @@
 package com.b4rrhh.rulesystem.companyprofile.infrastructure.web;
 
+import com.b4rrhh.geo.address.domain.exception.PostalAddressRejectedException;
 import com.b4rrhh.rulesystem.companyprofile.domain.exception.CompanyProfileCompanyNotFoundException;
 import com.b4rrhh.rulesystem.companyprofile.domain.exception.CompanyProfileCompanyNotApplicableException;
-import com.b4rrhh.rulesystem.companyprofile.domain.exception.CompanyProfileCountryInvalidException;
 import com.b4rrhh.rulesystem.companyprofile.domain.exception.CompanyProfileNotFoundException;
 import com.b4rrhh.rulesystem.companyprofile.infrastructure.web.dto.CompanyProfileErrorResponse;
 import org.springframework.http.HttpStatus;
@@ -24,7 +24,7 @@ public class CompanyProfileExceptionHandler {
     }
 
     @ExceptionHandler({
-            CompanyProfileCountryInvalidException.class,
+            PostalAddressRejectedException.class,
             IllegalArgumentException.class
     })
     public ResponseEntity<CompanyProfileErrorResponse> handleBadRequest(RuntimeException ex) {

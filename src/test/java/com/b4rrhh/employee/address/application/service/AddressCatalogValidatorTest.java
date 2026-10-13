@@ -56,25 +56,6 @@ class AddressCatalogValidatorTest {
         );
     }
 
-            @Test
-            void validatesCountryCodeFromSharedCountryCatalog() {
-            when(ruleEntityRepository.findByBusinessKey("ESP", "COUNTRY", "ESP"))
-                .thenReturn(Optional.of(activeCountryRuleEntityWithDates("ESP", LocalDate.of(1900, 1, 1), null)));
-
-            assertDoesNotThrow(() -> validator.validateCountryCode("ESP", "ESP", LocalDate.of(2026, 1, 31)));
-            }
-
-            @Test
-            void rejectsCountryCodeOutsideValidityRange() {
-            when(ruleEntityRepository.findByBusinessKey("ESP", "COUNTRY", "ESP"))
-                .thenReturn(Optional.of(activeCountryRuleEntityWithDates("ESP", LocalDate.of(1900, 1, 1), LocalDate.of(2025, 12, 31))));
-
-            assertThrows(
-                AddressCatalogValueInvalidException.class,
-                () -> validator.validateCountryCode("ESP", "ESP", LocalDate.of(2026, 1, 1))
-            );
-            }
-
     private RuleEntity activeRuleEntityWithDates(LocalDate startDate, LocalDate endDate) {
         return new RuleEntity(
                 1L,

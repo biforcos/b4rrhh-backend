@@ -32,9 +32,11 @@ public class CompanyProfileLookupAdapter implements CompanyProfileLookupPort {
                 .map(cp -> new CompanyProfileContext(
                         cp.getLegalName(),
                         cp.getTaxIdentifier(),
-                        cp.getStreet(),
-                        cp.getCity(),
-                        cp.getPostalCode(),
+                        // La cabecera del recibo: la vía y la población compuestas de la dirección
+                        // estructurada (backend#155).
+                        cp.getAddress() == null ? null : cp.getAddress().toDomain().streetLine(),
+                        cp.getAddress() == null ? null : cp.getAddress().toDomain().townLine(),
+                        cp.getAddress() == null ? null : cp.getAddress().toDomain().postalCode(),
                         cp.getCnaeCode()
                 ));
     }

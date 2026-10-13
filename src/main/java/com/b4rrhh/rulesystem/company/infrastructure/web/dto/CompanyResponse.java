@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.company.infrastructure.web.dto;
 
+import com.b4rrhh.geo.address.infrastructure.web.dto.PostalAddressResponse;
 import java.time.LocalDate;
 
 public record CompanyResponse(
@@ -12,7 +13,7 @@ public record CompanyResponse(
         boolean active,
         String legalName,
         String taxIdentifier,
-        CompanyAddressResponse address,
+        PostalAddressResponse address,
         String cnaeCode
 ) {
 }

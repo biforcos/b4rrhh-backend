@@ -3,7 +3,6 @@ package com.b4rrhh.employee.address.application.usecase;
 import com.b4rrhh.employee.address.application.model.AddressPlan;
 import com.b4rrhh.employee.address.application.port.EmployeeAddressContext;
 import com.b4rrhh.employee.address.application.port.EmployeeAddressLookupPort;
-import com.b4rrhh.employee.address.application.service.AddressCatalogValidator;
 import com.b4rrhh.employee.address.application.service.AddressTimelineService;
 import com.b4rrhh.employee.address.domain.exception.AddressEmployeeNotFoundException;
 import com.b4rrhh.employee.address.domain.exception.AddressNotFoundException;
@@ -12,6 +11,8 @@ import com.b4rrhh.employee.address.domain.exception.InvalidAddressDateRangeExcep
 import com.b4rrhh.employee.address.domain.model.Address;
 import com.b4rrhh.employee.address.domain.port.AddressRepository;
 import com.b4rrhh.employee.temporal.support.DateRange;
+import com.b4rrhh.geo.address.application.service.PostalAddressValidator;
+import com.b4rrhh.geo.address.domain.model.PostalAddress;
 import com.b4rrhh.rulesystem.domain.port.RuleSystemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,20 +32,20 @@ public class UpdateAddressService implements UpdateAddressUseCase {
     private final AddressRepository addressRepository;
     private final EmployeeAddressLookupPort employeeAddressLookupPort;
     private final RuleSystemRepository ruleSystemRepository;
-    private final AddressCatalogValidator addressCatalogValidator;
+    private final PostalAddressValidator postalAddressValidator;
     private final AddressTimelineService addressTimelineService;
 
     public UpdateAddressService(
             AddressRepository addressRepository,
             EmployeeAddressLookupPort employeeAddressLookupPort,
             RuleSystemRepository ruleSystemRepository,
-            AddressCatalogValidator addressCatalogValidator,
+            PostalAddressValidator postalAddressValidator,
             AddressTimelineService addressTimelineService
     ) {
         this.addressRepository = addressRepository;
         this.employeeAddressLookupPort = employeeAddressLookupPort;
         this.ruleSystemRepository = ruleSystemRepository;
-        this.addressCatalogValidator = addressCatalogValidator;
+        this.postalAddressValidator = postalAddressValidator;
         this.addressTimelineService = addressTimelineService;
     }
 
@@ -80,25 +81,13 @@ public class UpdateAddressService implements UpdateAddressUseCase {
                         normalizedAddressNumber
                 ));
 
-        String countryCode = normalizeCountryCodeForCorrection(command.countryCode(), existing.getCountryCode());
-        String street = normalizeRequiredTextForCorrection("street", command.street(), existing.getStreet());
-        String city = normalizeRequiredTextForCorrection("city", command.city(), existing.getCity());
-        String postalCode = normalizeOptionalTextForCorrection(command.postalCode(), existing.getPostalCode());
-        String regionCode = normalizeOptionalCodeForCorrection(command.regionCode(), existing.getRegionCode());
         LocalDate startDate = requireCorrectedStartDate(command.startDate());
         LocalDate endDate = command.endDate();
-        addressCatalogValidator.validateCountryCode(
-                normalizedRuleSystemCode,
-                countryCode,
-                startDate
-        );
+        // La dirección corregida entera, validada como en el alta (backend#155).
+        PostalAddress address = postalAddressValidator.validate(normalizedRuleSystemCode, command.address(), startDate);
 
         Address corrected = existing.correct(
-                street,
-                city,
-                countryCode,
-                postalCode,
-                regionCode,
+                address,
                 startDate,
                 endDate
         );
@@ -166,57 +155,5 @@ public class UpdateAddressService implements UpdateAddressUseCase {
         }
 
         return addressNumber;
-    }
-
-    private String normalizeCountryCodeForCorrection(String requestedCountryCode, String existingCountryCode) {
-        String normalizedRequested = requestedCountryCode == null ? "" : requestedCountryCode.trim();
-        if (!normalizedRequested.isEmpty()) {
-            return addressCatalogValidator.normalizeRequiredCode("countryCode", normalizedRequested);
-        }
-
-        String normalizedExisting = existingCountryCode == null ? "" : existingCountryCode.trim();
-        if (!normalizedExisting.isEmpty()) {
-            return normalizedExisting.toUpperCase();
-        }
-
-        throw new IllegalArgumentException("countryCode is required");
-    }
-
-    private String normalizeRequiredTextForCorrection(String fieldName, String requestedValue, String existingValue) {
-        String normalizedRequested = requestedValue == null ? "" : requestedValue.trim();
-        if (!normalizedRequested.isEmpty()) {
-            return normalizedRequested;
-        }
-
-        String normalizedExisting = existingValue == null ? "" : existingValue.trim();
-        if (!normalizedExisting.isEmpty()) {
-            return normalizedExisting;
-        }
-
-        throw new IllegalArgumentException(fieldName + " is required");
-    }
-
-    private String normalizeOptionalTextForCorrection(String requestedValue, String existingValue) {
-        if (requestedValue == null) {
-            return existingValue;
-        }
-
-        if (requestedValue.trim().isEmpty()) {
-            return existingValue;
-        }
-
-        return requestedValue.trim();
-    }
-
-    private String normalizeOptionalCodeForCorrection(String requestedValue, String existingValue) {
-        if (requestedValue == null) {
-            return existingValue;
-        }
-
-        if (requestedValue.trim().isEmpty()) {
-            return existingValue;
-        }
-
-        return requestedValue.trim().toUpperCase();
     }
 }

@@ -1,8 +1,9 @@
 package com.b4rrhh.rulesystem.company.application.usecase;
 
+import com.b4rrhh.geo.address.domain.model.PostalAddress;
+import com.b4rrhh.geo.address.application.service.PostalAddressValidator;
 import com.b4rrhh.rulesystem.company.domain.exception.CompanyAlreadyExistsException;
 import com.b4rrhh.rulesystem.company.domain.model.Company;
-import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileCatalogValidator;
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileInputNormalizer;
 import com.b4rrhh.rulesystem.companyprofile.domain.model.CompanyProfile;
 import com.b4rrhh.rulesystem.companyprofile.domain.port.CompanyProfileRepository;
@@ -24,7 +25,7 @@ public class CreateCompanyService implements CreateCompanyUseCase {
     private final RuleEntityTypeRepository ruleEntityTypeRepository;
     private final CompanyProfileRepository companyProfileRepository;
     private final CompanyProfileInputNormalizer inputNormalizer;
-    private final CompanyProfileCatalogValidator catalogValidator;
+    private final PostalAddressValidator postalAddressValidator;
     private final NationalLayerGuard nationalLayerGuard;
 
     public CreateCompanyService(
@@ -33,7 +34,7 @@ public class CreateCompanyService implements CreateCompanyUseCase {
             RuleEntityTypeRepository ruleEntityTypeRepository,
             CompanyProfileRepository companyProfileRepository,
             CompanyProfileInputNormalizer inputNormalizer,
-            CompanyProfileCatalogValidator catalogValidator,
+            PostalAddressValidator postalAddressValidator,
             NationalLayerGuard nationalLayerGuard
     ) {
         this.ruleEntityRepository = ruleEntityRepository;
@@ -41,7 +42,7 @@ public class CreateCompanyService implements CreateCompanyUseCase {
         this.ruleEntityTypeRepository = ruleEntityTypeRepository;
         this.companyProfileRepository = companyProfileRepository;
         this.inputNormalizer = inputNormalizer;
-        this.catalogValidator = catalogValidator;
+        this.postalAddressValidator = postalAddressValidator;
         this.nationalLayerGuard = nationalLayerGuard;
     }
 
@@ -50,7 +51,6 @@ public class CreateCompanyService implements CreateCompanyUseCase {
     public Company create(CreateCompanyCommand command) {
         String ruleSystemCode = inputNormalizer.normalizeRequiredRuleSystemCode(command.ruleSystemCode());
         String companyCode = inputNormalizer.normalizeRequiredCompanyCode(command.companyCode());
-        String countryCode = inputNormalizer.normalizeOptionalCountryCode(command.countryCode());
 
         LocalDate startDate = requireStartDate(command.startDate());
         String name = normalizeRequiredText("name", command.name(), 100);
@@ -71,7 +71,11 @@ public class CreateCompanyService implements CreateCompanyUseCase {
                     throw new CompanyAlreadyExistsException(ruleSystemCode, companyCode);
                 });
 
-        catalogValidator.validateCountryCode(ruleSystemCode, countryCode, startDate);
+        // La dirección de la empresa es opcional entera; si viene, se valida como la del
+        // empleado y la del centro (backend#155).
+        PostalAddress address = command.address() == null
+                ? null
+                : postalAddressValidator.validate(ruleSystemCode, command.address(), startDate);
 
         RuleEntity companyEntity = new RuleEntity(
                 null,
@@ -92,11 +96,7 @@ public class CreateCompanyService implements CreateCompanyUseCase {
         CompanyProfile companyProfile = new CompanyProfile(
                 command.legalName(),
                 command.taxIdentifier(),
-                command.street(),
-                command.city(),
-                command.postalCode(),
-                command.regionCode(),
-                countryCode,
+                address,
                 command.cnaeCode()
         );
 
@@ -115,11 +115,7 @@ public class CreateCompanyService implements CreateCompanyUseCase {
                 companyEntity.isActive(),
                 companyProfile.getLegalName(),
                 companyProfile.getTaxIdentifier(),
-                companyProfile.getStreet(),
-                companyProfile.getCity(),
-                companyProfile.getPostalCode(),
-                companyProfile.getRegionCode(),
-                companyProfile.getCountryCode(),
+                companyProfile.getAddress(),
                 companyProfile.getCnaeCode()
         );
     }

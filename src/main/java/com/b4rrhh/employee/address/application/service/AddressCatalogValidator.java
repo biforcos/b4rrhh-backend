@@ -35,16 +35,6 @@ public class AddressCatalogValidator {
         );
     }
 
-    public void validateCountryCode(String ruleSystemCode, String countryCode, LocalDate referenceDate) {
-        validateCatalog(
-                ruleSystemCode,
-                AddressRuleEntityTypeCodes.COUNTRY,
-                countryCode,
-                "countryCode",
-                referenceDate
-        );
-    }
-
     private void validateCatalog(
             String ruleSystemCode,
             String ruleEntityTypeCode,

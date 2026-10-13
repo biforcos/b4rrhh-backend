@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.address.infrastructure.persistence;
 
+import com.b4rrhh.geo.address.infrastructure.persistence.PostalAddressColumns;
 import com.b4rrhh.employee.address.domain.model.Address;
 import com.b4rrhh.employee.address.domain.port.AddressRepository;
 import org.springframework.stereotype.Component;
@@ -47,7 +48,10 @@ public class AddressPersistenceAdapter implements AddressRepository {
     public Address save(Address address) {
         AddressEntity entity = toEntity(address);
         AddressEntity saved = springDataAddressRepository.save(entity);
-        return toDomain(saved);
+        // La dirección, tal y como se escribió: el nombre del municipio es una fórmula que
+        // Hibernate no lee hasta volver a cargar la fila.
+        return new Address(saved.getId(), saved.getEmployeeId(), saved.getAddressNumber(), saved.getAddressTypeCode(),
+                address.getAddress(), saved.getStartDate(), saved.getEndDate(), saved.getCreatedAt(), saved.getUpdatedAt());
     }
 
     @Override
@@ -61,11 +65,7 @@ public class AddressPersistenceAdapter implements AddressRepository {
                 entity.getEmployeeId(),
                 entity.getAddressNumber(),
                 entity.getAddressTypeCode(),
-                entity.getStreet(),
-                entity.getCity(),
-                entity.getCountryCode(),
-                entity.getPostalCode(),
-                entity.getRegionCode(),
+                entity.getAddress().toDomain(),
                 entity.getStartDate(),
                 entity.getEndDate(),
                 entity.getCreatedAt(),
@@ -79,11 +79,7 @@ public class AddressPersistenceAdapter implements AddressRepository {
         entity.setEmployeeId(address.getEmployeeId());
         entity.setAddressNumber(address.getAddressNumber());
         entity.setAddressTypeCode(address.getAddressTypeCode());
-        entity.setStreet(address.getStreet());
-        entity.setCity(address.getCity());
-        entity.setCountryCode(address.getCountryCode());
-        entity.setPostalCode(address.getPostalCode());
-        entity.setRegionCode(address.getRegionCode());
+        entity.setAddress(PostalAddressColumns.of(address.getAddress()));
         entity.setStartDate(address.getStartDate());
         entity.setEndDate(address.getEndDate());
         entity.setCreatedAt(address.getCreatedAt());

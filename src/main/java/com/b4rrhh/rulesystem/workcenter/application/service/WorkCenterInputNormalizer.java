@@ -1,6 +1,5 @@
 package com.b4rrhh.rulesystem.workcenter.application.service;
 
-import com.b4rrhh.rulesystem.workcenter.domain.model.WorkCenterAddress;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -50,16 +49,6 @@ public class WorkCenterInputNormalizer {
 
     public String normalizeRequiredContactValue(String contactValue) {
         return normalizeRequiredText("contactValue", contactValue, 300);
-    }
-
-    public WorkCenterAddress normalizeAddress(
-            String street,
-            String city,
-            String postalCode,
-            String regionCode,
-            String countryCode
-    ) {
-        return new WorkCenterAddress(street, city, postalCode, regionCode, countryCode);
     }
 
     private String normalizeRequiredCode(String fieldName, String value, int maxLength) {

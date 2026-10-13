@@ -1,6 +1,8 @@
 package com.b4rrhh.employee.address.infrastructure.persistence;
 
+import com.b4rrhh.geo.address.infrastructure.persistence.PostalAddressColumns;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -29,20 +31,9 @@ public class AddressEntity {
     @Column(name = "address_type_code", nullable = false, length = 30)
     private String addressTypeCode;
 
-    @Column(name = "street", nullable = false, length = 300)
-    private String street;
-
-    @Column(name = "city", nullable = false, length = 120)
-    private String city;
-
-    @Column(name = "country_code", nullable = false, length = 3)
-    private String countryCode;
-
-    @Column(name = "postal_code", length = 20)
-    private String postalCode;
-
-    @Column(name = "region_code", length = 30)
-    private String regionCode;
+    // Las columnas de la dirección, las mismas que en la empresa y el centro (backend#155).
+    @Embedded
+    private PostalAddressColumns address = new PostalAddressColumns();
 
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
@@ -104,46 +95,6 @@ public class AddressEntity {
         this.addressTypeCode = addressTypeCode;
     }
 
-    public String getStreet() {
-        return street;
-    }
-
-    public void setStreet(String street) {
-        this.street = street;
-    }
-
-    public String getCity() {
-        return city;
-    }
-
-    public void setCity(String city) {
-        this.city = city;
-    }
-
-    public String getCountryCode() {
-        return countryCode;
-    }
-
-    public void setCountryCode(String countryCode) {
-        this.countryCode = countryCode;
-    }
-
-    public String getPostalCode() {
-        return postalCode;
-    }
-
-    public void setPostalCode(String postalCode) {
-        this.postalCode = postalCode;
-    }
-
-    public String getRegionCode() {
-        return regionCode;
-    }
-
-    public void setRegionCode(String regionCode) {
-        this.regionCode = regionCode;
-    }
-
     public LocalDate getStartDate() {
         return startDate;
     }
@@ -174,5 +125,13 @@ public class AddressEntity {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public PostalAddressColumns getAddress() {
+        return address;
+    }
+
+    public void setAddress(PostalAddressColumns address) {
+        this.address = address;
     }
 }

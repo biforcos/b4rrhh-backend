@@ -1,12 +1,12 @@
 package com.b4rrhh.rulesystem.workcenter.infrastructure.web;
 
+import com.b4rrhh.geo.address.domain.exception.PostalAddressRejectedException;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityIsMaintainedFromItsLayerException;
 import com.b4rrhh.rulesystem.workcenter.domain.exception.WorkCenterAlreadyExistsException;
 import com.b4rrhh.rulesystem.workcenter.domain.exception.WorkCenterCompanyInvalidException;
 import com.b4rrhh.rulesystem.workcenter.domain.exception.WorkCenterContactAlreadyExistsException;
 import com.b4rrhh.rulesystem.workcenter.domain.exception.WorkCenterContactNotFoundException;
 import com.b4rrhh.rulesystem.workcenter.domain.exception.WorkCenterContactTypeInvalidException;
-import com.b4rrhh.rulesystem.workcenter.domain.exception.WorkCenterCountryInvalidException;
 import com.b4rrhh.rulesystem.workcenter.domain.exception.WorkCenterNotApplicableException;
 import com.b4rrhh.rulesystem.workcenter.domain.exception.WorkCenterNotFoundException;
 import com.b4rrhh.rulesystem.workcenter.infrastructure.web.dto.WorkCenterErrorResponse;
@@ -38,7 +38,7 @@ public class WorkCenterExceptionHandler {
 
     @ExceptionHandler({
             WorkCenterCompanyInvalidException.class,
-            WorkCenterCountryInvalidException.class,
+            PostalAddressRejectedException.class,
             WorkCenterContactTypeInvalidException.class,
             IllegalArgumentException.class
     })

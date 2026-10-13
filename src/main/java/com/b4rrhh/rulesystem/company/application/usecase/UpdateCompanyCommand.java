@@ -1,5 +1,7 @@
 package com.b4rrhh.rulesystem.company.application.usecase;
 
+import com.b4rrhh.geo.address.domain.model.PostalAddressInput;
+
 public record UpdateCompanyCommand(
         String ruleSystemCode,
         String companyCode,
@@ -7,11 +9,7 @@ public record UpdateCompanyCommand(
         String description,
         String legalName,
         String taxIdentifier,
-        String street,
-        String city,
-        String postalCode,
-        String regionCode,
-        String countryCode,
+        PostalAddressInput address,
         String cnaeCode
 ) {
 }

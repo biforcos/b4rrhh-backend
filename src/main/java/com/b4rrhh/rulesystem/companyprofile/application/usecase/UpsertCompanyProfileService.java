@@ -1,6 +1,7 @@
 package com.b4rrhh.rulesystem.companyprofile.application.usecase;
 
-import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileCatalogValidator;
+import com.b4rrhh.geo.address.domain.model.PostalAddress;
+import com.b4rrhh.geo.address.application.service.PostalAddressValidator;
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileCompanyResolver;
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileInputNormalizer;
 import com.b4rrhh.rulesystem.companyprofile.domain.model.CompanyProfile;
@@ -18,18 +19,18 @@ public class UpsertCompanyProfileService implements UpsertCompanyProfileUseCase 
     private final CompanyProfileRepository companyProfileRepository;
     private final CompanyProfileCompanyResolver companyProfileCompanyResolver;
     private final CompanyProfileInputNormalizer companyProfileInputNormalizer;
-    private final CompanyProfileCatalogValidator companyProfileCatalogValidator;
+    private final PostalAddressValidator postalAddressValidator;
 
     public UpsertCompanyProfileService(
             CompanyProfileRepository companyProfileRepository,
             CompanyProfileCompanyResolver companyProfileCompanyResolver,
             CompanyProfileInputNormalizer companyProfileInputNormalizer,
-            CompanyProfileCatalogValidator companyProfileCatalogValidator
+            PostalAddressValidator postalAddressValidator
     ) {
         this.companyProfileRepository = companyProfileRepository;
         this.companyProfileCompanyResolver = companyProfileCompanyResolver;
         this.companyProfileInputNormalizer = companyProfileInputNormalizer;
-        this.companyProfileCatalogValidator = companyProfileCatalogValidator;
+        this.postalAddressValidator = postalAddressValidator;
     }
 
     @Override
@@ -37,19 +38,16 @@ public class UpsertCompanyProfileService implements UpsertCompanyProfileUseCase 
     public CompanyProfile upsert(UpsertCompanyProfileCommand command) {
         String ruleSystemCode = companyProfileInputNormalizer.normalizeRequiredRuleSystemCode(command.ruleSystemCode());
         String companyCode = companyProfileInputNormalizer.normalizeRequiredCompanyCode(command.companyCode());
-        String countryCode = companyProfileInputNormalizer.normalizeOptionalCountryCode(command.countryCode());
 
         RuleEntity company = companyProfileCompanyResolver.resolveApplicableToday(ruleSystemCode, companyCode);
-        companyProfileCatalogValidator.validateCountryCode(ruleSystemCode, countryCode, LocalDate.now());
+        PostalAddress address = command.address() == null
+                ? null
+                : postalAddressValidator.validate(ruleSystemCode, command.address(), LocalDate.now());
 
         CompanyProfile requestedProfile = new CompanyProfile(
                 command.legalName(),
                 command.taxIdentifier(),
-                command.street(),
-                command.city(),
-                command.postalCode(),
-                command.regionCode(),
-                countryCode,
+                address,
                 command.cnaeCode()
         );
 
@@ -59,11 +57,7 @@ public class UpsertCompanyProfileService implements UpsertCompanyProfileUseCase 
                 .map(existing -> existing.update(
                         requestedProfile.getLegalName(),
                         requestedProfile.getTaxIdentifier(),
-                        requestedProfile.getStreet(),
-                        requestedProfile.getCity(),
-                        requestedProfile.getPostalCode(),
-                        requestedProfile.getRegionCode(),
-                        requestedProfile.getCountryCode(),
+                        requestedProfile.getAddress(),
                         requestedProfile.getCnaeCode()
                 ))
                 .orElse(requestedProfile);

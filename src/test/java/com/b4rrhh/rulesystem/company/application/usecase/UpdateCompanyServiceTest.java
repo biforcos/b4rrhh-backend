@@ -1,8 +1,8 @@
 package com.b4rrhh.rulesystem.company.application.usecase;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.rulesystem.application.usecase.NationalLayerGuard;
 import com.b4rrhh.rulesystem.company.domain.exception.CompanyNotApplicableException;
-import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileCatalogValidator;
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileCompanyResolver;
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileInputNormalizer;
 import com.b4rrhh.rulesystem.companyprofile.domain.model.CompanyProfile;
@@ -44,7 +44,7 @@ class UpdateCompanyServiceTest {
         service = new UpdateCompanyService(
                 new CompanyProfileCompanyResolver(ruleEntityRepository),
                 new CompanyProfileInputNormalizer(),
-                new CompanyProfileCatalogValidator(ruleEntityRepository),
+                DireccionesDePrueba.validacionQueNoMiraElCatalogo(),
                 ruleEntityRepository,
                 companyProfileRepository,
                 mock(NationalLayerGuard.class)
@@ -56,11 +56,9 @@ class UpdateCompanyServiceTest {
         RuleEntity company = ruleEntity();
         when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COMPANY", "ACME", LocalDate.now()))
                 .thenReturn(Optional.of(company));
-        when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COUNTRY", "ESP", LocalDate.now()))
-                .thenReturn(Optional.of(ruleEntity(99L, "ESP", "COUNTRY", "ESP", "Spain", true)));
         when(ruleEntityRepository.save(any(RuleEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(companyProfileRepository.findByCompanyRuleEntityId(10L)).thenReturn(Optional.of(
-                new CompanyProfile("Old legal", null, null, null, null, null, null, null)
+                new CompanyProfile("Old legal", null, null, null)
         ));
         when(companyProfileRepository.save(any(Long.class), any(CompanyProfile.class)))
                 .thenAnswer(invocation -> invocation.getArgument(1));
@@ -72,11 +70,7 @@ class UpdateCompanyServiceTest {
                 "Updated description",
                 "Acme Spain SA",
                 "A123",
-                "Gran Via 1",
-                "Madrid",
-                "28013",
-                "MD",
-                "ESP",
+                DireccionesDePrueba.input("Gran Via 1", "Madrid", "ESP", "28013"),
                 "4719"
         ));
 
@@ -101,18 +95,16 @@ class UpdateCompanyServiceTest {
         RuleEntity company = ruleEntity();
         when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COMPANY", "ACME", LocalDate.now()))
                 .thenReturn(Optional.of(company));
-        when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COUNTRY", "ESP", LocalDate.now()))
-                .thenReturn(Optional.of(ruleEntity(99L, "ESP", "COUNTRY", "ESP", "Spain", true)));
         when(ruleEntityRepository.save(any(RuleEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(companyProfileRepository.findByCompanyRuleEntityId(10L)).thenReturn(Optional.of(
-                new CompanyProfile("Old legal", null, null, null, null, null, null, "4719")
+                new CompanyProfile("Old legal", null, null, "4719")
         ));
         when(companyProfileRepository.save(any(Long.class), any(CompanyProfile.class)))
                 .thenAnswer(invocation -> invocation.getArgument(1));
 
         var result = service.update(new UpdateCompanyCommand(
                 "ESP", "ACME", "Acme", null, "Acme Spain SA",
-                null, null, null, null, null, "ESP", null));
+                null, DireccionesDePrueba.input(null, null, "ESP", null), null));
 
         assertNull(result.cnaeCode());
     }
@@ -125,8 +117,6 @@ class UpdateCompanyServiceTest {
         RuleEntity company = ruleEntity();
         when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COMPANY", "ACME", LocalDate.now()))
                 .thenReturn(Optional.of(company));
-        when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COUNTRY", "ESP", LocalDate.now()))
-                .thenReturn(Optional.of(ruleEntity(99L, "ESP", "COUNTRY", "ESP", "Spain", true)));
         when(ruleEntityRepository.save(any(RuleEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(companyProfileRepository.findByCompanyRuleEntityId(10L)).thenReturn(Optional.empty());
 
@@ -137,11 +127,7 @@ class UpdateCompanyServiceTest {
                 "Updated description",
                 "Acme Spain SA",
                 "A123",
-                "Gran Via 1",
-                "Madrid",
-                "28013",
-                "MD",
-                "ESP",
+                DireccionesDePrueba.input("Gran Via 1", "Madrid", "ESP", "28013"),
                 "4719"
         )));
 
@@ -161,10 +147,6 @@ class UpdateCompanyServiceTest {
                 "Acme",
                 null,
                 "Acme Spain SA",
-                null,
-                null,
-                null,
-                null,
                 null,
                 null,
                 null

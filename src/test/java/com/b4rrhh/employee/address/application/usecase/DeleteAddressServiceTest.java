@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.address.application.usecase;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.employee.address.application.port.AddressPresenceLookupPort;
 import com.b4rrhh.employee.address.application.port.AddressTypeCoverageLookupPort;
 import com.b4rrhh.employee.address.application.port.EmployeeAddressContext;
@@ -163,7 +164,7 @@ class DeleteAddressServiceTest {
 
     private static Address address(int number, String addressTypeCode, LocalDate startDate, LocalDate endDate) {
         return new Address(
-                (long) number, 10L, number, addressTypeCode, "Calle Mayor " + number, "Madrid", "ESP", "28013", "MD",
+                (long) number, 10L, number, addressTypeCode, DireccionesDePrueba.address("Calle Mayor " + number, "Madrid", "ESP", "28013"),
                 startDate, endDate, LocalDateTime.now(), LocalDateTime.now()
         );
     }

@@ -11,6 +11,7 @@ import com.b4rrhh.employee.address.infrastructure.web.dto.AddressPeriodResponse;
 import com.b4rrhh.employee.address.infrastructure.web.dto.AddressPlanAdjustmentResponse;
 import com.b4rrhh.employee.address.infrastructure.web.dto.AddressPlanResponse;
 import com.b4rrhh.employee.address.infrastructure.web.dto.AddressResponse;
+import com.b4rrhh.geo.address.infrastructure.web.dto.PostalAddressResponse;
 import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
 import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
 import org.springframework.stereotype.Component;
@@ -36,11 +37,7 @@ public class AddressResponseAssembler {
                 address.getAddressNumber(),
                 address.getAddressTypeCode(),
                 addressTypeName,
-                address.getStreet(),
-                address.getCity(),
-                address.getCountryCode(),
-                address.getPostalCode(),
-                address.getRegionCode(),
+                PostalAddressResponse.of(address.getAddress()),
                 address.getStartDate(),
                 address.getEndDate()
         );

@@ -98,8 +98,10 @@ class TheAddressTypesSayWhichIsMandatoryEndToEndTest {
         return JsonPath.read(mockMvc.perform(post("/employees/ESP/INTERNAL/{n}/addresses", employeeNumber)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                { "addressTypeCode": "%s", "street": "Calle Mayor 1", "city": "Madrid",
-                                  "countryCode": "ESP", "postalCode": "28001", "startDate": "2026-04-01" }
+                                { "addressTypeCode": "%s",
+                                  "address": { "streetName": "Calle Mayor 1", "locality": "Madrid",
+                                               "countryCode": "ESP", "postalCode": "28001" },
+                                  "startDate": "2026-04-01" }
                                 """.formatted(type)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString(), "$.addressNumber");
@@ -107,7 +109,8 @@ class TheAddressTypesSayWhichIsMandatoryEndToEndTest {
 
     private static String close() {
         return """
-                { "street": "Calle Mayor 1", "city": "Madrid", "countryCode": "ESP", "postalCode": "28001",
+                { "address": { "streetName": "Calle Mayor 1", "locality": "Madrid", "countryCode": "ESP",
+                               "postalCode": "28001" },
                   "startDate": "2026-04-01", "endDate": "2026-06-30" }
                 """;
     }

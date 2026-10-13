@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.company.infrastructure.web;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.rulesystem.company.application.usecase.CreateCompanyCommand;
 import com.b4rrhh.rulesystem.company.application.usecase.CreateCompanyUseCase;
 import com.b4rrhh.rulesystem.company.application.usecase.GetCompanyQuery;
@@ -82,10 +83,9 @@ class CompanyControllerHttpTest {
                                   "legalName": "Acme Spain SA",
                                   "taxIdentifier": "A12345678",
                                   "address": {
-                                    "street": "Gran Via 1",
-                                    "city": "Madrid",
+                                    "streetName": "Gran Via 1",
+                                    "locality": "Madrid",
                                     "postalCode": "28013",
-                                    "regionCode": "MD",
                                     "countryCode": "ESP"
                                   }
                                 }
@@ -132,10 +132,9 @@ class CompanyControllerHttpTest {
                                   "legalName": "Acme Spain SA",
                                   "taxIdentifier": "A12345678",
                                   "address": {
-                                    "street": "Gran Via 1",
-                                    "city": "Madrid",
+                                    "streetName": "Gran Via 1",
+                                    "locality": "Madrid",
                                     "postalCode": "28013",
-                                    "regionCode": "MD",
                                     "countryCode": "ESP"
                                   }
                                 }
@@ -194,11 +193,7 @@ class CompanyControllerHttpTest {
                 true,
                 "Acme Spain SA",
                 "A12345678",
-                "Gran Via 1",
-                "Madrid",
-                "28013",
-                "MD",
-                "ESP",
+                DireccionesDePrueba.address("Gran Via 1", "Madrid", "ESP", "28013"),
                 "4719"
         );
     }

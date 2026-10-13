@@ -1,7 +1,7 @@
 package com.b4rrhh.rulesystem.company.infrastructure.web.assembler;
 
+import com.b4rrhh.geo.address.infrastructure.web.dto.PostalAddressResponse;
 import com.b4rrhh.rulesystem.company.domain.model.Company;
-import com.b4rrhh.rulesystem.company.infrastructure.web.dto.CompanyAddressResponse;
 import com.b4rrhh.rulesystem.company.infrastructure.web.dto.CompanyListItemResponse;
 import com.b4rrhh.rulesystem.company.infrastructure.web.dto.CompanyResponse;
 import org.springframework.stereotype.Component;
@@ -20,13 +20,7 @@ public class CompanyResponseAssembler {
                 company.active(),
                 company.legalName(),
                 company.taxIdentifier(),
-                new CompanyAddressResponse(
-                        company.street(),
-                        company.city(),
-                        company.postalCode(),
-                        company.regionCode(),
-                        company.countryCode()
-                ),
+                PostalAddressResponse.ofOrEmpty(company.address()),
                 company.cnaeCode()
         );
     }
@@ -38,7 +32,7 @@ public class CompanyResponseAssembler {
                 company.name(),
                 company.legalName(),
                 company.taxIdentifier(),
-                company.countryCode(),
+                company.address() == null ? null : company.address().countryCode(),
                 company.active(),
                 company.startDate(),
                 company.endDate()

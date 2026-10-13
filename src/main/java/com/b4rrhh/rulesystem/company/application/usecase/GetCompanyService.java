@@ -67,11 +67,7 @@ public class GetCompanyService implements GetCompanyUseCase {
                 companyEntity.isActive(),
                 companyProfile.getLegalName(),
                 companyProfile.getTaxIdentifier(),
-                companyProfile.getStreet(),
-                companyProfile.getCity(),
-                companyProfile.getPostalCode(),
-                companyProfile.getRegionCode(),
-                companyProfile.getCountryCode(),
+                companyProfile.getAddress(),
                 companyProfile.getCnaeCode()
         );
     }

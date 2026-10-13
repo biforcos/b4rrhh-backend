@@ -2,6 +2,7 @@ package com.b4rrhh.employee.address.domain.model;
 
 import com.b4rrhh.employee.address.domain.exception.AddressAlreadyClosedException;
 import com.b4rrhh.employee.address.domain.exception.InvalidAddressDateRangeException;
+import com.b4rrhh.geo.address.domain.model.PostalAddress;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -12,11 +13,7 @@ public class Address {
     private final Long employeeId;
     private final Integer addressNumber;
     private final String addressTypeCode;
-    private final String street;
-    private final String city;
-    private final String countryCode;
-    private final String postalCode;
-    private final String regionCode;
+    private final PostalAddress address;
     private final LocalDate startDate;
     private final LocalDate endDate;
     private final LocalDateTime createdAt;
@@ -27,11 +24,7 @@ public class Address {
             Long employeeId,
             Integer addressNumber,
             String addressTypeCode,
-            String street,
-            String city,
-            String countryCode,
-            String postalCode,
-            String regionCode,
+            PostalAddress address,
             LocalDate startDate,
             LocalDate endDate,
             LocalDateTime createdAt,
@@ -43,11 +36,10 @@ public class Address {
         this.employeeId = employeeId;
         this.addressNumber = addressNumber;
         this.addressTypeCode = normalizeRequiredCode("addressTypeCode", addressTypeCode);
-        this.street = normalizeRequiredText("street", street);
-        this.city = normalizeRequiredText("city", city);
-        this.countryCode = normalizeRequiredCode("countryCode", countryCode);
-        this.postalCode = normalizeOptionalText(postalCode);
-        this.regionCode = normalizeOptionalCode(regionCode);
+        if (address == null || address.countryCode() == null) {
+            throw new IllegalArgumentException("address with its countryCode is required");
+        }
+        this.address = address;
         this.startDate = startDate;
         this.endDate = endDate;
         this.createdAt = createdAt;
@@ -67,11 +59,7 @@ public class Address {
                 employeeId,
                 addressNumber,
                 addressTypeCode,
-                street,
-                city,
-                countryCode,
-                postalCode,
-                regionCode,
+                address,
                 startDate,
                 closeDate,
                 createdAt,
@@ -86,11 +74,7 @@ public class Address {
      * overlap is judged by the series, not here.
      */
     public Address correct(
-            String street,
-            String city,
-            String countryCode,
-            String postalCode,
-            String regionCode,
+            PostalAddress address,
             LocalDate startDate,
             LocalDate endDate
     ) {
@@ -99,11 +83,7 @@ public class Address {
                 employeeId,
                 addressNumber,
                 addressTypeCode,
-                street,
-                city,
-                countryCode,
-                postalCode,
-                regionCode,
+                address,
                 startDate,
                 endDate,
                 createdAt,
@@ -122,11 +102,7 @@ public class Address {
                 employeeId,
                 addressNumber,
                 addressTypeCode,
-                street,
-                city,
-                countryCode,
-                postalCode,
-                regionCode,
+                address,
                 startDate,
                 newEndDate,
                 createdAt,
@@ -155,30 +131,6 @@ public class Address {
         return value.trim().toUpperCase();
     }
 
-    private String normalizeRequiredText(String fieldName, String value) {
-        if (value == null || value.trim().isEmpty()) {
-            throw new IllegalArgumentException(fieldName + " is required");
-        }
-
-        return value.trim();
-    }
-
-    private String normalizeOptionalCode(String value) {
-        if (value == null || value.trim().isEmpty()) {
-            return null;
-        }
-
-        return value.trim().toUpperCase();
-    }
-
-    private String normalizeOptionalText(String value) {
-        if (value == null || value.trim().isEmpty()) {
-            return null;
-        }
-
-        return value.trim();
-    }
-
     public Long getId() {
         return id;
     }
@@ -195,24 +147,9 @@ public class Address {
         return addressTypeCode;
     }
 
-    public String getStreet() {
-        return street;
-    }
-
-    public String getCity() {
-        return city;
-    }
-
-    public String getCountryCode() {
-        return countryCode;
-    }
-
-    public String getPostalCode() {
-        return postalCode;
-    }
-
-    public String getRegionCode() {
-        return regionCode;
+    /** La dirección, la misma estructura que la de la empresa y el centro (backend#155). */
+    public PostalAddress getAddress() {
+        return address;
     }
 
     public LocalDate getStartDate() {

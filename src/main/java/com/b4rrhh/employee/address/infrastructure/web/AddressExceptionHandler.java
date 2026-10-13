@@ -2,6 +2,7 @@ package com.b4rrhh.employee.address.infrastructure.web;
 
 import com.b4rrhh.employee.address.domain.exception.AddressAlreadyClosedException;
 import com.b4rrhh.employee.address.domain.exception.AddressCatalogValueInvalidException;
+import com.b4rrhh.geo.address.domain.exception.PostalAddressRejectedException;
 import com.b4rrhh.employee.address.domain.exception.AddressCoverageGapException;
 import com.b4rrhh.employee.address.domain.exception.AddressEmployeeNotFoundException;
 import com.b4rrhh.employee.address.domain.exception.AddressIsACorrectionException;
@@ -37,6 +38,7 @@ public class AddressExceptionHandler {
 
     @ExceptionHandler({
             AddressCatalogValueInvalidException.class,
+            PostalAddressRejectedException.class,
             InvalidAddressDateRangeException.class,
             IllegalArgumentException.class
     })

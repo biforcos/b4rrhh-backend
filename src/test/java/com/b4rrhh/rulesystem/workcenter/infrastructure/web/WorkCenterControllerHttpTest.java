@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.workcenter.infrastructure.web;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.rulesystem.workcenter.application.usecase.CreateWorkCenterCommand;
 import com.b4rrhh.rulesystem.workcenter.application.usecase.CreateWorkCenterContactCommand;
 import com.b4rrhh.rulesystem.workcenter.application.usecase.CreateWorkCenterContactUseCase;
@@ -20,7 +21,6 @@ import com.b4rrhh.rulesystem.workcenter.application.usecase.UpdateWorkCenterUseC
 import com.b4rrhh.rulesystem.workcenter.application.view.WorkCenterDetails;
 import com.b4rrhh.rulesystem.workcenter.domain.exception.WorkCenterNotFoundException;
 import com.b4rrhh.rulesystem.workcenter.domain.model.WorkCenter;
-import com.b4rrhh.rulesystem.workcenter.domain.model.WorkCenterAddress;
 import com.b4rrhh.rulesystem.workcenter.domain.model.WorkCenterContact;
 import com.b4rrhh.rulesystem.workcenter.domain.model.WorkCenterProfile;
 import com.b4rrhh.rulesystem.workcenter.infrastructure.web.assembler.WorkCenterResponseAssembler;
@@ -123,10 +123,9 @@ class WorkCenterControllerHttpTest {
                                   "startDate": "2026-01-01",
                                   "companyCode": "ACME",
                                   "address": {
-                                    "street": "Gran Via 1",
-                                    "city": "Madrid",
+                                    "streetName": "Gran Via 1",
+                                    "locality": "Madrid",
                                     "postalCode": "28013",
-                                    "regionCode": "MD",
                                     "countryCode": "ESP"
                                   }
                                 }
@@ -173,16 +172,15 @@ class WorkCenterControllerHttpTest {
                                   "description": "Headquarters",
                                   "companyCode": "ACME",
                                   "address": {
-                                    "street": "Gran Via 1",
-                                    "city": "Madrid",
+                                    "streetName": "Gran Via 1",
+                                    "locality": "Madrid",
                                     "postalCode": "28013",
-                                    "regionCode": "MD",
                                     "countryCode": "ESP"
                                   }
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.address.city").value("Madrid"));
+                .andExpect(jsonPath("$.address.locality").value("Madrid"));
     }
 
     @Test
@@ -256,7 +254,7 @@ class WorkCenterControllerHttpTest {
                 ),
                 new WorkCenterProfile(
                         "ACME",
-                        new WorkCenterAddress("Gran Via 1", "Madrid", "28013", "MD", "ESP")
+                        DireccionesDePrueba.address("Gran Via 1", "Madrid", "ESP", "28013")
                 )
         );
     }

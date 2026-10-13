@@ -1,7 +1,7 @@
 package com.b4rrhh.rulesystem.companyprofile.infrastructure.web.assembler;
 
+import com.b4rrhh.geo.address.infrastructure.web.dto.PostalAddressResponse;
 import com.b4rrhh.rulesystem.companyprofile.domain.model.CompanyProfile;
-import com.b4rrhh.rulesystem.companyprofile.infrastructure.web.dto.CompanyProfileAddressResponse;
 import com.b4rrhh.rulesystem.companyprofile.infrastructure.web.dto.CompanyProfileResponse;
 import org.springframework.stereotype.Component;
 
@@ -13,13 +13,7 @@ public class CompanyProfileResponseAssembler {
                 normalizeRequiredCompanyCode(companyCode),
                 companyProfile.getLegalName(),
                 companyProfile.getTaxIdentifier(),
-                new CompanyProfileAddressResponse(
-                        companyProfile.getStreet(),
-                        companyProfile.getCity(),
-                        companyProfile.getPostalCode(),
-                        companyProfile.getRegionCode(),
-                        companyProfile.getCountryCode()
-                ),
+                PostalAddressResponse.ofOrEmpty(companyProfile.getAddress()),
                 companyProfile.getCnaeCode()
         );
     }

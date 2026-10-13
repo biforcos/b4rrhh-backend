@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.address.infrastructure.web.assembler;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.employee.address.domain.model.Address;
 import com.b4rrhh.employee.address.infrastructure.web.dto.AddressResponse;
 import com.b4rrhh.rulesystem.translation.application.service.RuleEntityLabelResolver;
@@ -56,11 +57,7 @@ class AddressResponseAssemblerTest {
                 20L,
                 addressNumber,
                 addressTypeCode,
-                "Calle Mayor 10",
-                "Madrid",
-                "ESP",
-                "28013",
-                "M",
+                DireccionesDePrueba.address("Calle Mayor 10", "Madrid", "ESP", "28013"),
                 LocalDate.of(2026, 1, 10),
                 null,
                 LocalDateTime.now(),

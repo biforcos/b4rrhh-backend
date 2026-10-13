@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.workcenter.application.usecase;
 
+import com.b4rrhh.geo.address.domain.model.PostalAddressInput;
 import java.time.LocalDate;
 
 public record CreateWorkCenterCommand(
@@ -9,10 +10,6 @@ public record CreateWorkCenterCommand(
         String description,
         LocalDate startDate,
         String companyCode,
-        String street,
-        String city,
-        String postalCode,
-        String regionCode,
-        String countryCode
+        PostalAddressInput address
 ) {
 }

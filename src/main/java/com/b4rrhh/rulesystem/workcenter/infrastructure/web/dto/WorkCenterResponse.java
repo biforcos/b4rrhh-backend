@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.workcenter.infrastructure.web.dto;
 
+import com.b4rrhh.geo.address.infrastructure.web.dto.PostalAddressResponse;
 import java.time.LocalDate;
 
 public record WorkCenterResponse(
@@ -11,6 +12,6 @@ public record WorkCenterResponse(
         LocalDate endDate,
         boolean active,
         String companyCode,
-        WorkCenterAddress address
+        PostalAddressResponse address
 ) {
 }

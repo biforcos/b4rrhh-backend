@@ -5,7 +5,6 @@ import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import com.b4rrhh.rulesystem.workcenter.application.usecase.WorkCenterRuleEntityTypeCodes;
 import com.b4rrhh.rulesystem.workcenter.domain.exception.WorkCenterCompanyInvalidException;
 import com.b4rrhh.rulesystem.workcenter.domain.exception.WorkCenterContactTypeInvalidException;
-import com.b4rrhh.rulesystem.workcenter.domain.exception.WorkCenterCountryInvalidException;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -26,15 +25,6 @@ public class WorkCenterCatalogValidator {
 
         validate(ruleSystemCode, WorkCenterRuleEntityTypeCodes.COMPANY, companyCode, referenceDate,
                 () -> new WorkCenterCompanyInvalidException(ruleSystemCode, companyCode));
-    }
-
-    public void validateCountryCode(String ruleSystemCode, String countryCode, LocalDate referenceDate) {
-        if (countryCode == null) {
-            return;
-        }
-
-        validate(ruleSystemCode, WorkCenterRuleEntityTypeCodes.COUNTRY, countryCode, referenceDate,
-                () -> new WorkCenterCountryInvalidException(ruleSystemCode, countryCode));
     }
 
     public void validateContactTypeCode(String ruleSystemCode, String contactTypeCode, LocalDate referenceDate) {

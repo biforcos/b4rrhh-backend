@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.company.application.usecase;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.rulesystem.company.domain.exception.CompanyNotApplicableException;
 import com.b4rrhh.rulesystem.company.domain.exception.CompanyNotFoundException;
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileCompanyResolver;
@@ -49,7 +50,7 @@ class GetCompanyServiceTest {
         when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COMPANY", "ACME", LocalDate.now()))
                 .thenReturn(Optional.of(company));
         when(companyProfileRepository.findByCompanyRuleEntityId(10L)).thenReturn(Optional.of(
-                new CompanyProfile("Acme Spain SA", "A123", "Gran Via 1", "Madrid", "28013", "MD", "ESP", null)
+                new CompanyProfile("Acme Spain SA", "A123", DireccionesDePrueba.address("Gran Via 1", "Madrid", "ESP", "28013"), null)
         ));
 
         var result = service.get(new GetCompanyQuery("esp", "acme"));

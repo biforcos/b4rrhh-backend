@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.company.infrastructure.web;
 
+import com.b4rrhh.geo.address.infrastructure.web.dto.PostalAddressRequest;
 import com.b4rrhh.rulesystem.company.application.usecase.CreateCompanyCommand;
 import com.b4rrhh.rulesystem.company.application.usecase.CreateCompanyUseCase;
 import com.b4rrhh.rulesystem.company.application.usecase.GetCompanyQuery;
@@ -10,7 +11,6 @@ import com.b4rrhh.rulesystem.company.application.usecase.UpdateCompanyCommand;
 import com.b4rrhh.rulesystem.company.application.usecase.UpdateCompanyUseCase;
 import com.b4rrhh.rulesystem.company.domain.model.Company;
 import com.b4rrhh.rulesystem.company.infrastructure.web.assembler.CompanyResponseAssembler;
-import com.b4rrhh.rulesystem.company.infrastructure.web.dto.CompanyAddressRequest;
 import com.b4rrhh.rulesystem.company.infrastructure.web.dto.CompanyListItemResponse;
 import com.b4rrhh.rulesystem.company.infrastructure.web.dto.CompanyResponse;
 import com.b4rrhh.rulesystem.company.infrastructure.web.dto.CreateCompanyRequest;
@@ -53,8 +53,6 @@ public class CompanyController {
 
     @PostMapping
     public ResponseEntity<CompanyResponse> create(@RequestBody CreateCompanyRequest request) {
-        CompanyAddressRequest address = request.address();
-
         Company company = createCompanyUseCase.create(
                 new CreateCompanyCommand(
                         request.ruleSystemCode(),
@@ -64,11 +62,7 @@ public class CompanyController {
                         request.startDate(),
                         request.legalName(),
                         request.taxIdentifier(),
-                        address == null ? null : address.street(),
-                        address == null ? null : address.city(),
-                        address == null ? null : address.postalCode(),
-                        address == null ? null : address.regionCode(),
-                        address == null ? null : address.countryCode(),
+                        PostalAddressRequest.toInput(request.address()),
                         request.cnaeCode()
                 )
         );
@@ -102,8 +96,6 @@ public class CompanyController {
             @PathVariable String companyCode,
             @RequestBody UpdateCompanyRequest request
     ) {
-        CompanyAddressRequest address = request.address();
-
         Company company = updateCompanyUseCase.update(
                 new UpdateCompanyCommand(
                         ruleSystemCode,
@@ -112,11 +104,7 @@ public class CompanyController {
                         request.description(),
                         request.legalName(),
                         request.taxIdentifier(),
-                        address == null ? null : address.street(),
-                        address == null ? null : address.city(),
-                        address == null ? null : address.postalCode(),
-                        address == null ? null : address.regionCode(),
-                        address == null ? null : address.countryCode(),
+                        PostalAddressRequest.toInput(request.address()),
                         request.cnaeCode()
                 )
         );

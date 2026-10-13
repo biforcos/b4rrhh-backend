@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.address.application.usecase;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.employee.address.application.model.AddressPlan;
 import com.b4rrhh.employee.address.domain.exception.AddressCoverageGapException;
 import com.b4rrhh.employee.address.domain.exception.AddressIsACorrectionException;
@@ -107,7 +108,7 @@ class AddressTimelineFlywayIntegrationTest {
         Address afterLeaving = createService.create(create(HOME, LocalDate.of(2026, 9, 1), null));
         Address corrected = updateService.update(new UpdateAddressCommand(
                 RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, 2,
-                "Calle Nueva 5", "Sevilla", "ESP", null, null, LocalDate.of(2026, 9, 1), LocalDate.of(2027, 12, 31)
+                DireccionesDePrueba.input("Calle Nueva 5", "Sevilla", "ESP", null), LocalDate.of(2026, 9, 1), LocalDate.of(2027, 12, 31)
         ));
         entityManager.flush();
 
@@ -179,7 +180,7 @@ class AddressTimelineFlywayIntegrationTest {
         // A fiscal address may be closed leaving the rest of the presence without one: its coverage is optional.
         updateService.update(new UpdateAddressCommand(
                 RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, 2,
-                "Calle Fiscal 1", "Madrid", "ESP", null, null, DAY_1, LocalDate.of(2026, 6, 30)
+                DireccionesDePrueba.input("Calle Fiscal 1", "Madrid", "ESP", null), DAY_1, LocalDate.of(2026, 6, 30)
         ));
         entityManager.flush();
         assertEquals(LocalDate.of(2026, 6, 30), persistedEndDate(2));
@@ -189,7 +190,7 @@ class AddressTimelineFlywayIntegrationTest {
                 AddressCoverageGapException.class,
                 () -> updateService.update(new UpdateAddressCommand(
                         RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, 1,
-                        "Calle Mayor 10", "Madrid", "ESP", null, null, DAY_1, LocalDate.of(2026, 6, 30)
+                        DireccionesDePrueba.input("Calle Mayor 10", "Madrid", "ESP", null), DAY_1, LocalDate.of(2026, 6, 30)
                 ))
         );
         entityManager.flush();
@@ -206,7 +207,7 @@ class AddressTimelineFlywayIntegrationTest {
                 AddressCoverageGapException.class,
                 () -> updateService.update(new UpdateAddressCommand(
                         RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber, 2,
-                        "Calle Mayor 10", "Madrid", "ESP", null, null, LocalDate.of(2026, 2, 1), null
+                        DireccionesDePrueba.input("Calle Mayor 10", "Madrid", "ESP", null), LocalDate.of(2026, 2, 1), null
                 ))
         );
         entityManager.flush();
@@ -266,7 +267,7 @@ class AddressTimelineFlywayIntegrationTest {
     private CreateAddressCommand create(String addressTypeCode, LocalDate startDate, LocalDate endDate) {
         return new CreateAddressCommand(
                 RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, employeeNumber,
-                addressTypeCode, "Calle Mayor 10", "Madrid", "ESP", "28013", "MD",
+                addressTypeCode, DireccionesDePrueba.input("Calle Mayor 10", "Madrid", "ESP", "28013"),
                 startDate, endDate
         );
     }

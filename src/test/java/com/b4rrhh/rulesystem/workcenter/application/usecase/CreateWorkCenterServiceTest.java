@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.workcenter.application.usecase;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.rulesystem.application.usecase.NationalLayerGuard;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.model.LiteralClass;
@@ -56,6 +57,7 @@ class CreateWorkCenterServiceTest {
                 workCenterProfileRepository,
                 new WorkCenterInputNormalizer(),
                 new WorkCenterCatalogValidator(ruleEntityRepository),
+                DireccionesDePrueba.validacionQueNoMiraElCatalogo(),
                 mock(NationalLayerGuard.class)
         );
     }
@@ -68,8 +70,6 @@ class CreateWorkCenterServiceTest {
                 .thenReturn(Optional.empty());
         when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COMPANY", "ACME", LocalDate.of(2026, 1, 1)))
                 .thenReturn(Optional.of(ruleEntity(20L, "ESP", "COMPANY", "ACME", "Acme", LocalDate.of(1900, 1, 1), null, true)));
-        when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COUNTRY", "ESP", LocalDate.of(2026, 1, 1)))
-                .thenReturn(Optional.of(ruleEntity(21L, "ESP", "COUNTRY", "ESP", "Spain", LocalDate.of(1900, 1, 1), null, true)));
         when(ruleEntityRepository.save(any(RuleEntity.class)))
                 .thenReturn(ruleEntity(10L, "ESP", "WORK_CENTER", "MADRID-HQ", "Madrid HQ", LocalDate.of(2026, 1, 1), null, true));
         when(workCenterProfileRepository.save(any(Long.class), any(WorkCenterProfile.class)))
@@ -82,12 +82,7 @@ class CreateWorkCenterServiceTest {
                 "Headquarters",
                 LocalDate.of(2026, 1, 1),
                 "acme",
-                "Gran Via 1",
-                "Madrid",
-                "28013",
-                "md",
-                "esp"
-        ));
+                DireccionesDePrueba.input("Gran Via 1", "Madrid", "esp", "28013")));
 
         ArgumentCaptor<RuleEntity> captor = ArgumentCaptor.forClass(RuleEntity.class);
         verify(ruleEntityRepository).save(captor.capture());
@@ -97,7 +92,7 @@ class CreateWorkCenterServiceTest {
         assertEquals("ESP", result.workCenter().ruleSystemCode());
         assertEquals("MADRID-HQ", result.workCenter().workCenterCode());
         assertEquals("ACME", result.profile().getCompanyCode());
-        assertEquals("Madrid", result.profile().getAddress().getCity());
+        assertEquals("Madrid", result.profile().getAddress().locality());
     }
 
     @Test
@@ -114,12 +109,7 @@ class CreateWorkCenterServiceTest {
                 null,
                 LocalDate.of(2026, 1, 1),
                 null,
-                null,
-                null,
-                null,
-                null,
-                null
-        )));
+                null)));
     }
 
     private RuleSystem ruleSystem(String code) {

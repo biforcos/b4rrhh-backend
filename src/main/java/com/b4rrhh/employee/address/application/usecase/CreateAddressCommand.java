@@ -1,5 +1,7 @@
 package com.b4rrhh.employee.address.application.usecase;
 
+import com.b4rrhh.geo.address.domain.model.PostalAddressInput;
+
 import java.time.LocalDate;
 
 public record CreateAddressCommand(
@@ -7,11 +9,7 @@ public record CreateAddressCommand(
         String employeeTypeCode,
         String employeeNumber,
         String addressTypeCode,
-        String street,
-        String city,
-        String countryCode,
-        String postalCode,
-        String regionCode,
+        PostalAddressInput address,
         LocalDate startDate,
         LocalDate endDate
 ) {

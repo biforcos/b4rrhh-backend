@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.workcenter.infrastructure.web.dto;
 
+import com.b4rrhh.geo.address.infrastructure.web.dto.PostalAddressRequest;
 import java.time.LocalDate;
 
 public record CreateWorkCenterRequest(
@@ -9,6 +10,6 @@ public record CreateWorkCenterRequest(
         String description,
         LocalDate startDate,
         String companyCode,
-        WorkCenterAddress address
+        PostalAddressRequest address
 ) {
 }

@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.workcenter.application.usecase;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.rulesystem.application.usecase.NationalLayerGuard;
 import com.b4rrhh.rulesystem.domain.exception.RequiredExtensionMissingException;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
@@ -41,6 +42,7 @@ class UpdateWorkCenterServiceTest {
                 new WorkCenterResolver(ruleEntityRepository),
                 new WorkCenterInputNormalizer(),
                 new WorkCenterCatalogValidator(ruleEntityRepository),
+                DireccionesDePrueba.validacionQueNoMiraElCatalogo(),
                 ruleEntityRepository,
                 workCenterProfileRepository,
                 mock(NationalLayerGuard.class)
@@ -60,7 +62,7 @@ class UpdateWorkCenterServiceTest {
         when(workCenterProfileRepository.save(anyLong(), any())).thenAnswer(inv -> inv.getArgument(1));
 
         WorkCenterDetails result = service.update(new UpdateWorkCenterCommand(
-                "ESP", "MAD-01", "New Name", null, "ES01", null, null, null, null, null));
+                "ESP", "MAD-01", "New Name", null, "ES01", null));
 
         assertEquals("New Name", result.workCenter().name());
         assertEquals("ES01", result.profile().getCompanyCode());
@@ -77,7 +79,7 @@ class UpdateWorkCenterServiceTest {
         when(workCenterProfileRepository.save(anyLong(), any())).thenAnswer(inv -> inv.getArgument(1));
 
         WorkCenterDetails result = service.update(new UpdateWorkCenterCommand(
-                "ESP", "MAD-01", "Madrid HQ", null, null, null, null, null, null, null));
+                "ESP", "MAD-01", "Madrid HQ", null, null, null));
 
         assertNull(result.profile().getCompanyCode());
     }
@@ -93,7 +95,7 @@ class UpdateWorkCenterServiceTest {
         when(workCenterProfileRepository.findByWorkCenterRuleEntityId(10L)).thenReturn(Optional.empty());
 
         assertThrows(RequiredExtensionMissingException.class, () -> service.update(new UpdateWorkCenterCommand(
-                "ESP", "MAD-01", "Madrid HQ", null, null, null, null, null, null, null)));
+                "ESP", "MAD-01", "Madrid HQ", null, null, null)));
 
         verify(workCenterProfileRepository, never()).save(anyLong(), any());
     }

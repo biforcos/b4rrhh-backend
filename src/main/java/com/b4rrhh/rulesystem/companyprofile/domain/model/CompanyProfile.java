@@ -1,13 +1,11 @@
 package com.b4rrhh.rulesystem.companyprofile.domain.model;
 
+import com.b4rrhh.geo.address.domain.model.PostalAddress;
+
 public class CompanyProfile {
 
     private static final int LEGAL_NAME_MAX_LENGTH = 200;
     private static final int TAX_IDENTIFIER_MAX_LENGTH = 50;
-    private static final int STREET_MAX_LENGTH = 300;
-    private static final int CITY_MAX_LENGTH = 120;
-    private static final int POSTAL_CODE_MAX_LENGTH = 20;
-    private static final int REGION_CODE_MAX_LENGTH = 30;
     private static final int CNAE_CODE_MAX_LENGTH = 10;
 
     /**
@@ -22,11 +20,8 @@ public class CompanyProfile {
 
     private final String legalName;
     private final String taxIdentifier;
-    private final String street;
-    private final String city;
-    private final String postalCode;
-    private final String regionCode;
-    private final String countryCode;
+    /** La dirección, la misma estructura que la del empleado y la del centro; {@code null} si no tiene (backend#155). */
+    private final PostalAddress address;
     /**
      * La actividad economica de la empresa, en CNAE ({@code backend#122}).
      *
@@ -52,20 +47,12 @@ public class CompanyProfile {
     public CompanyProfile(
             String legalName,
             String taxIdentifier,
-            String street,
-            String city,
-            String postalCode,
-            String regionCode,
-            String countryCode,
+            PostalAddress address,
             String cnaeCode
     ) {
         this.legalName = normalizeRequiredText("legalName", legalName, LEGAL_NAME_MAX_LENGTH);
         this.taxIdentifier = normalizeOptionalText("taxIdentifier", taxIdentifier, TAX_IDENTIFIER_MAX_LENGTH);
-        this.street = normalizeOptionalText("street", street, STREET_MAX_LENGTH);
-        this.city = normalizeOptionalText("city", city, CITY_MAX_LENGTH);
-        this.postalCode = normalizeOptionalText("postalCode", postalCode, POSTAL_CODE_MAX_LENGTH);
-        this.regionCode = normalizeOptionalCode("regionCode", regionCode, REGION_CODE_MAX_LENGTH);
-        this.countryCode = normalizeOptionalCode(countryCode);
+        this.address = address;
         this.cnaeCode = normalizeOptionalText("cnaeCode", cnaeCode, CNAE_CODE_MAX_LENGTH);
         this.cnaeClassification = this.cnaeCode == null ? null : CNAE_CLASSIFICATION;
     }
@@ -73,21 +60,13 @@ public class CompanyProfile {
     public CompanyProfile update(
             String legalName,
             String taxIdentifier,
-            String street,
-            String city,
-            String postalCode,
-            String regionCode,
-            String countryCode,
+            PostalAddress address,
             String cnaeCode
     ) {
         return new CompanyProfile(
                 legalName,
                 taxIdentifier,
-                street,
-                city,
-                postalCode,
-                regionCode,
-                countryCode,
+                address,
                 cnaeCode
         );
     }
@@ -104,24 +83,8 @@ public class CompanyProfile {
         return taxIdentifier;
     }
 
-    public String getStreet() {
-        return street;
-    }
-
-    public String getCity() {
-        return city;
-    }
-
-    public String getPostalCode() {
-        return postalCode;
-    }
-
-    public String getRegionCode() {
-        return regionCode;
-    }
-
-    public String getCountryCode() {
-        return countryCode;
+    public PostalAddress getAddress() {
+        return address;
     }
 
     public String getCnaeCode() {
@@ -150,16 +113,6 @@ public class CompanyProfile {
 
         validateLength(fieldName, normalized, maxLength);
         return normalized;
-    }
-
-    private String normalizeOptionalCode(String value) {
-        String normalized = normalizeOptionalText("countryCode", value, 3);
-        return normalized == null ? null : normalized.toUpperCase();
-    }
-
-    private String normalizeOptionalCode(String fieldName, String value, int maxLength) {
-        String normalized = normalizeOptionalText(fieldName, value, maxLength);
-        return normalized == null ? null : normalized.toUpperCase();
     }
 
     private void validateLength(String fieldName, String value, int maxLength) {

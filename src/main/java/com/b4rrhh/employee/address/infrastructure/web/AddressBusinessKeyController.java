@@ -15,6 +15,7 @@ import com.b4rrhh.employee.address.infrastructure.web.assembler.AddressResponseA
 import com.b4rrhh.employee.address.infrastructure.web.dto.AddressPlanResponse;
 import com.b4rrhh.employee.address.infrastructure.web.dto.AddressResponse;
 import com.b4rrhh.employee.address.infrastructure.web.dto.CreateAddressRequest;
+import com.b4rrhh.geo.address.infrastructure.web.dto.PostalAddressRequest;
 import com.b4rrhh.employee.address.infrastructure.web.dto.PlanAddressChangeRequest;
 import com.b4rrhh.employee.address.infrastructure.web.dto.UpdateAddressRequest;
 import com.b4rrhh.shared.infrastructure.web.language.ResponseLanguage;
@@ -75,11 +76,7 @@ public class AddressBusinessKeyController {
                         employeeTypeCode,
                         employeeNumber,
                         request.addressTypeCode(),
-                        request.street(),
-                        request.city(),
-                        request.countryCode(),
-                        request.postalCode(),
-                        request.regionCode(),
+                        PostalAddressRequest.toInput(request.address()),
                         request.startDate(),
                         request.endDate()
                 )
@@ -137,11 +134,7 @@ public class AddressBusinessKeyController {
                         employeeTypeCode,
                         employeeNumber,
                         addressNumber,
-                        request.street(),
-                        request.city(),
-                        request.countryCode(),
-                        request.postalCode(),
-                        request.regionCode(),
+                        PostalAddressRequest.toInput(request.address()),
                         request.startDate(),
                         request.endDate()
                 )

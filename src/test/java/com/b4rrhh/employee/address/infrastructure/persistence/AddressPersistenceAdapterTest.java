@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.address.infrastructure.persistence;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.employee.address.domain.model.Address;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,11 +40,7 @@ class AddressPersistenceAdapterTest {
                 10L,
                 1,
                 "HOME",
-                "Calle Mayor 10",
-                "Madrid",
-                "ESP",
-                "28013",
-                "MD",
+                DireccionesDePrueba.address("Calle Mayor 10", "Madrid", "ESP", "28013"),
                 LocalDate.of(2026, 1, 10),
                 LocalDate.of(2026, 2, 1),
                 createdAt,

@@ -9,6 +9,10 @@
 -- entera con el backend nuevo y comparando esta huella con la de la semilla de
 -- referencia. «Cero recibos se mueven» es que las catorce salen iguales.
 --
+-- Desde la V177 (backend#155) la direccion es la estructurada: tipo de via, nombre, numero...,
+-- municipio, provincia, CP, pais y la marca normalized. Contra una base anterior a la V177 esta
+-- consulta no corre: las columnas street, city y region_code ya no existen.
+--
 -- Eran once. backend#159 anadio direccion, documentos y contactos: son lo que leen
 -- los catalogos que el backend#158 subio a COM e INT (paises, tipos de documento,
 -- de contacto y de direccion), y la huella no los miraba. Por eso el fichero se
@@ -52,8 +56,12 @@ filas(tabla, fila) as (
            coalesce(photo_url, '∅'))
       from employee.employee
     union all
-    select 'employee.address', concat_ws('|', emp.k, address_number, address_type_code, street, city,
-           country_code, coalesce(postal_code, '∅'), coalesce(region_code, '∅'),
+    select 'employee.address', concat_ws('|', emp.k, address_number, address_type_code,
+           coalesce(street_type_code, '∅'), coalesce(street_name, '∅'), coalesce(street_number, '∅'),
+           coalesce(number_qualifier, '∅'), coalesce(block, '∅'), coalesce(stair, '∅'),
+           coalesce(floor, '∅'), coalesce(door, '∅'), coalesce(locality, '∅'),
+           coalesce(municipality_code, '∅'), coalesce(subdivision_code, '∅'),
+           coalesce(postal_code, '∅'), country_code, normalized,
            start_date, coalesce(end_date::text, '∅'))
       from employee.address x join emp on emp.id = x.employee_id
     union all

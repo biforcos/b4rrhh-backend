@@ -1,12 +1,12 @@
 package com.b4rrhh.rulesystem.companyprofile.infrastructure.web;
 
+import com.b4rrhh.geo.address.infrastructure.web.dto.PostalAddressRequest;
 import com.b4rrhh.rulesystem.companyprofile.application.usecase.GetCompanyProfileQuery;
 import com.b4rrhh.rulesystem.companyprofile.application.usecase.GetCompanyProfileUseCase;
 import com.b4rrhh.rulesystem.companyprofile.application.usecase.UpsertCompanyProfileCommand;
 import com.b4rrhh.rulesystem.companyprofile.application.usecase.UpsertCompanyProfileUseCase;
 import com.b4rrhh.rulesystem.companyprofile.domain.model.CompanyProfile;
 import com.b4rrhh.rulesystem.companyprofile.infrastructure.web.assembler.CompanyProfileResponseAssembler;
-import com.b4rrhh.rulesystem.companyprofile.infrastructure.web.dto.CompanyProfileAddressRequest;
 import com.b4rrhh.rulesystem.companyprofile.infrastructure.web.dto.CompanyProfileResponse;
 import com.b4rrhh.rulesystem.companyprofile.infrastructure.web.dto.UpsertCompanyProfileRequest;
 import org.springframework.http.ResponseEntity;
@@ -53,19 +53,13 @@ public class CompanyProfileController {
             @PathVariable String companyCode,
             @RequestBody UpsertCompanyProfileRequest request
     ) {
-        CompanyProfileAddressRequest address = request.address();
-
         CompanyProfile companyProfile = upsertCompanyProfileUseCase.upsert(
                 new UpsertCompanyProfileCommand(
                         ruleSystemCode,
                         companyCode,
                         request.legalName(),
                         request.taxIdentifier(),
-                        address == null ? null : address.street(),
-                        address == null ? null : address.city(),
-                        address == null ? null : address.postalCode(),
-                        address == null ? null : address.regionCode(),
-                        address == null ? null : address.countryCode(),
+                        PostalAddressRequest.toInput(request.address()),
                         request.cnaeCode()
                 )
         );

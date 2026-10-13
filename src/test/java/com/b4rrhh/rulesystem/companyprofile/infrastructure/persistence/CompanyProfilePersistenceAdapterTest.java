@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.companyprofile.infrastructure.persistence;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.rulesystem.companyprofile.domain.model.CompanyProfile;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,11 +50,7 @@ class CompanyProfilePersistenceAdapterTest {
         adapter.save(10L, new CompanyProfile(
                 "Acme Spain SA",
                 "A12345678",
-                "Gran Via 1",
-                "Madrid",
-                "28013",
-                "MD",
-                "ESP",
+                DireccionesDePrueba.address("Gran Via 1", "Madrid", "ESP", "28013"),
                 null
         ));
 
@@ -64,7 +61,7 @@ class CompanyProfilePersistenceAdapterTest {
         assertEquals(createdAt, persistedEntity.getCreatedAt());
         assertEquals(updatedAt, persistedEntity.getUpdatedAt());
         assertEquals("Acme Spain SA", persistedEntity.getLegalName());
-        assertEquals("ESP", persistedEntity.getCountryCode());
+        assertEquals("ESP", persistedEntity.getAddress().toDomain().countryCode());
     }
 
     @Test
@@ -81,10 +78,6 @@ class CompanyProfilePersistenceAdapterTest {
 
         adapter.save(10L, new CompanyProfile(
                 "Acme Spain SA",
-                null,
-                null,
-                null,
-                null,
                 null,
                 null,
                 null

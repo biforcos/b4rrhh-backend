@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.company.infrastructure.web.dto;
 
+import com.b4rrhh.geo.address.infrastructure.web.dto.PostalAddressRequest;
 import java.time.LocalDate;
 
 public record CreateCompanyRequest(
@@ -10,7 +11,7 @@ public record CreateCompanyRequest(
         LocalDate startDate,
         String legalName,
         String taxIdentifier,
-        CompanyAddressRequest address,
+        PostalAddressRequest address,
         String cnaeCode
 ) {
 }

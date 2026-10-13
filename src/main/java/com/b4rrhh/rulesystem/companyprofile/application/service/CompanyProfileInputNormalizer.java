@@ -13,24 +13,6 @@ public class CompanyProfileInputNormalizer {
         return normalizeRequiredCode("companyCode", companyCode, 30);
     }
 
-    public String normalizeOptionalCountryCode(String countryCode) {
-        if (countryCode == null) {
-            return null;
-        }
-
-        String normalized = countryCode.trim();
-        if (normalized.isEmpty()) {
-            return null;
-        }
-
-        normalized = normalized.toUpperCase();
-        if (normalized.length() != 3) {
-            throw new IllegalArgumentException("countryCode must have length 3");
-        }
-
-        return normalized;
-    }
-
     private String normalizeRequiredCode(String fieldName, String value, int maxLength) {
         if (value == null || value.trim().isEmpty()) {
             throw new IllegalArgumentException(fieldName + " is required");

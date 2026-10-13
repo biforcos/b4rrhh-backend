@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.address.application.usecase;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.employee.address.application.port.AddressPresenceLookupPort;
 import com.b4rrhh.employee.address.application.port.AddressTypeCoverageLookupPort;
 import com.b4rrhh.employee.address.application.port.EmployeeAddressContext;
@@ -32,6 +33,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -63,12 +65,11 @@ class UpdateAddressServiceTest {
 
     @BeforeEach
     void setUp() {
-        AddressCatalogValidator addressCatalogValidator = new AddressCatalogValidator(ruleEntityRepository);
         service = new UpdateAddressService(
                 addressRepository,
                 employeeAddressLookupPort,
                 ruleSystemRepository,
-                addressCatalogValidator,
+                DireccionesDePrueba.validacionQueNoMiraElCatalogo(),
                 new AddressTimelineService(addressRepository, presencePort, coveragePort)
         );
     }
@@ -80,11 +81,7 @@ class UpdateAddressServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER,
                 1,
-                "Calle Mayor 10",
-                "Madrid",
-                "ESP",
-                "28013",
-                "MD",
+                DireccionesDePrueba.input("Calle Mayor 10", "Madrid", "ESP", "28013"),
                 LocalDate.of(2026, 1, 10),
                 LocalDate.of(2026, 6, 30)
         );
@@ -93,8 +90,6 @@ class UpdateAddressServiceTest {
         when(employeeAddressLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
                 .thenReturn(Optional.of(employeeContext(10L)));
         when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existingAddress()));
-        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "ESP"))
-                .thenReturn(Optional.of(activeCountryRuleEntity()));
         // The employee left on 2026-06-30: closing the domicile that day leaves no gap.
         when(addressRepository.findByEmployeeIdAndAddressTypeCodeOrderByStartDate(10L, "HOME"))
                 .thenReturn(List.of(existingAddress()));
@@ -117,11 +112,7 @@ class UpdateAddressServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER,
                 1,
-                "Calle Mayor 10",
-                "Madrid",
-                "ESP",
-                "28013",
-                "MD",
+                DireccionesDePrueba.input("Calle Mayor 10", "Madrid", "ESP", "28013"),
                 LocalDate.of(2026, 2, 1),
                 null
         );
@@ -130,8 +121,6 @@ class UpdateAddressServiceTest {
         when(employeeAddressLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
                 .thenReturn(Optional.of(employeeContext(10L)));
         when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existingAddress()));
-        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "ESP"))
-                .thenReturn(Optional.of(activeCountryRuleEntity()));
         givenTheHomeSeriesOf(existingAddress());
 
         AddressCoverageGapException ex = assertThrows(AddressCoverageGapException.class, () -> service.update(command));
@@ -156,11 +145,7 @@ class UpdateAddressServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER,
                 1,
-                "Calle de Alcala 100",
-                "Madrid",
-                "esp",
-                "28009",
-                "md",
+                DireccionesDePrueba.input("Calle de Alcala 100", "Madrid", "esp", "28009"),
                 LocalDate.of(2026, 1, 10),
                 null
         );
@@ -171,8 +156,6 @@ class UpdateAddressServiceTest {
         when(employeeAddressLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
                 .thenReturn(Optional.of(employeeContext(10L)));
         when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existing));
-        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "ESP"))
-                .thenReturn(Optional.of(activeCountryRuleEntity()));
         givenTheHomeSeriesOf(existingAddress());
         when(addressRepository.save(any(Address.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -187,15 +170,43 @@ class UpdateAddressServiceTest {
         assertEquals(existing.getAddressTypeCode(), savedAddress.getAddressTypeCode());
         assertEquals(existing.getStartDate(), savedAddress.getStartDate());
 
-        assertEquals("Calle de Alcala 100", savedAddress.getStreet());
-        assertEquals("Madrid", savedAddress.getCity());
-        assertEquals("ESP", savedAddress.getCountryCode());
-        assertEquals("28009", savedAddress.getPostalCode());
-        assertEquals("MD", savedAddress.getRegionCode());
+        assertEquals("Calle de Alcala 100", savedAddress.getAddress().streetName());
+        assertEquals("Madrid", savedAddress.getAddress().locality());
+        assertEquals("ESP", savedAddress.getAddress().countryCode());
+        assertEquals("28009", savedAddress.getAddress().postalCode());
 
         assertEquals(existing.getAddressNumber(), updated.getAddressNumber());
         assertEquals(existing.getAddressTypeCode(), updated.getAddressTypeCode());
         assertEquals(existing.getStartDate(), updated.getStartDate());
+    }
+
+    // The correction is the whole address, not a patch (backend#155): with thirteen fields, merging
+    // what arrives empty with what was there left no way to clear one. What is not sent is empty.
+    @Test
+    void theCorrectionReplacesTheWholeAddress() {
+        UpdateAddressCommand command = new UpdateAddressCommand(
+                RULE_SYSTEM_CODE,
+                EMPLOYEE_TYPE_CODE,
+                EMPLOYEE_NUMBER,
+                1,
+                DireccionesDePrueba.input(null, null, "ESP", null),
+                LocalDate.of(2026, 1, 10),
+                null
+        );
+
+        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem()));
+        when(employeeAddressLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
+                .thenReturn(Optional.of(employeeContext(10L)));
+        when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existingAddress()));
+        givenTheHomeSeriesOf(existingAddress());
+        when(addressRepository.save(any(Address.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Address updated = service.update(command);
+
+        assertEquals("ESP", updated.getAddress().countryCode());
+        assertNull(updated.getAddress().streetName());
+        assertNull(updated.getAddress().locality());
+        assertNull(updated.getAddress().postalCode());
     }
 
     // A body without a start date used to mean "leave both dates as they
@@ -210,11 +221,7 @@ class UpdateAddressServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER,
                 1,
-                "Calle de Alcala 100",
-                "Madrid",
-                "ESP",
-                "28009",
-                "MD",
+                DireccionesDePrueba.input("Calle de Alcala 100", "Madrid", "ESP", "28009"),
                 null,
                 null
         );
@@ -242,11 +249,7 @@ class UpdateAddressServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER,
                 1,
-                "Calle de Alcala 100",
-                "Madrid",
-                "ESP",
-                "28009",
-                "MD",
+                DireccionesDePrueba.input("Calle de Alcala 100", "Madrid", "ESP", "28009"),
                 null,
                 null
         );
@@ -265,11 +268,7 @@ class UpdateAddressServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER,
                 9,
-                "Calle de Alcala 100",
-                "Madrid",
-                "ESP",
-                "28009",
-                "MD",
+                DireccionesDePrueba.input("Calle de Alcala 100", "Madrid", "ESP", "28009"),
                 null,
                 null
         );
@@ -282,205 +281,13 @@ class UpdateAddressServiceTest {
         assertThrows(AddressNotFoundException.class, () -> service.update(command));
     }
 
-    @Test
-    void rejectsInvalidCountryCatalogValue() {
-        UpdateAddressCommand command = new UpdateAddressCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                1,
-                "Calle de Alcala 100",
-                "Madrid",
-                "BAD",
-                "28009",
-                "MD",
-                LocalDate.of(2026, 1, 10),
-                null
-        );
-
-        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem()));
-        when(employeeAddressLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .thenReturn(Optional.of(employeeContext(10L)));
-        when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existingAddress()));
-        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "BAD"))
-                .thenReturn(Optional.empty());
-
-        assertThrows(AddressCatalogValueInvalidException.class, () -> service.update(command));
-    }
-
-    @Test
-    void usesExistingCountryCodeWhenRequestCountryCodeIsBlank() {
-        UpdateAddressCommand command = new UpdateAddressCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                1,
-                "Calle de Alcala 100",
-                "Madrid",
-                "  ",
-                "28009",
-                "MD",
-                LocalDate.of(2026, 1, 10),
-                null
-        );
-
-        Address existing = existingAddress();
-
-        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem()));
-        when(employeeAddressLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .thenReturn(Optional.of(employeeContext(10L)));
-        when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existing));
-        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "ESP"))
-                .thenReturn(Optional.of(activeCountryRuleEntity()));
-        givenTheHomeSeriesOf(existingAddress());
-        when(addressRepository.save(any(Address.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        Address updated = service.update(command);
-
-        assertEquals("ESP", updated.getCountryCode());
-    }
-
-    @Test
-    void usesExistingStreetAndCityWhenRequestValuesAreBlank() {
-        UpdateAddressCommand command = new UpdateAddressCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                1,
-                "   ",
-                "",
-                "ESP",
-                "28009",
-                "MD",
-                LocalDate.of(2026, 1, 10),
-                null
-        );
-
-        Address existing = existingAddress();
-
-        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem()));
-        when(employeeAddressLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .thenReturn(Optional.of(employeeContext(10L)));
-        when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existing));
-        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "ESP"))
-                .thenReturn(Optional.of(activeCountryRuleEntity()));
-        givenTheHomeSeriesOf(existingAddress());
-        when(addressRepository.save(any(Address.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        Address updated = service.update(command);
-
-        assertEquals(existing.getStreet(), updated.getStreet());
-        assertEquals(existing.getCity(), updated.getCity());
-    }
-
-    @Test
-    void usesExistingPostalCodeAndRegionCodeWhenRequestValuesAreBlank() {
-        UpdateAddressCommand command = new UpdateAddressCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                1,
-                "Calle de Alcala 100",
-                "Madrid",
-                "ESP",
-                "  ",
-                "",
-                LocalDate.of(2026, 1, 10),
-                null
-        );
-
-        Address existing = existingAddress();
-
-        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem()));
-        when(employeeAddressLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .thenReturn(Optional.of(employeeContext(10L)));
-        when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existing));
-        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "ESP"))
-                .thenReturn(Optional.of(activeCountryRuleEntity()));
-        givenTheHomeSeriesOf(existingAddress());
-        when(addressRepository.save(any(Address.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        Address updated = service.update(command);
-
-        assertEquals(existing.getPostalCode(), updated.getPostalCode());
-        assertEquals(existing.getRegionCode(), updated.getRegionCode());
-    }
-
-    @Test
-    void usesExistingPostalCodeAndRegionCodeWhenRequestValuesAreNull() {
-        UpdateAddressCommand command = new UpdateAddressCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                1,
-                "Calle de Alcala 100",
-                "Madrid",
-                "ESP",
-                null,
-                null,
-                LocalDate.of(2026, 1, 10),
-                null
-        );
-
-        Address existing = existingAddress();
-
-        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem()));
-        when(employeeAddressLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .thenReturn(Optional.of(employeeContext(10L)));
-        when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existing));
-        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "ESP"))
-                .thenReturn(Optional.of(activeCountryRuleEntity()));
-        givenTheHomeSeriesOf(existingAddress());
-        when(addressRepository.save(any(Address.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        Address updated = service.update(command);
-
-        assertEquals(existing.getPostalCode(), updated.getPostalCode());
-        assertEquals(existing.getRegionCode(), updated.getRegionCode());
-    }
-
-    @Test
-    void updatesPostalCodeAndRegionCodeWhenRequestValuesAreProvided() {
-        UpdateAddressCommand command = new UpdateAddressCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                1,
-                "Calle de Alcala 100",
-                "Madrid",
-                "ESP",
-                "28001",
-                "ca",
-                LocalDate.of(2026, 1, 10),
-                null
-        );
-
-        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem()));
-        when(employeeAddressLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .thenReturn(Optional.of(employeeContext(10L)));
-        when(addressRepository.findByEmployeeIdAndAddressNumber(10L, 1)).thenReturn(Optional.of(existingAddress()));
-        when(ruleEntityRepository.findByBusinessKey(RULE_SYSTEM_CODE, AddressRuleEntityTypeCodes.COUNTRY, "ESP"))
-                .thenReturn(Optional.of(activeCountryRuleEntity()));
-        givenTheHomeSeriesOf(existingAddress());
-        when(addressRepository.save(any(Address.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        Address updated = service.update(command);
-
-        assertEquals("28001", updated.getPostalCode());
-        assertEquals("CA", updated.getRegionCode());
-    }
-
     private Address existingAddress() {
         return new Address(
                 20L,
                 10L,
                 1,
                 "HOME",
-                "Calle Mayor 10",
-                "Madrid",
-                "ESP",
-                "28013",
-                "MD",
+                DireccionesDePrueba.address("Calle Mayor 10", "Madrid", "ESP", "28013"),
                 LocalDate.of(2026, 1, 10),
                 null,
                 LocalDateTime.now(),

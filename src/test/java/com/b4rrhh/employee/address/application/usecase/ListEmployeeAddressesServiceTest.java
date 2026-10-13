@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.address.application.usecase;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.employee.address.application.port.EmployeeAddressContext;
 import com.b4rrhh.employee.address.application.port.EmployeeAddressLookupPort;
 import com.b4rrhh.employee.address.domain.exception.AddressEmployeeNotFoundException;
@@ -80,11 +81,7 @@ class ListEmployeeAddressesServiceTest {
                 employeeId,
                 number,
                 "HOME",
-                "Calle Mayor 10",
-                "Madrid",
-                "ESP",
-                "28013",
-                "MD",
+                DireccionesDePrueba.address("Calle Mayor 10", "Madrid", "ESP", "28013"),
                 startDate,
                 endDate,
                 LocalDateTime.now(),

@@ -119,7 +119,7 @@ class ARuleSystemDoesNotWriteWhatAnotherLayerDefinesEndToEndTest {
                 returning id
                 """, Long.class);
         jdbcTemplate.update("""
-                insert into employee.address (employee_id, address_number, address_type_code, street, city, country_code, start_date)
+                insert into employee.address (employee_id, address_number, address_type_code, street_name, locality, country_code, start_date)
                 values (?, 1, 'FISCAL', 'Rue 1', 'Andorra la Vella', 'AND', date '2026-01-01')
                 """, employeeId);
 

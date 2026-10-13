@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.address.infrastructure.web;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.employee.address.application.model.AddressPlan;
 import com.b4rrhh.employee.address.application.model.AddressPlanAdjustment;
 import com.b4rrhh.employee.address.application.usecase.CreateAddressUseCase;
@@ -104,18 +105,19 @@ class AddressBusinessKeyControllerHttpTest {
                         .contentType("application/json")
                         .content("""
                                 {
-                                  "street": "Calle de Alcala 100",
-                                  "city": "Madrid",
-                                  "countryCode": "ESP",
-                                  "postalCode": "28009",
-                                  "regionCode": "MD",
+                                  "address": {
+                                    "streetName": "Calle de Alcala 100",
+                                    "locality": "Madrid",
+                                    "countryCode": "ESP",
+                                    "postalCode": "28009"
+                                  },
                                   "startDate": "2026-01-10"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.addressNumber").value(1))
                 .andExpect(jsonPath("$.addressTypeName").value("Domicilio"))
-                .andExpect(jsonPath("$.street").value("Calle de Alcala 100"))
+                .andExpect(jsonPath("$.address.streetName").value("Calle de Alcala 100"))
                 .andExpect(jsonPath("$.employeeId").doesNotExist())
                 .andExpect(jsonPath("$.id").doesNotExist());
 
@@ -137,9 +139,11 @@ class AddressBusinessKeyControllerHttpTest {
                         .contentType("application/json")
                         .content("""
                                 {
-                                  "street": "Calle de Alcala 100",
-                                  "city": "Madrid",
-                                  "countryCode": "ESP",
+                                  "address": {
+                                    "streetName": "Calle de Alcala 100",
+                                    "locality": "Madrid",
+                                    "countryCode": "ESP"
+                                  },
                                   "startDate": "2026-01-10",
                                   "endDate": "2026-06-30"
                                 }
@@ -165,9 +169,11 @@ class AddressBusinessKeyControllerHttpTest {
                         .contentType("application/json")
                         .content("""
                                 {
-                                  "street": "Calle de Alcala 100",
-                                  "city": "Madrid",
-                                  "countryCode": "ESP"
+                                  "address": {
+                                    "streetName": "Calle de Alcala 100",
+                                    "locality": "Madrid",
+                                    "countryCode": "ESP"
+                                  }
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
@@ -189,9 +195,11 @@ class AddressBusinessKeyControllerHttpTest {
                         .contentType("application/json")
                         .content("""
                                 {
-                                  "street": "Calle de Alcala 100",
-                                  "city": "Madrid",
-                                  "countryCode": "ESP",
+                                  "address": {
+                                    "streetName": "Calle de Alcala 100",
+                                    "locality": "Madrid",
+                                    "countryCode": "ESP"
+                                  },
                                   "startDate": "2026-02-01"
                                 }
                                 """))
@@ -216,9 +224,11 @@ class AddressBusinessKeyControllerHttpTest {
                         .content("""
                                 {
                                   "addressTypeCode": "HOME",
-                                  "street": "Calle de Alcala 100",
-                                  "city": "Madrid",
-                                  "countryCode": "ESP",
+                                  "address": {
+                                    "streetName": "Calle de Alcala 100",
+                                    "locality": "Madrid",
+                                    "countryCode": "ESP"
+                                  },
                                   "startDate": "2026-01-20",
                                   "endDate": "2026-02-10"
                                 }
@@ -242,9 +252,11 @@ class AddressBusinessKeyControllerHttpTest {
                         .content("""
                                 {
                                   "addressTypeCode": "HOME",
-                                  "street": "Calle de Alcala 100",
-                                  "city": "Madrid",
-                                  "countryCode": "ESP",
+                                  "address": {
+                                    "streetName": "Calle de Alcala 100",
+                                    "locality": "Madrid",
+                                    "countryCode": "ESP"
+                                  },
                                   "startDate": "2026-01-10"
                                 }
                                 """))
@@ -397,11 +409,12 @@ class AddressBusinessKeyControllerHttpTest {
                         .contentType("application/json")
                         .content("""
                                 {
-                                  "street": "Calle de Alcala 100",
-                                  "city": "Madrid",
-                                  "countryCode": "ESP",
-                                  "postalCode": "28009",
-                                  "regionCode": "MD"
+                                  "address": {
+                                    "streetName": "Calle de Alcala 100",
+                                    "locality": "Madrid",
+                                    "countryCode": "ESP",
+                                    "postalCode": "28009"
+                                  }
                                 }
                                 """))
                 .andExpect(status().isNotFound());
@@ -417,11 +430,12 @@ class AddressBusinessKeyControllerHttpTest {
                         .contentType("application/json")
                         .content("""
                                 {
-                                  "street": "Calle de Alcala 100",
-                                  "city": "Madrid",
-                                  "countryCode": "ESP",
-                                  "postalCode": "28009",
-                                  "regionCode": "MD"
+                                  "address": {
+                                    "streetName": "Calle de Alcala 100",
+                                    "locality": "Madrid",
+                                    "countryCode": "ESP",
+                                    "postalCode": "28009"
+                                  }
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -438,11 +452,12 @@ class AddressBusinessKeyControllerHttpTest {
                         .contentType("application/json")
                         .content("""
                                 {
-                                  "street": "Calle de Alcala 100",
-                                  "city": "Madrid",
-                                  "countryCode": "ESP",
-                                  "postalCode": "28009",
-                                  "regionCode": "MD"
+                                  "address": {
+                                    "streetName": "Calle de Alcala 100",
+                                    "locality": "Madrid",
+                                    "countryCode": "ESP",
+                                    "postalCode": "28009"
+                                  }
                                 }
                                 """))
                 .andExpect(status().isNotFound());
@@ -468,11 +483,12 @@ class AddressBusinessKeyControllerHttpTest {
                         .contentType("application/json")
                         .content("""
                                 {
-                                  "street": "Calle de Alcala 100",
-                                  "city": "Madrid",
-                                  "countryCode": "BAD",
-                                  "postalCode": "28009",
-                                  "regionCode": "MD"
+                                  "address": {
+                                    "streetName": "Calle de Alcala 100",
+                                    "locality": "Madrid",
+                                    "countryCode": "BAD",
+                                    "postalCode": "28009"
+                                  }
                                 }
                                 """))
                 .andExpect(status().isBadRequest());
@@ -484,11 +500,7 @@ class AddressBusinessKeyControllerHttpTest {
                 10L,
                 1,
                 "HOME",
-                "Calle de Alcala 100",
-                "Madrid",
-                "ESP",
-                "28009",
-                "MD",
+                DireccionesDePrueba.address("Calle de Alcala 100", "Madrid", "ESP", "28009"),
                 LocalDate.of(2026, 1, 10),
                 null,
                 LocalDateTime.now(),

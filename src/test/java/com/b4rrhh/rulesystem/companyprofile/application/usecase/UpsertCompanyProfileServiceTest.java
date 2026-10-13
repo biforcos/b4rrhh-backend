@@ -1,11 +1,10 @@
 package com.b4rrhh.rulesystem.companyprofile.application.usecase;
 
-import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileCatalogValidator;
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileCompanyResolver;
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileInputNormalizer;
 import com.b4rrhh.rulesystem.companyprofile.domain.exception.CompanyProfileCompanyNotApplicableException;
 import com.b4rrhh.rulesystem.companyprofile.domain.exception.CompanyProfileCompanyNotFoundException;
-import com.b4rrhh.rulesystem.companyprofile.domain.exception.CompanyProfileCountryInvalidException;
 import com.b4rrhh.rulesystem.companyprofile.domain.model.CompanyProfile;
 import com.b4rrhh.rulesystem.companyprofile.domain.port.CompanyProfileRepository;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
@@ -43,7 +42,7 @@ class UpsertCompanyProfileServiceTest {
                 companyProfileRepository,
                                 new CompanyProfileCompanyResolver(ruleEntityRepository),
                                 new CompanyProfileInputNormalizer(),
-                new CompanyProfileCatalogValidator(ruleEntityRepository)
+                DireccionesDePrueba.validacionQueNoMiraElCatalogo()
         );
     }
 
@@ -52,8 +51,6 @@ class UpsertCompanyProfileServiceTest {
         when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COMPANY", "ACME", java.time.LocalDate.now()))
                 .thenReturn(Optional.of(ruleEntity(10L, "ESP", "COMPANY", "ACME")));
         when(companyProfileRepository.findByCompanyRuleEntityId(10L)).thenReturn(Optional.empty());
-        when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COUNTRY", "ESP", java.time.LocalDate.now()))
-                .thenReturn(Optional.of(ruleEntity(99L, "ESP", "COUNTRY", "ESP")));
         when(companyProfileRepository.save(any(Long.class), any(CompanyProfile.class)))
                 .thenAnswer(invocation -> invocation.getArgument(1));
 
@@ -62,18 +59,14 @@ class UpsertCompanyProfileServiceTest {
                 "acme",
                 "Acme Spain SA",
                 "A12345678",
-                "Gran Via 1",
-                "Madrid",
-                "28013",
-                "MD",
-                "esp",
+                DireccionesDePrueba.input("Gran Via 1", "Madrid", "esp", "28013"),
                 null
         ));
 
         ArgumentCaptor<CompanyProfile> captor = ArgumentCaptor.forClass(CompanyProfile.class);
         verify(companyProfileRepository).save(org.mockito.Mockito.eq(10L), captor.capture());
         assertEquals("Acme Spain SA", captor.getValue().getLegalName());
-        assertEquals("ESP", captor.getValue().getCountryCode());
+        assertEquals("ESP", captor.getValue().getAddress().countryCode());
         assertEquals("Acme Spain SA", result.getLegalName());
     }
 
@@ -85,15 +78,9 @@ class UpsertCompanyProfileServiceTest {
                 .thenReturn(Optional.of(new CompanyProfile(
                         "Old Legal Name",
                         null,
-                        "Old Street",
-                        "Madrid",
-                        null,
-                        null,
-                        null,
+                        DireccionesDePrueba.address("Old Street", "Madrid", null, null),
                         null
                 )));
-        when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COUNTRY", "ESP", java.time.LocalDate.now()))
-                .thenReturn(Optional.of(ruleEntity(99L, "ESP", "COUNTRY", "ESP")));
         when(companyProfileRepository.save(any(Long.class), any(CompanyProfile.class)))
                 .thenAnswer(invocation -> invocation.getArgument(1));
 
@@ -102,17 +89,13 @@ class UpsertCompanyProfileServiceTest {
                 "ACME",
                 "Acme Spain SA",
                 "A12345678",
-                "Gran Via 1",
-                "Madrid",
-                "28013",
-                "MD",
-                "ESP",
+                DireccionesDePrueba.input("Gran Via 1", "Madrid", "ESP", "28013"),
                 null
         ));
 
         assertEquals("Acme Spain SA", result.getLegalName());
-        assertEquals("Gran Via 1", result.getStreet());
-        assertEquals("ESP", result.getCountryCode());
+        assertEquals("Gran Via 1", result.getAddress().streetName());
+        assertEquals("ESP", result.getAddress().countryCode());
     }
 
     @Test
@@ -130,34 +113,6 @@ class UpsertCompanyProfileServiceTest {
                         "Missing Company SA",
                         null,
                         null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null
-                ))
-        );
-    }
-
-    @Test
-    void rejectsInvalidCountryCodeWhenProvided() {
-        when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COMPANY", "ACME", java.time.LocalDate.now()))
-                .thenReturn(Optional.of(ruleEntity(10L, "ESP", "COMPANY", "ACME")));
-        when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COUNTRY", "ZZZ", java.time.LocalDate.now()))
-                .thenReturn(Optional.empty());
-
-        assertThrows(
-                CompanyProfileCountryInvalidException.class,
-                () -> service.upsert(new UpsertCompanyProfileCommand(
-                        "ESP",
-                        "ACME",
-                        "Acme Spain SA",
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        "ZZZ",
                         null
                 ))
         );
@@ -178,10 +133,6 @@ class UpsertCompanyProfileServiceTest {
                         "Acme Spain SA",
                         null,
                         null,
-                        null,
-                        null,
-                        null,
-                        null,
                         null
                 ))
         );
@@ -192,14 +143,12 @@ class UpsertCompanyProfileServiceTest {
         when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COMPANY", "ACME", LocalDate.now()))
                 .thenReturn(Optional.of(ruleEntity(10L, "ESP", "COMPANY", "ACME")));
         when(companyProfileRepository.findByCompanyRuleEntityId(10L)).thenReturn(Optional.empty());
-        when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COUNTRY", "ESP", LocalDate.now()))
-                .thenReturn(Optional.of(ruleEntity(99L, "ESP", "COUNTRY", "ESP")));
         when(companyProfileRepository.save(any(Long.class), any(CompanyProfile.class)))
                 .thenAnswer(invocation -> invocation.getArgument(1));
 
         CompanyProfile result = service.upsert(new UpsertCompanyProfileCommand(
                 "ESP", "ACME", "Acme Spain SA", null,
-                null, null, null, null, "ESP", "6210"
+                DireccionesDePrueba.input(null, null, "ESP", null), "6210"
         ));
 
         assertEquals("6210", result.getCnaeCode());

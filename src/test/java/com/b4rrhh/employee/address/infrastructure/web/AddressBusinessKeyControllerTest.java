@@ -1,5 +1,7 @@
 package com.b4rrhh.employee.address.infrastructure.web;
 
+import com.b4rrhh.geo.address.infrastructure.web.dto.PostalAddressRequest;
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.employee.address.application.usecase.CreateAddressCommand;
 import com.b4rrhh.employee.address.application.usecase.CreateAddressUseCase;
 import com.b4rrhh.employee.address.application.usecase.DeleteAddressUseCase;
@@ -73,11 +75,7 @@ class AddressBusinessKeyControllerTest {
     void createsAddressUsingEmployeeBusinessKey() {
         CreateAddressRequest request = new CreateAddressRequest(
                 "HOME",
-                "Calle Mayor 10",
-                "Madrid",
-                "ESP",
-                "28013",
-                "MD",
+                new PostalAddressRequest(null, "Calle Mayor 10", null, null, null, null, null, null, "Madrid", null, null, "28013", "ESP"),
                 LocalDate.of(2026, 1, 10),
                 null
         );
@@ -128,11 +126,7 @@ class AddressBusinessKeyControllerTest {
     @Test
     void updatesAddressUsingBusinessKeyAndAddressNumber() {
         UpdateAddressRequest request = new UpdateAddressRequest(
-                "Calle de Alcala 100",
-                "Madrid",
-                "ESP",
-                "28009",
-                "MD",
+                new PostalAddressRequest(null, "Calle de Alcala 100", null, null, null, null, null, null, "Madrid", null, null, "28009", "ESP"),
                 null,
                 null
         );
@@ -144,7 +138,7 @@ class AddressBusinessKeyControllerTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals("Calle de Alcala 100", response.getBody().street());
+        assertEquals("Calle de Alcala 100", response.getBody().address().streetName());
         assertEquals("HOME", response.getBody().addressTypeCode());
         assertNull(response.getBody().addressTypeName());
 
@@ -154,7 +148,7 @@ class AddressBusinessKeyControllerTest {
         assertEquals("INTERNAL", captor.getValue().employeeTypeCode());
         assertEquals("EMP001", captor.getValue().employeeNumber());
         assertEquals(1, captor.getValue().addressNumber());
-        assertEquals("Calle de Alcala 100", captor.getValue().street());
+        assertEquals("Calle de Alcala 100", captor.getValue().address().streetName());
     }
 
     private Address activeAddress() {
@@ -163,11 +157,7 @@ class AddressBusinessKeyControllerTest {
                 10L,
                 1,
                 "HOME",
-                "Calle Mayor 10",
-                "Madrid",
-                "ESP",
-                "28013",
-                "MD",
+                DireccionesDePrueba.address("Calle Mayor 10", "Madrid", "ESP", "28013"),
                 LocalDate.of(2026, 1, 10),
                 null,
                 LocalDateTime.now(),
@@ -181,11 +171,7 @@ class AddressBusinessKeyControllerTest {
                 10L,
                 1,
                 "HOME",
-                "Calle Mayor 10",
-                "Madrid",
-                "ESP",
-                "28013",
-                "MD",
+                DireccionesDePrueba.address("Calle Mayor 10", "Madrid", "ESP", "28013"),
                 LocalDate.of(2026, 1, 10),
                 LocalDate.of(2026, 2, 1),
                 LocalDateTime.now(),
@@ -199,11 +185,7 @@ class AddressBusinessKeyControllerTest {
                 10L,
                 1,
                 "HOME",
-                "Calle de Alcala 100",
-                "Madrid",
-                "ESP",
-                "28009",
-                "MD",
+                DireccionesDePrueba.address("Calle de Alcala 100", "Madrid", "ESP", "28009"),
                 LocalDate.of(2026, 1, 10),
                 null,
                 LocalDateTime.now(),

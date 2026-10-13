@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.company.application.usecase;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileInputNormalizer;
 import com.b4rrhh.rulesystem.companyprofile.domain.model.CompanyProfile;
 import com.b4rrhh.rulesystem.companyprofile.domain.port.CompanyProfileRepository;
@@ -55,7 +56,7 @@ class ListCompaniesServiceTest {
         when(ruleEntityRepository.findByFilters(null, "COMPANY", null, true, LocalDate.now()))
                 .thenReturn(List.of(company));
         when(companyProfileRepository.findByCompanyRuleEntityId(10L)).thenReturn(Optional.of(
-                new CompanyProfile("Acme Spain SA", "A123", null, null, null, null, "ESP", null)
+                new CompanyProfile("Acme Spain SA", "A123", DireccionesDePrueba.address(null, null, "ESP", null), null)
         ));
 
         var result = service.list(new ListCompaniesQuery(null));

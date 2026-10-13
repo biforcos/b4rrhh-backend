@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.companyprofile.infrastructure.web;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.rulesystem.companyprofile.application.usecase.GetCompanyProfileQuery;
 import com.b4rrhh.rulesystem.companyprofile.application.usecase.GetCompanyProfileUseCase;
 import com.b4rrhh.rulesystem.companyprofile.application.usecase.UpsertCompanyProfileCommand;
@@ -65,13 +66,13 @@ class CompanyProfileControllerHttpTest {
     @Test
     void getAlwaysReturnsNonNullAddressObject() throws Exception {
         when(getCompanyProfileUseCase.get(any(GetCompanyProfileQuery.class)))
-                .thenReturn(new CompanyProfile("Acme Spain SA", null, null, null, null, null, null, null));
+                .thenReturn(new CompanyProfile("Acme Spain SA", null, null, null));
 
         mockMvc.perform(get("/companies/esp/acme/profile"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.companyCode").value("ACME"))
                 .andExpect(jsonPath("$.address").exists())
-                .andExpect(jsonPath("$.address.street").isEmpty());
+                .andExpect(jsonPath("$.address.streetName").isEmpty());
     }
 
     @Test
@@ -86,10 +87,9 @@ class CompanyProfileControllerHttpTest {
                                   "legalName": "Acme Spain SA",
                                   "taxIdentifier": "A12345678",
                                   "address": {
-                                    "street": "Gran Via 1",
-                                    "city": "Madrid",
+                                    "streetName": "Gran Via 1",
+                                    "locality": "Madrid",
                                     "postalCode": "28013",
-                                    "regionCode": "MD",
                                     "countryCode": "ESP"
                                   }
                                 }
@@ -103,7 +103,7 @@ class CompanyProfileControllerHttpTest {
         assertEquals("ESP", captor.getValue().ruleSystemCode());
         assertEquals("ACME", captor.getValue().companyCode());
         assertEquals("Acme Spain SA", captor.getValue().legalName());
-        assertEquals("ESP", captor.getValue().countryCode());
+        assertEquals("ESP", captor.getValue().address().countryCode());
     }
 
     @Test
@@ -120,11 +120,7 @@ class CompanyProfileControllerHttpTest {
         return new CompanyProfile(
                 "Acme Spain SA",
                 "A12345678",
-                "Gran Via 1",
-                "Madrid",
-                "28013",
-                "MD",
-                "ESP",
+                DireccionesDePrueba.address("Gran Via 1", "Madrid", "ESP", "28013"),
                 null
         );
     }

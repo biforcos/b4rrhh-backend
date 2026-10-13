@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.address.application.service;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.employee.address.application.model.AddressPlan;
 import com.b4rrhh.employee.address.application.model.AddressPlanAdjustment;
 import com.b4rrhh.employee.address.application.port.AddressPresenceLookupPort;
@@ -315,11 +316,7 @@ class AddressTimelineServiceTest {
                 EMPLOYEE_ID,
                 number,
                 addressTypeCode,
-                "Calle Mayor " + number,
-                "Madrid",
-                "ESP",
-                "28013",
-                "MD",
+                DireccionesDePrueba.address("Calle Mayor " + number, "Madrid", "ESP", "28013"),
                 startDate,
                 endDate,
                 LocalDateTime.now(),

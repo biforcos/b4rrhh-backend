@@ -1,5 +1,7 @@
 package com.b4rrhh.rulesystem.workcenter.application.usecase;
 
+import com.b4rrhh.geo.address.application.service.PostalAddressValidator;
+import com.b4rrhh.geo.address.domain.model.PostalAddress;
 import com.b4rrhh.rulesystem.workcenter.application.view.WorkCenterDetails;
 import com.b4rrhh.rulesystem.application.usecase.NationalLayerGuard;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
@@ -10,7 +12,6 @@ import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterCatalogVal
 import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterInputNormalizer;
 import com.b4rrhh.rulesystem.workcenter.domain.exception.WorkCenterAlreadyExistsException;
 import com.b4rrhh.rulesystem.workcenter.domain.model.WorkCenter;
-import com.b4rrhh.rulesystem.workcenter.domain.model.WorkCenterAddress;
 import com.b4rrhh.rulesystem.workcenter.domain.model.WorkCenterProfile;
 import com.b4rrhh.rulesystem.workcenter.domain.port.WorkCenterProfileRepository;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ public class CreateWorkCenterService implements CreateWorkCenterUseCase {
     private final WorkCenterProfileRepository workCenterProfileRepository;
     private final WorkCenterInputNormalizer inputNormalizer;
     private final WorkCenterCatalogValidator catalogValidator;
+    private final PostalAddressValidator postalAddressValidator;
     private final NationalLayerGuard nationalLayerGuard;
 
     public CreateWorkCenterService(
@@ -34,6 +36,7 @@ public class CreateWorkCenterService implements CreateWorkCenterUseCase {
             WorkCenterProfileRepository workCenterProfileRepository,
             WorkCenterInputNormalizer inputNormalizer,
             WorkCenterCatalogValidator catalogValidator,
+            PostalAddressValidator postalAddressValidator,
             NationalLayerGuard nationalLayerGuard
     ) {
         this.ruleEntityRepository = ruleEntityRepository;
@@ -42,6 +45,7 @@ public class CreateWorkCenterService implements CreateWorkCenterUseCase {
         this.workCenterProfileRepository = workCenterProfileRepository;
         this.inputNormalizer = inputNormalizer;
         this.catalogValidator = catalogValidator;
+        this.postalAddressValidator = postalAddressValidator;
         this.nationalLayerGuard = nationalLayerGuard;
     }
 
@@ -54,13 +58,6 @@ public class CreateWorkCenterService implements CreateWorkCenterUseCase {
         String description = inputNormalizer.normalizeOptionalDescription(command.description());
         java.time.LocalDate startDate = inputNormalizer.requireStartDate(command.startDate());
         String companyCode = inputNormalizer.normalizeOptionalCompanyCode(command.companyCode());
-        WorkCenterAddress address = inputNormalizer.normalizeAddress(
-                command.street(),
-                command.city(),
-                command.postalCode(),
-                command.regionCode(),
-                command.countryCode()
-        );
 
         ruleSystemRepository.findByCode(ruleSystemCode).orElseThrow(
                 () -> new IllegalArgumentException("Rule system not found with code: " + ruleSystemCode)
@@ -80,7 +77,11 @@ public class CreateWorkCenterService implements CreateWorkCenterUseCase {
                 });
 
         catalogValidator.validateCompanyCode(ruleSystemCode, companyCode, startDate);
-        catalogValidator.validateCountryCode(ruleSystemCode, address.getCountryCode(), startDate);
+        // La dirección del centro es opcional entera; si viene, se valida como la del empleado
+        // y la de la empresa (backend#155).
+        PostalAddress address = command.address() == null
+                ? null
+                : postalAddressValidator.validate(ruleSystemCode, command.address(), startDate);
 
         RuleEntity savedEntity = ruleEntityRepository.save(new RuleEntity(
                 null,

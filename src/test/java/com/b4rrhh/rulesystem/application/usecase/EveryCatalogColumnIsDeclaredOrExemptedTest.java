@@ -46,10 +46,17 @@ class EveryCatalogColumnIsDeclaredOrExemptedTest {
             "es un concepto del motor de nómina (payroll_engine.payroll_concept), no una fila de rule_entity",
             "address.postal_code",
             "es el código postal escrito por el usuario; geo.postal_code (backend#154) no es un "
-                    + "catálogo de rule_entity, y la dirección no lo usa hasta el backend#155",
-            "address.region_code",
-            "es texto libre de provincia/región; los tipos REGION y PROVINCE existen desde el "
-                    + "backend#154, pero la dirección no los usa hasta el backend#155"
+                    + "catálogo de rule_entity, y la validación de la dirección sólo mira su provincia",
+            "address.municipality_code",
+            "es un municipio del maestro geo (geo.municipality, backend#154), no una fila de rule_entity",
+            "address.street_type_code",
+            "es un STREET_TYPE de la capa ESP, y no de la reglamentación del empleado: se valida por el "
+                    + "país de la dirección (un empleado de FRA puede vivir en Valencia), y una dirección "
+                    + "sin normalizar puede guardar uno que no está; la marca lo dice (backend#155)",
+            "address.subdivision_code",
+            "es una PROVINCE de la capa ESP, y no de la reglamentación del empleado: se valida por el "
+                    + "país de la dirección, y una dirección sin normalizar puede guardar una que no está; "
+                    + "la marca lo dice (backend#155)"
     );
 
     @Autowired

@@ -1,9 +1,9 @@
 package com.b4rrhh.rulesystem.company.application.usecase;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.rulesystem.application.usecase.NationalLayerGuard;
 import com.b4rrhh.rulesystem.company.domain.exception.CompanyAlreadyExistsException;
 import com.b4rrhh.rulesystem.company.domain.model.Company;
-import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileCatalogValidator;
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileInputNormalizer;
 import com.b4rrhh.rulesystem.companyprofile.domain.model.CompanyProfile;
 import com.b4rrhh.rulesystem.companyprofile.domain.port.CompanyProfileRepository;
@@ -54,7 +54,7 @@ class CreateCompanyServiceTest {
                 ruleEntityTypeRepository,
                 companyProfileRepository,
                 new CompanyProfileInputNormalizer(),
-                new CompanyProfileCatalogValidator(ruleEntityRepository),
+                DireccionesDePrueba.validacionQueNoMiraElCatalogo(),
                 mock(NationalLayerGuard.class)
         );
     }
@@ -83,8 +83,6 @@ class CreateCompanyServiceTest {
                 LocalDateTime.now()
         )));
         when(ruleEntityRepository.findByBusinessKey("ESP", "COMPANY", "ACME")).thenReturn(Optional.empty());
-        when(ruleEntityRepository.findApplicableByBusinessKey("ESP", "COUNTRY", "ESP", LocalDate.of(2026, 1, 1)))
-                .thenReturn(Optional.of(ruleEntity(99L, "ESP", "COUNTRY", "ESP", "Spain", LocalDate.of(1900, 1, 1), null, true)));
         when(ruleEntityRepository.save(any(RuleEntity.class))).thenReturn(ruleEntity(10L, "ESP", "COMPANY", "ACME", "Acme SA", LocalDate.of(2026, 1, 1), null, true));
         when(companyProfileRepository.save(any(Long.class), any(CompanyProfile.class)))
                 .thenAnswer(invocation -> invocation.getArgument(1));
@@ -97,11 +95,7 @@ class CreateCompanyServiceTest {
                 LocalDate.of(2026, 1, 1),
                 "Acme Spain SA",
                 "A12345678",
-                "Gran Via 1",
-                "Madrid",
-                "28013",
-                "MD",
-                "ESP",
+                DireccionesDePrueba.input("Gran Via 1", "Madrid", "ESP", "28013"),
                 "4719"
         ));
 
@@ -149,10 +143,6 @@ class CreateCompanyServiceTest {
                 null,
                 LocalDate.of(2026, 1, 1),
                 "Acme Spain SA",
-                null,
-                null,
-                null,
-                null,
                 null,
                 null,
                 null

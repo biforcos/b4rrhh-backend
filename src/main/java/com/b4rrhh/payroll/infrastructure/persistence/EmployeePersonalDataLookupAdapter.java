@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll.infrastructure.persistence;
 
+import com.b4rrhh.geo.address.domain.model.PostalAddress;
 import com.b4rrhh.employee.address.infrastructure.persistence.AddressEntity;
 import com.b4rrhh.employee.address.infrastructure.persistence.SpringDataAddressRepository;
 import com.b4rrhh.employee.employee.infrastructure.persistence.EmployeeEntity;
@@ -53,20 +54,23 @@ public class EmployeePersonalDataLookupAdapter implements EmployeePersonalDataLo
                 .map(i -> i.getIdentifierValue())
                 .orElse(null);
 
-        Optional<AddressEntity> activeAddress = addressRepository
+        Optional<PostalAddress> activeAddress = addressRepository
                 .findByEmployeeIdOrderByStartDateAsc(employee.getId())
                 .stream()
                 .filter(a -> "HOME".equals(a.getAddressTypeCode())
                         && !a.getStartDate().isAfter(referenceDate)
                         && (a.getEndDate() == null || !a.getEndDate().isBefore(referenceDate)))
-                .reduce((first, second) -> second);
+                .reduce((first, second) -> second)
+                .map(a -> a.getAddress().toDomain());
 
         return new EmployeePersonalDataContext(
                 fullName,
                 nif,
-                activeAddress.map(AddressEntity::getStreet).orElse(null),
-                activeAddress.map(AddressEntity::getCity).orElse(null),
-                activeAddress.map(AddressEntity::getPostalCode).orElse(null)
+                // La cabecera del recibo: la vía y la población compuestas de la dirección
+                // estructurada (backend#155).
+                activeAddress.map(PostalAddress::streetLine).orElse(null),
+                activeAddress.map(PostalAddress::townLine).orElse(null),
+                activeAddress.map(PostalAddress::postalCode).orElse(null)
         );
     }
 

@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.company.application.usecase;
 
+import com.b4rrhh.geo.address.domain.model.PostalAddressInput;
 import java.time.LocalDate;
 
 public record CreateCompanyCommand(
@@ -10,11 +11,7 @@ public record CreateCompanyCommand(
         LocalDate startDate,
         String legalName,
         String taxIdentifier,
-        String street,
-        String city,
-        String postalCode,
-        String regionCode,
-        String countryCode,
+        PostalAddressInput address,
         String cnaeCode
 ) {
 }

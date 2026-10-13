@@ -1,9 +1,10 @@
 package com.b4rrhh.rulesystem.company.application.usecase;
 
+import com.b4rrhh.geo.address.domain.model.PostalAddress;
+import com.b4rrhh.geo.address.application.service.PostalAddressValidator;
 import com.b4rrhh.rulesystem.company.domain.exception.CompanyNotApplicableException;
 import com.b4rrhh.rulesystem.company.domain.exception.CompanyNotFoundException;
 import com.b4rrhh.rulesystem.company.domain.model.Company;
-import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileCatalogValidator;
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileCompanyResolver;
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileInputNormalizer;
 import com.b4rrhh.rulesystem.companyprofile.domain.exception.CompanyProfileCompanyNotApplicableException;
@@ -24,7 +25,7 @@ public class UpdateCompanyService implements UpdateCompanyUseCase {
 
     private final CompanyProfileCompanyResolver companyResolver;
     private final CompanyProfileInputNormalizer inputNormalizer;
-    private final CompanyProfileCatalogValidator catalogValidator;
+    private final PostalAddressValidator postalAddressValidator;
     private final RuleEntityRepository ruleEntityRepository;
     private final CompanyProfileRepository companyProfileRepository;
     private final NationalLayerGuard nationalLayerGuard;
@@ -32,14 +33,14 @@ public class UpdateCompanyService implements UpdateCompanyUseCase {
     public UpdateCompanyService(
             CompanyProfileCompanyResolver companyResolver,
             CompanyProfileInputNormalizer inputNormalizer,
-            CompanyProfileCatalogValidator catalogValidator,
+            PostalAddressValidator postalAddressValidator,
             RuleEntityRepository ruleEntityRepository,
             CompanyProfileRepository companyProfileRepository,
             NationalLayerGuard nationalLayerGuard
     ) {
         this.companyResolver = companyResolver;
         this.inputNormalizer = inputNormalizer;
-        this.catalogValidator = catalogValidator;
+        this.postalAddressValidator = postalAddressValidator;
         this.ruleEntityRepository = ruleEntityRepository;
         this.companyProfileRepository = companyProfileRepository;
         this.nationalLayerGuard = nationalLayerGuard;
@@ -50,11 +51,14 @@ public class UpdateCompanyService implements UpdateCompanyUseCase {
     public Company update(UpdateCompanyCommand command) {
         String ruleSystemCode = inputNormalizer.normalizeRequiredRuleSystemCode(command.ruleSystemCode());
         String companyCode = inputNormalizer.normalizeRequiredCompanyCode(command.companyCode());
-        String countryCode = inputNormalizer.normalizeOptionalCountryCode(command.countryCode());
 
         RuleEntity companyEntity = resolveApplicableCompany(ruleSystemCode, companyCode);
         nationalLayerGuard.requireDefinedInNationalLayer(ruleSystemCode, companyEntity);
-        catalogValidator.validateCountryCode(ruleSystemCode, countryCode, LocalDate.now());
+        // La dirección de la empresa es opcional entera; si viene, se valida como la del
+        // empleado y la del centro (backend#155).
+        PostalAddress address = command.address() == null
+                ? null
+                : postalAddressValidator.validate(ruleSystemCode, command.address(), LocalDate.now());
 
         String name = normalizeRequiredText("name", command.name(), 100);
         String description = normalizeOptionalText("description", command.description(), 500);
@@ -69,11 +73,7 @@ public class UpdateCompanyService implements UpdateCompanyUseCase {
         CompanyProfile updatedProfile = existingProfile.update(
                 command.legalName(),
                 command.taxIdentifier(),
-                command.street(),
-                command.city(),
-                command.postalCode(),
-                command.regionCode(),
-                countryCode,
+                address,
                 // Con null aqui, editar una empresa le borraba el CNAE. Mientras la columna no la
                 // leia nadie eso no se notaba; desde el backend#122 le quita a sus empleados la
                 // cuota de accidentes de trabajo y hace fallar la corrida siguiente.
@@ -105,11 +105,7 @@ public class UpdateCompanyService implements UpdateCompanyUseCase {
                 companyEntity.isActive(),
                 companyProfile.getLegalName(),
                 companyProfile.getTaxIdentifier(),
-                companyProfile.getStreet(),
-                companyProfile.getCity(),
-                companyProfile.getPostalCode(),
-                companyProfile.getRegionCode(),
-                companyProfile.getCountryCode(),
+                companyProfile.getAddress(),
                 companyProfile.getCnaeCode()
         );
     }

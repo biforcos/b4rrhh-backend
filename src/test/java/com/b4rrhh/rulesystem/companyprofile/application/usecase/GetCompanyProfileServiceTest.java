@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.companyprofile.application.usecase;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileCompanyResolver;
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileInputNormalizer;
 import com.b4rrhh.rulesystem.companyprofile.domain.exception.CompanyProfileCompanyNotApplicableException;
@@ -110,6 +111,6 @@ class GetCompanyProfileServiceTest {
     }
 
     private CompanyProfile companyProfile(String legalName) {
-        return new CompanyProfile(legalName, "A12345678", "Gran Via 1", "Madrid", "28013", "MD", "ESP", null);
+        return new CompanyProfile(legalName, "A12345678", DireccionesDePrueba.address("Gran Via 1", "Madrid", "ESP", "28013"), null);
     }
 }

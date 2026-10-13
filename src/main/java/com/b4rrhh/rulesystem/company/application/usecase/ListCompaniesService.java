@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.company.application.usecase;
 
+import com.b4rrhh.geo.address.domain.model.PostalAddress;
 import com.b4rrhh.rulesystem.company.domain.model.Company;
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileInputNormalizer;
 import com.b4rrhh.rulesystem.companyprofile.domain.model.CompanyProfile;
@@ -57,11 +58,7 @@ public class ListCompaniesService implements ListCompaniesUseCase {
         String legalName = profile.map(CompanyProfile::getLegalName)
                 .orElseThrow(() -> new RequiredExtensionMissingException(companyEntity.getId(), "rulesystem.company_profile"));
         String taxIdentifier = profile.map(CompanyProfile::getTaxIdentifier).orElse(null);
-        String street = profile.map(CompanyProfile::getStreet).orElse(null);
-        String city = profile.map(CompanyProfile::getCity).orElse(null);
-        String postalCode = profile.map(CompanyProfile::getPostalCode).orElse(null);
-        String regionCode = profile.map(CompanyProfile::getRegionCode).orElse(null);
-        String countryCode = profile.map(CompanyProfile::getCountryCode).orElse(null);
+        PostalAddress address = profile.map(CompanyProfile::getAddress).orElse(null);
         String cnaeCode = profile.map(CompanyProfile::getCnaeCode).orElse(null);
 
         return new Company(
@@ -74,11 +71,7 @@ public class ListCompaniesService implements ListCompaniesUseCase {
                 companyEntity.isActive(),
                 legalName,
                 taxIdentifier,
-                street,
-                city,
-                postalCode,
-                regionCode,
-                countryCode,
+                address,
                 cnaeCode
         );
     }

@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.address.application.usecase;
 
+import com.b4rrhh.support.DireccionesDePrueba;
 import com.b4rrhh.employee.address.application.port.AddressPresenceLookupPort;
 import com.b4rrhh.employee.address.application.port.AddressTypeCoverageLookupPort;
 import com.b4rrhh.employee.address.application.port.EmployeeAddressContext;
@@ -78,7 +79,8 @@ class CreateAddressServiceTest {
                 employeeAddressLookupPort,
                 ruleSystemRepository,
                 addressCatalogValidator,
-                new AddressTimelineService(addressRepository, presencePort, coveragePort)
+                new AddressTimelineService(addressRepository, presencePort, coveragePort),
+                DireccionesDePrueba.validacionQueNoMiraElCatalogo()
         );
     }
 
@@ -89,11 +91,7 @@ class CreateAddressServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER,
                 "home",
-                "Calle Mayor 10",
-                "Madrid",
-                "esp",
-                "28013",
-                "md",
+                DireccionesDePrueba.input("Calle Mayor 10", "Madrid", "esp", "28013"),
                 LocalDate.of(2026, 1, 10),
                 null
         );
@@ -110,11 +108,7 @@ class CreateAddressServiceTest {
                     input.getEmployeeId(),
                     input.getAddressNumber(),
                     input.getAddressTypeCode(),
-                    input.getStreet(),
-                    input.getCity(),
-                    input.getCountryCode(),
-                    input.getPostalCode(),
-                    input.getRegionCode(),
+                    input.getAddress(),
                     input.getStartDate(),
                     input.getEndDate(),
                     LocalDateTime.now(),
@@ -127,7 +121,7 @@ class CreateAddressServiceTest {
         assertEquals(99L, created.getId());
         assertEquals(3, created.getAddressNumber());
         assertEquals("HOME", created.getAddressTypeCode());
-        assertEquals("ESP", created.getCountryCode());
+        assertEquals("ESP", created.getAddress().countryCode());
 
         ArgumentCaptor<Address> captor = ArgumentCaptor.forClass(Address.class);
         verify(addressRepository).save(captor.capture());
@@ -147,11 +141,7 @@ class CreateAddressServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER,
                 "FISCAL",
-                "Calle Mayor 10",
-                "Madrid",
-                "ESP",
-                "28013",
-                "MD",
+                DireccionesDePrueba.input("Calle Mayor 10", "Madrid", "ESP", "28013"),
                 LocalDate.of(2026, 1, 10),
                 LocalDate.of(2026, 1, 10)
         );
@@ -246,11 +236,7 @@ class CreateAddressServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER,
                 "MAILING",
-                "Apartado 123",
-                "Madrid",
-                "ESP",
-                "28013",
-                "MD",
+                DireccionesDePrueba.input("Apartado 123", "Madrid", "ESP", "28013"),
                 LocalDate.of(2026, 3, 1),
                 null
         );
@@ -326,35 +312,7 @@ class CreateAddressServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER,
                 "bad",
-                "Calle Mayor 10",
-                "Madrid",
-                "ESP",
-                null,
-                null,
-                LocalDate.of(2026, 1, 10),
-                null
-        );
-
-        when(ruleSystemRepository.findByCode(RULE_SYSTEM_CODE)).thenReturn(Optional.of(ruleSystem(RULE_SYSTEM_CODE)));
-        when(employeeAddressLookupPort.findByBusinessKeyForUpdate(RULE_SYSTEM_CODE, EMPLOYEE_TYPE_CODE, EMPLOYEE_NUMBER))
-                .thenReturn(Optional.of(employeeContext(10L)));
-
-        assertThrows(AddressCatalogValueInvalidException.class, () -> service.create(command));
-        verify(addressRepository, never()).save(any(Address.class));
-    }
-
-    @Test
-    void rejectsInvalidCountryCatalogValue() {
-        CreateAddressCommand command = new CreateAddressCommand(
-                RULE_SYSTEM_CODE,
-                EMPLOYEE_TYPE_CODE,
-                EMPLOYEE_NUMBER,
-                "HOME",
-                "Calle Mayor 10",
-                "Madrid",
-                "bad_country",
-                null,
-                null,
+                DireccionesDePrueba.input("Calle Mayor 10", "Madrid", "ESP", null),
                 LocalDate.of(2026, 1, 10),
                 null
         );
@@ -374,11 +332,7 @@ class CreateAddressServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER,
                 "HOME",
-                "Calle Mayor 10",
-                "Madrid",
-                "ESP",
-                null,
-                null,
+                DireccionesDePrueba.input("Calle Mayor 10", "Madrid", "ESP", null),
                 LocalDate.of(2026, 1, 10),
                 LocalDate.of(2026, 1, 9)
         );
@@ -411,11 +365,7 @@ class CreateAddressServiceTest {
                 EMPLOYEE_TYPE_CODE,
                 EMPLOYEE_NUMBER,
                 addressTypeCode,
-                "Calle Mayor 10",
-                "Madrid",
-                "ESP",
-                null,
-                null,
+                DireccionesDePrueba.input("Calle Mayor 10", "Madrid", "ESP", null),
                 startDate,
                 endDate
         );
@@ -427,11 +377,7 @@ class CreateAddressServiceTest {
                 10L,
                 number,
                 addressTypeCode,
-                "Calle Mayor " + number,
-                "Madrid",
-                "ESP",
-                "28013",
-                "MD",
+                DireccionesDePrueba.address("Calle Mayor " + number, "Madrid", "ESP", "28013"),
                 startDate,
                 endDate,
                 LocalDateTime.now(),
@@ -449,13 +395,6 @@ class CreateAddressServiceTest {
         public void validateAddressTypeCode(String ruleSystemCode, String addressTypeCode, LocalDate referenceDate) {
             if ("BAD".equals(addressTypeCode)) {
                 throw new AddressCatalogValueInvalidException("addressTypeCode", addressTypeCode);
-            }
-        }
-
-        @Override
-        public void validateCountryCode(String ruleSystemCode, String countryCode, LocalDate referenceDate) {
-            if ("BAD_COUNTRY".equals(countryCode)) {
-                throw new AddressCatalogValueInvalidException("countryCode", countryCode);
             }
         }
 

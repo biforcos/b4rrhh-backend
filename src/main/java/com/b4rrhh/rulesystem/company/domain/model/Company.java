@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.company.domain.model;
 
+import com.b4rrhh.geo.address.domain.model.PostalAddress;
 import java.time.LocalDate;
 
 public record Company(
@@ -12,11 +13,7 @@ public record Company(
         boolean active,
         String legalName,
         String taxIdentifier,
-        String street,
-        String city,
-        String postalCode,
-        String regionCode,
-        String countryCode,
+        PostalAddress address,
         /**
          * La actividad economica de la empresa, en CNAE ({@code backend#122}).
          *
