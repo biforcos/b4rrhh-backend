@@ -29,19 +29,22 @@ public class CreateRuleEntityService implements CreateRuleEntityUseCase {
     private final RuleEntityTypeRepository ruleEntityTypeRepository;
     private final RuleEntityExtensionRepository ruleEntityExtensionRepository;
     private final RuleEntityTypeOwnEndpointPort ruleEntityTypeOwnEndpointPort;
+    private final NationalLayerGuard nationalLayerGuard;
 
     public CreateRuleEntityService(
             RuleEntityRepository ruleEntityRepository,
             RuleSystemRepository ruleSystemRepository,
             RuleEntityTypeRepository ruleEntityTypeRepository,
             RuleEntityExtensionRepository ruleEntityExtensionRepository,
-            RuleEntityTypeOwnEndpointPort ruleEntityTypeOwnEndpointPort
+            RuleEntityTypeOwnEndpointPort ruleEntityTypeOwnEndpointPort,
+            NationalLayerGuard nationalLayerGuard
     ) {
         this.ruleEntityRepository = ruleEntityRepository;
         this.ruleSystemRepository = ruleSystemRepository;
         this.ruleEntityTypeRepository = ruleEntityTypeRepository;
         this.ruleEntityExtensionRepository = ruleEntityExtensionRepository;
         this.ruleEntityTypeOwnEndpointPort = ruleEntityTypeOwnEndpointPort;
+        this.nationalLayerGuard = nationalLayerGuard;
     }
 
     @Override
@@ -59,6 +62,7 @@ public class CreateRuleEntityService implements CreateRuleEntityUseCase {
         );
 
         rejectIfTheTypeIsMaintainedByItsOwnEndpoint(normalizedRuleEntityTypeCode);
+        nationalLayerGuard.requireNationalType(normalizedRuleSystemCode, normalizedRuleEntityTypeCode);
 
         ruleEntityRepository.findByBusinessKey(normalizedRuleSystemCode, normalizedRuleEntityTypeCode, normalizedCode)
                 .ifPresent(existing -> {

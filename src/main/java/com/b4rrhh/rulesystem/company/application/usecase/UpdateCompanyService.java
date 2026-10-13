@@ -11,6 +11,7 @@ import com.b4rrhh.rulesystem.companyprofile.domain.exception.CompanyProfileCompa
 import com.b4rrhh.rulesystem.companyprofile.domain.model.CompanyProfile;
 import com.b4rrhh.rulesystem.companyprofile.domain.port.CompanyProfileRepository;
 import com.b4rrhh.rulesystem.domain.exception.RequiredExtensionMissingException;
+import com.b4rrhh.rulesystem.application.usecase.NationalLayerGuard;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import org.springframework.stereotype.Service;
@@ -26,19 +27,22 @@ public class UpdateCompanyService implements UpdateCompanyUseCase {
     private final CompanyProfileCatalogValidator catalogValidator;
     private final RuleEntityRepository ruleEntityRepository;
     private final CompanyProfileRepository companyProfileRepository;
+    private final NationalLayerGuard nationalLayerGuard;
 
     public UpdateCompanyService(
             CompanyProfileCompanyResolver companyResolver,
             CompanyProfileInputNormalizer inputNormalizer,
             CompanyProfileCatalogValidator catalogValidator,
             RuleEntityRepository ruleEntityRepository,
-            CompanyProfileRepository companyProfileRepository
+            CompanyProfileRepository companyProfileRepository,
+            NationalLayerGuard nationalLayerGuard
     ) {
         this.companyResolver = companyResolver;
         this.inputNormalizer = inputNormalizer;
         this.catalogValidator = catalogValidator;
         this.ruleEntityRepository = ruleEntityRepository;
         this.companyProfileRepository = companyProfileRepository;
+        this.nationalLayerGuard = nationalLayerGuard;
     }
 
     @Override
@@ -49,6 +53,7 @@ public class UpdateCompanyService implements UpdateCompanyUseCase {
         String countryCode = inputNormalizer.normalizeOptionalCountryCode(command.countryCode());
 
         RuleEntity companyEntity = resolveApplicableCompany(ruleSystemCode, companyCode);
+        nationalLayerGuard.requireDefinedInNationalLayer(ruleSystemCode, companyEntity);
         catalogValidator.validateCountryCode(ruleSystemCode, countryCode, LocalDate.now());
 
         String name = normalizeRequiredText("name", command.name(), 100);

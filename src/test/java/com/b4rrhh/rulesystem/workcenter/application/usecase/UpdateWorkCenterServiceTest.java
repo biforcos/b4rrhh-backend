@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.workcenter.application.usecase;
 
+import com.b4rrhh.rulesystem.application.usecase.NationalLayerGuard;
 import com.b4rrhh.rulesystem.domain.exception.RequiredExtensionMissingException;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
@@ -41,7 +42,8 @@ class UpdateWorkCenterServiceTest {
                 new WorkCenterInputNormalizer(),
                 new WorkCenterCatalogValidator(ruleEntityRepository),
                 ruleEntityRepository,
-                workCenterProfileRepository
+                workCenterProfileRepository,
+                mock(NationalLayerGuard.class)
         );
     }
 

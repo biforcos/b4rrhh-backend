@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.company.application.usecase;
 
+import com.b4rrhh.rulesystem.application.usecase.NationalLayerGuard;
 import com.b4rrhh.rulesystem.company.domain.exception.CompanyAlreadyExistsException;
 import com.b4rrhh.rulesystem.company.domain.model.Company;
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileCatalogValidator;
@@ -28,6 +29,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -52,7 +54,8 @@ class CreateCompanyServiceTest {
                 ruleEntityTypeRepository,
                 companyProfileRepository,
                 new CompanyProfileInputNormalizer(),
-                new CompanyProfileCatalogValidator(ruleEntityRepository)
+                new CompanyProfileCatalogValidator(ruleEntityRepository),
+                mock(NationalLayerGuard.class)
         );
     }
 

@@ -44,7 +44,8 @@ class CreateRuleEntityServiceTest {
                 ruleSystemRepository,
                 ruleEntityTypeRepository,
                 ruleEntityExtensionRepository,
-                ruleEntityTypeOwnEndpointPort);
+                ruleEntityTypeOwnEndpointPort,
+                mock(NationalLayerGuard.class));
     }
 
     @Test

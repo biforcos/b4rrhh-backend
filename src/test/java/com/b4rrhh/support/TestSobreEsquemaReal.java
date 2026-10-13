@@ -116,11 +116,13 @@ import com.b4rrhh.rulesystem.agreementprofile.infrastructure.persistence.Agreeme
 import com.b4rrhh.rulesystem.application.usecase.CheckCatalogCodeIntegrityService;
 import com.b4rrhh.rulesystem.application.usecase.CreateRuleEntityService;
 import com.b4rrhh.rulesystem.application.usecase.DeleteRuleEntityService;
+import com.b4rrhh.rulesystem.application.usecase.NationalLayerGuard;
 import com.b4rrhh.rulesystem.employeeaddresstypeprofile.infrastructure.persistence.EmployeeAddressTypeProfilePersistenceAdapter;
 import com.b4rrhh.rulesystem.infrastructure.persistence.CatalogCodeIntegrityReadAdapter;
 import com.b4rrhh.rulesystem.infrastructure.persistence.RuleEntityPersistenceAdapter;
 import com.b4rrhh.rulesystem.infrastructure.persistence.RuleEntityExtensionPersistenceAdapter;
 import com.b4rrhh.rulesystem.infrastructure.persistence.RuleEntityTypeOwnEndpointAdapter;
+import com.b4rrhh.rulesystem.infrastructure.persistence.LayerJdbcAdapter;
 import com.b4rrhh.rulesystem.infrastructure.persistence.RuleEntityTypePersistenceAdapter;
 import com.b4rrhh.rulesystem.infrastructure.persistence.RuleEntityUsageCheckAdapter;
 import com.b4rrhh.rulesystem.infrastructure.persistence.RuleSystemPersistenceAdapter;
@@ -312,6 +314,9 @@ import java.lang.annotation.Target;
         // rulesystem: borrado de codigos (backend#26)
         DeleteRuleEntityService.class,
         RuleEntityUsageCheckAdapter.class,
+        // rulesystem: desde una reglamentacion solo se escribe en su capa nacional (backend#166)
+        NationalLayerGuard.class,
+        LayerJdbcAdapter.class,
         // rulesystem: la comprobacion de codigos contra el dato, la misma que corre el
         // despliegue contra una base poblada (backend#44)
         CheckCatalogCodeIntegrityService.class,

@@ -13,9 +13,11 @@ import java.time.LocalDate;
 public class CorrectRuleEntityService implements CorrectRuleEntityUseCase {
 
     private final RuleEntityRepository ruleEntityRepository;
+    private final NationalLayerGuard nationalLayerGuard;
 
-    public CorrectRuleEntityService(RuleEntityRepository ruleEntityRepository) {
+    public CorrectRuleEntityService(RuleEntityRepository ruleEntityRepository, NationalLayerGuard nationalLayerGuard) {
         this.ruleEntityRepository = ruleEntityRepository;
+        this.nationalLayerGuard = nationalLayerGuard;
     }
 
     @Override
@@ -31,6 +33,7 @@ public class CorrectRuleEntityService implements CorrectRuleEntityUseCase {
 
         RuleEntity existing = ruleEntityRepository.findByBusinessKeyAndStartDate(ruleSystemCode, ruleEntityTypeCode, code, startDate)
                 .orElseThrow(() -> new RuleEntityNotFoundException(ruleSystemCode, ruleEntityTypeCode, code, startDate));
+        nationalLayerGuard.requireDefinedInNationalLayer(ruleSystemCode, existing);
 
         existing.correct(name, description, endDate);
 

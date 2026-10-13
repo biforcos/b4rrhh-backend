@@ -1,6 +1,7 @@
 package com.b4rrhh.rulesystem.workcenter.application.usecase;
 
 import com.b4rrhh.rulesystem.domain.exception.RequiredExtensionMissingException;
+import com.b4rrhh.rulesystem.application.usecase.NationalLayerGuard;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import com.b4rrhh.rulesystem.workcenter.application.service.WorkCenterCatalogValidator;
@@ -23,19 +24,22 @@ public class UpdateWorkCenterService implements UpdateWorkCenterUseCase {
     private final WorkCenterCatalogValidator catalogValidator;
     private final RuleEntityRepository ruleEntityRepository;
     private final WorkCenterProfileRepository workCenterProfileRepository;
+    private final NationalLayerGuard nationalLayerGuard;
 
     public UpdateWorkCenterService(
             WorkCenterResolver workCenterResolver,
             WorkCenterInputNormalizer inputNormalizer,
             WorkCenterCatalogValidator catalogValidator,
             RuleEntityRepository ruleEntityRepository,
-            WorkCenterProfileRepository workCenterProfileRepository
+            WorkCenterProfileRepository workCenterProfileRepository,
+            NationalLayerGuard nationalLayerGuard
     ) {
         this.workCenterResolver = workCenterResolver;
         this.inputNormalizer = inputNormalizer;
         this.catalogValidator = catalogValidator;
         this.ruleEntityRepository = ruleEntityRepository;
         this.workCenterProfileRepository = workCenterProfileRepository;
+        this.nationalLayerGuard = nationalLayerGuard;
     }
 
     @Override
@@ -55,6 +59,7 @@ public class UpdateWorkCenterService implements UpdateWorkCenterUseCase {
         );
 
         RuleEntity workCenterEntity = workCenterResolver.resolveApplicableToday(ruleSystemCode, workCenterCode);
+        nationalLayerGuard.requireDefinedInNationalLayer(ruleSystemCode, workCenterEntity);
         catalogValidator.validateCompanyCode(ruleSystemCode, companyCode, LocalDate.now());
         catalogValidator.validateCountryCode(ruleSystemCode, address.getCountryCode(), LocalDate.now());
 

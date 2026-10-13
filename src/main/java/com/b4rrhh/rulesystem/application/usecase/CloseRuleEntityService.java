@@ -13,9 +13,11 @@ import java.time.LocalDate;
 public class CloseRuleEntityService implements CloseRuleEntityUseCase {
 
     private final RuleEntityRepository ruleEntityRepository;
+    private final NationalLayerGuard nationalLayerGuard;
 
-    public CloseRuleEntityService(RuleEntityRepository ruleEntityRepository) {
+    public CloseRuleEntityService(RuleEntityRepository ruleEntityRepository, NationalLayerGuard nationalLayerGuard) {
         this.ruleEntityRepository = ruleEntityRepository;
+        this.nationalLayerGuard = nationalLayerGuard;
     }
 
     @Override
@@ -29,6 +31,7 @@ public class CloseRuleEntityService implements CloseRuleEntityUseCase {
 
         RuleEntity existing = ruleEntityRepository.findByBusinessKeyAndStartDate(ruleSystemCode, ruleEntityTypeCode, code, startDate)
                 .orElseThrow(() -> new RuleEntityNotFoundException(ruleSystemCode, ruleEntityTypeCode, code, startDate));
+        nationalLayerGuard.requireDefinedInNationalLayer(ruleSystemCode, existing);
 
         existing.close(endDate);
 

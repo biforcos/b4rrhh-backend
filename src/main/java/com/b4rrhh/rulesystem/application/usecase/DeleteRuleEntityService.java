@@ -3,6 +3,7 @@ package com.b4rrhh.rulesystem.application.usecase;
 import com.b4rrhh.rulesystem.application.port.RuleEntityUsageCheckPort;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityInUseException;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityNotFoundException;
+import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.model.RuleEntityReference;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import org.springframework.stereotype.Service;
@@ -16,13 +17,16 @@ public class DeleteRuleEntityService implements DeleteRuleEntityUseCase {
 
     private final RuleEntityRepository ruleEntityRepository;
     private final RuleEntityUsageCheckPort ruleEntityUsageCheckPort;
+    private final NationalLayerGuard nationalLayerGuard;
 
     public DeleteRuleEntityService(
             RuleEntityRepository ruleEntityRepository,
-            RuleEntityUsageCheckPort ruleEntityUsageCheckPort
+            RuleEntityUsageCheckPort ruleEntityUsageCheckPort,
+            NationalLayerGuard nationalLayerGuard
     ) {
         this.ruleEntityRepository = ruleEntityRepository;
         this.ruleEntityUsageCheckPort = ruleEntityUsageCheckPort;
+        this.nationalLayerGuard = nationalLayerGuard;
     }
 
     @Override
@@ -33,7 +37,7 @@ public class DeleteRuleEntityService implements DeleteRuleEntityUseCase {
         String normalizedCode = normalizeCode(command.code());
         LocalDate startDate = normalizeStartDate(command.startDate());
 
-        ruleEntityRepository.findByBusinessKeyAndStartDate(
+        RuleEntity existing = ruleEntityRepository.findByBusinessKeyAndStartDate(
                         normalizedRuleSystemCode,
                         normalizedRuleEntityTypeCode,
                         normalizedCode,
@@ -45,6 +49,9 @@ public class DeleteRuleEntityService implements DeleteRuleEntityUseCase {
                         normalizedCode,
                         startDate
                 ));
+        // Antes de contar: las referencias se cuentan sólo en esta reglamentación, y una entidad de
+        // INT la usan también las otras que la montan (backend#166).
+        nationalLayerGuard.requireDefinedInNationalLayer(normalizedRuleSystemCode, existing);
 
         List<RuleEntityReference> references = ruleEntityUsageCheckPort.findReferences(
                 normalizedRuleSystemCode,

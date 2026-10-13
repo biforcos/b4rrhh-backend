@@ -6,6 +6,7 @@ import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileCa
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileInputNormalizer;
 import com.b4rrhh.rulesystem.companyprofile.domain.model.CompanyProfile;
 import com.b4rrhh.rulesystem.companyprofile.domain.port.CompanyProfileRepository;
+import com.b4rrhh.rulesystem.application.usecase.NationalLayerGuard;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityTypeRepository;
@@ -24,6 +25,7 @@ public class CreateCompanyService implements CreateCompanyUseCase {
     private final CompanyProfileRepository companyProfileRepository;
     private final CompanyProfileInputNormalizer inputNormalizer;
     private final CompanyProfileCatalogValidator catalogValidator;
+    private final NationalLayerGuard nationalLayerGuard;
 
     public CreateCompanyService(
             RuleEntityRepository ruleEntityRepository,
@@ -31,7 +33,8 @@ public class CreateCompanyService implements CreateCompanyUseCase {
             RuleEntityTypeRepository ruleEntityTypeRepository,
             CompanyProfileRepository companyProfileRepository,
             CompanyProfileInputNormalizer inputNormalizer,
-            CompanyProfileCatalogValidator catalogValidator
+            CompanyProfileCatalogValidator catalogValidator,
+            NationalLayerGuard nationalLayerGuard
     ) {
         this.ruleEntityRepository = ruleEntityRepository;
         this.ruleSystemRepository = ruleSystemRepository;
@@ -39,6 +42,7 @@ public class CreateCompanyService implements CreateCompanyUseCase {
         this.companyProfileRepository = companyProfileRepository;
         this.inputNormalizer = inputNormalizer;
         this.catalogValidator = catalogValidator;
+        this.nationalLayerGuard = nationalLayerGuard;
     }
 
     @Override
@@ -59,6 +63,8 @@ public class CreateCompanyService implements CreateCompanyUseCase {
         ruleEntityTypeRepository.findByCode(CompanyRuleEntityTypeCodes.COMPANY).orElseThrow(
                 () -> new IllegalArgumentException("Rule entity type not found with code: " + CompanyRuleEntityTypeCodes.COMPANY)
         );
+
+        nationalLayerGuard.requireNationalType(ruleSystemCode, CompanyRuleEntityTypeCodes.COMPANY);
 
         ruleEntityRepository.findByBusinessKey(ruleSystemCode, CompanyRuleEntityTypeCodes.COMPANY, companyCode)
                 .ifPresent(existing -> {

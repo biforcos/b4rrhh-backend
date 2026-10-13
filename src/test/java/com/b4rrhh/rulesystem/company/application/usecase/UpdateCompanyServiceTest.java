@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.company.application.usecase;
 
+import com.b4rrhh.rulesystem.application.usecase.NationalLayerGuard;
 import com.b4rrhh.rulesystem.company.domain.exception.CompanyNotApplicableException;
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileCatalogValidator;
 import com.b4rrhh.rulesystem.companyprofile.application.service.CompanyProfileCompanyResolver;
@@ -23,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -44,7 +46,8 @@ class UpdateCompanyServiceTest {
                 new CompanyProfileInputNormalizer(),
                 new CompanyProfileCatalogValidator(ruleEntityRepository),
                 ruleEntityRepository,
-                companyProfileRepository
+                companyProfileRepository,
+                mock(NationalLayerGuard.class)
         );
     }
 

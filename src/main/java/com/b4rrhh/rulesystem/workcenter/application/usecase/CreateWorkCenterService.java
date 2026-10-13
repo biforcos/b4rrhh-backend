@@ -1,6 +1,7 @@
 package com.b4rrhh.rulesystem.workcenter.application.usecase;
 
 import com.b4rrhh.rulesystem.workcenter.application.view.WorkCenterDetails;
+import com.b4rrhh.rulesystem.application.usecase.NationalLayerGuard;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import com.b4rrhh.rulesystem.domain.port.RuleEntityTypeRepository;
@@ -24,6 +25,7 @@ public class CreateWorkCenterService implements CreateWorkCenterUseCase {
     private final WorkCenterProfileRepository workCenterProfileRepository;
     private final WorkCenterInputNormalizer inputNormalizer;
     private final WorkCenterCatalogValidator catalogValidator;
+    private final NationalLayerGuard nationalLayerGuard;
 
     public CreateWorkCenterService(
             RuleEntityRepository ruleEntityRepository,
@@ -31,7 +33,8 @@ public class CreateWorkCenterService implements CreateWorkCenterUseCase {
             RuleEntityTypeRepository ruleEntityTypeRepository,
             WorkCenterProfileRepository workCenterProfileRepository,
             WorkCenterInputNormalizer inputNormalizer,
-            WorkCenterCatalogValidator catalogValidator
+            WorkCenterCatalogValidator catalogValidator,
+            NationalLayerGuard nationalLayerGuard
     ) {
         this.ruleEntityRepository = ruleEntityRepository;
         this.ruleSystemRepository = ruleSystemRepository;
@@ -39,6 +42,7 @@ public class CreateWorkCenterService implements CreateWorkCenterUseCase {
         this.workCenterProfileRepository = workCenterProfileRepository;
         this.inputNormalizer = inputNormalizer;
         this.catalogValidator = catalogValidator;
+        this.nationalLayerGuard = nationalLayerGuard;
     }
 
     @Override
@@ -67,6 +71,8 @@ public class CreateWorkCenterService implements CreateWorkCenterUseCase {
                         "Rule entity type not found with code: " + WorkCenterRuleEntityTypeCodes.WORK_CENTER
                 )
         );
+
+        nationalLayerGuard.requireNationalType(ruleSystemCode, WorkCenterRuleEntityTypeCodes.WORK_CENTER);
 
         ruleEntityRepository.findByBusinessKey(ruleSystemCode, WorkCenterRuleEntityTypeCodes.WORK_CENTER, workCenterCode)
                 .ifPresent(existing -> {

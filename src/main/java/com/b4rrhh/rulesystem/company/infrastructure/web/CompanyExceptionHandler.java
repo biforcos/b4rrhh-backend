@@ -6,6 +6,7 @@ import com.b4rrhh.rulesystem.company.domain.exception.CompanyNotFoundException;
 import com.b4rrhh.rulesystem.company.infrastructure.web.dto.CompanyErrorResponse;
 import com.b4rrhh.rulesystem.companyprofile.domain.exception.CompanyProfileCountryInvalidException;
 import com.b4rrhh.rulesystem.companyprofile.domain.exception.CompanyProfileNotFoundException;
+import com.b4rrhh.rulesystem.domain.exception.RuleEntityIsMaintainedFromItsLayerException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -25,7 +26,8 @@ public class CompanyExceptionHandler {
 
     @ExceptionHandler({
             CompanyAlreadyExistsException.class,
-            CompanyNotApplicableException.class
+            CompanyNotApplicableException.class,
+            RuleEntityIsMaintainedFromItsLayerException.class
     })
     public ResponseEntity<CompanyErrorResponse> handleConflict(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)

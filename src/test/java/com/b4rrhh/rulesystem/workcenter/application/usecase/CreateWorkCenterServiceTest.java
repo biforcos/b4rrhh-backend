@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.workcenter.application.usecase;
 
+import com.b4rrhh.rulesystem.application.usecase.NationalLayerGuard;
 import com.b4rrhh.rulesystem.domain.model.RuleEntity;
 import com.b4rrhh.rulesystem.domain.model.LiteralClass;
 import com.b4rrhh.rulesystem.domain.model.MaintenanceMode;
@@ -28,6 +29,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -53,7 +55,8 @@ class CreateWorkCenterServiceTest {
                 ruleEntityTypeRepository,
                 workCenterProfileRepository,
                 new WorkCenterInputNormalizer(),
-                new WorkCenterCatalogValidator(ruleEntityRepository)
+                new WorkCenterCatalogValidator(ruleEntityRepository),
+                mock(NationalLayerGuard.class)
         );
     }
 

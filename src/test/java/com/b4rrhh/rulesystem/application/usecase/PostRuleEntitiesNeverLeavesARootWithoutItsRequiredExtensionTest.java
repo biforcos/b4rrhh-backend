@@ -75,12 +75,14 @@ class PostRuleEntitiesNeverLeavesARootWithoutItsRequiredExtensionTest {
 
     // La otra mitad: el endpoint genérico sigue siendo la puerta de los maestros simples, que
     // son una fila en rule_entity y nada más (ADR-053 §4). Un rechazo que se llevara a éstos por
-    // delante sería peor que el defecto.
+    // delante sería peor que el defecto. Un tipo nacional: los de COM e INT se dan de alta en su
+    // capa, no desde una reglamentación (backend#166).
     @Test
     void aTypeWithoutExtensionsStillGoesThroughTheGenericEndpoint() {
         String typeCode = jdbcTemplate.queryForObject("""
                 select t.code from rulesystem.rule_entity_type t
-                 where not exists (
+                 where t.level = 3
+                   and not exists (
                         select 1 from rulesystem.rule_entity_extension e
                          where e.rule_entity_type_code = t.code and e.required)
                  order by t.code

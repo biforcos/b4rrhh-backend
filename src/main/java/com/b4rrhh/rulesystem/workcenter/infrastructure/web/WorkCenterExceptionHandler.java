@@ -1,5 +1,6 @@
 package com.b4rrhh.rulesystem.workcenter.infrastructure.web;
 
+import com.b4rrhh.rulesystem.domain.exception.RuleEntityIsMaintainedFromItsLayerException;
 import com.b4rrhh.rulesystem.workcenter.domain.exception.WorkCenterAlreadyExistsException;
 import com.b4rrhh.rulesystem.workcenter.domain.exception.WorkCenterCompanyInvalidException;
 import com.b4rrhh.rulesystem.workcenter.domain.exception.WorkCenterContactAlreadyExistsException;
@@ -28,7 +29,8 @@ public class WorkCenterExceptionHandler {
     @ExceptionHandler({
             WorkCenterAlreadyExistsException.class,
             WorkCenterNotApplicableException.class,
-            WorkCenterContactAlreadyExistsException.class
+            WorkCenterContactAlreadyExistsException.class,
+            RuleEntityIsMaintainedFromItsLayerException.class
     })
     public ResponseEntity<WorkCenterErrorResponse> handleConflict(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new WorkCenterErrorResponse(ex.getMessage()));

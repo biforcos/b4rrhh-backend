@@ -4,6 +4,7 @@ import com.b4rrhh.rulesystem.domain.exception.LayerNotFoundException;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityAlreadyClosedException;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityInUseException;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityInvalidDateRangeException;
+import com.b4rrhh.rulesystem.domain.exception.RuleEntityIsMaintainedFromItsLayerException;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityNotFoundException;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityOverlapException;
 import com.b4rrhh.rulesystem.domain.exception.RuleEntityTypeIsMaintainedByItsOwnEndpointException;
@@ -36,6 +37,7 @@ public class RuleEntityExceptionHandler {
     @ExceptionHandler({
             RuleEntityAlreadyClosedException.class,
             RuleEntityInvalidDateRangeException.class,
+            RuleEntityIsMaintainedFromItsLayerException.class,
             RuleEntityOverlapException.class
     })
     public ResponseEntity<RuleEntityErrorResponse> handleConflict(RuntimeException ex) {
