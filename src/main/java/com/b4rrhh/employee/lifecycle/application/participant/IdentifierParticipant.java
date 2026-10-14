@@ -7,6 +7,7 @@ import com.b4rrhh.employee.identifier.domain.exception.IdentifierValueInvalidExc
 import com.b4rrhh.employee.lifecycle.application.model.HireContext;
 import com.b4rrhh.employee.lifecycle.application.port.HireParticipant;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
+import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeIdentifierInvalidException;
 import org.springframework.stereotype.Component;
 
 /**
@@ -41,8 +42,10 @@ public class IdentifierParticipant implements HireParticipant {
                     ctx.identifier().expirationDate(),
                     true
             ));
-        } catch (IdentifierCatalogValueInvalidException | IdentifierValueInvalidException ex) {
+        } catch (IdentifierCatalogValueInvalidException ex) {
             throw new HireEmployeeCatalogValueInvalidException(ex.getMessage(), ex);
+        } catch (IdentifierValueInvalidException ex) {
+            throw new HireEmployeeIdentifierInvalidException(ex.getMessage(), ex);
         }
     }
 }

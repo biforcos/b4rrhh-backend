@@ -3,6 +3,7 @@ package com.b4rrhh.employee.lifecycle.infrastructure.rest;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeAlreadyExistsException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeBusinessValidationException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeCatalogValueInvalidException;
+import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeIdentifierInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeConflictException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeDependentRelationInvalidException;
 import com.b4rrhh.employee.lifecycle.domain.exception.HireEmployeeEntryReasonNotHiringException;
@@ -56,6 +57,13 @@ public class HireEmployeeExceptionHandler {
     public ResponseEntity<HireEmployeeErrorResponse> handleInvalidCatalog(HireEmployeeCatalogValueInvalidException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(new HireEmployeeErrorResponse("INVALID_CATALOG_VALUE", ex.getMessage(), null));
+    }
+
+    // El documento mal escrito, nombrando el campo y con el motivo del validador (backend#171).
+    @ExceptionHandler(HireEmployeeIdentifierInvalidException.class)
+    public ResponseEntity<HireEmployeeErrorResponse> handleInvalidIdentifier(HireEmployeeIdentifierInvalidException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new HireEmployeeErrorResponse("INVALID_IDENTIFIER", ex.getMessage(), Map.of("field", "identifier")));
     }
 
     @ExceptionHandler(WorkCenterCatalogValueInvalidException.class)

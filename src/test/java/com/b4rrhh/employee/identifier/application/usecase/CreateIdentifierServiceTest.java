@@ -286,7 +286,8 @@ class CreateIdentifierServiceTest {
         IdentifierSpanishNationalIdInvalidException ex =
                 assertThrows(IdentifierSpanishNationalIdInvalidException.class, () -> service.create(command));
 
-                assertEquals(true, ex.getMessage().startsWith("INVALID_SPANISH_NATIONAL_ID"));
+        // El mensaje es el que lee quien lo tecleó, con el motivo (backend#171).
+        assertEquals("El DNI 12345678A no es válido: la letra debería ser Z.", ex.getMessage());
         verify(identifierRepository, never()).save(any(Identifier.class));
     }
 

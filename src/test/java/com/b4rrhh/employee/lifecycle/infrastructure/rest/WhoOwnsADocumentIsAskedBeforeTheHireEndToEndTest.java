@@ -13,10 +13,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
 
-import static org.hamcrest.Matchers.emptyString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -70,10 +68,48 @@ class WhoOwnsADocumentIsAskedBeforeTheHireEndToEndTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    void aFreeDocumentAnswersEmpty() throws Exception {
+    void aFreeDocumentIsValidAndHasNoOwner() throws Exception {
+        // Antes era un 204 vacío; desde el backend#171 la consulta dice también si está bien
+        // escrito, así que siempre contesta.
         mockMvc.perform(ask(DatosDePrueba.dni()))
-                .andExpect(status().isNoContent())
-                .andExpect(content().string(emptyString()));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(true))
+                .andExpect(jsonPath("$.reason").doesNotExist())
+                .andExpect(jsonPath("$.employeeNumber").doesNotExist());
+    }
+
+    /**
+     * Si está bien escrito (backend#171): el mismo validador que el alta, con el motivo en palabras.
+     * La sesión de workspace#18 tecleó un DNI con la letra mal y nada se lo dijo hasta el final.
+     */
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void aDocumentWithTheWrongLetterIsInvalidAndSaysWhichLetter() throws Exception {
+        mockMvc.perform(ask("12345678A"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(false))
+                .andExpect(jsonPath("$.reason").value("la letra debería ser Z"))
+                .andExpect(jsonPath("$.employeeNumber").doesNotExist());
+        mockMvc.perform(ask("12345678Z"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(true))
+                .andExpect(jsonPath("$.employeeNumber").doesNotExist());
+        mockMvc.perform(ask("1234"))
+                .andExpect(jsonPath("$.valid").value(false))
+                .andExpect(jsonPath("$.reason").value(
+                        "un DNI son ocho cifras y una letra, y un NIE una X, Y o Z, siete cifras y una letra"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void aHireWithAnInvalidDocumentNamesTheFieldAndTheReason() throws Exception {
+        mockMvc.perform(post("/employees/hire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(HIRE.formatted("12345678A")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_IDENTIFIER"))
+                .andExpect(jsonPath("$.details.field").value("identifier"))
+                .andExpect(jsonPath("$.message").value("El DNI 12345678A no es válido: la letra debería ser Z."));
     }
 
     @Test
@@ -100,13 +136,11 @@ class WhoOwnsADocumentIsAskedBeforeTheHireEndToEndTest {
         return get("/employees/identifier-owner")
                 .param("ruleSystemCode", "ESP")
                 .param("identifierTypeCode", "NATIONAL_ID")
-                .param("identifierValue", value);
+                .param("identifierValue", value)
+                .param("issuingCountryCode", "ESP");
     }
 
-    private String hire(String dni) throws Exception {
-        String response = mockMvc.perform(post("/employees/hire")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
+    private static final String HIRE = """
                                 {
                                   "ruleSystemCode": "ESP",
                                   "employeeTypeCode": "INTERNAL",
@@ -121,7 +155,12 @@ class WhoOwnsADocumentIsAskedBeforeTheHireEndToEndTest {
                                   "laborClassification": { "agreementCode": "99002405011982", "agreementCategoryCode": "99002405-G3" },
                                   "workingTime": { "workingTimePercentage": 100 }
                                 }
-                                """.formatted(dni)))
+                                """;
+
+    private String hire(String dni) throws Exception {
+        String response = mockMvc.perform(post("/employees/hire")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(HIRE.formatted(dni)))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         return JsonPath.read(response, "$.employeeNumber");
