@@ -1,5 +1,6 @@
 package com.b4rrhh.payroll.infrastructure.persistence;
 
+import com.b4rrhh.shared.infrastructure.search.EmployeeNumberSearch;
 import com.b4rrhh.payroll.domain.model.Payroll;
 import com.b4rrhh.payroll.domain.model.PayrollConcept;
 import com.b4rrhh.payroll.domain.model.PayrollContextSnapshot;
@@ -58,6 +59,27 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
             int size) {
         Page<PayrollEntity> result = springDataPayrollRepository
                 .findPageByFilters(ruleSystemCode, payrollPeriodCode, employeeNumber, status, PageRequest.of(page, size));
+        List<Payroll> items = result.getContent().stream().map(this::toDomain).toList();
+        return new PayrollSearchPage(items, page, size, result.getTotalElements(), sharedMonths(items));
+    }
+
+    @Override
+    public PayrollSearchPage searchPage(
+            String ruleSystemCode,
+            String payrollPeriodCode,
+            String text,
+            PayrollStatus status,
+            int page,
+            int size) {
+        String normalized = text == null || text.isBlank() ? null : text.trim().toUpperCase(java.util.Locale.ROOT);
+        Page<PayrollEntity> result = springDataPayrollRepository.searchPage(
+                ruleSystemCode,
+                payrollPeriodCode,
+                normalized,
+                EmployeeNumberSearch.prefixOf(normalized),
+                EmployeeNumberSearch.digitsOf(normalized),
+                status,
+                PageRequest.of(page, size));
         List<Payroll> items = result.getContent().stream().map(this::toDomain).toList();
         return new PayrollSearchPage(items, page, size, result.getTotalElements(), sharedMonths(items));
     }

@@ -293,7 +293,8 @@ public class PayrollController {
             @RequestParam(required = false) String employeeNumber,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) String q
     ) {
         int resolvedPage = page == null ? 0 : page;
         int resolvedSize = size == null ? SearchPayrollsQuery.DEFAULT_SIZE : size;
@@ -312,7 +313,7 @@ public class PayrollController {
             }
         }
         PayrollSearchPage result = searchPayrollsUseCase.search(new SearchPayrollsQuery(
-                ruleSystemCode, payrollPeriodCode, employeeNumber, parsedStatus, resolvedPage, resolvedSize));
+                ruleSystemCode, payrollPeriodCode, employeeNumber, parsedStatus, resolvedPage, resolvedSize, q));
         return ResponseEntity.ok(new PayrollSearchPageResponse(
                 result.items().stream()
                         .map(p -> payrollResponseAssembler.toSummaryResponse(p, result.sharesItsMonth(p)))

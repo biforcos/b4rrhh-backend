@@ -55,6 +55,55 @@ public interface SpringDataPayrollRepository extends JpaRepository<PayrollEntity
     );
 
     /**
+     * La búsqueda de la lista de recibos por lo que se escribe (b4rrhh/frontend#141): parte de la
+     * matrícula —también por sus dígitos sin los ceros de relleno, {@code :numberPrefix} y {@code :numberDigits}— o parte
+     * del nombre del empleado, que el recibo no guarda y se lee de {@code employee.employee}. El
+     * orden es el de {@link #findPageByFilters}. {@code :text} llega ya en mayúsculas.
+     */
+    @Query(value = "SELECT p FROM PayrollEntity p WHERE " +
+           "(:ruleSystemCode IS NULL OR p.ruleSystemCode = :ruleSystemCode) AND " +
+           "(:payrollPeriodCode IS NULL OR p.payrollPeriodCode = :payrollPeriodCode) AND " +
+           "(:text IS NULL " +
+           "  OR upper(p.employeeNumber) LIKE concat('%', cast(:text as string), '%') " +
+           "  OR (:numberPrefix IS NOT NULL AND upper(p.employeeNumber) like concat(cast(:numberPrefix as string), '%') and trim(leading '0' from substring(upper(p.employeeNumber), length(cast(:numberPrefix as string)) + 1)) = cast(:numberDigits as string)) " +
+           "  OR EXISTS (SELECT 1 FROM EmployeeEntity e WHERE e.ruleSystemCode = p.ruleSystemCode " +
+           "     AND e.employeeTypeCode = p.employeeTypeCode AND e.employeeNumber = p.employeeNumber " +
+           "     AND (upper(e.firstName) LIKE concat('%', cast(:text as string), '%') " +
+           "       OR upper(e.lastName1) LIKE concat('%', cast(:text as string), '%') " +
+           "       OR upper(coalesce(e.lastName2, '')) LIKE concat('%', cast(:text as string), '%') " +
+           "       OR upper(coalesce(e.preferredName, '')) LIKE concat('%', cast(:text as string), '%') " +
+           "       OR upper(concat(concat(concat(e.firstName, ' '), e.lastName1), concat(' ', coalesce(e.lastName2, '')))) " +
+           "          LIKE concat('%', cast(:text as string), '%')))) AND " +
+           "(:status IS NULL OR p.status = :status) " +
+           "ORDER BY p.payrollPeriodCode DESC, " +
+           "CASE WHEN p.status = com.b4rrhh.payroll.domain.model.PayrollStatus.DEFINITIVE THEN 1 ELSE 0 END, " +
+           "p.employeeNumber, p.presenceNumber, p.payrollTypeCode",
+           countQuery = "SELECT count(p) FROM PayrollEntity p WHERE " +
+           "(:ruleSystemCode IS NULL OR p.ruleSystemCode = :ruleSystemCode) AND " +
+           "(:payrollPeriodCode IS NULL OR p.payrollPeriodCode = :payrollPeriodCode) AND " +
+           "(:text IS NULL " +
+           "  OR upper(p.employeeNumber) LIKE concat('%', cast(:text as string), '%') " +
+           "  OR (:numberPrefix IS NOT NULL AND upper(p.employeeNumber) like concat(cast(:numberPrefix as string), '%') and trim(leading '0' from substring(upper(p.employeeNumber), length(cast(:numberPrefix as string)) + 1)) = cast(:numberDigits as string)) " +
+           "  OR EXISTS (SELECT 1 FROM EmployeeEntity e WHERE e.ruleSystemCode = p.ruleSystemCode " +
+           "     AND e.employeeTypeCode = p.employeeTypeCode AND e.employeeNumber = p.employeeNumber " +
+           "     AND (upper(e.firstName) LIKE concat('%', cast(:text as string), '%') " +
+           "       OR upper(e.lastName1) LIKE concat('%', cast(:text as string), '%') " +
+           "       OR upper(coalesce(e.lastName2, '')) LIKE concat('%', cast(:text as string), '%') " +
+           "       OR upper(coalesce(e.preferredName, '')) LIKE concat('%', cast(:text as string), '%') " +
+           "       OR upper(concat(concat(concat(e.firstName, ' '), e.lastName1), concat(' ', coalesce(e.lastName2, '')))) " +
+           "          LIKE concat('%', cast(:text as string), '%')))) AND " +
+           "(:status IS NULL OR p.status = :status)")
+    Page<PayrollEntity> searchPage(
+            @Param("ruleSystemCode") String ruleSystemCode,
+            @Param("payrollPeriodCode") String payrollPeriodCode,
+            @Param("text") String text,
+            @Param("numberPrefix") String numberPrefix,
+            @Param("numberDigits") String numberDigits,
+            @Param("status") PayrollStatus status,
+            Pageable pageable
+    );
+
+    /**
      * De estos empleados y períodos, los meses con recibo en más de una presencia
      * ({@code b4rrhh/frontend#104}): cada fila es regla, tipo de empleado, empleado, período y tipo.
      *

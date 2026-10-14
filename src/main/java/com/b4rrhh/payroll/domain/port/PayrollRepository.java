@@ -31,6 +31,21 @@ public interface PayrollRepository {
             int page,
             int size);
 
+    /**
+     * Lo mismo, pero buscando por lo que se escribe en la lista (b4rrhh/frontend#141): parte de la
+     * matrícula —sin mayúsculas ni ceros de relleno: «25», «0025», «EMP25»— o parte del nombre.
+     * Por defecto, la matrícula exacta, que es lo que sabe hacer un repositorio sin empleados.
+     */
+    default PayrollSearchPage searchPage(
+            String ruleSystemCode,
+            String payrollPeriodCode,
+            String text,
+            PayrollStatus status,
+            int page,
+            int size) {
+        return findPageByFilters(ruleSystemCode, payrollPeriodCode, text, status, page, size);
+    }
+
     Payroll save(Payroll payroll);
 
     void deleteById(Long id);

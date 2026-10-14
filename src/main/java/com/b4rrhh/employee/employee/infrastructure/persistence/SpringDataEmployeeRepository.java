@@ -1,5 +1,6 @@
 package com.b4rrhh.employee.employee.infrastructure.persistence;
 
+import com.b4rrhh.shared.infrastructure.search.EmployeeNumberSearch;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -49,6 +50,10 @@ public interface SpringDataEmployeeRepository extends JpaRepository<EmployeeEnti
 
     // El estado no es una columna: se lee de las presencias en :today, igual que la ficha, y el
     // filtro por estado compara contra esa misma expresion (b4rrhh/backend#148).
+    //
+    // La matricula se busca tambien por su parte numerica sin los ceros de relleno
+    // (:numberPrefix y :numberDigits, b4rrhh/frontend#141): «EMP25» da EMP000025. La que es
+    // exactamente lo escrito va primero; luego las que acaban en esos digitos; luego el resto.
     @Query(value = """
             select new com.b4rrhh.employee.employee.infrastructure.persistence.EmployeeDirectoryProjection(
                 e.ruleSystemCode,
@@ -109,6 +114,7 @@ public interface SpringDataEmployeeRepository extends JpaRepository<EmployeeEnti
               and (
                                         :q is null
                                         or upper(e.employeeNumber) like concat('%', cast(:q as string), '%')
+                                        or (:numberPrefix is not null and upper(e.employeeNumber) like concat(cast(:numberPrefix as string), '%') and trim(leading '0' from substring(upper(e.employeeNumber), length(cast(:numberPrefix as string)) + 1)) = cast(:numberDigits as string))
                                         or upper(e.ruleSystemCode) like concat('%', cast(:q as string), '%')
                                         or upper(e.employeeTypeCode) like concat('%', cast(:q as string), '%')
                                         or upper(e.firstName) like concat('%', cast(:q as string), '%')
@@ -122,7 +128,14 @@ public interface SpringDataEmployeeRepository extends JpaRepository<EmployeeEnti
                         )
                                         ) like concat('%', cast(:q as string), '%')
               )
-            order by e.ruleSystemCode, e.employeeTypeCode, e.employeeNumber
+            order by
+                case
+                    when :q is not null and upper(e.employeeNumber) = :q then 0
+                    when :numberDigits is not null
+                         and upper(e.employeeNumber) like concat('%', cast(:numberDigits as string)) then 1
+                    else 2
+                end,
+                e.ruleSystemCode, e.employeeTypeCode, e.employeeNumber
             """,
             // El conteo lleva los mismos filtros que la página, y nada más: ni la proyección ni la
             // subconsulta del centro de trabajo, que el conteo derivado arrastraría (backend#18).
@@ -150,6 +163,7 @@ public interface SpringDataEmployeeRepository extends JpaRepository<EmployeeEnti
               and (
                     :q is null
                     or upper(e.employeeNumber) like concat('%', cast(:q as string), '%')
+                    or (:numberPrefix is not null and upper(e.employeeNumber) like concat(cast(:numberPrefix as string), '%') and trim(leading '0' from substring(upper(e.employeeNumber), length(cast(:numberPrefix as string)) + 1)) = cast(:numberDigits as string))
                     or upper(e.ruleSystemCode) like concat('%', cast(:q as string), '%')
                     or upper(e.employeeTypeCode) like concat('%', cast(:q as string), '%')
                     or upper(e.firstName) like concat('%', cast(:q as string), '%')
@@ -166,10 +180,28 @@ public interface SpringDataEmployeeRepository extends JpaRepository<EmployeeEnti
             """)
     Page<EmployeeDirectoryProjection> findDirectoryByFilters(
                         @Param("q") String q,
+            @Param("numberPrefix") String numberPrefix,
+            @Param("numberDigits") String numberDigits,
             @Param("ruleSystemCode") String ruleSystemCode,
             @Param("employeeTypeCode") String employeeTypeCode,
             @Param("status") String status,
             @Param("today") LocalDate today,
             Pageable pageable
     );
+
+    /**
+     * El directorio con lo escrito tal cual: el patron de la matricula se saca de ahi
+     * (b4rrhh/frontend#141), para que nadie tenga que acordarse de pasarlo.
+     */
+    default Page<EmployeeDirectoryProjection> findDirectoryByFilters(
+            String q,
+            String ruleSystemCode,
+            String employeeTypeCode,
+            String status,
+            LocalDate today,
+            Pageable pageable
+    ) {
+        return findDirectoryByFilters(q, EmployeeNumberSearch.prefixOf(q), EmployeeNumberSearch.digitsOf(q),
+                ruleSystemCode, employeeTypeCode, status, today, pageable);
+    }
 }

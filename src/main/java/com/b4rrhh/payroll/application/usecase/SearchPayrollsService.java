@@ -18,6 +18,16 @@ public class SearchPayrollsService implements SearchPayrollsUseCase {
     @Override
     @Transactional(readOnly = true)
     public PayrollSearchPage search(SearchPayrollsQuery query) {
+        if (query.text() != null && !query.text().isBlank()) {
+            return payrollRepository.searchPage(
+                    query.ruleSystemCode(),
+                    query.payrollPeriodCode(),
+                    query.text(),
+                    query.status(),
+                    query.page(),
+                    query.size()
+            );
+        }
         return payrollRepository.findPageByFilters(
                 query.ruleSystemCode(),
                 query.payrollPeriodCode(),

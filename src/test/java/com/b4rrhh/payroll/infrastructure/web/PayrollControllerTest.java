@@ -221,7 +221,7 @@ class PayrollControllerTest {
                 .thenReturn(new PayrollSearchPage(List.of(payroll), 0, 50, 7908, Set.of(PayrollSearchPage.Month.of(payroll))));
 
         ResponseEntity<PayrollSearchPageResponse> response =
-                controller.search(null, "202604", "MAS000001", "CALCULATED", null, null);
+                controller.search(null, "202604", "MAS000001", "CALCULATED", null, null, "0025");
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -235,6 +235,8 @@ class PayrollControllerTest {
         assertEquals(PayrollStatus.CALCULATED, queryCaptor.getValue().status());
         assertEquals(0, queryCaptor.getValue().page());
         assertEquals(50, queryCaptor.getValue().size());
+        // Lo escrito en la lista llega al caso de uso (b4rrhh/frontend#141).
+        assertEquals("0025", queryCaptor.getValue().text());
 
         PayrollSummaryResponse first = response.getBody().items().getFirst();
         assertEquals("CALCULATED", first.status());
@@ -246,10 +248,10 @@ class PayrollControllerTest {
     void rejectsAPageOutsideItsBounds() {
         assertThrows(
                 com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException.class,
-                () -> controller.search(null, null, null, null, 0, 201));
+                () -> controller.search(null, null, null, null, 0, 201, null));
         assertThrows(
                 com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException.class,
-                () -> controller.search(null, null, null, null, -1, 50));
+                () -> controller.search(null, null, null, null, -1, 50, null));
     }
 
     @Test

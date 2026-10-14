@@ -139,6 +139,30 @@ class SpringDataEmployeeRepositoryIntegrationTest {
         assertEquals("EMP001", result.getContent().get(0).employeeNumber());
     }
 
+    // b4rrhh/frontend#141: «esto de tener que buscar con toda la matrícula (EMP000025) en vez de
+    // subcadenas (0025 por ejemplo) es una castaña». Las tres formas dan EMP000025, y la exacta va
+    // delante de las que sólo contienen esos dígitos.
+    @Test
+    void findsAnEmployeeNumberByItsDigitsWithoutTheZerosAndPutsTheExactOneFirst() {
+        insertEmployee("ESP", "INTERNAL", "EMP000250", "ANA", "ROMERO", null, null);
+        insertEmployee("ESP", "INTERNAL", "EMP000125", "LUIS", "SAEZ", null, null);
+        insertEmployee("ESP", "INTERNAL", "EMP000025", "EVA", "TORRES", null, null);
+        insertEmployee("ESP", "INTERNAL", "EMP000031", "PEPE", "ULLOA", null, null);
+
+        for (String q : new String[] {"25", "0025", "EMP25", "EMP000025"}) {
+            Page<EmployeeDirectoryProjection> result = repository.findDirectoryByFilters(
+                    q, null, null, null, LocalDate.now(), PageRequest.of(0, 20));
+            assertEquals("EMP000025", result.getContent().get(0).employeeNumber(), "buscando " + q);
+            assertTrue(result.getContent().stream().noneMatch(e -> e.employeeNumber().equals("EMP000031")),
+                    "buscando " + q);
+        }
+
+        Page<EmployeeDirectoryProjection> byDigits = repository.findDirectoryByFilters(
+                "25", null, null, null, LocalDate.now(), PageRequest.of(0, 20));
+        assertEquals(java.util.List.of("EMP000025", "EMP000125", "EMP000250"),
+                byDigits.getContent().stream().map(EmployeeDirectoryProjection::employeeNumber).toList());
+    }
+
     private void assertSingleMatchForQ(String q, String expectedEmployeeNumber) {
         Page<EmployeeDirectoryProjection> result = repository.findDirectoryByFilters(
                 q,
