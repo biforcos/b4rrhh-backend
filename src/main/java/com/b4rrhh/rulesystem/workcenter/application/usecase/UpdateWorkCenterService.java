@@ -53,7 +53,7 @@ public class UpdateWorkCenterService implements UpdateWorkCenterUseCase {
         String workCenterCode = inputNormalizer.normalizeRequiredWorkCenterCode(command.workCenterCode());
         String name = inputNormalizer.normalizeRequiredName(command.name());
         String description = inputNormalizer.normalizeOptionalDescription(command.description());
-        String companyCode = inputNormalizer.normalizeOptionalCompanyCode(command.companyCode());
+        String companyCode = inputNormalizer.normalizeRequiredCompanyCode(command.companyCode());
 
         RuleEntity workCenterEntity = workCenterResolver.resolveApplicableToday(ruleSystemCode, workCenterCode);
         nationalLayerGuard.requireDefinedInNationalLayer(ruleSystemCode, workCenterEntity);

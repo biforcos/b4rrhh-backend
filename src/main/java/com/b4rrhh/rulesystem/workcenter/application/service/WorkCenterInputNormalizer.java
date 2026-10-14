@@ -15,13 +15,9 @@ public class WorkCenterInputNormalizer {
         return normalizeRequiredCode("workCenterCode", workCenterCode, 30);
     }
 
-    public String normalizeOptionalCompanyCode(String companyCode) {
-        return normalizeOptionalCode("companyCode", companyCode, 30);
-    }
-
     /**
-     * La empresa de un centro es obligatoria en el alta: la base la exige desde la V40, y sin ella
-     * el alta llegaba hasta el {@code insert} y salía un 500 (backend#167).
+     * La empresa de un centro es obligatoria, en el alta y en la edición: la base la exige desde la
+     * V40, y sin ella la escritura llegaba hasta la base y salía un 500 (backend#167).
      */
     public String normalizeRequiredCompanyCode(String companyCode) {
         return normalizeRequiredCode("companyCode", companyCode, 30);

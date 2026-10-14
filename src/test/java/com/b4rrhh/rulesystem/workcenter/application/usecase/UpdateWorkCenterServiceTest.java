@@ -69,19 +69,13 @@ class UpdateWorkCenterServiceTest {
     }
 
     @Test
-    void updatesWithNullCompanyCode() {
-        RuleEntity entity = ruleEntity(10L, "ESP", "MAD-01", "Madrid HQ");
-        when(ruleEntityRepository.findApplicableByBusinessKey(eq("ESP"), eq("WORK_CENTER"), eq("MAD-01"), any(LocalDate.class)))
-                .thenReturn(Optional.of(entity));
-        when(ruleEntityRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(workCenterProfileRepository.findByWorkCenterRuleEntityId(10L))
-                .thenReturn(Optional.of(new WorkCenterProfile("ES01", null)));
-        when(workCenterProfileRepository.save(anyLong(), any())).thenAnswer(inv -> inv.getArgument(1));
+    void refusesToLeaveTheWorkCenterWithoutACompany() {
+        // Cambió de premisa con el backend#167: la base exige la empresa desde la V40, y dejarla
+        // nula era un 500 al confirmar. Ahora se rechaza antes de escribir nada.
+        assertThrows(IllegalArgumentException.class, () -> service.update(new UpdateWorkCenterCommand(
+                "ESP", "MAD-01", "Madrid HQ", null, null, null)));
 
-        WorkCenterDetails result = service.update(new UpdateWorkCenterCommand(
-                "ESP", "MAD-01", "Madrid HQ", null, null, null));
-
-        assertNull(result.profile().getCompanyCode());
+        verify(workCenterProfileRepository, never()).save(anyLong(), any());
     }
 
     // backend#35: antes el update de un centro sin perfil le creaba uno fabricado al vuelo.
@@ -92,10 +86,12 @@ class UpdateWorkCenterServiceTest {
         when(ruleEntityRepository.findApplicableByBusinessKey(eq("ESP"), eq("WORK_CENTER"), eq("MAD-01"), any(LocalDate.class)))
                 .thenReturn(Optional.of(entity));
         when(ruleEntityRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(ruleEntityRepository.findApplicableByBusinessKey(eq("ESP"), eq("COMPANY"), eq("ES01"), any(LocalDate.class)))
+                .thenReturn(Optional.of(ruleEntity(20L, "ESP", "ES01", "Company")));
         when(workCenterProfileRepository.findByWorkCenterRuleEntityId(10L)).thenReturn(Optional.empty());
 
         assertThrows(RequiredExtensionMissingException.class, () -> service.update(new UpdateWorkCenterCommand(
-                "ESP", "MAD-01", "Madrid HQ", null, null, null)));
+                "ESP", "MAD-01", "Madrid HQ", null, "ES01", null)));
 
         verify(workCenterProfileRepository, never()).save(anyLong(), any());
     }
