@@ -4,5 +4,5 @@ import com.b4rrhh.geo.territory.domain.model.PostalCodeCheck;
 
 public interface CheckPostalCodeUseCase {
 
-    PostalCodeCheck check(String ruleSystemCode, String countryCode, String postalCode);
+    PostalCodeCheck check(String countryCode, String postalCode);
 }

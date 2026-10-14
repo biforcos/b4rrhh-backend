@@ -6,5 +6,6 @@ import java.util.List;
 
 public interface ListTerritoryProvincesUseCase {
 
-    List<Province> list(String ruleSystemCode);
+    /** Las del país; vacío si no tiene territorio (backend#169). */
+    List<Province> list(String countryCode);
 }

@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * El territorio que es catálogo (V174, backend#158). Las entidades se piden al puerto, que es
@@ -49,6 +50,26 @@ public class TerritoryCatalogAdapter implements TerritoryCatalogPort {
     @Override
     public boolean ruleSystemExists(String ruleSystemCode) {
         return ruleSystems.findByCode(ruleSystemCode).isPresent();
+    }
+
+    @Override
+    public Optional<String> nationalRuleSystemOf(String countryCode) {
+        if (countryCode == null || countryCode.isBlank()) {
+            return Optional.empty();
+        }
+        String country = countryCode.strip().toUpperCase(Locale.ROOT);
+        return ruleSystems.findAll().stream()
+                .filter(ruleSystem -> ruleSystem.isActive() && country.equals(ruleSystem.getCountryCode()))
+                .map(ruleSystem -> ruleSystem.getCode())
+                .sorted()
+                .findFirst();
+    }
+
+    @Override
+    public boolean inNationalCatalog(String countryCode, String ruleEntityTypeCode, String code) {
+        return code != null && nationalRuleSystemOf(countryCode)
+                .flatMap(ruleSystem -> ruleEntities.findByBusinessKey(ruleSystem, ruleEntityTypeCode, code))
+                .isPresent();
     }
 
     @Override

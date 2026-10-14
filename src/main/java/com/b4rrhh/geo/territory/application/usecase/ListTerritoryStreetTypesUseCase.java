@@ -6,5 +6,6 @@ import java.util.List;
 
 public interface ListTerritoryStreetTypesUseCase {
 
-    List<StreetType> list(String ruleSystemCode);
+    /** Los del país; vacío si no tiene territorio (backend#169). */
+    List<StreetType> list(String countryCode);
 }

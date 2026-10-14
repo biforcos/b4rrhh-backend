@@ -1,6 +1,7 @@
 package com.b4rrhh.geo.territory.infrastructure.web;
 
 import com.b4rrhh.geo.territory.domain.model.Country;
+import com.b4rrhh.geo.territory.domain.model.CountryTerritory;
 import com.b4rrhh.geo.territory.domain.model.LocatedMunicipality;
 import com.b4rrhh.geo.territory.domain.model.Municipality;
 import com.b4rrhh.geo.territory.domain.model.PostalCodeCheck;
@@ -10,6 +11,7 @@ import com.b4rrhh.geo.territory.domain.model.StreetType;
 import com.b4rrhh.geo.territory.infrastructure.web.dto.TerritoryCountryResponse;
 import com.b4rrhh.geo.territory.infrastructure.web.dto.TerritoryMunicipalityRefResponse;
 import com.b4rrhh.geo.territory.infrastructure.web.dto.TerritoryMunicipalityResponse;
+import com.b4rrhh.geo.territory.infrastructure.web.dto.TerritoryOfCountryResponse;
 import com.b4rrhh.geo.territory.infrastructure.web.dto.TerritoryPostalCodeResponse;
 import com.b4rrhh.geo.territory.infrastructure.web.dto.TerritoryProvinceRefResponse;
 import com.b4rrhh.geo.territory.infrastructure.web.dto.TerritoryProvinceResponse;
@@ -51,6 +53,10 @@ public class TerritoryResponseAssembler {
                         ? new TerritoryProvinceRefResponse(municipality.provinceCode(), null)
                         : new TerritoryProvinceRefResponse(province.code(), province.name()),
                 region == null ? null : new TerritoryRegionRefResponse(region.code(), region.name()));
+    }
+
+    public TerritoryOfCountryResponse toResponse(CountryTerritory territory) {
+        return new TerritoryOfCountryResponse(territory.countryCode(), territory.hasTerritory(), territory.message());
     }
 
     public TerritoryPostalCodeResponse toResponse(PostalCodeCheck check) {

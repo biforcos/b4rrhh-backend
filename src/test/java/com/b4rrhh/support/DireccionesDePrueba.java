@@ -39,7 +39,7 @@ public final class DireccionesDePrueba {
      * lo que rechaza la de verdad sin necesitar el catálogo.
      */
     public static PostalAddressValidator validacionQueNoMiraElCatalogo() {
-        return new PostalAddressValidator(null, null, null) {
+        return new PostalAddressValidator(null, null, null, null) {
             @Override
             public PostalAddress validate(String ruleSystemCode, PostalAddressInput input, LocalDate date) {
                 if (input == null || input.countryCode() == null || input.countryCode().isBlank()) {

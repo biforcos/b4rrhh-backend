@@ -16,7 +16,7 @@ public class ListTerritoryStreetTypesService implements ListTerritoryStreetTypes
     }
 
     @Override
-    public List<StreetType> list(String ruleSystemCode) {
-        return catalog.streetTypes(TerritoryRuleSystem.require(catalog, ruleSystemCode));
+    public List<StreetType> list(String countryCode) {
+        return catalog.nationalRuleSystemOf(countryCode).map(catalog::streetTypes).orElse(List.of());
     }
 }

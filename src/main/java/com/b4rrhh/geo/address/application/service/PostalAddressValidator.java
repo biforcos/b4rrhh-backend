@@ -1,5 +1,6 @@
 package com.b4rrhh.geo.address.application.service;
 
+import com.b4rrhh.geo.territory.application.port.TerritoryCatalogPort;
 import com.b4rrhh.geo.territory.domain.port.PostalCodeRepository;
 import com.b4rrhh.geo.address.domain.model.PostalAddressIssue;
 import com.b4rrhh.geo.address.domain.exception.PostalAddressRejectedException;
@@ -39,7 +40,8 @@ import java.util.regex.Pattern;
  *
  * <p>Por el país de la dirección, no por la reglamentación de quien la tiene: un empleado de FRA que
  * vive en Valencia tiene una calle española. Los tipos de vía y las provincias se leen en la capa
- * {@code ESP} (V174); el país, en el catálogo de la reglamentación, que lo ve desde INT.</p>
+ * nacional del país, resuelta por {@code TerritoryCatalogPort} igual que la consulta del territorio
+ * (backend#169); el país, en el catálogo de la reglamentación, que lo ve desde INT.</p>
  *
  * <p>La vigencia de un municipio es «desde al menos» (V175): {@code startDate} es la primera
  * relación del INE cargada, no su creación. Por eso sólo cuenta que no haya terminado.</p>
@@ -48,8 +50,6 @@ import java.util.regex.Pattern;
 public class PostalAddressValidator {
 
     public static final String SPAIN = "ESP";
-    /** La capa donde viven las provincias y los tipos de vía de España (V174). */
-    static final String SPANISH_TERRITORY_LAYER = "ESP";
     static final String COUNTRY = "COUNTRY";
     static final String PROVINCE = "PROVINCE";
     static final String STREET_TYPE = "STREET_TYPE";
@@ -59,15 +59,18 @@ public class PostalAddressValidator {
     private final RuleEntityRepository ruleEntityRepository;
     private final MunicipalityRepository municipalityRepository;
     private final PostalCodeRepository postalCodeRepository;
+    private final TerritoryCatalogPort territoryCatalog;
 
     public PostalAddressValidator(
             RuleEntityRepository ruleEntityRepository,
             MunicipalityRepository municipalityRepository,
-            PostalCodeRepository postalCodeRepository
+            PostalCodeRepository postalCodeRepository,
+            TerritoryCatalogPort territoryCatalog
     ) {
         this.ruleEntityRepository = ruleEntityRepository;
         this.municipalityRepository = municipalityRepository;
         this.postalCodeRepository = postalCodeRepository;
+        this.territoryCatalog = territoryCatalog;
     }
 
     /**
@@ -188,9 +191,12 @@ public class PostalAddressValidator {
         return inSpanishCatalog(PROVINCE, province) ? province : null;
     }
 
+    /**
+     * Si el código está en la capa nacional de España, resuelta como la resuelve la consulta del
+     * territorio: por el país, no por la reglamentación de quien tiene la dirección (backend#169).
+     */
     private boolean inSpanishCatalog(String ruleEntityTypeCode, String code) {
-        return code != null
-                && ruleEntityRepository.findInLayerByBusinessKey(SPANISH_TERRITORY_LAYER, ruleEntityTypeCode, code).isPresent();
+        return territoryCatalog.inNationalCatalog(SPAIN, ruleEntityTypeCode, code);
     }
 
     private static boolean isSpanishPostalCode(String postalCode) {

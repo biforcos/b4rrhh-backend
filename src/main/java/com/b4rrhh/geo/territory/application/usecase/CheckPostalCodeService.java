@@ -9,6 +9,7 @@ import com.b4rrhh.geo.territory.domain.port.MunicipalityRepository;
 import com.b4rrhh.geo.territory.domain.port.PostalCodeRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
@@ -37,8 +38,7 @@ public class CheckPostalCodeService implements CheckPostalCodeUseCase {
     }
 
     @Override
-    public PostalCodeCheck check(String ruleSystemCode, String countryCode, String postalCode) {
-        String ruleSystem = TerritoryRuleSystem.require(catalog, ruleSystemCode);
+    public PostalCodeCheck check(String countryCode, String postalCode) {
         String country = countryCode == null ? "" : countryCode.strip().toUpperCase();
         String code = postalCode == null ? "" : postalCode.strip();
 
@@ -50,7 +50,8 @@ public class CheckPostalCodeService implements CheckPostalCodeUseCase {
             throw new InvalidTerritoryQueryException("Un código postal español son cinco cifras: " + code + ".");
         }
 
-        Optional<Province> province = catalog.provinces(ruleSystem).stream()
+        Optional<Province> province = catalog.nationalRuleSystemOf(country).map(catalog::provinces)
+                .orElse(List.of()).stream()
                 .filter(candidate -> candidate.code().equals(code.substring(0, 2)))
                 .findFirst();
         if (province.isEmpty()) {

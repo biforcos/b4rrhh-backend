@@ -63,7 +63,7 @@ class TheTerritoryIsQueriedEndToEndTest {
     @Test
     void searchingValeFindsBothValenciasWithTheirProvinces() throws Exception {
         mockMvc.perform(get("/territory/ESP/municipalities")
-                        .param("countryCode", "ESP").param("name", "Vale").param("date", "2026-10-02"))
+                        .param("name", "Vale").param("date", "2026-10-02"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.code == '46250')].name").value("València"))
                 .andExpect(jsonPath("$[?(@.code == '46250')].province.name").value("Valencia/València"))
@@ -76,11 +76,11 @@ class TheTerritoryIsQueriedEndToEndTest {
     void aMunicipalityIsFoundOnlyOnDatesItIsInForceOn() throws Exception {
         // Usansolo entra con la relación de 2024: en 2023 no sale, en 2024 sí.
         mockMvc.perform(get("/territory/ESP/municipalities")
-                        .param("countryCode", "ESP").param("name", "Usansolo").param("date", "2023-06-01"))
+                        .param("name", "Usansolo").param("date", "2023-06-01"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
         mockMvc.perform(get("/territory/ESP/municipalities")
-                        .param("countryCode", "ESP").param("name", "Usansolo").param("date", "2024-06-01"))
+                        .param("name", "Usansolo").param("date", "2024-06-01"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].code").value("48916"));
     }
@@ -95,20 +95,20 @@ class TheTerritoryIsQueriedEndToEndTest {
                 """);
 
         mockMvc.perform(get("/territory/ESP/municipalities")
-                        .param("countryCode", "ESP").param("name", "Valfing").param("date", "2024-06-01"))
+                        .param("name", "Valfing").param("date", "2024-06-01"))
                 .andExpect(jsonPath("$[*].code").value(hasItem("46999")));
         mockMvc.perform(get("/territory/ESP/municipalities")
-                        .param("countryCode", "ESP").param("name", "Valfing").param("date", "2025-01-01"))
+                        .param("name", "Valfing").param("date", "2025-01-01"))
                 .andExpect(jsonPath("$[*].code").value(not(hasItem("46999"))));
     }
 
     @Test
     void aPostalCodeSaysItsProvinceByItsFirstTwoDigits() throws Exception {
-        mockMvc.perform(get("/territory/ESP/postal-codes/46363").param("countryCode", "ESP"))
+        mockMvc.perform(get("/territory/ESP/postal-codes/46363"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.province.code").value("46"))
                 .andExpect(jsonPath("$.message").value(nullValue()));
-        mockMvc.perform(get("/territory/ESP/postal-codes/28001").param("countryCode", "ESP"))
+        mockMvc.perform(get("/territory/ESP/postal-codes/28001"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.province.code").value("28"))
                 .andExpect(jsonPath("$.province.name").value("Madrid"))
@@ -123,23 +123,23 @@ class TheTerritoryIsQueriedEndToEndTest {
      */
     @Test
     void aPostalCodeSaysWhetherItIsInTheMaster() throws Exception {
-        mockMvc.perform(get("/territory/ESP/postal-codes/46112").param("countryCode", "ESP"))
+        mockMvc.perform(get("/territory/ESP/postal-codes/46112"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.province.code").value("46"))
                 .andExpect(jsonPath("$.suggestedMunicipality").value(nullValue()))
                 .andExpect(jsonPath("$.known").value(true));
-        mockMvc.perform(get("/territory/ESP/postal-codes/46363").param("countryCode", "ESP"))
+        mockMvc.perform(get("/territory/ESP/postal-codes/46363"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.province.code").value("46"))
                 .andExpect(jsonPath("$.suggestedMunicipality").value(nullValue()))
                 .andExpect(jsonPath("$.known").value(false));
-        mockMvc.perform(get("/territory/ESP/postal-codes/99999").param("countryCode", "ESP"))
+        mockMvc.perform(get("/territory/ESP/postal-codes/99999"))
                 .andExpect(jsonPath("$.known").value(false));
     }
 
     @Test
     void aPostalCodeWhoseFirstTwoDigitsAreNoProvinceHasNoneAndSaysWhy() throws Exception {
-        mockMvc.perform(get("/territory/ESP/postal-codes/99999").param("countryCode", "ESP"))
+        mockMvc.perform(get("/territory/ESP/postal-codes/99999"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.province").value(nullValue()))
                 .andExpect(jsonPath("$.suggestedMunicipality").value(nullValue()))
@@ -148,13 +148,15 @@ class TheTerritoryIsQueriedEndToEndTest {
 
     @Test
     void whatIsNotAQuestionIsRejected() throws Exception {
-        mockMvc.perform(get("/territory/ESP/postal-codes/4600A").param("countryCode", "ESP"))
+        mockMvc.perform(get("/territory/ESP/postal-codes/4600A"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("TERRITORY_INVALID_QUERY"));
-        mockMvc.perform(get("/territory/ESP/municipalities").param("countryCode", "ESP").param("name", "V"))
+        mockMvc.perform(get("/territory/ESP/municipalities").param("name", "V"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("TERRITORY_INVALID_QUERY"));
-        mockMvc.perform(get("/territory/ZZZ/provinces"))
+        // Los países los ve una reglamentación: ésa sí tiene que existir. Las provincias son de un
+        // país, y uno que no tiene territorio contesta vacío (backend#169).
+        mockMvc.perform(get("/territory/ZZZ/countries"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("TERRITORY_RULE_SYSTEM_NOT_FOUND"));
     }

@@ -16,7 +16,7 @@ public class ListTerritoryProvincesService implements ListTerritoryProvincesUseC
     }
 
     @Override
-    public List<Province> list(String ruleSystemCode) {
-        return catalog.provinces(TerritoryRuleSystem.require(catalog, ruleSystemCode));
+    public List<Province> list(String countryCode) {
+        return catalog.nationalRuleSystemOf(countryCode).map(catalog::provinces).orElse(List.of());
     }
 }

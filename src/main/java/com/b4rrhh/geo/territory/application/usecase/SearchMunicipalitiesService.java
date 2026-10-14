@@ -34,7 +34,6 @@ public class SearchMunicipalitiesService implements SearchMunicipalitiesUseCase 
 
     @Override
     public List<LocatedMunicipality> search(SearchMunicipalitiesQuery query) {
-        String ruleSystemCode = TerritoryRuleSystem.require(catalog, query.ruleSystemCode());
         String name = query.name() == null ? "" : query.name().strip();
         if (name.length() < MIN_NAME_LENGTH) {
             throw new InvalidTerritoryQueryException(
@@ -47,7 +46,8 @@ public class SearchMunicipalitiesService implements SearchMunicipalitiesUseCase 
         String countryCode = query.countryCode() == null ? "" : query.countryCode().strip().toUpperCase();
         LocalDate date = query.date() == null ? LocalDate.now() : query.date();
 
-        Map<String, Province> provinces = catalog.provinces(ruleSystemCode).stream()
+        Map<String, Province> provinces = catalog.nationalRuleSystemOf(countryCode).map(catalog::provinces)
+                .orElse(List.of()).stream()
                 .collect(Collectors.toMap(Province::code, Function.identity()));
         return municipalities.searchByName(countryCode, name, date, limit).stream()
                 .map(municipality -> new LocatedMunicipality(municipality, provinces.get(municipality.provinceCode())))

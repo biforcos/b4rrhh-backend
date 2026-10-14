@@ -3,6 +3,7 @@ package com.b4rrhh.geo.address;
 import java.util.TreeMap;
 import java.util.Objects;
 import java.util.Map;
+import com.b4rrhh.geo.territory.application.port.TerritoryCatalogPort;
 import com.b4rrhh.geo.territory.infrastructure.persistence.PostalCodeJdbcAdapter;
 import com.b4rrhh.geo.address.domain.model.PostalAddressIssue;
 import com.b4rrhh.geo.address.application.service.PostalAddressValidator;
@@ -27,6 +28,7 @@ import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -97,7 +99,8 @@ class TheAddressMigrationSaysWhatItLeftOnTheSeedTest {
     @Test
     void theJavaValidationSaysOfEveryRowWhatTheMigrationSaid() {
         PostalAddressValidator validator = new PostalAddressValidator(
-                catalogFromTheSeed(), new MunicipalityJdbcAdapter(seed), new PostalCodeJdbcAdapter(seed));
+                catalogFromTheSeed(), new MunicipalityJdbcAdapter(seed), new PostalCodeJdbcAdapter(seed),
+                territoryFromTheSeed());
         List<String> discrepan = new ArrayList<>();
         for (String[] fuente : new String[][] {
                 {"employee.address a join employee.employee e on e.id = a.employee_id", "e.rule_system_code", "a.start_date"},
@@ -135,14 +138,24 @@ class TheAddressMigrationSaysWhatItLeftOnTheSeedTest {
                 """, (rs, n) -> entity(rs.getString(1), rs.getString(2), "COUNTRY", rs.getObject(3, LocalDate.class),
                 rs.getObject(4, LocalDate.class), rs.getBoolean(5)), call.getArgument(0), call.getArgument(2))
                 .stream().findFirst());
-        when(catalog.findInLayerByBusinessKey(anyString(), anyString(), anyString())).thenAnswer(call -> seed.query("""
-                select re.code, re.layer_code, re.rule_entity_type_code, re.start_date, re.end_date, re.active
-                  from rulesystem.rule_entity re
-                 where re.layer_code = ? and re.rule_entity_type_code = ? and re.code = ?
-                """, (rs, n) -> entity(rs.getString(1), rs.getString(2), rs.getString(3), rs.getObject(4, LocalDate.class),
-                rs.getObject(5, LocalDate.class), rs.getBoolean(6)), call.getArgument(0), call.getArgument(1), call.getArgument(2))
-                .stream().findFirst());
         return catalog;
+    }
+
+    /**
+     * La capa nacional del país, como la resuelve {@code TerritoryCatalogAdapter} (backend#169): la de
+     * la reglamentación que lo tiene como suyo.
+     */
+    private static TerritoryCatalogPort territoryFromTheSeed() {
+        TerritoryCatalogPort territory = mock(TerritoryCatalogPort.class);
+        when(territory.inNationalCatalog(anyString(), anyString(), any())).thenAnswer(call -> call.getArgument(2) != null
+                && Boolean.TRUE.equals(seed.queryForObject("""
+                select exists (select 1
+                  from rulesystem.rule_system rs
+                  join rulesystem.rule_system_layer rsl on rsl.rule_system_code = rs.code
+                  join rulesystem.rule_entity re on re.layer_code = rsl.layer_code
+                 where rs.country_code = ? and re.rule_entity_type_code = ? and re.code = ?)
+                """, Boolean.class, call.getArgument(0), call.getArgument(1), call.getArgument(2))));
+        return territory;
     }
 
     private static RuleEntity entity(String code, String layer, String type, LocalDate start, LocalDate end, boolean active) {
