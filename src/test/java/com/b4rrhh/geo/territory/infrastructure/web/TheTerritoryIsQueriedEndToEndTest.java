@@ -116,6 +116,27 @@ class TheTerritoryIsQueriedEndToEndTest {
                 .andExpect(jsonPath("$.suggestedMunicipality.name").value("Madrid"));
     }
 
+    /**
+     * Si el CP está en el maestro (backend#170): 46363 y 46112 son los dos de Valencia y ninguno sugiere
+     * municipio, y sin esto contestaban lo mismo. Sólo uno existe, y es lo que decide la marca
+     * {@code CP_DESCONOCIDO} del backend#155.
+     */
+    @Test
+    void aPostalCodeSaysWhetherItIsInTheMaster() throws Exception {
+        mockMvc.perform(get("/territory/ESP/postal-codes/46112").param("countryCode", "ESP"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.province.code").value("46"))
+                .andExpect(jsonPath("$.suggestedMunicipality").value(nullValue()))
+                .andExpect(jsonPath("$.known").value(true));
+        mockMvc.perform(get("/territory/ESP/postal-codes/46363").param("countryCode", "ESP"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.province.code").value("46"))
+                .andExpect(jsonPath("$.suggestedMunicipality").value(nullValue()))
+                .andExpect(jsonPath("$.known").value(false));
+        mockMvc.perform(get("/territory/ESP/postal-codes/99999").param("countryCode", "ESP"))
+                .andExpect(jsonPath("$.known").value(false));
+    }
+
     @Test
     void aPostalCodeWhoseFirstTwoDigitsAreNoProvinceHasNoneAndSaysWhy() throws Exception {
         mockMvc.perform(get("/territory/ESP/postal-codes/99999").param("countryCode", "ESP"))

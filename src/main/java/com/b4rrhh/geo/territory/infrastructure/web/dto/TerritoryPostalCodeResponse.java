@@ -5,6 +5,7 @@ public record TerritoryPostalCodeResponse(
         String countryCode,
         TerritoryProvinceRefResponse province,
         TerritoryMunicipalityRefResponse suggestedMunicipality,
+        boolean known,
         String message
 ) {
 }

@@ -43,7 +43,7 @@ public class CheckPostalCodeService implements CheckPostalCodeUseCase {
         String code = postalCode == null ? "" : postalCode.strip();
 
         if (!"ESP".equals(country)) {
-            return new PostalCodeCheck(code, country, null, null,
+            return new PostalCodeCheck(code, country, null, null, false,
                     "No hay datos de códigos postales de " + country + ".");
         }
         if (!SPANISH_POSTAL_CODE.matcher(code).matches()) {
@@ -54,12 +54,12 @@ public class CheckPostalCodeService implements CheckPostalCodeUseCase {
                 .filter(candidate -> candidate.code().equals(code.substring(0, 2)))
                 .findFirst();
         if (province.isEmpty()) {
-            return new PostalCodeCheck(code, country, null, null,
+            return new PostalCodeCheck(code, country, null, null, postalCodes.exists(country, code),
                     "Las dos primeras cifras de " + code + " no son una provincia.");
         }
         Municipality suggested = postalCodes.findSuggestedMunicipalityCode(country, code)
                 .flatMap(municipalityCode -> municipalities.findByCode(country, municipalityCode))
                 .orElse(null);
-        return new PostalCodeCheck(code, country, province.get(), suggested, null);
+        return new PostalCodeCheck(code, country, province.get(), suggested, postalCodes.exists(country, code), null);
     }
 }

@@ -61,6 +61,7 @@ public class TerritoryResponseAssembler {
                 check.countryCode(),
                 province == null ? null : new TerritoryProvinceRefResponse(province.code(), province.name()),
                 suggested == null ? null : new TerritoryMunicipalityRefResponse(suggested.code(), suggested.name()),
+                check.known(),
                 check.message());
     }
 }
