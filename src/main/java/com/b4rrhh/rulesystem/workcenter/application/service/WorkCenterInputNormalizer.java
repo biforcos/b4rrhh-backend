@@ -68,24 +68,6 @@ public class WorkCenterInputNormalizer {
         return normalized;
     }
 
-    private String normalizeOptionalCode(String fieldName, String value, int maxLength) {
-        if (value == null) {
-            return null;
-        }
-
-        String normalized = value.trim();
-        if (normalized.isEmpty()) {
-            return null;
-        }
-
-        normalized = normalized.toUpperCase();
-        if (normalized.length() > maxLength) {
-            throw new IllegalArgumentException(fieldName + " exceeds max length " + maxLength);
-        }
-
-        return normalized;
-    }
-
     private String normalizeRequiredText(String fieldName, String value, int maxLength) {
         if (value == null || value.trim().isEmpty()) {
             throw new IllegalArgumentException(fieldName + " is required");
