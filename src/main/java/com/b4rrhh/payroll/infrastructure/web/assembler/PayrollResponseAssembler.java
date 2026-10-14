@@ -96,7 +96,8 @@ public class PayrollResponseAssembler {
         );
     }
 
-    public PayrollSummaryResponse toSummaryResponse(Payroll payroll, boolean sharesPeriodWithAnotherPresence) {
+    public PayrollSummaryResponse toSummaryResponse(Payroll payroll, boolean sharesPeriodWithAnotherPresence,
+                                                    String employeeName) {
         return new PayrollSummaryResponse(
                 payroll.getRuleSystemCode(),
                 payroll.getEmployeeTypeCode(),
@@ -106,7 +107,8 @@ public class PayrollResponseAssembler {
                 payroll.getPresenceNumber(),
                 payroll.getStatus().name(),
                 payroll.getCalculatedAt(),
-                sharesPeriodWithAnotherPresence
+                sharesPeriodWithAnotherPresence,
+                employeeName
         );
     }
 

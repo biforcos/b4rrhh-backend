@@ -316,7 +316,7 @@ public class PayrollController {
                 ruleSystemCode, payrollPeriodCode, employeeNumber, parsedStatus, resolvedPage, resolvedSize, q));
         return ResponseEntity.ok(new PayrollSearchPageResponse(
                 result.items().stream()
-                        .map(p -> payrollResponseAssembler.toSummaryResponse(p, result.sharesItsMonth(p)))
+                        .map(p -> payrollResponseAssembler.toSummaryResponse(p, result.sharesItsMonth(p), result.employeeNameOf(p)))
                         .toList(),
                 result.page(),
                 result.size(),

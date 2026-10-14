@@ -122,6 +122,15 @@ public interface SpringDataPayrollRepository extends JpaRepository<PayrollEntity
     );
 
     /**
+     * El nombre de los empleados de una página de recibos ({@code b4rrhh/frontend#143}): cada fila es
+     * regla, tipo, número, nombre y los dos apellidos. El recibo no lo guarda; se lee de
+     * {@code employee.employee}, como en la búsqueda por nombre.
+     */
+    @Query("select e.ruleSystemCode, e.employeeTypeCode, e.employeeNumber, e.firstName, e.lastName1, e.lastName2"
+            + " from EmployeeEntity e where e.employeeNumber in :employeeNumbers")
+    List<Object[]> findEmployeeNames(@Param("employeeNumbers") Collection<String> employeeNumbers);
+
+    /**
      * En que estado esta cada recibo que este empleado tiene de un periodo ({@code backend#128}).
      *
      * <p>Sin filtrar por estado <b>a proposito</b>: la pregunta es si hay alguno y como esta, y un

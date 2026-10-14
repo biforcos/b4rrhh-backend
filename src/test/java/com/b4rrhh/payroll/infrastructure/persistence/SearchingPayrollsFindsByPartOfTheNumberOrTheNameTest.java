@@ -45,6 +45,21 @@ class SearchingPayrollsFindsByPartOfTheNumberOrTheNameTest {
         assertEquals(List.of("EMP000025", "EMP000031"), numbers("EMP"));
     }
 
+    // La lista enseña por qué entra cada fila (b4rrhh/frontend#143): el nombre va con la página.
+    @Test
+    void thePageCarriesTheNameOfEachEmployee() {
+        employee("EMP000025", "EVA", "TORRES");
+        save("EMP000025");
+        save("EMP000031");
+
+        var page = repository.searchPage(null, "202609", "", null, 0, 50);
+
+        Payroll eva = page.items().stream().filter(p -> p.getEmployeeNumber().equals("EMP000025")).findFirst().orElseThrow();
+        Payroll nadie = page.items().stream().filter(p -> p.getEmployeeNumber().equals("EMP000031")).findFirst().orElseThrow();
+        assertEquals("EVA TORRES", page.employeeNameOf(eva));
+        assertEquals(null, page.employeeNameOf(nadie));
+    }
+
     // La matrícula entera es la del salto desde la ficha (frontend#68): trae a ese y a nadie más. Y
     // con prefijo, los ceros son sólo relleno: «EMP25» no es EMP000125 ni EMP000250.
     @Test

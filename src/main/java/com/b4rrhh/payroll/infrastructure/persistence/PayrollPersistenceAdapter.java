@@ -14,7 +14,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -60,7 +62,8 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
         Page<PayrollEntity> result = springDataPayrollRepository
                 .findPageByFilters(ruleSystemCode, payrollPeriodCode, employeeNumber, status, PageRequest.of(page, size));
         List<Payroll> items = result.getContent().stream().map(this::toDomain).toList();
-        return new PayrollSearchPage(items, page, size, result.getTotalElements(), sharedMonths(items));
+        return new PayrollSearchPage(items, page, size, result.getTotalElements(), sharedMonths(items),
+                employeeNames(items));
     }
 
     @Override
@@ -81,7 +84,30 @@ public class PayrollPersistenceAdapter implements PayrollRepository {
                 status,
                 PageRequest.of(page, size));
         List<Payroll> items = result.getContent().stream().map(this::toDomain).toList();
-        return new PayrollSearchPage(items, page, size, result.getTotalElements(), sharedMonths(items));
+        return new PayrollSearchPage(items, page, size, result.getTotalElements(), sharedMonths(items),
+                employeeNames(items));
+    }
+
+    /** El nombre de cada empleado de la página, en una consulta (`b4rrhh/frontend#143`). */
+    private Map<PayrollSearchPage.Employee, String> employeeNames(List<Payroll> items) {
+        if (items.isEmpty()) {
+            return Map.of();
+        }
+        Set<PayrollSearchPage.Employee> onThePage = items.stream()
+                .map(PayrollSearchPage.Employee::of)
+                .collect(Collectors.toSet());
+        Map<PayrollSearchPage.Employee, String> names = new HashMap<>();
+        for (Object[] row : springDataPayrollRepository.findEmployeeNames(
+                items.stream().map(Payroll::getEmployeeNumber).collect(Collectors.toSet()))) {
+            PayrollSearchPage.Employee employee =
+                    new PayrollSearchPage.Employee((String) row[0], (String) row[1], (String) row[2]);
+            if (onThePage.contains(employee)) {
+                String lastName2 = (String) row[5];
+                names.put(employee, row[3] + " " + row[4]
+                        + (lastName2 == null || lastName2.isBlank() ? "" : " " + lastName2));
+            }
+        }
+        return names;
     }
 
     /** Una consulta por página, y ninguna si la página viene vacía (`b4rrhh/frontend#104`). */
