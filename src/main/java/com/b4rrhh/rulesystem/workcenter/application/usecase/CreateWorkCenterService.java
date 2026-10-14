@@ -57,7 +57,7 @@ public class CreateWorkCenterService implements CreateWorkCenterUseCase {
         String name = inputNormalizer.normalizeRequiredName(command.name());
         String description = inputNormalizer.normalizeOptionalDescription(command.description());
         java.time.LocalDate startDate = inputNormalizer.requireStartDate(command.startDate());
-        String companyCode = inputNormalizer.normalizeOptionalCompanyCode(command.companyCode());
+        String companyCode = inputNormalizer.normalizeRequiredCompanyCode(command.companyCode());
 
         ruleSystemRepository.findByCode(ruleSystemCode).orElseThrow(
                 () -> new IllegalArgumentException("Rule system not found with code: " + ruleSystemCode)

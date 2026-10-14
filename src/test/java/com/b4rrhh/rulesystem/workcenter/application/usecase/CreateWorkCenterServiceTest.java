@@ -108,7 +108,9 @@ class CreateWorkCenterServiceTest {
                 "Madrid HQ",
                 null,
                 LocalDate.of(2026, 1, 1),
-                null,
+                // Con empresa: sin ella el alta se rechaza antes de mirar si el centro ya existe
+                // (backend#167), y esto prueba el duplicado.
+                "ACME",
                 null)));
     }
 
