@@ -57,7 +57,8 @@ public class DirectCatalogOptionController {
                 item.name(),
                 item.active(),
                 item.startDate(),
-                item.endDate()
+                item.endDate(),
+                item.commonLabel()
         );
     }
 }

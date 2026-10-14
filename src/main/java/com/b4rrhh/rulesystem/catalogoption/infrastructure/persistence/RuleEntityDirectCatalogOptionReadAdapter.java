@@ -7,8 +7,10 @@ import com.b4rrhh.rulesystem.domain.port.RuleEntityRepository;
 import com.b4rrhh.rulesystem.translation.domain.model.LanguageCode;
 import com.b4rrhh.rulesystem.translation.infrastructure.persistence.RuleEntityTranslationEntity;
 import com.b4rrhh.rulesystem.translation.infrastructure.persistence.SpringDataRuleEntityTranslationRepository;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -19,13 +21,16 @@ public class RuleEntityDirectCatalogOptionReadAdapter implements DirectCatalogOp
 
     private final RuleEntityRepository ruleEntityRepository;
     private final SpringDataRuleEntityTranslationRepository springDataRuleEntityTranslationRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     public RuleEntityDirectCatalogOptionReadAdapter(
             RuleEntityRepository ruleEntityRepository,
-            SpringDataRuleEntityTranslationRepository springDataRuleEntityTranslationRepository
+            SpringDataRuleEntityTranslationRepository springDataRuleEntityTranslationRepository,
+            JdbcTemplate jdbcTemplate
     ) {
         this.ruleEntityRepository = ruleEntityRepository;
         this.springDataRuleEntityTranslationRepository = springDataRuleEntityTranslationRepository;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
@@ -38,10 +43,31 @@ public class RuleEntityDirectCatalogOptionReadAdapter implements DirectCatalogOp
         List<RuleEntity> entities = ruleEntityRepository
                 .findActiveOptions(ruleSystemCode, ruleEntityTypeCode, qLike, null);
         Map<Long, String> translatedNames = translatedNames(entities, languageCode);
+        Map<Long, String> commonLabels = commonLabels(entities, languageCode);
 
         return entities.stream()
-                .map(entity -> toDomain(entity, translatedNames.get(entity.getId())))
+                .map(entity -> toDomain(entity, translatedNames.get(entity.getId()), commonLabels.get(entity.getId())))
                 .toList();
+    }
+
+    /**
+     * La etiqueta en palabras de las citas reglamentarias que la tienen (backend#173, V180). Una
+     * consulta por lote, como las traducciones; sin idioma pedido, ninguna.
+     */
+    private Map<Long, String> commonLabels(List<RuleEntity> entities, String languageCode) {
+        Optional<String> language = LanguageCode.canonical(languageCode);
+        if (language.isEmpty() || entities.isEmpty()) {
+            return Map.of();
+        }
+        Long[] ids = entities.stream().map(RuleEntity::getId).toArray(Long[]::new);
+        Map<Long, String> labels = new HashMap<>();
+        jdbcTemplate.query(
+                "select rule_entity_id, label from rulesystem.rule_entity_common_label"
+                        + " where language_code = ? and rule_entity_id = any (?)",
+                rs -> { labels.put(rs.getLong(1), rs.getString(2)); },
+                language.get(),
+                ids);
+        return labels;
     }
 
     // Una consulta por lote, no una por opcion: es lo que alimenta todos los desplegables.
@@ -59,13 +85,14 @@ public class RuleEntityDirectCatalogOptionReadAdapter implements DirectCatalogOp
                 .collect(Collectors.toMap(RuleEntityTranslationEntity::getRuleEntityId, RuleEntityTranslationEntity::getName));
     }
 
-    private DirectCatalogOption toDomain(RuleEntity entity, String translatedName) {
+    private DirectCatalogOption toDomain(RuleEntity entity, String translatedName, String commonLabel) {
         return new DirectCatalogOption(
                 entity.getCode(),
                 translatedName != null ? translatedName : entity.getName(),
                 entity.isActive(),
                 entity.getStartDate(),
-                entity.getEndDate()
+                entity.getEndDate(),
+                commonLabel
         );
     }
 }

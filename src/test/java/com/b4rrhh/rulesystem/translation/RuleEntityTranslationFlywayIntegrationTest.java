@@ -98,6 +98,31 @@ class RuleEntityTranslationFlywayIntegrationTest {
         }
     }
 
+    // La etiqueta común (backend#173, nota en ADR-054 §3) acompaña a una cita reglamentaria y a
+    // nada más: en un vocabulario sería una segunda traducción, y en un nombre propio, un segundo
+    // nombre. Es el candado de arriba ampliado: las citas siguen sin traducción, y lo único que se
+    // les añade es esto.
+    @Test
+    void aCommonLabelOnlyAccompaniesARegulatoryCitation() {
+        Integer outsideCitations = jdbcTemplate.queryForObject("""
+                select count(*)
+                  from rulesystem.rule_entity_common_label l
+                  join rulesystem.rule_entity re on re.id = l.rule_entity_id
+                  join rulesystem.rule_entity_type t on t.code = re.rule_entity_type_code
+                 where t.literal_class <> 'REGULATORY_CITATION'
+                """, Integer.class);
+        assertThat(outsideCitations).as("etiquetas comunes fuera de una cita reglamentaria").isZero();
+
+        String itCommon = jdbcTemplate.queryForObject("""
+                select l.label
+                  from rulesystem.rule_entity_common_label l
+                  join rulesystem.rule_entity re on re.id = l.rule_entity_id
+                 where re.rule_entity_type_code = 'EMPLOYEE_ABSENCE_TYPE' and re.code = 'IT_COMMON'
+                   and l.language_code = 'es-ES'
+                """, String.class);
+        assertThat(itCommon).startsWith("Baja por enfermedad");
+    }
+
     // El literal base sigue intacto: la semilla añade filas en la tabla de traducciones y
     // no toca rule_entity.name, que es el inglés neutro (ADR-052 §1).
     @Test

@@ -57,7 +57,7 @@ class DirectCatalogOptionsMarkedByDateIntegrationTest {
     @BeforeEach
     void setUp() {
         useCase = new GetDirectCatalogOptionsService(new RuleEntityDirectCatalogOptionReadAdapter(
-                ruleEntityRepository, springDataRuleEntityTranslationRepository));
+                ruleEntityRepository, springDataRuleEntityTranslationRepository, jdbcTemplate));
         DatosDePrueba.ruleEntity(jdbcTemplate, TYPE, "TST_CLOSED", "Closed in 2020",
                 LocalDate.of(1900, 1, 1), LocalDate.of(2020, 12, 31));
         DatosDePrueba.ruleEntity(jdbcTemplate, TYPE, "TST_FUTURE", "Starts in 2030",

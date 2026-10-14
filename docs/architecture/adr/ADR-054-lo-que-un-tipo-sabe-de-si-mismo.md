@@ -91,6 +91,31 @@ universalidad del backend#25 y la forma del formulario de alta de frontend#31—
 igual que a los nuestros. Si algún día uno de los tres necesita distinguirlo, ése será el momento de
 partir el valor. Hoy sería una distinción sin consecuencia.
 
+### Nota (backend#173, 15/10/2026): una cita reglamentaria puede llevar una etiqueta común
+
+En la sesión de workspace#18, quien declaraba una baja buscaba «enfermedad» y el desplegable decía
+«IT Contingencia Común»: «vale que el nombre legal de la enfermedad es IT común… pero qué poco
+intuitivo». Es el disparador que dejó escrito el «Límite conocido» de abajo: un tipo mixto con una
+consecuencia real.
+
+No se traduce la cita: sigue siendo el nombre, en su idioma, y traducirla seguiría siendo
+falsificarla. Lo que se añade es una **etiqueta común**, en el mismo idioma que la cita, que la
+**acompaña** sin sustituirla: la pantalla enseña «Baja por enfermedad común · IT Contingencia Común»,
+la etiqueta delante y la cita detrás. No es el «nombre para la interfaz» que §1 deja fuera, porque
+no compite con el nombre: no se edita en su lugar, no se enseña sin él y no existe en los tipos que
+no son cita.
+
+- Va en `rulesystem.rule_entity_common_label` (V180), por entidad e idioma, y no en
+  `rule_entity_translation`: las citas siguen con cero traducciones.
+- Sólo cuelga de entidades de tipos **cita reglamentaria**. En un vocabulario sería una segunda
+  traducción, y en un nombre propio, un segundo nombre. Lo vigila
+  `RuleEntityTranslationFlywayIntegrationTest.aCommonLabelOnlyAccompaniesARegulatoryCitation`,
+  junto al candado de siempre.
+- Sólo donde la cita no se entiende. De los siete tipos de ausencia, las dos IT; vacaciones, los
+  permisos y la excedencia ya están en palabras.
+- `/catalog-options/direct` la sirve como `commonLabel` junto a `name`, y la clase sigue
+  declarándose en el tipo: esto no baja la clase a la fila.
+
 ### 4. El modo de mantenimiento, no un booleano de visibilidad
 
 Un `visible boolean` confunde dos cosas: **se ve** y **se edita**. `COUNTRY` y `GRUPO_COTIZACION`

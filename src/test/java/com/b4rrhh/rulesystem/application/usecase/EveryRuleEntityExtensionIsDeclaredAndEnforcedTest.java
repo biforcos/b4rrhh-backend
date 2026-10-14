@@ -39,7 +39,11 @@ class EveryRuleEntityExtensionIsDeclaredAndEnforcedTest {
             "rulesystem.rule_entity_translation",
             "cuelga de cualquier raíz, sea del tipo que sea (ADR-052 §1); declararla exigiría una fila "
                     + "por tipo y la ausencia dejaría de significar «sólo raíz» (ADR-053 §2). "
-                    + "Su cascada se afirma en la guardia 4 igual que la de las declaradas."
+                    + "Su cascada se afirma en la guardia 4 igual que la de las declaradas.",
+            "rulesystem.rule_entity_common_label",
+            "la etiqueta en palabras de una cita reglamentaria (backend#173, nota en ADR-054 §3): es "
+                    + "de la familia de la traducción y no extiende un tipo; a qué tipos puede colgar "
+                    + "lo dice su clase del literal, y lo vigila RuleEntityTranslationFlywayIntegrationTest."
     );
 
     @Autowired
