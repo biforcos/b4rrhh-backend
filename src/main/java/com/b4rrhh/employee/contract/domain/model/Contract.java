@@ -47,6 +47,14 @@ public class Contract {
         return new Contract(employeeId, contractCode, contractSubtypeCode, startDate, newEndDate);
     }
 
+    /**
+     * Las fechas que tiene que tener porque su presencia se rectificó (backend#172): el alta o el cese
+     * estaban mal tecleados. Todo lo demás se conserva.
+     */
+    public Contract rectifyDates(LocalDate newStartDate, LocalDate newEndDate) {
+        return new Contract(employeeId, contractCode, contractSubtypeCode, newStartDate, newEndDate);
+    }
+
     public Contract close(LocalDate closeDate) {
         if (!isActive()) {
             throw new ContractAlreadyClosedException(startDate);

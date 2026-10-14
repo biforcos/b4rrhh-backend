@@ -168,6 +168,15 @@ public class WorkingTime {
         );
     }
 
+    /**
+     * Las fechas que tiene que tener porque su presencia se rectificó (backend#172): el alta o el cese
+     * estaban mal tecleados. Todo lo demás se conserva.
+     */
+    public WorkingTime rectifyDates(LocalDate newStartDate, LocalDate newEndDate) {
+        return new WorkingTime(id, employeeId, workingTimeNumber, newStartDate, newEndDate, workingTimePercentage,
+                weeklyHours, dailyHours, monthlyHours, createdAt, updatedAt);
+    }
+
     public WorkingTime close(LocalDate closeDate) {
         if (!isActive()) {
             throw new WorkingTimeAlreadyClosedException(workingTimeNumber);

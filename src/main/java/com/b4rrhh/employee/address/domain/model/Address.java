@@ -46,6 +46,15 @@ public class Address {
         this.updatedAt = updatedAt;
     }
 
+    /**
+     * Las fechas que tiene que tener porque su presencia se rectificó (backend#172): el alta o el cese
+     * estaban mal tecleados. Todo lo demás se conserva.
+     */
+    public Address rectifyDates(LocalDate newStartDate, LocalDate newEndDate) {
+        return new Address(id, employeeId, addressNumber, addressTypeCode, address, newStartDate, newEndDate,
+                createdAt, updatedAt);
+    }
+
     public Address close(LocalDate closeDate) {
         if (!isActive()) {
             throw new AddressAlreadyClosedException(addressNumber);

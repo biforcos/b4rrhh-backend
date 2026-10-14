@@ -73,7 +73,12 @@ class OnlyOnePortReadsAPayrollOfAnotherPeriodTest {
             "PayrollBulkStatusTransitionAdapter.java",
                     "el invalidador en masa (backend#150): cambia el estado de los recibos de SU"
                             + " periodo en una sola sentencia y cuenta cuantos habia en cada estado."
-                            + " No lee ningun importe ni ninguna linea, ni de otro periodo"));
+                            + " No lee ningun importe ni ninguna linea, ni de otro periodo",
+            "PresencePayrollJdbcAdapter.java",
+                    "la rectificacion de la fecha de alta o de cese (backend#172): pregunta que periodos"
+                            + " de UNA presencia tienen ya un recibo DEFINITIVE, para negarse a mover una"
+                            + " fecha que ya se pago. Filtra por DEFINITIVE en la propia consulta y no lee"
+                            + " ningun importe ni ninguna linea: no es una lectura de calculo"));
 
     /** El unico puerto por el que un calculo puede leer un recibo de otro periodo. */
     private static final String PUERTO = "PreviousPeriodContributionBaseLookupPort";

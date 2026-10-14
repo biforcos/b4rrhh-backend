@@ -51,6 +51,14 @@ public class LaborClassification {
         );
     }
 
+    /**
+     * Las fechas que tiene que tener porque su presencia se rectificó (backend#172): el alta o el cese
+     * estaban mal tecleados. Todo lo demás se conserva.
+     */
+    public LaborClassification rectifyDates(LocalDate newStartDate, LocalDate newEndDate) {
+        return new LaborClassification(employeeId, agreementCode, agreementCategoryCode, newStartDate, newEndDate);
+    }
+
     public LaborClassification close(LocalDate closeDate) {
         if (!isActive()) {
             throw new LaborClassificationAlreadyClosedException(startDate);

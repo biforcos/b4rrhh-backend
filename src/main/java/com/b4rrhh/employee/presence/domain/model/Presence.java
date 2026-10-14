@@ -45,6 +45,15 @@ public class Presence {
         this.updatedAt = updatedAt;
     }
 
+    /**
+     * La presencia con su alta o su cese rectificados (backend#172): estaban mal tecleados. Todo lo demás
+     * se conserva; las fechas ya vienen validadas por quien rectifica.
+     */
+    public Presence rectifyDates(LocalDate newStartDate, LocalDate newEndDate) {
+        return new Presence(id, employeeId, presenceNumber, companyCode, entryReasonCode, exitReasonCode,
+                newStartDate, newEndDate, createdAt, updatedAt);
+    }
+
     public Presence close(LocalDate closeDate, String closeExitReasonCode) {
         if (!isActive()) {
             throw new PresenceAlreadyClosedException(presenceNumber);

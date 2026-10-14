@@ -48,6 +48,14 @@ public class CostCenterAllocation {
         );
     }
 
+    /**
+     * Las fechas que tiene que tener porque su presencia se rectificó (backend#172): el alta o el cese
+     * estaban mal tecleados. Todo lo demás se conserva.
+     */
+    public CostCenterAllocation rectifyDates(LocalDate newStartDate, LocalDate newEndDate) {
+        return new CostCenterAllocation(employeeId, costCenterCode, allocationPercentage, newStartDate, newEndDate);
+    }
+
     public CostCenterAllocation close(LocalDate closeDate) {
         if (!isActive()) {
             throw new CostCenterAlreadyClosedException(costCenterCode, startDate);
