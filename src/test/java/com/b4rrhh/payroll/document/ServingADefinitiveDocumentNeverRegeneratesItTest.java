@@ -1,10 +1,10 @@
 package com.b4rrhh.payroll.document;
 
 import com.b4rrhh.payroll.application.service.PayrollSnapshotProfiles;
+import com.b4rrhh.payroll.document.application.service.PayslipDocumentArchiver;
 import com.b4rrhh.payroll.document.application.service.PayslipDocumentContentFactory;
 import com.b4rrhh.payroll.document.application.usecase.GetPayslipDocumentCommand;
 import com.b4rrhh.payroll.document.application.usecase.GetPayslipDocumentService;
-import com.b4rrhh.payroll.document.domain.exception.PayslipDocumentNotArchivedException;
 import com.b4rrhh.payroll.document.domain.model.PayslipDocument;
 import com.b4rrhh.payroll.document.domain.port.PayslipDocumentStorage;
 import com.b4rrhh.payroll.document.infrastructure.pdf.PdfBoxPayslipDocumentRenderer;
@@ -25,7 +25,6 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -61,7 +60,12 @@ class ServingADefinitiveDocumentNeverRegeneratesItTest {
             almacen,
             new PayslipDocumentContentFactory(new PayrollSnapshotProfiles(new ObjectMapper())),
             new PdfBoxPayslipDocumentRenderer(),
-            seccionesDelCatalogo());
+            seccionesDelCatalogo(),
+            new PayslipDocumentArchiver(
+                    new PayslipDocumentContentFactory(new PayrollSnapshotProfiles(new ObjectMapper())),
+                    new PdfBoxPayslipDocumentRenderer(),
+                    almacen,
+                    seccionesDelCatalogo()));
 
     /**
      * Criterio 2: el cerrado dice el literal viejo y el calculado dice el nuevo.
@@ -136,26 +140,9 @@ class ServingADefinitiveDocumentNeverRegeneratesItTest {
         assertTrue(texto(documento).contains("BORRADOR"));
     }
 
-    /**
-     * Un cerrado sin documento se dice, no se tapa regenerandolo.
-     *
-     * <p>Desde este issue no puede pasar —cerrar y archivar son el mismo acto—, pero los recibos
-     * cerrados antes existen. Regenerar les daria un papel parecido al que tienen y no el mismo, y
-     * nadie sabria que no es el mismo.
-     */
-    @Test
-    void aClosedPayslipWithoutItsDocumentSaysSoInsteadOfMakingANewOne() {
-        repositorio.recibo = PayslipDocumentFixtures.cerrado(PayslipDocumentFixtures.emp000001());
-
-        PayslipDocumentNotArchivedException fallo = assertThrows(
-                PayslipDocumentNotArchivedException.class,
-                () -> servicio.getDocument(EMP000001));
-
-        assertTrue(fallo.getMessage().contains("no se regenera")
-                        || fallo.getMessage().contains("No se regenera"),
-                "El error dice por que no hay un PDF de repuesto: " + fallo.getMessage());
-        assertTrue(almacen.objetos.isEmpty(), "Y no escribe nada de paso");
-    }
+    // Hasta el backend#174 aqui habia un quinto: un cerrado sin documento daba un 409 en vez de
+    // reponerlo. Ahora se repone, porque sale el mismo; eso se prueba, byte a byte, en
+    // AClosedPayslipWithoutItsDocumentIsRedrawnTest.
 
     // ---------------------------------------------------------------------
 

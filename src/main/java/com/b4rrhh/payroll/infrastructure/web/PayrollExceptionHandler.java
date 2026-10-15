@@ -1,7 +1,6 @@
 package com.b4rrhh.payroll.infrastructure.web;
 
 import com.b4rrhh.payroll.application.usecase.PayrollLaunchInputMissingException;
-import com.b4rrhh.payroll.document.domain.exception.PayslipDocumentNotArchivedException;
 import com.b4rrhh.payroll.document.domain.exception.PayslipDocumentStorageUnavailableException;
 import com.b4rrhh.payroll.document.infrastructure.web.PayslipDocumentController;
 import com.b4rrhh.payroll.domain.exception.InvalidPayrollArgumentException;
@@ -49,20 +48,6 @@ public class PayrollExceptionHandler {
     public ResponseEntity<PayrollErrorResponse> handleStorageUnavailable(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new PayrollErrorResponse(
                 "PAYSLIP_DOCUMENT_STORAGE_UNAVAILABLE", ex.getMessage(), null));
-    }
-
-    /**
-     * Un recibo cerrado al que le falta su documento ({@code backend#112}).
-     *
-     * <p>409 porque el recibo existe y esta en un estado que no cuadra con lo que se le pide, y
-     * con codigo porque no se parece a nada: no es que no haya recibo —eso es 404— ni que el
-     * almacen este caido —eso es 503—. Es que este recibo se cerro antes de que cerrar emitiera el
-     * papel, y <b>no se regenera</b>: seria otro documento del mismo recibo.
-     */
-    @ExceptionHandler(PayslipDocumentNotArchivedException.class)
-    public ResponseEntity<PayrollErrorResponse> handleDocumentNotArchived(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(new PayrollErrorResponse(
-                "PAYSLIP_DOCUMENT_NOT_ARCHIVED", ex.getMessage(), null));
     }
 
     @ExceptionHandler({

@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
  * puede preguntar una sola cosa: quien llama a {@code finalizePayroll()}, ¿tambien llama a esto?
  * Eso es {@code EveryPathToDefinitiveArchivesItsDocumentTest}.
  *
- * <h2>Se genera una vez y no se regenera nunca</h2>
+ * <h2>Lo guardado no se sustituye</h2>
  *
  * <p>Lo guardado <b>es</b> el documento. No se vuelve a generar «para actualizar la plantilla» ni
  * «porque el de antes tenia una errata»: dos generaciones con plantillas distintas darian dos
@@ -29,6 +29,12 @@ import org.springframework.stereotype.Service;
  *
  * <p>Si hay que cambiar un documento entregado, eso es otra operacion, con otro nombre, y no
  * existe todavia.
+ *
+ * <p>Lo que si existe desde el {@code backend#174} es <b>reponer</b> el que falta
+ * ({@link #restore}): un cerrado cuyo documento no esta en el almacen lo vuelve a dibujar de sus
+ * filas definitivas. Es licito porque sale el mismo —el PDF es funcion pura de esas filas, con el
+ * {@code /ID} sacado del recibo y los bloques que solo crecen (V181)— y solo cuando falta: lo que
+ * hay guardado se sirve tal cual, aunque la plantilla haya cambiado despues.
  */
 @Service
 public class PayslipDocumentArchiver {
@@ -65,6 +71,31 @@ public class PayslipDocumentArchiver {
      *                   impresa la marca de borrador y se quedaria asi para siempre.
      */
     public void archive(Payroll definitive) {
+        byte[] documento = dibujarYGuardar(definitive);
+        log.info("[RECIBO] Documento archivado | {} | {} bytes",
+                PayslipDocumentKey.of(definitive), documento.length);
+    }
+
+    /**
+     * Repone el documento de un cerrado que no lo tiene en el almacen, y lo devuelve
+     * ({@code backend#174}).
+     *
+     * <p>Lo deja dicho en el registro con otra marca que el archivo: un documento repuesto no es
+     * un cierre, y quien busque cuando se cerro un recibo no tiene que encontrar esto.
+     *
+     * <p>Un limite que no se esconde: el papel sale de las filas <b>y de la plantilla</b>, que es
+     * codigo. Mientras la plantilla no cambie desde el cierre, el repuesto es byte a byte el que se
+     * perdio. Si ha cambiado, el repuesto lleva la de hoy con las cifras de entonces; no hay otra
+     * copia con la que compararlo, y la linea del registro es lo que queda para saberlo.
+     */
+    public byte[] restore(Payroll definitive) {
+        byte[] documento = dibujarYGuardar(definitive);
+        log.warn("[RECIBO] Documento repuesto de sus filas definitivas: no estaba en el almacen | {} | {} bytes",
+                PayslipDocumentKey.of(definitive), documento.length);
+        return documento;
+    }
+
+    private byte[] dibujarYGuardar(Payroll definitive) {
         if (definitive.getStatus() != PayrollStatus.DEFINITIVE) {
             throw new IllegalStateException(
                     "Solo se archiva el documento de un recibo definitivo, y este esta en "
@@ -72,12 +103,11 @@ public class PayslipDocumentArchiver {
                             + "borrador no lo es.");
         }
 
-        String objectKey = PayslipDocumentKey.of(definitive);
         byte[] documento = renderer.render(contentFactory.contentOf(
                 definitive,
                 payslipSectionRepository.findByRuleSystemCode(definitive.getRuleSystemCode())));
 
-        storage.store(objectKey, documento, renderer.contentType());
-        log.info("[RECIBO] Documento archivado | {} | {} bytes", objectKey, documento.length);
+        storage.store(PayslipDocumentKey.of(definitive), documento, renderer.contentType());
+        return documento;
     }
 }

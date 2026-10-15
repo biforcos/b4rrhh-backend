@@ -1,8 +1,8 @@
 package com.b4rrhh.payroll.document.application.usecase;
 
 import com.b4rrhh.payroll.document.application.port.PayslipDocumentRenderer;
+import com.b4rrhh.payroll.document.application.service.PayslipDocumentArchiver;
 import com.b4rrhh.payroll.document.application.service.PayslipDocumentContentFactory;
-import com.b4rrhh.payroll.document.domain.exception.PayslipDocumentNotArchivedException;
 import com.b4rrhh.payroll.document.domain.model.PayslipDocument;
 import com.b4rrhh.payroll.document.domain.model.PayslipDocumentKey;
 import com.b4rrhh.payroll.document.domain.port.PayslipDocumentStorage;
@@ -19,10 +19,16 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <h2>Dos regimenes, y cual manda lo dice el estado</h2>
  *
- * <p>Un {@code DEFINITIVE} <b>se sirve desde el almacen</b>, tal cual se guardo al cerrar. No se
- * regenera nunca: pedirlo dos veces devuelve los mismos bytes porque es el mismo objeto, no porque
- * se generara igual. Esa distincion es toda la decision — dos generaciones con plantillas
- * distintas darian dos documentos del mismo recibo, y el empleado tiene uno.
+ * <p>Un {@code DEFINITIVE} <b>se sirve desde el almacen</b>, tal cual se guardo al cerrar. Lo
+ * guardado no se regenera: pedirlo dos veces devuelve los mismos bytes porque es el mismo objeto,
+ * no porque se generara igual. Esa distincion es toda la decision — dos generaciones con
+ * plantillas distintas darian dos documentos del mismo recibo, y el empleado tiene uno.
+ *
+ * <p>Si <b>no esta</b>, se repone de sus filas definitivas, se guarda y se sirve
+ * ({@code backend#174}). Hasta entonces era un 409, y es lo que les pasaba a los cerrados de la
+ * semilla en la demo: el volcado lleva la base y no el almacen. Reponerlo es licito porque el PDF
+ * es funcion pura de esas filas, y por eso sale el mismo; el porque y su limite estan en
+ * {@link PayslipDocumentArchiver#restore}.
  *
  * <p>Los otros tres estados se renderizan <b>aqui y ahora, y no se guardan</b>, con la marca de
  * que no son definitivos. Recalcular y volver a pedirlo enseña lo nuevo, y esta bien, porque
@@ -40,19 +46,22 @@ public class GetPayslipDocumentService implements GetPayslipDocumentUseCase {
     private final PayslipDocumentContentFactory contentFactory;
     private final PayslipDocumentRenderer renderer;
     private final PayslipSectionRepository payslipSectionRepository;
+    private final PayslipDocumentArchiver archiver;
 
     public GetPayslipDocumentService(
             PayrollRepository payrollRepository,
             PayslipDocumentStorage storage,
             PayslipDocumentContentFactory contentFactory,
             PayslipDocumentRenderer renderer,
-            PayslipSectionRepository payslipSectionRepository
+            PayslipSectionRepository payslipSectionRepository,
+            PayslipDocumentArchiver archiver
     ) {
         this.payrollRepository = payrollRepository;
         this.storage = storage;
         this.contentFactory = contentFactory;
         this.renderer = renderer;
         this.payslipSectionRepository = payslipSectionRepository;
+        this.archiver = archiver;
     }
 
     @Override
@@ -74,10 +83,9 @@ public class GetPayslipDocumentService implements GetPayslipDocumentUseCase {
                         command.presenceNumber()));
 
         if (payroll.getStatus() == PayrollStatus.DEFINITIVE) {
-            String objectKey = PayslipDocumentKey.of(payroll);
-            byte[] guardado = storage.retrieve(objectKey)
-                    .orElseThrow(() -> new PayslipDocumentNotArchivedException(objectKey));
-            return new PayslipDocument(guardado, renderer.contentType(), fileName(payroll, true), true);
+            byte[] documento = storage.retrieve(PayslipDocumentKey.of(payroll))
+                    .orElseGet(() -> archiver.restore(payroll));
+            return new PayslipDocument(documento, renderer.contentType(), fileName(payroll, true), true);
         }
 
         byte[] borrador = renderer.render(contentFactory.contentOf(
