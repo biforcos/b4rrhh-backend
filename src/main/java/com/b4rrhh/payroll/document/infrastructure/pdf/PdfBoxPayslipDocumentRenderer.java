@@ -15,6 +15,10 @@ import org.springframework.stereotype.Component;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * El recibo, dibujado en A4 ({@code backend#112}).
@@ -126,6 +130,7 @@ public class PdfBoxPayslipDocumentRenderer implements PayslipDocumentRenderer {
                 marcaDeBorrador(document);
             }
 
+            document.setDocumentId(identificador(content));
             document.save(salida);
             return salida.toByteArray();
         } catch (IOException e) {
@@ -438,6 +443,25 @@ public class PdfBoxPayslipDocumentRenderer implements PayslipDocumentRenderer {
         private void relleno(float x, float yy, float ancho, float alto) throws IOException {
             cs.addRect(x, yy, ancho, alto);
             cs.fill();
+        }
+    }
+
+    /**
+     * La semilla del {@code /ID} del trailer, sacada del recibo ({@code backend#174}).
+     *
+     * <p>Sin ella PDFBox la saca de {@code System.currentTimeMillis()}, y dos dibujos del mismo
+     * recibo diferian en esos bytes: el papel regenerado de un cerrado no habria sido el mismo que
+     * el que se archivo al cerrar. Sale de la clave de negocio y de si es borrador, que es lo que
+     * distingue un documento de otro; el contenido ya va en el resto del fichero.
+     */
+    private static long identificador(PayslipDocumentContent content) {
+        String clave = content.provenance().businessKey() + (content.draft() ? "|BORRADOR" : "");
+        try {
+            byte[] resumen = MessageDigest.getInstance("SHA-256")
+                    .digest(clave.getBytes(StandardCharsets.UTF_8));
+            return ByteBuffer.wrap(resumen).getLong();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("La JVM no trae SHA-256", e);
         }
     }
 
