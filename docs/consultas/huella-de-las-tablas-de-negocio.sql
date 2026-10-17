@@ -33,7 +33,16 @@
 -- Lo que cambia de una corrida a otra sin que cambie nada de negocio:
 --   - los id surrogados, y las FK por id (employee_id, payroll_id): se sustituyen
 --     por la clave de negocio de la fila a la que apuntan;
---   - las marcas de tiempo (created_at, updated_at, calculated_at) y el run_id.
+--   - las marcas de tiempo (created_at, updated_at, calculated_at) y el run_id;
+--   - employee.photo_url (backend#176): es un puntero al almacen, no un dato. La
+--     clave del objeto lleva un UUID que el backend sortea al pedir la URL de
+--     subida (photos/ESP/INTERNAL/EMP000025/<uuid>.jpg), asi que dos cargas
+--     identicas de la misma semilla con fotos (workforce-loader#19) dan dos
+--     photo_url distintos. El UUID no se quita: esta para que una foto nueva no
+--     se sirva vieja desde la cache de un cubo publico. Si que una foto exista
+--     importa, se cuenta aparte: count(photo_url) contra los ficheros.
+--     Una huella guardada antes de este cambio no vale para employee.employee
+--     (llevaba un '∅' por fila): la referencia se vuelve a sacar con esta consulta.
 -- Todo lo demas entra, incluidos los nulos (concat_ws los saltaria; por eso cada
 -- columna pasa por coalesce a un literal que no puede ser un valor).
 --
@@ -53,8 +62,8 @@ nom as (
 ),
 filas(tabla, fila) as (
     select 'employee.employee', concat_ws('|', rule_system_code, employee_type_code, employee_number,
-           first_name, last_name_1, coalesce(last_name_2, '∅'), coalesce(preferred_name, '∅'),
-           coalesce(photo_url, '∅'))
+           first_name, last_name_1, coalesce(last_name_2, '∅'), coalesce(preferred_name, '∅'))
+           -- sin photo_url: es un puntero al almacen con un UUID sorteado (ver arriba)
       from employee.employee
     union all
     select 'employee.address', concat_ws('|', emp.k, address_number, address_type_code,
