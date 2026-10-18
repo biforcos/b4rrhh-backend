@@ -60,7 +60,10 @@ public class EmployeePhotoController {
      * token. Es lo mismo que exponía el cubo público —una URL con UUID—, menos lo que ya no está: una
      * foto cambiada o borrada deja de servirse. Ver {@code SecurityConfig}.
      *
-     * <p>Se cachea un año: la versión va en el enlace, así que una foto nueva es un enlace nuevo.
+     * <p>Se cachea un año, pero sólo en el navegador ({@code private}): la versión va en el enlace,
+     * así que una foto nueva es un enlace nuevo. Con {@code public} una caché compartida —el
+     * Cloudflare de delante de la demo, si alguna regla cachea {@code /api}— podría guardarla un año,
+     * y una foto borrada seguiría servida en su enlace, que es justo lo que esto vino a quitar.
      */
     @GetMapping(produces = MediaType.IMAGE_JPEG_VALUE)
     public ResponseEntity<byte[]> getPhoto(
@@ -75,7 +78,7 @@ public class EmployeePhotoController {
                 .map(contenido -> ResponseEntity.ok()
                         .contentType(MediaType.IMAGE_JPEG)
                         .eTag(contenido.objectKey())
-                        .cacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePublic().immutable())
+                        .cacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).cachePrivate().immutable())
                         .body(contenido.jpeg()))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

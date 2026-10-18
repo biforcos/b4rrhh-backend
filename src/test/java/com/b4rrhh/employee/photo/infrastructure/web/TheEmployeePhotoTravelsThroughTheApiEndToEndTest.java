@@ -74,14 +74,14 @@ class TheEmployeePhotoTravelsThroughTheApiEndToEndTest {
     }
 
     @Test
-    void anImgWithoutTokenGetsThePhotoWithTheCurrentVersionCachedForAYear() throws Exception {
+    void anImgWithoutTokenGetsThePhotoWithTheCurrentVersionCachedForAYearInTheBrowserOnly() throws Exception {
         String enlace = subir(JPEG);
 
         mockMvc.perform(get(RUTA).param("v", version(enlace)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.IMAGE_JPEG))
                 .andExpect(content().bytes(JPEG))
-                .andExpect(header().string("Cache-Control", "max-age=31536000, public, immutable"))
+                .andExpect(header().string("Cache-Control", "max-age=31536000, private, immutable"))
                 .andExpect(header().string("ETag", "\"" + clave() + "\""));
     }
 
