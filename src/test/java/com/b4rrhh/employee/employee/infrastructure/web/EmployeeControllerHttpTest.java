@@ -58,6 +58,7 @@ class EmployeeControllerHttpTest {
                         "Lidia Morales",
                         "Lidia",
                         "Morales",
+                        "Lidia Morales",
                         "ACTIVE",
                         "MADRID_HQ",
                         "photos/ESP/INTERNAL/EMP001/0b6d3c1e-6f0a-4c43-9d6a-2b1a3e5f7c90.jpg"
@@ -88,6 +89,7 @@ class EmployeeControllerHttpTest {
                 // Para el avatar del directorio (frontend#144): las iniciales y la foto por la API.
                 .andExpect(jsonPath("$.items[0].firstName").value("Lidia"))
                 .andExpect(jsonPath("$.items[0].lastName1").value("Morales"))
+                .andExpect(jsonPath("$.items[0].preferredName").value("Lidia Morales"))
                 .andExpect(jsonPath("$.items[0].photoUrl")
                         .value("/api/employees/ESP/INTERNAL/EMP001/photo?v=0b6d3c1e-6f0a-4c43-9d6a-2b1a3e5f7c90"))
                 .andExpect(jsonPath("$.items[0].id").doesNotExist());

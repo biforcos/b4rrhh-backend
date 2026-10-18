@@ -64,6 +64,7 @@ public class EmployeeDirectoryPersistenceAdapter implements EmployeeDirectoryRep
                 displayName,
                 projection.firstName(),
                 projection.lastName1(),
+                projection.preferredName(),
                 projection.status(),
                 projection.workCenterCode(),
                 projection.photoKey()

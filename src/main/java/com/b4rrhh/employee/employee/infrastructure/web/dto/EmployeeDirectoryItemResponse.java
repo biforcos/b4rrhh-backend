@@ -7,6 +7,7 @@ public record EmployeeDirectoryItemResponse(
         String displayName,
         String firstName,
         String lastName1,
+        String preferredName,
         String status,
         String workCenterCode,
         String photoUrl

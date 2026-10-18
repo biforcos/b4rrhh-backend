@@ -85,6 +85,7 @@ public class EmployeeController {
                 employee.getDisplayName(),
                 employee.getFirstName(),
                 employee.getLastName1(),
+                employee.getPreferredName(),
                 employee.getStatus(),
                 employee.getWorkCenterCode(),
                 // El mismo enlace de la API que la ficha (backend#177): el directorio enseña la cara

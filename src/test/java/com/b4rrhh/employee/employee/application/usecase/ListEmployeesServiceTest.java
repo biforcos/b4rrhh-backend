@@ -39,6 +39,7 @@ class ListEmployeesServiceTest {
                         "Juan Perez",
                         "Juan",
                         "Perez",
+                        null,
                         "ACTIVE",
                         "MADRID",
                         null

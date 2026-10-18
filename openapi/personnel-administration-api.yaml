@@ -10042,6 +10042,12 @@ components:
             surname, and a compound first name cannot be told apart in displayName (frontend#144).
         lastName1:
           type: string
+        preferredName:
+          type: string
+          nullable: true
+          description: >-
+            The preferred name, when there is one. It is what displayName shows, so the avatar
+            initials come from it and not from the first name (frontend#144).
         photoUrl:
           type: string
           nullable: true

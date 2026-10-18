@@ -11,6 +11,9 @@ public class EmployeeDirectoryItem {
     // nombre (frontend#144).
     private final String firstName;
     private final String lastName1;
+    // El nombre preferido, o null: si lo hay, es lo que pinta el directorio, y las iniciales salen
+    // de él y no del nombre de pila (frontend#144).
+    private final String preferredName;
     private final String status;
     private final String workCenterCode;
     private final String photoKey;
@@ -22,6 +25,7 @@ public class EmployeeDirectoryItem {
             String displayName,
             String firstName,
             String lastName1,
+            String preferredName,
             String status,
             String workCenterCode,
             String photoKey
@@ -32,6 +36,7 @@ public class EmployeeDirectoryItem {
         this.displayName = displayName;
         this.firstName = firstName;
         this.lastName1 = lastName1;
+        this.preferredName = preferredName;
         this.status = status;
         this.workCenterCode = workCenterCode;
         this.photoKey = photoKey;
@@ -59,6 +64,10 @@ public class EmployeeDirectoryItem {
 
     public String getLastName1() {
         return lastName1;
+    }
+
+    public String getPreferredName() {
+        return preferredName;
     }
 
     public String getStatus() {
