@@ -5,6 +5,7 @@ import com.b4rrhh.employee.presence.application.usecase.GetEmployeeStandingUseCa
 import com.b4rrhh.employee.employee.domain.model.Employee;
 import com.b4rrhh.employee.presence.domain.model.EmployeeStanding;
 import com.b4rrhh.employee.employee.infrastructure.web.dto.EmployeeResponse;
+import com.b4rrhh.employee.photo.infrastructure.web.EmployeePhotoLinks;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -18,13 +19,16 @@ public class EmployeeResponseAssembler {
 
     private final DisplayNameComputationService displayNameComputationService;
     private final GetEmployeeStandingUseCase getEmployeeStandingUseCase;
+    private final EmployeePhotoLinks employeePhotoLinks;
 
     public EmployeeResponseAssembler(
             DisplayNameComputationService displayNameComputationService,
-            GetEmployeeStandingUseCase getEmployeeStandingUseCase
+            GetEmployeeStandingUseCase getEmployeeStandingUseCase,
+            EmployeePhotoLinks employeePhotoLinks
     ) {
         this.displayNameComputationService = displayNameComputationService;
         this.getEmployeeStandingUseCase = getEmployeeStandingUseCase;
+        this.employeePhotoLinks = employeePhotoLinks;
     }
 
     public EmployeeResponse toResponse(Employee employee) {
@@ -54,7 +58,12 @@ public class EmployeeResponseAssembler {
                 standing.statusSince(),
                 standing.plannedTerminationDate(),
                 standing.plannedHireDate(),
-                employee.getPhotoUrl()
+                // El enlace de la API, no la clave del almacén (backend#177).
+                employeePhotoLinks.linkFor(
+                        employee.getRuleSystemCode(),
+                        employee.getEmployeeTypeCode(),
+                        employee.getEmployeeNumber(),
+                        employee.getPhotoKey())
         );
     }
 }

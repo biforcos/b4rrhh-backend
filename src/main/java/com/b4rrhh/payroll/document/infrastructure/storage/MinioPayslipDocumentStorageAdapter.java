@@ -22,7 +22,7 @@ import java.util.Set;
  *
  * <p>Reutiliza el {@code MinioClient} que ya estaba cableado para las fotos de empleado: el issue
  * dice que el PDF tiene donde vivir y un adaptador que copiar, y que no se invente almacenamiento.
- * Lo que no comparte es el cubo, porque no comparte la politica: el de las fotos se sirve publico
+ * Lo que no comparte es el cubo, porque no comparte la politica: el de las fotos se servia publico
  * y un recibo de nomina no.
  *
  * <p><b>Aqui no se tapa ningun fallo.</b> Es lo unico importante de este fichero. Un

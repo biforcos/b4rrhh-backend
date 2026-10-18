@@ -24,7 +24,7 @@ public class EmployeePhotoLookupAdapter implements EmployeePhotoLookupPort {
                 employeeTypeCode,
                 employeeNumber,
                 employee -> Optional.of(
-                        new EmployeePhotoContext(employee.getId(), employee.getPhotoUrl())
+                        new EmployeePhotoContext(employee.getId(), employee.getPhotoKey())
                 )
         );
     }

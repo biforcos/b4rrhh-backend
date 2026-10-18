@@ -1,9 +1,9 @@
 package com.b4rrhh.employee.photo.application.usecase;
 
-public record ConfirmEmployeePhotoCommand(
+public record UploadEmployeePhotoCommand(
         String ruleSystemCode,
         String employeeTypeCode,
         String employeeNumber,
-        String objectKey
+        byte[] jpeg
 ) {
 }

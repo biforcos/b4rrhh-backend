@@ -40,7 +40,8 @@ class EmployeeControllerHttpTest {
     void setUp() {
         EmployeeResponseAssembler employeeResponseAssembler = new EmployeeResponseAssembler(
                 new DisplayNameComputationService(ruleSystemCode -> java.util.Optional.empty()),
-                (employeeId, date) -> EmployeeStanding.on(java.time.LocalDate.of(2026, 1, 1), List.of()));
+                (employeeId, date) -> EmployeeStanding.on(java.time.LocalDate.of(2026, 1, 1), List.of()),
+                new com.b4rrhh.employee.photo.infrastructure.web.EmployeePhotoLinks("/api"));
         EmployeeController controller = new EmployeeController(createEmployeeUseCase, listEmployeesUseCase, employeeResponseAssembler);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new EmployeeExceptionHandler())

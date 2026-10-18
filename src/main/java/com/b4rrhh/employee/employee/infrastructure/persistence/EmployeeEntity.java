@@ -38,8 +38,10 @@ public class EmployeeEntity {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    // La columna se llama photo_url por historia. Desde backend#177 guarda la clave del almacén
+    // (photos/ESP/INTERNAL/EMP000025/<uuid>.jpg), no una URL: el enlace lo compone la API al leer.
     @Column(name = "photo_url")
-    private String photoUrl;
+    private String photoKey;
 
     @PrePersist
     void prePersist() {
@@ -137,11 +139,11 @@ public class EmployeeEntity {
         this.updatedAt = updatedAt;
     }
 
-    public String getPhotoUrl() {
-        return photoUrl;
+    public String getPhotoKey() {
+        return photoKey;
     }
 
-    public void setPhotoUrl(String photoUrl) {
-        this.photoUrl = photoUrl;
+    public void setPhotoKey(String photoKey) {
+        this.photoKey = photoKey;
     }
 }

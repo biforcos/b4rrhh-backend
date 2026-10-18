@@ -35,12 +35,12 @@ public class DeleteEmployeePhotoService implements DeleteEmployeePhotoUseCase {
                 command.employeeNumber()
         ));
 
-        if (context.photoUrl() == null) {
+        if (context.photoKey() == null) {
             return;
         }
 
-        String objectKey = storagePort.extractObjectKey(context.photoUrl());
-        storagePort.deleteObject(objectKey);
-        updatePort.setPhotoUrl(context.employeeId(), null);
+        // La fila primero: si el almacén falla después, queda un objeto huérfano, no un enlace roto.
+        updatePort.setPhotoKey(context.employeeId(), null);
+        storagePort.delete(context.photoKey());
     }
 }

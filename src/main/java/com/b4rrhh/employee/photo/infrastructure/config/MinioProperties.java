@@ -7,7 +7,6 @@ public record MinioProperties(
         String endpoint,
         String accessKey,
         String secretKey,
-        String bucketName,
-        int presignedUrlExpiryMinutes
+        String bucketName
 ) {
 }

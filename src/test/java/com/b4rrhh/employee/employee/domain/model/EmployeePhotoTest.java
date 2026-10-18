@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class EmployeePhotoTest {
 
+    private static final String CLAVE = "photos/ESP/EMP/00001/0b6d3c1e-6f0a-4c43-9d6a-2b1a3e5f7c90.jpg";
+
     private Employee employeeWithNoPhoto() {
         return new Employee(1L, "ESP", "EMP", "00001",
                 "Juan", "García", null, null,
@@ -13,24 +15,24 @@ class EmployeePhotoTest {
     }
 
     @Test
-    void withPhotoUrl_returns_new_instance_with_photo_url() {
-        Employee employee = employeeWithNoPhoto().withPhotoUrl("http://minio:9000/bucket/photos/key.jpg");
+    void withPhotoKey_returns_new_instance_with_the_key() {
+        Employee employee = employeeWithNoPhoto().withPhotoKey(CLAVE);
 
-        assertThat(employee.getPhotoUrl()).isEqualTo("http://minio:9000/bucket/photos/key.jpg");
+        assertThat(employee.getPhotoKey()).isEqualTo(CLAVE);
         assertThat(employee.getFirstName()).isEqualTo("Juan");
     }
 
     @Test
-    void withoutPhotoUrl_clears_existing_photo() {
+    void withoutPhoto_clears_existing_photo() {
         Employee employee = employeeWithNoPhoto()
-                .withPhotoUrl("http://minio:9000/bucket/photos/key.jpg")
-                .withoutPhotoUrl();
+                .withPhotoKey(CLAVE)
+                .withoutPhoto();
 
-        assertThat(employee.getPhotoUrl()).isNull();
+        assertThat(employee.getPhotoKey()).isNull();
     }
 
     @Test
-    void new_employee_has_null_photo_url() {
-        assertThat(employeeWithNoPhoto().getPhotoUrl()).isNull();
+    void new_employee_has_no_photo() {
+        assertThat(employeeWithNoPhoto().getPhotoKey()).isNull();
     }
 }

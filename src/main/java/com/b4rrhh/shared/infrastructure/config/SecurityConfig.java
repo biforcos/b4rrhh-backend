@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -55,6 +56,12 @@ public class SecurityConfig {
                     // El commit del backend, sin token: lo pregunta crear-semilla.sh para anotar la
                     // procedencia de una semilla, y un commit no es un secreto.
                     auth.requestMatchers("/actuator/info").permitAll();
+                    // La foto de un empleado, sin token: la pide un <img>, que no manda la cabecera
+                    // Authorization. La llave es el ?v= con el UUID de la foto vigente, que sólo
+                    // conoce quien leyó el empleado con token; sin él, o con uno viejo, 404. Expone
+                    // lo mismo que el cubo público de antes, menos las fotos cambiadas o borradas
+                    // (backend#177). Sólo el GET: subir y borrar siguen pidiendo ADMIN.
+                    auth.requestMatchers(HttpMethod.GET, "/employees/*/*/*/photo").permitAll();
                     if (isDevAuthEnabled()) {
                         auth.requestMatchers("/dev/auth/token").permitAll();
                     }

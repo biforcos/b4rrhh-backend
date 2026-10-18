@@ -19,7 +19,7 @@ public class Employee {
     private final String preferredName;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
-    private final String photoUrl;
+    private final String photoKey;
 
     public Employee(
             Long id,
@@ -32,7 +32,7 @@ public class Employee {
             String preferredName,
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
-            String photoUrl
+            String photoKey
     ) {
         this.id = id;
         this.ruleSystemCode = ruleSystemCode;
@@ -44,7 +44,7 @@ public class Employee {
         this.preferredName = preferredName;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        this.photoUrl = photoUrl;
+        this.photoKey = photoKey;
     }
 
     public Long getId() { return id; }
@@ -57,22 +57,22 @@ public class Employee {
     public String getPreferredName() { return preferredName; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public String getPhotoUrl() { return photoUrl; }
+    public String getPhotoKey() { return photoKey; }
 
-    public Employee withPhotoUrl(String photoUrl) {
+    public Employee withPhotoKey(String photoKey) {
         return new Employee(id, ruleSystemCode, employeeTypeCode, employeeNumber,
                 firstName, lastName1, lastName2, preferredName,
-                createdAt, updatedAt, photoUrl);
+                createdAt, updatedAt, photoKey);
     }
 
-    public Employee withoutPhotoUrl() {
-        return withPhotoUrl(null);
+    public Employee withoutPhoto() {
+        return withPhotoKey(null);
     }
 
     public Employee updateIdentityFields(
             String firstName, String lastName1, String lastName2, String preferredName) {
         return new Employee(id, ruleSystemCode, employeeTypeCode, employeeNumber,
                 firstName, lastName1, lastName2, preferredName,
-                createdAt, LocalDateTime.now(), photoUrl);
+                createdAt, LocalDateTime.now(), photoKey);
     }
 }

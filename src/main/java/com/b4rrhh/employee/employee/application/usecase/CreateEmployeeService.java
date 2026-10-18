@@ -35,7 +35,7 @@ public class CreateEmployeeService implements CreateEmployeeUseCase {
                 command.preferredName(),
                 LocalDateTime.now(), // createdAt
                 LocalDateTime.now(),  // updatedAt
-                null // photoUrl
+                null // photoKey
         );
 
         return employeeRepository.save(newEmployee);

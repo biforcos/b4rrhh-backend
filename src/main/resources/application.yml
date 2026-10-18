@@ -94,11 +94,12 @@ minio:
   access-key: ${MINIO_ACCESS_KEY:b4rrhh}
   secret-key: ${MINIO_SECRET_KEY:b4rrhh123}
   bucket-name: b4rrhh-employee-photos
-  presigned-url-expiry-minutes: 10
 
 # Los documentos de los recibos cerrados (backend#112). Cubo aparte del de las
-# fotos a proposito: aquel se sirve publico y un recibo de nomina no se sirve a
-# nadie que no pase por el API autenticado. El cubo lo crea el adaptador la
+# fotos a proposito: aquel se servia publico, y un recibo de nomina no se sirve a
+# nadie que no pase por el API autenticado. Desde backend#177 las fotos tambien
+# las sirve la API, pero los cubos siguen aparte: no se borran ni se capturan
+# igual (deploy#25, deploy#26). El cubo lo crea el adaptador la
 # primera vez que hace falta, no el docker-compose, porque no lleva politica que
 # poner.
 payslip-document:

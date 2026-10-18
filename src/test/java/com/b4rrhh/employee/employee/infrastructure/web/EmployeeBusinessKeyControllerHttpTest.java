@@ -44,7 +44,8 @@ class EmployeeBusinessKeyControllerHttpTest {
 
     private final EmployeeResponseAssembler employeeResponseAssembler = new EmployeeResponseAssembler(
             new DisplayNameComputationService(ruleSystemCode -> java.util.Optional.empty()),
-            (employeeId, date) -> EmployeeStanding.on(LocalDate.of(2026, 1, 1), java.util.List.of()));
+            (employeeId, date) -> EmployeeStanding.on(LocalDate.of(2026, 1, 1), java.util.List.of()),
+            new com.b4rrhh.employee.photo.infrastructure.web.EmployeePhotoLinks("/api"));
 
     private MockMvc mockMvc;
 
