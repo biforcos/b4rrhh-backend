@@ -9,6 +9,8 @@ public record EmployeeDirectoryProjection(
         String lastName2,
         String preferredName,
         String status,
-        String workCenterCode
+        String workCenterCode,
+        // La clave de la foto, o null: el directorio enseña la cara sin consulta extra (frontend#144).
+        String photoKey
 ) {
 }

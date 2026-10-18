@@ -31,6 +31,11 @@ public class EmployeeResponseAssembler {
         this.employeePhotoLinks = employeePhotoLinks;
     }
 
+    /** El enlace de la foto, el mismo para la ficha y para el directorio; null sin foto. */
+    public String photoLinkFor(String ruleSystemCode, String employeeTypeCode, String employeeNumber, String photoKey) {
+        return employeePhotoLinks.linkFor(ruleSystemCode, employeeTypeCode, employeeNumber, photoKey);
+    }
+
     public EmployeeResponse toResponse(Employee employee) {
         return toResponse(employee, null);
     }

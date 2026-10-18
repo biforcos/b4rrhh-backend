@@ -90,7 +90,8 @@ public interface SpringDataEmployeeRepository extends JpaRepository<EmployeeEnti
                             and w2.startDate <= :today
                             and (w2.endDate is null or w2.endDate >= :today)
                       )
-                )
+                ),
+                e.photoKey
             )
             from EmployeeEntity e
             where (:ruleSystemCode is null or e.ruleSystemCode = :ruleSystemCode)

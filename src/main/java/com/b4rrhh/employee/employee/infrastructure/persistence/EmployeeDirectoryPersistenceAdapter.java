@@ -62,8 +62,11 @@ public class EmployeeDirectoryPersistenceAdapter implements EmployeeDirectoryRep
                 projection.employeeTypeCode(),
                 projection.employeeNumber(),
                 displayName,
+                projection.firstName(),
+                projection.lastName1(),
                 projection.status(),
-                projection.workCenterCode()
+                projection.workCenterCode(),
+                projection.photoKey()
         );
     }
 }

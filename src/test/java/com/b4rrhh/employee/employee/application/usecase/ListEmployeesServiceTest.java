@@ -37,8 +37,11 @@ class ListEmployeesServiceTest {
                         "INTERNAL",
                         "EMP001",
                         "Juan Perez",
+                        "Juan",
+                        "Perez",
                         "ACTIVE",
-                        "MADRID"
+                        "MADRID",
+                        null
                 )
         );
         // El total viaja tal cual desde el repositorio: el servicio no lo recalcula (backend#18).

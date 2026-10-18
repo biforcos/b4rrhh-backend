@@ -5,7 +5,10 @@ public record EmployeeDirectoryItemResponse(
         String employeeTypeCode,
         String employeeNumber,
         String displayName,
+        String firstName,
+        String lastName1,
         String status,
-        String workCenterCode
+        String workCenterCode,
+        String photoUrl
 ) {
 }

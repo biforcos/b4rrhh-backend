@@ -86,6 +86,20 @@ class TheEmployeePhotoTravelsThroughTheApiEndToEndTest {
     }
 
     @Test
+    void theDirectoryCarriesTheSameLinkAndTheNamesForTheInitials() throws Exception {
+        String enlace = subir(JPEG);
+
+        String cuerpo = mockMvc.perform(get("/employees").param("q", "FOTO0001")
+                        .with(user("lector").roles("READONLY")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat((String) JsonPath.read(cuerpo, "$.items[0].photoUrl")).isEqualTo(enlace);
+        assertThat((String) JsonPath.read(cuerpo, "$.items[0].firstName")).isEqualTo("Ana");
+        assertThat((String) JsonPath.read(cuerpo, "$.items[0].lastName1")).isEqualTo("Lopez");
+    }
+
+    @Test
     void withoutTheVersionOrWithAnotherOneThereIsNoPhoto() throws Exception {
         subir(JPEG);
 

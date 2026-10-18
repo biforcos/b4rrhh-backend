@@ -83,8 +83,17 @@ public class EmployeeController {
                 employee.getEmployeeTypeCode(),
                 employee.getEmployeeNumber(),
                 employee.getDisplayName(),
+                employee.getFirstName(),
+                employee.getLastName1(),
                 employee.getStatus(),
-                employee.getWorkCenterCode()
+                employee.getWorkCenterCode(),
+                // El mismo enlace de la API que la ficha (backend#177): el directorio enseña la cara
+                // (frontend#144).
+                employeeResponseAssembler.photoLinkFor(
+                        employee.getRuleSystemCode(),
+                        employee.getEmployeeTypeCode(),
+                        employee.getEmployeeNumber(),
+                        employee.getPhotoKey())
         );
     }
 }
